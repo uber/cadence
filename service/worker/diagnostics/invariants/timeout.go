@@ -24,8 +24,11 @@ package invariants
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"time"
 
+	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -33,11 +36,21 @@ type Timeout Invariant
 
 type timeout struct {
 	workflowExecutionHistory *types.GetWorkflowExecutionHistoryResponse
+	domain                   string
+	clientBean               client.Bean
 }
 
-func NewTimeout(wfHistory *types.GetWorkflowExecutionHistoryResponse) Invariant {
+type NewTimeoutParams struct {
+	WorkflowExecutionHistory *types.GetWorkflowExecutionHistoryResponse
+	Domain                   string
+	ClientBean               client.Bean
+}
+
+func NewTimeout(p NewTimeoutParams) Invariant {
 	return &timeout{
-		workflowExecutionHistory: wfHistory,
+		workflowExecutionHistory: p.WorkflowExecutionHistory,
+		domain:                   p.Domain,
+		clientBean:               p.ClientBean,
 	}
 }
 
@@ -51,6 +64,7 @@ func (t *timeout) Check(context.Context) ([]InvariantCheckResult, error) {
 				ExecutionTime:     getExecutionTime(1, event.ID, events),
 				ConfiguredTimeout: time.Duration(timeoutLimit) * time.Second,
 				LastOngoingEvent:  events[len(events)-2],
+				Tasklist:          getWorkflowExecutionTasklist(events),
 			}
 			result = append(result, InvariantCheckResult{
 				InvariantType: TimeoutTypeExecution.String(),
@@ -92,4 +106,96 @@ func (t *timeout) Check(context.Context) ([]InvariantCheckResult, error) {
 		}
 	}
 	return result, nil
+}
+
+func (t *timeout) RootCause(ctx context.Context, issues []InvariantCheckResult) ([]InvariantRootCauseResult, error) {
+	result := make([]InvariantRootCauseResult, 0)
+	for _, issue := range issues {
+		pollerStatus, err := t.checkTasklist(ctx, issue)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, pollerStatus)
+
+		if issue.InvariantType == TimeoutTypeActivity.String() {
+			heartbeatStatus, err := checkHeartbeatStatus(issue)
+			if err != nil {
+				return nil, err
+			}
+			result = append(result, heartbeatStatus)
+		}
+	}
+	return result, nil
+}
+
+func (t *timeout) checkTasklist(ctx context.Context, issue InvariantCheckResult) (InvariantRootCauseResult, error) {
+	var taskList *types.TaskList
+	switch issue.InvariantType {
+	case TimeoutTypeExecution.String():
+		var metadata ExecutionTimeoutMetadata
+		err := json.Unmarshal(issue.Metadata, &metadata)
+		if err != nil {
+			return InvariantRootCauseResult{}, err
+		}
+		taskList = metadata.Tasklist
+	case TimeoutTypeActivity.String():
+		var metadata ActivityTimeoutMetadata
+		err := json.Unmarshal(issue.Metadata, &metadata)
+		if err != nil {
+			return InvariantRootCauseResult{}, err
+		}
+		taskList = metadata.Tasklist
+	}
+	if taskList == nil {
+		return InvariantRootCauseResult{}, fmt.Errorf("tasklist not set")
+	}
+
+	frontendClient := t.clientBean.GetFrontendClient()
+	resp, err := frontendClient.DescribeTaskList(ctx, &types.DescribeTaskListRequest{
+		Domain:   t.domain,
+		TaskList: taskList,
+	})
+	if err != nil {
+		return InvariantRootCauseResult{}, err
+	}
+
+	tasklistBacklog := resp.GetTaskListStatus().GetBacklogCountHint()
+	if len(resp.GetPollers()) == 0 {
+		return InvariantRootCauseResult{
+			RootCause: RootCauseTypeMissingPollers,
+			Metadata:  taskListBacklogInBytes(tasklistBacklog),
+		}, nil
+	}
+	return InvariantRootCauseResult{
+		RootCause: RootCauseTypePollersStatus,
+		Metadata:  taskListBacklogInBytes(tasklistBacklog),
+	}, nil
+
+}
+
+func checkHeartbeatStatus(issue InvariantCheckResult) (InvariantRootCauseResult, error) {
+	var metadata ActivityTimeoutMetadata
+	err := json.Unmarshal(issue.Metadata, &metadata)
+	if err != nil {
+		return InvariantRootCauseResult{}, err
+	}
+
+	if metadata.HeartBeatTimeout == 0 {
+		return InvariantRootCauseResult{
+			RootCause: RootCauseTypeHeartBeatingNotEnabled,
+			Metadata:  []byte(metadata.TimeElapsed.String()),
+		}, nil
+	}
+
+	if metadata.HeartBeatTimeout > 0 && metadata.TimeoutType.String() == types.TimeoutTypeHeartbeat.String() {
+		return InvariantRootCauseResult{
+			RootCause: RootCauseTypeHeartBeatingEnabledMissingHeartbeat,
+			Metadata:  []byte(metadata.TimeElapsed.String()),
+		}, nil
+	}
+
+	return InvariantRootCauseResult{
+		RootCause: RootCauseTypeHeartBeatingEnabledActivityTimedOut,
+		Metadata:  []byte(metadata.TimeElapsed.String()),
+	}, nil
 }

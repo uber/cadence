@@ -56,9 +56,18 @@ func getWorkflowExecutionConfiguredTimeout(events []*types.HistoryEvent) int32 {
 	return 0
 }
 
+func getWorkflowExecutionTasklist(events []*types.HistoryEvent) *types.TaskList {
+	for _, event := range events {
+		if event.ID == 1 { // event 1 is workflow execution started event
+			return event.GetWorkflowExecutionStartedEventAttributes().TaskList
+		}
+	}
+	return nil
+}
+
 func getActivityTaskMetadata(e *types.HistoryEvent, events []*types.HistoryEvent) (ActivityTimeoutMetadata, error) {
 	eventScheduledID := e.GetActivityTaskTimedOutEventAttributes().GetScheduledEventID()
-	eventstartedID := e.GetActivityTaskTimedOutEventAttributes().StartedEventID
+	eventStartedID := e.GetActivityTaskTimedOutEventAttributes().StartedEventID
 	timeoutType := e.GetActivityTaskTimedOutEventAttributes().GetTimeoutType()
 	var configuredTimeout int32
 	var timeElapsed time.Duration
@@ -68,7 +77,7 @@ func getActivityTaskMetadata(e *types.HistoryEvent, events []*types.HistoryEvent
 			switch timeoutType {
 			case types.TimeoutTypeHeartbeat:
 				configuredTimeout = attr.GetHeartbeatTimeoutSeconds()
-				timeElapsed = getExecutionTime(eventstartedID, e.ID, events)
+				timeElapsed = getExecutionTime(eventStartedID, e.ID, events)
 			case types.TimeoutTypeScheduleToClose:
 				configuredTimeout = attr.GetScheduleToCloseTimeoutSeconds()
 				timeElapsed = getExecutionTime(eventScheduledID, e.ID, events)
@@ -77,7 +86,7 @@ func getActivityTaskMetadata(e *types.HistoryEvent, events []*types.HistoryEvent
 				timeElapsed = getExecutionTime(eventScheduledID, e.ID, events)
 			case types.TimeoutTypeStartToClose:
 				configuredTimeout = attr.GetStartToCloseTimeoutSeconds()
-				timeElapsed = getExecutionTime(eventstartedID, e.ID, events)
+				timeElapsed = getExecutionTime(eventStartedID, e.ID, events)
 			default:
 				return ActivityTimeoutMetadata{}, fmt.Errorf("unknown timeout type")
 			}
@@ -115,6 +124,11 @@ func getChildWorkflowExecutionConfiguredTimeout(e *types.HistoryEvent, events []
 }
 
 func timeoutLimitInBytes(val int32) []byte {
+	valInBytes, _ := json.Marshal(val)
+	return valInBytes
+}
+
+func taskListBacklogInBytes(val int64) []byte {
 	valInBytes, _ := json.Marshal(val)
 	return valInBytes
 }

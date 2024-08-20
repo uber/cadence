@@ -44,9 +44,14 @@ func (w *dw) retrieveExecutionHistory(ctx context.Context, info retrieveExecutio
 
 type identifyTimeoutsInputParams struct {
 	history *types.GetWorkflowExecutionHistoryResponse
+	domain  string
 }
 
 func (w *dw) identifyTimeouts(ctx context.Context, info identifyTimeoutsInputParams) ([]invariants.InvariantCheckResult, error) {
-	timeoutInvariant := invariants.NewTimeout(info.history)
+	timeoutInvariant := invariants.NewTimeout(invariants.NewTimeoutParams{
+		WorkflowExecutionHistory: info.history,
+		Domain:                   info.domain,
+		ClientBean:               w.clientBean,
+	})
 	return timeoutInvariant.Check(ctx)
 }
