@@ -120,7 +120,7 @@ func (m *metricsScope) RecordHistogramValue(id int, value float64) {
 }
 
 func (m *metricsScope) Tagged(tags ...Tag) Scope {
-	domainTagged := false
+	domainTagged := m.isDomainTagged
 	tagMap := make(map[string]string, len(tags))
 	for _, tag := range tags {
 		if isDomainTagged(tag) {
