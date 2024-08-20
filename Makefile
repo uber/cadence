@@ -257,6 +257,8 @@ $(STABLE_BIN)/$(PROTOC_VERSION_BIN): | $(STABLE_BIN)
 #
 # `git ls-tree HEAD idls` is selected because this only cares about the committed/checked-out target,
 # not whatever the current status is, because only the committed value will exist for others.
+#
+# and last but not least: this avoids using `go` to make this check take only a couple seconds.
 .idl-status:
 	branches="$$(git submodule foreach git branch master --contains HEAD)"; \
 	if ! (echo "$$branches" | grep -q master); then \
@@ -265,7 +267,7 @@ $(STABLE_BIN)/$(PROTOC_VERSION_BIN): | $(STABLE_BIN)
 	  exit 1; \
 	fi
 	idlsha="$$(git ls-tree HEAD idls | awk '{print substr($$3,0,12)}')"; \
-	gosha="$$(go list -m github.com/uber/cadence-idl | tr '-' '\n' | tail -n1)"; \
+	gosha="$$(grep github.com/uber/cadence-idl go.mod | tr '-' '\n' | tail -n1)"; \
 	if [[ "$$idlsha" != "$$gosha" ]]; then \
 	  >&2 echo "IDL submodule sha ($$idlsha) does not match go module sha ($$gosha)."; \
 	  >&2 echo "Make sure the IDL PR has been merged, and this PR is updated, before merging here."; \
