@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/execution"
@@ -208,6 +209,8 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(
 		}
 		result.PendingDecision = pendingDecision
 	}
+
+	e.metricsClient.Scope(metrics.WorkflowCancelCount)
 
 	return result, nil
 }

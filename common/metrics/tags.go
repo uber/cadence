@@ -61,6 +61,7 @@ const (
 	pollerIsolationGroup      = "poller_isolation_group"
 	asyncWFRequestType        = "async_wf_request_type"
 	workflowTerminationReason = "workflow_termination_reason"
+	workflowCloseStatus       = "workflow_close_status"
 
 	// limiter-side tags
 	globalRatelimitKey            = "global_ratelimit_key"
@@ -283,6 +284,12 @@ func GlobalRatelimiterCollectionName(value string) Tag {
 func WorkflowTerminationReasonTag(value string) Tag {
 	value = safeAlphaNumericStringRE.ReplaceAllString(value, "_")
 	return simpleMetric{key: workflowTerminationReason, value: value}
+}
+
+// WorkflowCloseStatusTag is a stringified workflow status
+func WorkflowCloseStatusTag(value string) Tag {
+	value = safeAlphaNumericStringRE.ReplaceAllString(value, "_")
+	return simpleMetric{key: workflowCloseStatus, value: value}
 }
 
 // PartitionConfigTags returns a list of partition config tags
