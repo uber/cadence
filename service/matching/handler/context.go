@@ -102,6 +102,7 @@ func (reqCtx *handlerContext) handleErr(err error) error {
 		reqCtx.scope.IncCounter(metrics.CadenceErrStickyWorkerUnavailablePerTaskListCounter)
 		return err
 	case *cadence_errors.TaskListNotOwnedByHostError:
+		reqCtx.scope.IncCounter(metrics.CadenceErrTaskListNotOwnedByHostPerTaskListCounter)
 		return err
 	default:
 		reqCtx.scope.IncCounter(metrics.CadenceFailuresPerTaskList)

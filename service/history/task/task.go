@@ -276,6 +276,7 @@ func (t *taskImpl) HandleErr(err error) (retErr error) {
 	// with the new membership information.
 	var taskListNotOwnedByHostError *cadence_errors.TaskListNotOwnedByHostError
 	if errors.As(err, &taskListNotOwnedByHostError) {
+		t.scope.IncCounter(metrics.TaskListNotOwnedByHostCounterPerDomain)
 		return err
 	}
 
