@@ -4430,7 +4430,7 @@ func TestWorkflowDescribeEmitStatusMetrics(t *testing.T) {
 					name: "describe_wf_status",
 					tags: map[string]string{
 						"domain":                "some-domain",
-						"workflow_close_status": "unknownkk",
+						"workflow_close_status": "unknown",
 						"operation":             "DescribeWorkflowExecutionStatus",
 					},
 					value: 1,
