@@ -3415,6 +3415,8 @@ func (wh *WorkflowHandler) DescribeWorkflowExecution(
 		Request:    request,
 	})
 
+	wh.emitDescribeWorkflowExecutionMetrics(domainName, response, err)
+
 	if err != nil {
 		return nil, err
 	}
@@ -4069,6 +4071,23 @@ func (hs HealthStatus) String() string {
 	default:
 		return "unknown"
 	}
+}
+
+func (wh *WorkflowHandler) emitDescribeWorkflowExecutionMetrics(domain string, response *types.DescribeWorkflowExecutionResponse, err error) {
+	scope := wh.GetMetricsClient().Scope(metrics.FrontendDescribeWorkflowExecutionStatusScope, metrics.DomainTag(domain))
+
+	if err != nil || response == nil {
+		scope.IncCounter(metrics.DescribeWorkflowStatusError)
+		return
+	}
+
+	status := "unknown"
+	if response.WorkflowExecutionInfo != nil && response.WorkflowExecutionInfo.CloseStatus != nil {
+		status = response.WorkflowExecutionInfo.CloseStatus.String()
+	}
+
+	scope = scope.Tagged(metrics.WorkflowCloseStatusTag(status))
+	scope.IncCounter(metrics.DescribeWorkflowStatusCount)
 }
 
 func getDomainWfIDRunIDTags(

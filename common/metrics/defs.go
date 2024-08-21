@@ -990,6 +990,9 @@ const (
 	FrontendQueryWorkflowScope
 	// FrontendDescribeWorkflowExecutionScope is the metric scope for frontend.DescribeWorkflowExecution
 	FrontendDescribeWorkflowExecutionScope
+	// FrontendDescribeWorkflowExecutionStatusScope is a custom metric for more
+	// rich details about workflow description calls, including workflow open/closed status
+	FrontendDescribeWorkflowExecutionStatusScope
 	// FrontendDescribeTaskListScope is the metric scope for frontend.DescribeTaskList
 	FrontendDescribeTaskListScope
 	// FrontendResetStickyTaskListScope is the metric scope for frontend.ResetStickyTaskList
@@ -1801,6 +1804,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		FrontendDeprecateDomainScope:                       {operation: "DeprecateDomain"},
 		FrontendQueryWorkflowScope:                         {operation: "QueryWorkflow"},
 		FrontendDescribeWorkflowExecutionScope:             {operation: "DescribeWorkflowExecution"},
+		FrontendDescribeWorkflowExecutionStatusScope:       {operation: "DescribeWorkflowExecutionStatus"},
 		FrontendListTaskListPartitionsScope:                {operation: "FrontendListTaskListPartitions"},
 		FrontendGetTaskListsByDomainScope:                  {operation: "FrontendGetTaskListsByDomain"},
 		FrontendRefreshWorkflowTasksScope:                  {operation: "FrontendRefreshWorkflowTasks"},
@@ -2128,6 +2132,9 @@ const (
 	KafkaConsumerMessageNack
 	KafkaConsumerMessageNackDlqErr
 	KafkaConsumerSessionStart
+
+	DescribeWorkflowStatusCount
+	DescribeWorkflowStatusError
 
 	GracefulFailoverLatency
 	GracefulFailoverFailure
@@ -2880,6 +2887,8 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		IsolationGroupStateHealthy:           {metricName: "isolation_group_healthy", metricType: Counter},
 		ValidatedWorkflowCount:               {metricName: "task_validator_count", metricType: Counter},
 		HashringViewIdentifier:               {metricName: "hashring_view_identifier", metricType: Counter},
+		DescribeWorkflowStatusError:          {metricName: "describe_wf_error", metricType: Counter},
+		DescribeWorkflowStatusCount:          {metricName: "describe_wf_status", metricType: Counter},
 
 		AsyncRequestPayloadSize: {metricName: "async_request_payload_size_per_domain", metricRollupName: "async_request_payload_size", metricType: Timer},
 
