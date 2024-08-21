@@ -84,12 +84,62 @@ func Test__identifyTimeouts(t *testing.T) {
 	require.Equal(t, expectedResult, result)
 }
 
+func Test__rootCauseTimeouts(t *testing.T) {
+	dwtest := testDiagnosticWorkflow(t)
+	workflowTimeoutData := invariants.ExecutionTimeoutMetadata{
+		ExecutionTime:     110 * time.Second,
+		ConfiguredTimeout: 110 * time.Second,
+		LastOngoingEvent: &types.HistoryEvent{
+			ID:        1,
+			Timestamp: common.Int64Ptr(testTimeStamp),
+			WorkflowExecutionStartedEventAttributes: &types.WorkflowExecutionStartedEventAttributes{
+				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(workflowTimeoutSecond),
+			},
+		},
+		Tasklist: &types.TaskList{
+			Name: "testasklist",
+			Kind: nil,
+		},
+	}
+	workflowTimeoutDataInBytes, err := json.Marshal(workflowTimeoutData)
+	require.NoError(t, err)
+	issues := []invariants.InvariantCheckResult{
+		{
+			InvariantType: invariants.TimeoutTypeExecution.String(),
+			Reason:        "START_TO_CLOSE",
+			Metadata:      workflowTimeoutDataInBytes,
+		},
+	}
+	taskListBacklog := int64(10)
+	taskListBacklogInBytes, err := json.Marshal(taskListBacklog)
+	require.NoError(t, err)
+	expectedRootCause := []invariants.InvariantRootCauseResult{
+		{
+			RootCause: invariants.RootCauseTypePollersStatus,
+			Metadata:  taskListBacklogInBytes,
+		},
+	}
+	result, err := dwtest.rootCauseTimeouts(context.Background(), rootCauseTimeoutsParams{history: testWorkflowExecutionHistoryResponse(), domain: "test-domain", issues: issues})
+	require.NoError(t, err)
+	require.Equal(t, expectedRootCause, result)
+}
+
 func testDiagnosticWorkflow(t *testing.T) *dw {
 	ctrl := gomock.NewController(t)
 	mockClientBean := client.NewMockBean(ctrl)
 	mockFrontendClient := frontend.NewMockClient(ctrl)
 	mockClientBean.EXPECT().GetFrontendClient().Return(mockFrontendClient).AnyTimes()
 	mockFrontendClient.EXPECT().GetWorkflowExecutionHistory(gomock.Any(), gomock.Any()).Return(testWorkflowExecutionHistoryResponse(), nil).AnyTimes()
+	mockFrontendClient.EXPECT().DescribeTaskList(gomock.Any(), gomock.Any()).Return(&types.DescribeTaskListResponse{
+		Pollers: []*types.PollerInfo{
+			{
+				Identity: "dca24-xy",
+			},
+		},
+		TaskListStatus: &types.TaskListStatus{
+			BacklogCountHint: int64(10),
+		},
+	}, nil).AnyTimes()
 	return &dw{
 		clientBean: mockClientBean,
 	}
