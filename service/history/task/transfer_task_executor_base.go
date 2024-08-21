@@ -463,7 +463,7 @@ func getWorkflowHeaders(startEvent *types.HistoryEvent) map[string][]byte {
 	if attr == nil || attr.Header == nil {
 		return nil
 	}
-	headers := make(map[string][]byte)
+	headers := make(map[string][]byte, len(attr.Header.Fields))
 	for k, v := range attr.Header.Fields {
 		val := make([]byte, len(v))
 		copy(val, v)
