@@ -110,6 +110,7 @@ func TestMatchingSimulationSuite(t *testing.T) {
 	mockHistoryCl := history.NewMockClient(ctrl)
 	mockHistoryCl.EXPECT().RecordDecisionTaskStarted(gomock.Any(), gomock.Any()).
 		DoAndReturn(func(ctx context.Context, req *types.RecordDecisionTaskStartedRequest, opts ...yarpc.CallOption) (*types.RecordDecisionTaskStartedResponse, error) {
+			time.Sleep(getRecordDecisionTaskStartedTime(clusterConfig.MatchingConfig.SimulationConfig.RecordDecisionTaskStartedTime))
 			return &types.RecordDecisionTaskStartedResponse{
 				ScheduledEventID: req.ScheduleID,
 			}, nil
@@ -186,12 +187,13 @@ func (s *MatchingSimulationSuite) TestMatchingSimulation() {
 	pollDuration := getPollDuration(s.testClusterConfig.MatchingConfig.SimulationConfig.PollTimeout)
 	polledTasksCounter := int32(0)
 	maxTasksToGenerate := getMaxTaskstoGenerate(s.testClusterConfig.MatchingConfig.SimulationConfig.MaxTaskToGenerate)
+	taskProcessTime := getTaskProcessTime(s.testClusterConfig.MatchingConfig.SimulationConfig.TaskProcessTime)
 	var tasksToReceive sync.WaitGroup
 	tasksToReceive.Add(maxTasksToGenerate)
 	var pollerWG sync.WaitGroup
 	for i := 0; i < numPollers; i++ {
 		pollerWG.Add(1)
-		go s.poll(ctx, matchingClient, domainID, tasklist, &polledTasksCounter, &pollerWG, pollDuration, statsCh, &tasksToReceive)
+		go s.poll(ctx, matchingClient, domainID, tasklist, &polledTasksCounter, &pollerWG, pollDuration, taskProcessTime, statsCh, &tasksToReceive)
 	}
 
 	// wait a bit for pollers to start.
@@ -200,7 +202,8 @@ func (s *MatchingSimulationSuite) TestMatchingSimulation() {
 	startTime := time.Now()
 	// Start task generators
 	rps := getTaskQPS(s.testClusterConfig.MatchingConfig.SimulationConfig.TasksPerSecond)
-	rateLimiter := rate.NewLimiter(rate.Limit(rps), rps)
+	burst := getTaskBurst(s.testClusterConfig.MatchingConfig.SimulationConfig.TasksBurst)
+	rateLimiter := rate.NewLimiter(rate.Limit(rps), burst)
 	generatedTasksCounter := int32(0)
 	lastTaskScheduleID := int32(0)
 	numGenerators := getNumGenerators(s.testClusterConfig.MatchingConfig.SimulationConfig.NumTaskGenerators)
@@ -326,20 +329,18 @@ func (s *MatchingSimulationSuite) poll(
 	domainID, tasklist string,
 	polledTasksCounter *int32,
 	wg *sync.WaitGroup,
-	pollDuration time.Duration,
+	pollDuration, taskProcessTime time.Duration,
 	statsCh chan *operationStats,
 	tasksToReceive *sync.WaitGroup,
 ) {
 	defer wg.Done()
-	t := time.NewTicker(50 * time.Millisecond)
-	defer t.Stop()
 
 	for {
 		select {
 		case <-ctx.Done():
 			s.log("Poller done")
 			return
-		case <-t.C:
+		default:
 			s.log("Poller will initiate a poll")
 			reqCtx, cancel := context.WithTimeout(ctx, pollDuration)
 			start := time.Now()
@@ -375,6 +376,7 @@ func (s *MatchingSimulationSuite) poll(
 			atomic.AddInt32(polledTasksCounter, 1)
 			s.log("PollForDecisionTask got a task with startedid: %d. resp: %+v", resp.StartedEventID, resp)
 			tasksToReceive.Done()
+			time.Sleep(taskProcessTime)
 		}
 	}
 }
@@ -475,16 +477,10 @@ func getPartitions(i int) int {
 }
 
 func getForwarderMaxOutstandingPolls(i int) int {
-	if i == 0 {
-		return 20
-	}
 	return i
 }
 
 func getForwarderMaxOutstandingTasks(i int) int {
-	if i == 0 {
-		return 1
-	}
 	return i
 }
 
@@ -507,4 +503,26 @@ func getTaskQPS(i int) int {
 		return 40
 	}
 	return i
+}
+
+func getTaskBurst(i int) int {
+	if i == 0 {
+		return 1
+	}
+	return i
+}
+
+func getTaskProcessTime(duration time.Duration) time.Duration {
+	if duration == 0 {
+		return time.Millisecond
+	}
+	return duration
+}
+
+func getRecordDecisionTaskStartedTime(duration time.Duration) time.Duration {
+	if duration == 0 {
+		return time.Millisecond
+	}
+
+	return duration
 }

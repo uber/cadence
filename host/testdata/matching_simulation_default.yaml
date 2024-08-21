@@ -8,12 +8,12 @@ historyconfig:
 matchingconfig:
   nummatchinghosts: 4
   simulationconfig:
-    tasklistwritepartitions: 2
-    tasklistreadpartitions: 2
-    numpollers: 10
+    tasklistwritepartitions: 4
+    tasklistreadpartitions: 4
+    numpollers: 8
     numtaskgenerators: 2
-    taskspersecond: 40
-    maxtasktogenerate: 1500
+    taskspersecond: 80
+    maxtasktogenerate: 3000
     polltimeout: 60s
     forwardermaxoutstandingpolls: 1
     forwardermaxoutstandingtasks: 1
@@ -21,5 +21,6 @@ matchingconfig:
     forwardermaxchildrenpernode: 20
     localpollwaittime: 0ms
     localtaskwaittime: 0ms
+    taskprocesstime: 1ms
 workerconfig:
   enableasyncwfconsumer: false
