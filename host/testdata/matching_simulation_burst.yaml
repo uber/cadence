@@ -10,17 +10,19 @@ matchingconfig:
   simulationconfig:
     tasklistwritepartitions: 4
     tasklistreadpartitions: 4
-    numpollers: 8
-    numtaskgenerators: 10
-    taskspersecond: 500
-    maxtasktogenerate: 10000
-    polltimeout: 60s
     forwardermaxoutstandingpolls: 1
     forwardermaxoutstandingtasks: 1
     forwardermaxratepersecond: 10
     forwardermaxchildrenpernode: 20
     localpollwaittime: 0ms
     localtaskwaittime: 0ms
-    taskprocesstime: 1ms
+    tasks:
+      - numtaskgenerators: 10
+        taskspersecond: 500
+        maxtasktogenerate: 10000
+    pollers:
+      - taskprocesstime: 1ms
+        numpollers: 8
+        polltimeout: 60s
 workerconfig:
   enableasyncwfconsumer: false
