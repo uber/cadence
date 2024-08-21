@@ -80,7 +80,7 @@ services:
       services-network:
         aliases:
           - zookeeper
-
+  # Needs a new pinot version to run the new json match query
   pinot-controller:
     image: apachepinot/pinot:latest
     command: "StartController -zkAddress zookeeper:2181 -controllerPort 9001"
