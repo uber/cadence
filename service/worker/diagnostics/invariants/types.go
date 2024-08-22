@@ -37,13 +37,28 @@ const (
 	TimeoutTypeChildWorkflow TimeoutType = "Child Workflow Execution has timed out"
 )
 
+type RootCause string
+
+const (
+	RootCauseTypeMissingPollers                      RootCause = "There are no pollers for the tasklist"
+	RootCauseTypePollersStatus                       RootCause = "There are pollers for the tasklist. Check backlog status"
+	RootCauseTypeHeartBeatingNotEnabled              RootCause = "HeartBeating not enabled for activity"
+	RootCauseTypeHeartBeatingEnabledMissingHeartbeat RootCause = "HeartBeating enabled for activity but timed out due to missing heartbeat"
+	RootCauseTypeHeartBeatingEnabledActivityTimedOut RootCause = "HeartBeating enabled for activity but activity timed out due to other configured timeouts"
+)
+
 func (tt TimeoutType) String() string {
 	return string(tt)
+}
+
+func (r RootCause) String() string {
+	return string(r)
 }
 
 type ExecutionTimeoutMetadata struct {
 	ExecutionTime     time.Duration
 	ConfiguredTimeout time.Duration
+	Tasklist          *types.TaskList
 	LastOngoingEvent  *types.HistoryEvent
 }
 

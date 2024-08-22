@@ -8,8 +8,8 @@ historyconfig:
 matchingconfig:
   nummatchinghosts: 4
   simulationconfig:
-    tasklistwritepartitions: 4
-    tasklistreadpartitions: 8
+    tasklistwritepartitions: 1
+    tasklistreadpartitions: 1
     forwardermaxoutstandingpolls: 1
     forwardermaxoutstandingtasks: 1
     forwardermaxratepersecond: 10

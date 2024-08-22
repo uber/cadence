@@ -34,6 +34,18 @@ agents:
 
 steps:
 
+  - label: ":on: IDL submodule points to master"
+    plugins:
+      - kubernetes:
+          <<: *kubernetes
+          podSpec:
+            <<: *podSpec
+            containers:
+              - <<: *commandContainer
+                command:
+                  - |-
+                    make .idl-status
+
   - label: ":golang: unit test"
     artifact_paths:
       - ".build/coverage/*.out"

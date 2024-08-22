@@ -38,6 +38,7 @@ const (
 
 	retrieveWfExecutionHistoryActivity = "retrieveWfExecutionHistory"
 	identifyTimeoutsActivity           = "identifyTimeouts"
+	rootCauseTimeoutsActivity          = "rootCauseTimeouts"
 )
 
 type DiagnosticsWorkflowInput struct {
@@ -67,9 +68,21 @@ func (w *dw) DiagnosticsWorkflow(ctx workflow.Context, params DiagnosticsWorkflo
 
 	var checkResult []invariants.InvariantCheckResult
 	err = workflow.ExecuteActivity(activityCtx, w.identifyTimeouts, identifyTimeoutsInputParams{
-		history: wfExecutionHistory}).Get(ctx, &checkResult)
+		history: wfExecutionHistory,
+		domain:  params.Domain,
+	}).Get(ctx, &checkResult)
 	if err != nil {
 		return fmt.Errorf("IdentifyTimeouts: %w", err)
+	}
+
+	var rootCauseResult []invariants.InvariantRootCauseResult
+	err = workflow.ExecuteActivity(activityCtx, w.rootCauseTimeouts, rootCauseTimeoutsParams{
+		history: wfExecutionHistory,
+		domain:  params.Domain,
+		issues:  checkResult,
+	}).Get(ctx, &rootCauseResult)
+	if err != nil {
+		return fmt.Errorf("RootCauseTimeouts: %w", err)
 	}
 
 	return nil

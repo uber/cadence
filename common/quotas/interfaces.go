@@ -59,10 +59,10 @@ type Limiter interface {
 	// Reserve reserves a rate limit token
 	Reserve() clock.Reservation
 
-	// Limit retrieves the limit of this ratelimiter.
+	// Limit returns the current configured ratelimit.
 	//
-	// If multiple ratelimits are wrapped, this is generally the "most relevant" value,
-	// e.g. the minimum of all that will apply, or the currently-in-use limiter's value.
+	// If this Limiter wraps multiple values, this is generally the "most relevant" one,
+	// i.e. the one that is most likely to apply to the next request
 	Limit() rate.Limit
 }
 

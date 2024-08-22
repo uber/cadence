@@ -34,6 +34,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	"github.com/uber-go/tally"
 
 	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/client/matching"
@@ -4363,3 +4364,118 @@ func (s *workflowHandlerSuite) TestTerminateWorkflowExecution() {
 	})
 
 }
+
+func TestWorkflowDescribeEmitStatusMetrics(t *testing.T) {
+
+	tests := map[string]struct {
+		res              *types.DescribeWorkflowExecutionResponse
+		err              error
+		expectedCounters map[string]tally.CounterSnapshot
+	}{
+		"valid closed workflow": {
+			res: &types.DescribeWorkflowExecutionResponse{
+				WorkflowExecutionInfo: &types.WorkflowExecutionInfo{
+					CloseStatus: common.Ptr(types.WorkflowExecutionCloseStatusCompleted),
+				},
+			},
+			expectedCounters: map[string]tally.CounterSnapshot{
+				"describe_wf_status+domain=some-domain,operation=DescribeWorkflowExecutionStatus,workflow_close_status=COMPLETED": &counterSnapshotMock{
+					name: "describe_wf_status",
+					tags: map[string]string{
+						"domain":                "some-domain",
+						"workflow_close_status": "COMPLETED",
+						"operation":             "DescribeWorkflowExecutionStatus",
+					},
+					value: 1,
+				},
+			},
+		},
+		"A workflow not found": {
+			res: nil,
+			err: &types.EntityNotExistsError{},
+			expectedCounters: map[string]tally.CounterSnapshot{
+				"describe_wf_error+domain=some-domain,operation=DescribeWorkflowExecutionStatus": &counterSnapshotMock{
+					name: "describe_wf_error",
+					tags: map[string]string{
+						"domain":    "some-domain",
+						"operation": "DescribeWorkflowExecutionStatus",
+					},
+					value: 1,
+				},
+			},
+		},
+		"A invalid input 1": {
+			res: nil,
+			err: nil,
+			expectedCounters: map[string]tally.CounterSnapshot{
+				"describe_wf_error+domain=some-domain,operation=DescribeWorkflowExecutionStatus": &counterSnapshotMock{
+					name: "describe_wf_error",
+					tags: map[string]string{
+						"domain":    "some-domain",
+						"operation": "DescribeWorkflowExecutionStatus",
+					},
+					value: 1,
+				},
+			},
+		},
+		"invalid input 2": {
+			res: &types.DescribeWorkflowExecutionResponse{
+				WorkflowExecutionInfo: &types.WorkflowExecutionInfo{
+					// intentionally nil
+					// CloseStatus: common.Ptr(types.WorkflowExecutionCloseStatusCompleted),
+				},
+			},
+			expectedCounters: map[string]tally.CounterSnapshot{
+				"describe_wf_status+domain=some-domain,operation=DescribeWorkflowExecutionStatus,workflow_close_status=unknown": &counterSnapshotMock{
+					name: "describe_wf_status",
+					tags: map[string]string{
+						"domain":                "some-domain",
+						"workflow_close_status": "unknown",
+						"operation":             "DescribeWorkflowExecutionStatus",
+					},
+					value: 1,
+				},
+			},
+		},
+	}
+
+	for name, td := range tests {
+		t.Run(name, func(t *testing.T) {
+
+			scope := tally.NewTestScope("", nil)
+			mockR := resource.Test{
+				MetricsScope:  scope,
+				MetricsClient: metrics.NewClient(scope, 1),
+			}
+
+			wh := WorkflowHandler{
+				Resource: &mockR,
+			}
+
+			wh.emitDescribeWorkflowExecutionMetrics("some-domain", td.res, td.err)
+			snap := scope.Snapshot()
+
+			for k, v := range td.expectedCounters {
+				_, ok := snap.Counters()[k]
+				if !ok {
+					t.Errorf("the metric string expected was not found. Expected a map with this key: %q\ngot %v", k, snap.Counters())
+					return
+				}
+
+				assert.Equal(t, snap.Counters()[k].Name(), v.Name())
+				assert.Equal(t, snap.Counters()[k].Value(), v.Value())
+				assert.Equal(t, snap.Counters()[k].Tags(), v.Tags())
+			}
+		})
+	}
+}
+
+type counterSnapshotMock struct {
+	name  string
+	tags  map[string]string
+	value int64
+}
+
+func (cs *counterSnapshotMock) Name() string            { return cs.name }
+func (cs *counterSnapshotMock) Tags() map[string]string { return cs.tags }
+func (cs *counterSnapshotMock) Value() int64            { return cs.value }
