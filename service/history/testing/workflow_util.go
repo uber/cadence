@@ -66,6 +66,7 @@ func StartWorkflow(
 				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 				Header: &types.Header{Fields: map[string][]byte{
 					"context-key":         []byte("contextValue"),
+					"123456": []byte("123456"), // unsanitizable key
 					"invalid-context-key": []byte("invalidContextValue"),
 				}},
 			},

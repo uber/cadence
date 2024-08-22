@@ -41,6 +41,7 @@ import (
 	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/shard"
 	"github.com/uber/cadence/service/worker/archiver"
+	"go.uber.org/multierr"
 )
 
 const (
@@ -181,10 +182,9 @@ func (t *transferTaskExecutorBase) recordWorkflowStarted(
 
 	// headers are appended into search attributes if enabled
 	if t.config.EnableContextHeaderInVisibility(domainEntry.GetInfo().Name) {
-		if newSearchAttr, err := appendContextHeaderToSearchAttributes(searchAttributes, headers, t.config.ValidSearchAttributes()); err != nil {
+		// fail open, if error occurs, just log it; successfully appended headers will be stored
+		if searchAttributes, err = appendContextHeaderToSearchAttributes(searchAttributes, headers, t.config.ValidSearchAttributes()); err != nil {
 			t.logger.Error("failed to add headers to search attributes", tag.Error(err))
-		} else {
-			searchAttributes = newSearchAttr
 		}
 	}
 
@@ -258,10 +258,9 @@ func (t *transferTaskExecutorBase) upsertWorkflowExecution(
 
 	// headers are appended into search attributes if enabled
 	if t.config.EnableContextHeaderInVisibility(domain) {
-		if newSearchAttr, err := appendContextHeaderToSearchAttributes(searchAttributes, headers, t.config.ValidSearchAttributes()); err != nil {
+		// fail open, if error occurs, just log it; successfully appended headers will be stored
+		if searchAttributes, err = appendContextHeaderToSearchAttributes(searchAttributes, headers, t.config.ValidSearchAttributes()); err != nil {
 			t.logger.Error("failed to add headers to search attributes", tag.Error(err))
-		} else {
-			searchAttributes = newSearchAttr
 		}
 	}
 
@@ -339,10 +338,9 @@ func (t *transferTaskExecutorBase) recordWorkflowClosed(
 	if recordWorkflowClose {
 		// headers are appended into search attributes if enabled
 		if t.config.EnableContextHeaderInVisibility(domainEntry.GetInfo().Name) {
-			if newSearchAttr, err := appendContextHeaderToSearchAttributes(searchAttributes, headers, t.config.ValidSearchAttributes()); err != nil {
+			// fail open, if error occurs, just log it; successfully appended headers will be stored
+			if searchAttributes, err = appendContextHeaderToSearchAttributes(searchAttributes, headers, t.config.ValidSearchAttributes()); err != nil {
 				t.logger.Error("failed to add headers to search attributes", tag.Error(err))
-			} else {
-				searchAttributes = newSearchAttr
 			}
 		}
 		if err := t.visibilityMgr.RecordWorkflowExecutionClosed(ctx, &persistence.RecordWorkflowExecutionClosedRequest{
@@ -431,31 +429,32 @@ func getWorkflowMemo(
 	return &types.Memo{Fields: memo}
 }
 
+// context headers are appended to search attributes if in allow list; return errors when all context key is processed
 func appendContextHeaderToSearchAttributes(attr, context map[string][]byte, allowedKeys map[string]interface{}) (map[string][]byte, error) {
+	// sanity check
+	if attr == nil {
+		attr = make(map[string][]byte)
+	}
+	var errGroup error
 	for k, v := range context {
-		unsanitizedKey := fmt.Sprintf(definition.HeaderFormat, k)
-		key, err := visibility.SanitizeSearchAttributeKey(unsanitizedKey)
-		if err != nil {
-			return nil, fmt.Errorf("fail to sanitize context key %s: %w", key, err)
+		sanitizedKey, err := visibility.SanitizeSearchAttributeKey(k)
+		if err != nil { // This could never happen
+			multierr.Append(errGroup, fmt.Errorf("fail to sanitize context key %s: %w", k, err))
+			continue
 		}
-
+		key := fmt.Sprintf(definition.HeaderFormat, sanitizedKey)
 		if _, ok := attr[key]; ok { // skip if key already exists
 			continue
 		}
 		if _, allowed := allowedKeys[key]; !allowed { // skip if not allowed
 			continue
 		}
-		if attr == nil {
-			attr = make(map[string][]byte)
-		}
 		// context header are raw string bytes, need to be json encoded to be stored in search attributes
-		data, err := json.Marshal(string(v))
-		if err != nil {
-			return nil, fmt.Errorf("fail to json encoding context key %s, val %v: %w", k, v, err)
-		}
+		// ignore error as it can't happen to err on json encoding string
+		data, _ := json.Marshal(string(v))
 		attr[key] = data
 	}
-	return attr, nil
+	return attr, errGroup
 }
 
 func getWorkflowHeaders(startEvent *types.HistoryEvent) map[string][]byte {
