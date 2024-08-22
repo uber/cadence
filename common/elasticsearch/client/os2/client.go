@@ -103,6 +103,13 @@ func NewClient(
 		RetryBackoff: func(i int) time.Duration { return time.Duration(i) * 100 * time.Millisecond },
 	}
 
+	if connectConfig.CustomHeaders.Caller != "" && connectConfig.CustomHeaders.Service != "" {
+		osconfig.Header = http.Header{
+			"Rpc-Caller":  []string{connectConfig.CustomHeaders.Caller},
+			"Rpc-Service": []string{connectConfig.CustomHeaders.Service},
+		}
+	}
+
 	// DiscoverNodesOnStart is false by default. Turn it on only when disable sniff is set to False in ES config
 	if !connectConfig.DisableSniff {
 		osconfig.DiscoverNodesOnStart = true
