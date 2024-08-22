@@ -1559,7 +1559,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessRecordWorkflowStartedTaskWi
 	s.mockShard.GetConfig().ValidSearchAttributes = func(opts ...dc.FilterOption) map[string]interface{} {
 		return map[string]interface{}{
 			"Header_context_key": struct{}{},
-			"123456": struct{}{}, // unsanitizable key
+			"123456":             struct{}{}, // unsanitizable key
 		}
 	}
 
