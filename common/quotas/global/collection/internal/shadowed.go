@@ -25,6 +25,8 @@ package internal
 import (
 	"context"
 
+	"golang.org/x/time/rate"
+
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/quotas"
 )
@@ -77,6 +79,10 @@ func (s shadowedLimiter) Reserve() clock.Reservation {
 		primary: s.primary.Reserve(),
 		shadow:  s.shadow.Reserve(),
 	}
+}
+
+func (s shadowedLimiter) Limit() rate.Limit {
+	return s.primary.Limit()
 }
 
 func (s shadowedReservation) Allow() bool {

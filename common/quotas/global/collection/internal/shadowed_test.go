@@ -188,4 +188,8 @@ func TestShadowed(t *testing.T) {
 			})
 		})
 	})
+	t.Run("limit", func(t *testing.T) {
+		l := NewShadowedLimiter(&allowlimiter{}, quotas.NewSimpleRateLimiter(t, 0))
+		assert.Equal(t, rate.Inf, l.Limit(), "should return the primary limit, not shadowed")
+	})
 }

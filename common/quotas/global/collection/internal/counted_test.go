@@ -30,6 +30,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/sync/errgroup"
+	"golang.org/x/time/rate"
 
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/quotas"
@@ -94,6 +95,12 @@ func TestUsage(t *testing.T) {
 		assert.False(t, r.Allow(), "should not have a token available")
 		r.Used(false)
 		assert.Equal(t, UsageMetrics{0, 1, 0}, lim.Collect(), "not-allowed reservations count as rejection")
+	})
+	// largely for coverage
+	t.Run("supports Limit", func(t *testing.T) {
+		rps := rate.Limit(1)
+		lim := NewCountedLimiter(clock.NewMockRatelimiter(clock.NewMockedTimeSource(), rps, 1))
+		assert.Equal(t, rps, lim.Limit())
 	})
 }
 

@@ -436,7 +436,7 @@ func (tm *TaskMatcher) UpdateRatelimit(rps *float64) {
 
 // Rate returns the current rate at which tasks are dispatched
 func (tm *TaskMatcher) Rate() float64 {
-	return tm.limiter.Limit()
+	return float64(tm.limiter.Limit())
 }
 
 func (tm *TaskMatcher) pollOrForward(
