@@ -26,6 +26,8 @@ import (
 	"fmt"
 	"time"
 
+	"go.uber.org/multierr"
+
 	"github.com/uber/cadence/client/matching"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
@@ -160,11 +162,13 @@ func (t *transferTaskExecutorBase) recordWorkflowStarted(
 	visibilityMemo *types.Memo,
 	updateTimeUnixNano int64,
 	searchAttributes map[string][]byte,
+	headers map[string][]byte,
 ) error {
 
 	domain := defaultDomainName
 
-	if domainEntry, err := t.shard.GetDomainCache().GetDomainByID(domainID); err != nil {
+	domainEntry, err := t.shard.GetDomainCache().GetDomainByID(domainID)
+	if err != nil {
 		if _, ok := err.(*types.EntityNotExistsError); !ok {
 			return err
 		}
@@ -174,6 +178,14 @@ func (t *transferTaskExecutorBase) recordWorkflowStarted(
 		if domainEntry.IsSampledForLongerRetentionEnabled(workflowID) &&
 			!domainEntry.IsSampledForLongerRetention(workflowID) {
 			return nil
+		}
+	}
+
+	// headers are appended into search attributes if enabled
+	if t.config.EnableContextHeaderInVisibility(domainEntry.GetInfo().Name) {
+		// fail open, if error occurs, just log it; successfully appended headers will be stored
+		if searchAttributes, err = appendContextHeaderToSearchAttributes(searchAttributes, headers, t.config.ValidSearchAttributes()); err != nil {
+			t.logger.Error("failed to add headers to search attributes", tag.Error(err))
 		}
 	}
 
@@ -234,6 +246,7 @@ func (t *transferTaskExecutorBase) upsertWorkflowExecution(
 	numClusters int16,
 	updateTimeUnixNano int64,
 	searchAttributes map[string][]byte,
+	headers map[string][]byte,
 ) error {
 
 	domain, err := t.shard.GetDomainCache().GetDomainName(domainID)
@@ -242,6 +255,14 @@ func (t *transferTaskExecutorBase) upsertWorkflowExecution(
 			return err
 		}
 		domain = defaultDomainName
+	}
+
+	// headers are appended into search attributes if enabled
+	if t.config.EnableContextHeaderInVisibility(domain) {
+		// fail open, if error occurs, just log it; successfully appended headers will be stored
+		if searchAttributes, err = appendContextHeaderToSearchAttributes(searchAttributes, headers, t.config.ValidSearchAttributes()); err != nil {
+			t.logger.Error("failed to add headers to search attributes", tag.Error(err))
+		}
 	}
 
 	request := &persistence.UpsertWorkflowExecutionRequest{
@@ -286,6 +307,7 @@ func (t *transferTaskExecutorBase) recordWorkflowClosed(
 	numClusters int16,
 	updateTimeUnixNano int64,
 	searchAttributes map[string][]byte,
+	headers map[string][]byte,
 ) error {
 
 	// Record closing in visibility store
@@ -315,6 +337,13 @@ func (t *transferTaskExecutorBase) recordWorkflowClosed(
 	}
 
 	if recordWorkflowClose {
+		// headers are appended into search attributes if enabled
+		if t.config.EnableContextHeaderInVisibility(domainEntry.GetInfo().Name) {
+			// fail open, if error occurs, just log it; successfully appended headers will be stored
+			if searchAttributes, err = appendContextHeaderToSearchAttributes(searchAttributes, headers, t.config.ValidSearchAttributes()); err != nil {
+				t.logger.Error("failed to add headers to search attributes", tag.Error(err))
+			}
+		}
 		if err := t.visibilityMgr.RecordWorkflowExecutionClosed(ctx, &persistence.RecordWorkflowExecutionClosedRequest{
 			DomainUUID: domainID,
 			Domain:     domain,
@@ -401,31 +430,46 @@ func getWorkflowMemo(
 	return &types.Memo{Fields: memo}
 }
 
+// context headers are appended to search attributes if in allow list; return errors when all context key is processed
 func appendContextHeaderToSearchAttributes(attr, context map[string][]byte, allowedKeys map[string]interface{}) (map[string][]byte, error) {
+	// sanity check
+	if attr == nil {
+		attr = make(map[string][]byte)
+	}
+	var errGroup error
 	for k, v := range context {
-		unsanitizedKey := fmt.Sprintf(definition.HeaderFormat, k)
-		key, err := visibility.SanitizeSearchAttributeKey(unsanitizedKey)
-		if err != nil {
-			return nil, fmt.Errorf("fail to sanitize context key %s: %w", key, err)
+		sanitizedKey, err := visibility.SanitizeSearchAttributeKey(k)
+		if err != nil { // This could never happen
+			multierr.Append(errGroup, fmt.Errorf("fail to sanitize context key %s: %w", k, err))
+			continue
 		}
-
+		key := fmt.Sprintf(definition.HeaderFormat, sanitizedKey)
 		if _, ok := attr[key]; ok { // skip if key already exists
 			continue
 		}
 		if _, allowed := allowedKeys[key]; !allowed { // skip if not allowed
 			continue
 		}
-		if attr == nil {
-			attr = make(map[string][]byte)
-		}
 		// context header are raw string bytes, need to be json encoded to be stored in search attributes
-		data, err := json.Marshal(string(v))
-		if err != nil {
-			return nil, fmt.Errorf("fail to json encoding context key %s, val %v: %w", k, v, err)
-		}
+		// ignore error as it can't happen to err on json encoding string
+		data, _ := json.Marshal(string(v))
 		attr[key] = data
 	}
-	return attr, nil
+	return attr, errGroup
+}
+
+func getWorkflowHeaders(startEvent *types.HistoryEvent) map[string][]byte {
+	attr := startEvent.GetWorkflowExecutionStartedEventAttributes()
+	if attr == nil || attr.Header == nil {
+		return nil
+	}
+	headers := make(map[string][]byte, len(attr.Header.Fields))
+	for k, v := range attr.Header.Fields {
+		val := make([]byte, len(v))
+		copy(val, v)
+		headers[k] = val
+	}
+	return headers
 }
 
 func copySearchAttributes(
