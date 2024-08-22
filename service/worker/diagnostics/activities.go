@@ -55,3 +55,18 @@ func (w *dw) identifyTimeouts(ctx context.Context, info identifyTimeoutsInputPar
 	})
 	return timeoutInvariant.Check(ctx)
 }
+
+type rootCauseTimeoutsParams struct {
+	history *types.GetWorkflowExecutionHistoryResponse
+	domain  string
+	issues  []invariants.InvariantCheckResult
+}
+
+func (w *dw) rootCauseTimeouts(ctx context.Context, info rootCauseTimeoutsParams) ([]invariants.InvariantRootCauseResult, error) {
+	timeoutInvariant := invariants.NewTimeout(invariants.NewTimeoutParams{
+		WorkflowExecutionHistory: info.history,
+		ClientBean:               w.clientBean,
+		Domain:                   info.domain,
+	})
+	return timeoutInvariant.RootCause(ctx, info.issues)
+}
