@@ -57,8 +57,8 @@ func (w *dw) DiagnosticsWorkflow(ctx workflow.Context, params DiagnosticsWorkflo
 
 	var wfExecutionHistory *types.GetWorkflowExecutionHistoryResponse
 	err := workflow.ExecuteActivity(activityCtx, w.retrieveExecutionHistory, retrieveExecutionHistoryInputParams{
-		domain: params.Domain,
-		execution: &types.WorkflowExecution{
+		Domain: params.Domain,
+		Execution: &types.WorkflowExecution{
 			WorkflowID: params.WorkflowID,
 			RunID:      params.RunID,
 		}}).Get(ctx, &wfExecutionHistory)
@@ -68,8 +68,8 @@ func (w *dw) DiagnosticsWorkflow(ctx workflow.Context, params DiagnosticsWorkflo
 
 	var checkResult []invariants.InvariantCheckResult
 	err = workflow.ExecuteActivity(activityCtx, w.identifyTimeouts, identifyTimeoutsInputParams{
-		history: wfExecutionHistory,
-		domain:  params.Domain,
+		History: wfExecutionHistory,
+		Domain:  params.Domain,
 	}).Get(ctx, &checkResult)
 	if err != nil {
 		return fmt.Errorf("IdentifyTimeouts: %w", err)
@@ -77,9 +77,9 @@ func (w *dw) DiagnosticsWorkflow(ctx workflow.Context, params DiagnosticsWorkflo
 
 	var rootCauseResult []invariants.InvariantRootCauseResult
 	err = workflow.ExecuteActivity(activityCtx, w.rootCauseTimeouts, rootCauseTimeoutsParams{
-		history: wfExecutionHistory,
-		domain:  params.Domain,
-		issues:  checkResult,
+		History: wfExecutionHistory,
+		Domain:  params.Domain,
+		Issues:  checkResult,
 	}).Get(ctx, &rootCauseResult)
 	if err != nil {
 		return fmt.Errorf("RootCauseTimeouts: %w", err)

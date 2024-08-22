@@ -47,8 +47,8 @@ const (
 func Test__retrieveExecutionHistory(t *testing.T) {
 	dwtest := testDiagnosticWorkflow(t)
 	result, err := dwtest.retrieveExecutionHistory(context.Background(), retrieveExecutionHistoryInputParams{
-		domain: "test",
-		execution: &types.WorkflowExecution{
+		Domain: "test",
+		Execution: &types.WorkflowExecution{
 			WorkflowID: "123",
 			RunID:      "abc",
 		},
@@ -79,7 +79,7 @@ func Test__identifyTimeouts(t *testing.T) {
 			Metadata:      workflowTimeoutDataInBytes,
 		},
 	}
-	result, err := dwtest.identifyTimeouts(context.Background(), identifyTimeoutsInputParams{history: testWorkflowExecutionHistoryResponse()})
+	result, err := dwtest.identifyTimeouts(context.Background(), identifyTimeoutsInputParams{History: testWorkflowExecutionHistoryResponse()})
 	require.NoError(t, err)
 	require.Equal(t, expectedResult, result)
 }
@@ -119,7 +119,7 @@ func Test__rootCauseTimeouts(t *testing.T) {
 			Metadata:  taskListBacklogInBytes,
 		},
 	}
-	result, err := dwtest.rootCauseTimeouts(context.Background(), rootCauseTimeoutsParams{history: testWorkflowExecutionHistoryResponse(), domain: "test-domain", issues: issues})
+	result, err := dwtest.rootCauseTimeouts(context.Background(), rootCauseTimeoutsParams{History: testWorkflowExecutionHistoryResponse(), Domain: "test-domain", Issues: issues})
 	require.NoError(t, err)
 	require.Equal(t, expectedRootCause, result)
 }
