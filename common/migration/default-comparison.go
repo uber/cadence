@@ -88,8 +88,7 @@ func defaultComparisonFn[T any](
 	// taken to try and catch the egregious cases which will cause panics.
 
 	// Firstly, use a bit of reflection to work out of the given types are pointers
-	// and try and derefrence them. this is not super robust, fairly obviously pointers to pointers
-	// will panic
+	// and try and derefrence them.
 	backgroundVal, d1, err := followPtrsAndReturnValue(backgroundRes)
 	if err != nil {
 		return false // fail to compare due to being unable to deref safely
