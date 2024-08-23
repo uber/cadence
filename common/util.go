@@ -597,6 +597,7 @@ func CheckEventBlobSizeLimit(
 	warnLimit int,
 	errorLimit int,
 	domainID string,
+	domainName string,
 	workflowID string,
 	runID string,
 	scope metrics.Scope,
@@ -606,17 +607,32 @@ func CheckEventBlobSizeLimit(
 
 	scope.RecordTimer(metrics.EventBlobSize, time.Duration(actualSize))
 
-	if actualSize > warnLimit {
+	if errorLimit < warnLimit {
 		if logger != nil {
-			logger.Warn("Blob size exceeds limit.",
-				tag.WorkflowDomainID(domainID),
-				tag.WorkflowID(workflowID),
-				tag.WorkflowRunID(runID),
-				tag.WorkflowSize(int64(actualSize)),
-				blobSizeViolationOperationTag)
+			logger.Warn("Error limit is less than warn limit.", tag.WorkflowDomainName(domainName), tag.WorkflowDomainID(domainID))
+		}
+
+		warnLimit = errorLimit
+	}
+
+	if actualSize > warnLimit {
+		tags := []tag.Tag{
+			tag.WorkflowDomainName(domainName),
+			tag.WorkflowDomainID(domainID),
+			tag.WorkflowID(workflowID),
+			tag.WorkflowRunID(runID),
+			tag.WorkflowSize(int64(actualSize)),
+			blobSizeViolationOperationTag,
+		}
+		if logger != nil {
+			logger.Warn("Blob size close to the limit.", tags...)
 		}
 
 		if actualSize > errorLimit {
+			scope.Tagged(metrics.DomainTag(domainName)).IncCounter(metrics.EventBlobSizeExceedLimit)
+			if logger != nil {
+				logger.Error("Blob size exceeds limit.", tags...)
+			}
 			return ErrBlobSizeExceedsLimit
 		}
 	}

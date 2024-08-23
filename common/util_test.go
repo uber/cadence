@@ -20,7 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package common
+package common_test
 
 import (
 	"context"
@@ -38,13 +38,52 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"github.com/uber-go/tally"
 	"go.uber.org/yarpc/yarpcerrors"
 
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/log/testlogger"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/types"
+)
+
+const (
+	retryPersistenceOperationInitialInterval    = 50 * time.Millisecond
+	retryPersistenceOperationMaxInterval        = 10 * time.Second
+	retryPersistenceOperationExpirationInterval = 30 * time.Second
+
+	historyServiceOperationInitialInterval    = 50 * time.Millisecond
+	historyServiceOperationMaxInterval        = 10 * time.Second
+	historyServiceOperationExpirationInterval = 30 * time.Second
+
+	matchingServiceOperationInitialInterval    = 1000 * time.Millisecond
+	matchingServiceOperationMaxInterval        = 10 * time.Second
+	matchingServiceOperationExpirationInterval = 30 * time.Second
+
+	frontendServiceOperationInitialInterval    = 200 * time.Millisecond
+	frontendServiceOperationMaxInterval        = 5 * time.Second
+	frontendServiceOperationExpirationInterval = 15 * time.Second
+
+	adminServiceOperationInitialInterval    = 200 * time.Millisecond
+	adminServiceOperationMaxInterval        = 5 * time.Second
+	adminServiceOperationExpirationInterval = 15 * time.Second
+
+	retryKafkaOperationInitialInterval = 50 * time.Millisecond
+	retryKafkaOperationMaxInterval     = 10 * time.Second
+	retryKafkaOperationMaxAttempts     = 10
+
+	retryTaskProcessingInitialInterval = 50 * time.Millisecond
+	retryTaskProcessingMaxInterval     = 100 * time.Millisecond
+	retryTaskProcessingMaxAttempts     = 3
+
+	replicationServiceBusyInitialInterval    = 2 * time.Second
+	replicationServiceBusyMaxInterval        = 10 * time.Second
+	replicationServiceBusyExpirationInterval = 5 * time.Minute
+
+	contextExpireThreshold = 10 * time.Millisecond
 )
 
 func TestIsServiceTransientError(t *testing.T) {
@@ -90,7 +129,7 @@ func TestIsServiceTransientError(t *testing.T) {
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
-			require.Equal(t, c.want, IsServiceTransientError(c.err))
+			require.Equal(t, c.want, common.IsServiceTransientError(c.err))
 		})
 	}
 
@@ -119,7 +158,7 @@ func TestIsExpectedError(t *testing.T) {
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
-			require.Equal(t, c.want, IsExpectedError(c.err))
+			require.Equal(t, c.want, common.IsExpectedError(c.err))
 		})
 	}
 }
@@ -132,7 +171,7 @@ func TestFrontendRetry(t *testing.T) {
 	}{
 		{
 			name: "ServiceBusyError due to workflow id rate limiting",
-			err:  &types.ServiceBusyError{Reason: WorkflowIDRateLimitReason},
+			err:  &types.ServiceBusyError{Reason: common.WorkflowIDRateLimitReason},
 			want: false,
 		},
 		{
@@ -154,7 +193,7 @@ func TestFrontendRetry(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			require.Equal(t, tt.want, FrontendRetry(tt.err))
+			require.Equal(t, tt.want, common.FrontendRetry(tt.err))
 		})
 	}
 }
@@ -163,17 +202,17 @@ func TestIsContextTimeoutError(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond)
 	defer cancel()
 	time.Sleep(50 * time.Millisecond)
-	require.True(t, IsContextTimeoutError(ctx.Err()))
-	require.True(t, IsContextTimeoutError(&types.InternalServiceError{Message: ctx.Err().Error()}))
+	require.True(t, common.IsContextTimeoutError(ctx.Err()))
+	require.True(t, common.IsContextTimeoutError(&types.InternalServiceError{Message: ctx.Err().Error()}))
 
 	yarpcErr := yarpcerrors.DeadlineExceededErrorf("yarpc deadline exceeded")
-	require.True(t, IsContextTimeoutError(yarpcErr))
+	require.True(t, common.IsContextTimeoutError(yarpcErr))
 
-	require.False(t, IsContextTimeoutError(errors.New("some random error")))
+	require.False(t, common.IsContextTimeoutError(errors.New("some random error")))
 
 	ctx, cancel = context.WithCancel(context.Background())
 	cancel()
-	require.False(t, IsContextTimeoutError(ctx.Err()))
+	require.False(t, common.IsContextTimeoutError(ctx.Err()))
 }
 
 func TestConvertDynamicConfigMapPropertyToIntMap(t *testing.T) {
@@ -182,7 +221,7 @@ func TestConvertDynamicConfigMapPropertyToIntMap(t *testing.T) {
 		dcValue[strconv.Itoa(idx)] = value
 	}
 
-	intMap, err := ConvertDynamicConfigMapPropertyToIntMap(dcValue)
+	intMap, err := common.ConvertDynamicConfigMapPropertyToIntMap(dcValue)
 	require.NoError(t, err)
 	require.Len(t, intMap, 4)
 	for i := 0; i != 4; i++ {
@@ -200,7 +239,7 @@ func TestCreateHistoryStartWorkflowRequest_ExpirationTimeWithCron(t *testing.T) 
 		CronSchedule: "@every 300s",
 	}
 	now := time.Now()
-	startRequest, err := CreateHistoryStartWorkflowRequest(domainID, request, now, nil)
+	startRequest, err := common.CreateHistoryStartWorkflowRequest(domainID, request, now, nil)
 	require.NoError(t, err)
 	require.NotNil(t, startRequest)
 
@@ -264,9 +303,9 @@ func TestFirstDecisionTaskBackoffDuringStartWorkflow(t *testing.T) {
 		t.Run(strconv.Itoa(idx), func(t *testing.T) {
 			domainID := uuid.New()
 			request := &types.StartWorkflowExecutionRequest{
-				FirstRunAtTimeStamp: Int64Ptr(firstRunAtTimestampMap[tt.firstRunAtTimeCategory]),
-				DelayStartSeconds:   Int32Ptr(tt.delayStartSeconds),
-				JitterStartSeconds:  Int32Ptr(tt.jitterStartSeconds),
+				FirstRunAtTimeStamp: common.Int64Ptr(firstRunAtTimestampMap[tt.firstRunAtTimeCategory]),
+				DelayStartSeconds:   common.Int32Ptr(tt.delayStartSeconds),
+				JitterStartSeconds:  common.Int32Ptr(tt.jitterStartSeconds),
 			}
 			if tt.cron {
 				request.CronSchedule = "* * * * *"
@@ -278,7 +317,7 @@ func TestFirstDecisionTaskBackoffDuringStartWorkflow(t *testing.T) {
 			for i := 0; i < caseCount; i++ {
 				// Start at the minute boundary so we know what the backoff should be
 				startTime, _ := time.Parse(time.RFC3339, "2018-12-17T08:00:00+00:00")
-				startRequest, err := CreateHistoryStartWorkflowRequest(domainID, request, startTime, nil)
+				startRequest, err := common.CreateHistoryStartWorkflowRequest(domainID, request, startTime, nil)
 				require.NoError(t, err)
 				require.NotNil(t, startRequest)
 
@@ -355,8 +394,8 @@ func testExpirationTime(t *testing.T, delayStartSeconds int, cronSeconds int, ji
 			InitialIntervalInSeconds:    60,
 			ExpirationIntervalInSeconds: 60,
 		},
-		DelayStartSeconds:  Int32Ptr(int32(delayStartSeconds)),
-		JitterStartSeconds: Int32Ptr(int32(jitterSeconds)),
+		DelayStartSeconds:  common.Int32Ptr(int32(delayStartSeconds)),
+		JitterStartSeconds: common.Int32Ptr(int32(jitterSeconds)),
 	}
 	if cronSeconds > 0 {
 		request.CronSchedule = fmt.Sprintf("@every %ds", cronSeconds)
@@ -364,7 +403,7 @@ func testExpirationTime(t *testing.T, delayStartSeconds int, cronSeconds int, ji
 	minDelay := delayStartSeconds + cronSeconds
 	maxDelay := delayStartSeconds + 2*cronSeconds + jitterSeconds
 	now := time.Now()
-	startRequest, err := CreateHistoryStartWorkflowRequest(domainID, request, now, nil)
+	startRequest, err := common.CreateHistoryStartWorkflowRequest(domainID, request, now, nil)
 	require.NoError(t, err)
 	require.NotNil(t, startRequest)
 
@@ -400,7 +439,7 @@ func TestCreateHistoryStartWorkflowRequest_ExpirationTimeWithoutCron(t *testing.
 		},
 	}
 	now := time.Now()
-	startRequest, err := CreateHistoryStartWorkflowRequest(domainID, request, now, nil)
+	startRequest, err := common.CreateHistoryStartWorkflowRequest(domainID, request, now, nil)
 	require.NoError(t, err)
 	require.NotNil(t, startRequest)
 
@@ -414,13 +453,13 @@ func TestCreateHistoryStartWorkflowRequest_ExpirationTimeWithoutCron(t *testing.
 func TestConvertIndexedValueTypeToInternalType(t *testing.T) {
 	values := []types.IndexedValueType{types.IndexedValueTypeString, types.IndexedValueTypeKeyword, types.IndexedValueTypeInt, types.IndexedValueTypeDouble, types.IndexedValueTypeBool, types.IndexedValueTypeDatetime}
 	for _, expected := range values {
-		require.Equal(t, expected, ConvertIndexedValueTypeToInternalType(int(expected), nil))
-		require.Equal(t, expected, ConvertIndexedValueTypeToInternalType(float64(expected), nil))
+		require.Equal(t, expected, common.ConvertIndexedValueTypeToInternalType(int(expected), nil))
+		require.Equal(t, expected, common.ConvertIndexedValueTypeToInternalType(float64(expected), nil))
 
 		buffer, err := expected.MarshalText()
 		require.NoError(t, err)
-		require.Equal(t, expected, ConvertIndexedValueTypeToInternalType(buffer, nil))
-		require.Equal(t, expected, ConvertIndexedValueTypeToInternalType(string(buffer), nil))
+		require.Equal(t, expected, common.ConvertIndexedValueTypeToInternalType(buffer, nil))
+		require.Equal(t, expected, common.ConvertIndexedValueTypeToInternalType(string(buffer), nil))
 	}
 }
 
@@ -449,7 +488,7 @@ func TestValidateDomainUUID(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.msg, func(t *testing.T) {
-			err := ValidateDomainUUID(tc.domainUUID)
+			err := common.ValidateDomainUUID(tc.domainUUID)
 			if tc.valid {
 				require.NoError(t, err)
 			} else {
@@ -483,24 +522,24 @@ func TestConvertErrToGetTaskFailedCause(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		require.Equal(t, tc.expectedFailedCause, ConvertErrToGetTaskFailedCause(tc.err))
+		require.Equal(t, tc.expectedFailedCause, common.ConvertErrToGetTaskFailedCause(tc.err))
 	}
 }
 
 func TestToServiceTransientError(t *testing.T) {
 	t.Run("it converts nil", func(t *testing.T) {
-		assert.NoError(t, ToServiceTransientError(nil))
+		assert.NoError(t, common.ToServiceTransientError(nil))
 	})
 
 	t.Run("it keeps transient errors", func(t *testing.T) {
 		err := &types.InternalServiceError{}
-		assert.Equal(t, err, ToServiceTransientError(err))
-		assert.True(t, IsServiceTransientError(ToServiceTransientError(err)))
+		assert.Equal(t, err, common.ToServiceTransientError(err))
+		assert.True(t, common.IsServiceTransientError(common.ToServiceTransientError(err)))
 	})
 
 	t.Run("it converts errors to transient errors", func(t *testing.T) {
 		err := fmt.Errorf("error")
-		assert.True(t, IsServiceTransientError(ToServiceTransientError(err)))
+		assert.True(t, common.IsServiceTransientError(common.ToServiceTransientError(err)))
 	})
 }
 
@@ -508,21 +547,21 @@ func TestIntersectionStringSlice(t *testing.T) {
 	t.Run("it returns all items", func(t *testing.T) {
 		a := []string{"a", "b", "c"}
 		b := []string{"a", "b", "c"}
-		c := IntersectionStringSlice(a, b)
+		c := common.IntersectionStringSlice(a, b)
 		assert.ElementsMatch(t, []string{"a", "b", "c"}, c)
 	})
 
 	t.Run("it returns no item", func(t *testing.T) {
 		a := []string{"a", "b", "c"}
 		b := []string{"d", "e", "f"}
-		c := IntersectionStringSlice(a, b)
+		c := common.IntersectionStringSlice(a, b)
 		assert.ElementsMatch(t, []string{}, c)
 	})
 
 	t.Run("it returns intersection", func(t *testing.T) {
 		a := []string{"a", "b", "c"}
 		b := []string{"c", "b", "f"}
-		c := IntersectionStringSlice(a, b)
+		c := common.IntersectionStringSlice(a, b)
 		assert.ElementsMatch(t, []string{"c", "b"}, c)
 	})
 }
@@ -534,7 +573,7 @@ func TestAwaitWaitGroup(t *testing.T) {
 		wg.Add(1)
 		wg.Done()
 
-		got := AwaitWaitGroup(&wg, time.Second)
+		got := common.AwaitWaitGroup(&wg, time.Second)
 		require.True(t, got)
 	})
 
@@ -550,7 +589,7 @@ func TestAwaitWaitGroup(t *testing.T) {
 			wg.Done()
 		}()
 
-		got := AwaitWaitGroup(&wg, time.Microsecond)
+		got := common.AwaitWaitGroup(&wg, time.Microsecond)
 		require.False(t, got)
 
 		doneC <- struct{}{}
@@ -584,7 +623,7 @@ func TestIsValidIDLength(t *testing.T) {
 
 	t.Run("valid id length, no warnings", func(t *testing.T) {
 		logger := new(log.MockLogger)
-		got := IsValidIDLength(id, scope, 7, 10, metricCounter, domainName, logger, idTypeViolationTag)
+		got := common.IsValidIDLength(id, scope, 7, 10, metricCounter, domainName, logger, idTypeViolationTag)
 		require.True(t, got, "expected true, because id length is 5 and it's less than error limit 10")
 	})
 
@@ -592,7 +631,7 @@ func TestIsValidIDLength(t *testing.T) {
 		logger := new(log.MockLogger)
 		mockWarnCall(logger)
 
-		got := IsValidIDLength(id, scope, 4, 10, metricCounter, domainName, logger, idTypeViolationTag)
+		got := common.IsValidIDLength(id, scope, 4, 10, metricCounter, domainName, logger, idTypeViolationTag)
 		require.True(t, got, "expected true, because id length is 5 and it's less than error limit 10")
 
 		// logger should be called once
@@ -603,7 +642,7 @@ func TestIsValidIDLength(t *testing.T) {
 		logger := new(log.MockLogger)
 		mockWarnCall(logger)
 
-		got := IsValidIDLength(id, scope, 1, 4, metricCounter, domainName, logger, idTypeViolationTag)
+		got := common.IsValidIDLength(id, scope, 1, 4, metricCounter, domainName, logger, idTypeViolationTag)
 		require.False(t, got, "expected false, because id length is 5 and it's more than error limit 4")
 
 		// logger should be called once
@@ -614,12 +653,12 @@ func TestIsValidIDLength(t *testing.T) {
 func TestIsEntityNotExistsError(t *testing.T) {
 	t.Run("is entity not exists error", func(t *testing.T) {
 		err := &types.EntityNotExistsError{}
-		require.True(t, IsEntityNotExistsError(err), "expected true, because err is entity not exists error")
+		require.True(t, common.IsEntityNotExistsError(err), "expected true, because err is entity not exists error")
 	})
 
 	t.Run("is not entity not exists error", func(t *testing.T) {
 		err := fmt.Errorf("generic error")
-		require.False(t, IsEntityNotExistsError(err), "expected false, because err is a generic error")
+		require.False(t, common.IsEntityNotExistsError(err), "expected false, because err is a generic error")
 	})
 }
 
@@ -632,37 +671,37 @@ func TestCreateXXXRetryPolicyWithSetExpirationInterval(t *testing.T) {
 		wantSetExpirationInterval time.Duration
 	}{
 		"CreatePersistenceRetryPolicy": {
-			createFn:                  CreatePersistenceRetryPolicy,
+			createFn:                  common.CreatePersistenceRetryPolicy,
 			wantInitialInterval:       retryPersistenceOperationInitialInterval,
 			wantMaximumInterval:       retryPersistenceOperationMaxInterval,
 			wantSetExpirationInterval: retryPersistenceOperationExpirationInterval,
 		},
 		"CreateHistoryServiceRetryPolicy": {
-			createFn:                  CreateHistoryServiceRetryPolicy,
+			createFn:                  common.CreateHistoryServiceRetryPolicy,
 			wantInitialInterval:       historyServiceOperationInitialInterval,
 			wantMaximumInterval:       historyServiceOperationMaxInterval,
 			wantSetExpirationInterval: historyServiceOperationExpirationInterval,
 		},
 		"CreateMatchingServiceRetryPolicy": {
-			createFn:                  CreateMatchingServiceRetryPolicy,
+			createFn:                  common.CreateMatchingServiceRetryPolicy,
 			wantInitialInterval:       matchingServiceOperationInitialInterval,
 			wantMaximumInterval:       matchingServiceOperationMaxInterval,
 			wantSetExpirationInterval: matchingServiceOperationExpirationInterval,
 		},
 		"CreateFrontendServiceRetryPolicy": {
-			createFn:                  CreateFrontendServiceRetryPolicy,
+			createFn:                  common.CreateFrontendServiceRetryPolicy,
 			wantInitialInterval:       frontendServiceOperationInitialInterval,
 			wantMaximumInterval:       frontendServiceOperationMaxInterval,
 			wantSetExpirationInterval: frontendServiceOperationExpirationInterval,
 		},
 		"CreateAdminServiceRetryPolicy": {
-			createFn:                  CreateAdminServiceRetryPolicy,
+			createFn:                  common.CreateAdminServiceRetryPolicy,
 			wantInitialInterval:       adminServiceOperationInitialInterval,
 			wantMaximumInterval:       adminServiceOperationMaxInterval,
 			wantSetExpirationInterval: adminServiceOperationExpirationInterval,
 		},
 		"CreateReplicationServiceBusyRetryPolicy": {
-			createFn:                  CreateReplicationServiceBusyRetryPolicy,
+			createFn:                  common.CreateReplicationServiceBusyRetryPolicy,
 			wantInitialInterval:       replicationServiceBusyInitialInterval,
 			wantMaximumInterval:       replicationServiceBusyMaxInterval,
 			wantSetExpirationInterval: replicationServiceBusyExpirationInterval,
@@ -687,13 +726,13 @@ func TestCreateXXXRetryPolicyWithMaximumAttempts(t *testing.T) {
 		wantMaximumAttempts int
 	}{
 		"CreateDlqPublishRetryPolicy": {
-			createFn:            CreateDlqPublishRetryPolicy,
+			createFn:            common.CreateDlqPublishRetryPolicy,
 			wantInitialInterval: retryKafkaOperationInitialInterval,
 			wantMaximumInterval: retryKafkaOperationMaxInterval,
 			wantMaximumAttempts: retryKafkaOperationMaxAttempts,
 		},
 		"CreateTaskProcessingRetryPolicy": {
-			createFn:            CreateTaskProcessingRetryPolicy,
+			createFn:            common.CreateTaskProcessingRetryPolicy,
 			wantInitialInterval: retryTaskProcessingInitialInterval,
 			wantMaximumInterval: retryTaskProcessingMaxInterval,
 			wantMaximumAttempts: retryTaskProcessingMaxAttempts,
@@ -742,7 +781,7 @@ func TestValidateRetryPolicy_Success(t *testing.T) {
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
-			require.NoError(t, ValidateRetryPolicy(policy))
+			require.NoError(t, common.ValidateRetryPolicy(policy))
 		})
 	}
 }
@@ -818,7 +857,7 @@ func TestValidateRetryPolicy_Error(t *testing.T) {
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
-			got := ValidateRetryPolicy(c.policy)
+			got := common.ValidateRetryPolicy(c.policy)
 			require.Error(t, got)
 			require.ErrorContains(t, got, c.wantErr.Message)
 		})
@@ -833,7 +872,7 @@ func TestConvertGetTaskFailedCauseToErr(t *testing.T) {
 		types.GetTaskFailedCauseUncategorized:      &types.InternalServiceError{Message: "uncategorized error"},
 	} {
 		t.Run(cause.String(), func(t *testing.T) {
-			gotErr := ConvertGetTaskFailedCauseToErr(cause)
+			gotErr := common.ConvertGetTaskFailedCauseToErr(cause)
 			require.Equal(t, wantErr, gotErr)
 		})
 	}
@@ -858,7 +897,7 @@ func TestWorkflowIDToHistoryShard(t *testing.T) {
 		},
 	} {
 		t.Run(fmt.Sprintf("%s-%v", c.workflowID, c.numberOfShards), func(t *testing.T) {
-			got := WorkflowIDToHistoryShard(c.workflowID, c.numberOfShards)
+			got := common.WorkflowIDToHistoryShard(c.workflowID, c.numberOfShards)
 			require.Equal(t, c.want, got)
 		})
 	}
@@ -883,7 +922,7 @@ func TestDomainIDToHistoryShard(t *testing.T) {
 		},
 	} {
 		t.Run(fmt.Sprintf("%s-%v", c.domainID, c.numberOfShards), func(t *testing.T) {
-			got := DomainIDToHistoryShard(c.domainID, c.numberOfShards)
+			got := common.DomainIDToHistoryShard(c.domainID, c.numberOfShards)
 			require.Equal(t, c.want, got)
 		})
 	}
@@ -896,7 +935,7 @@ func TestGenerateRandomString(t *testing.T) {
 		10: 10,
 	} {
 		t.Run(fmt.Sprintf("%d", input), func(t *testing.T) {
-			got := GenerateRandomString(input)
+			got := common.GenerateRandomString(input)
 			require.Len(t, got, wantSize)
 		})
 	}
@@ -904,71 +943,71 @@ func TestGenerateRandomString(t *testing.T) {
 
 func TestIsValidContext(t *testing.T) {
 	t.Run("background context", func(t *testing.T) {
-		require.NoError(t, IsValidContext(context.Background()))
+		require.NoError(t, common.IsValidContext(context.Background()))
 	})
 	t.Run("canceled context", func(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		cancel()
-		got := IsValidContext(ctx)
+		got := common.IsValidContext(ctx)
 		require.Error(t, got)
 		require.ErrorIs(t, got, context.Canceled)
 	})
 	t.Run("deadline exceeded context", func(t *testing.T) {
 		ctx, _ := context.WithTimeout(context.Background(), -time.Second)
-		got := IsValidContext(ctx)
+		got := common.IsValidContext(ctx)
 		require.Error(t, got)
 		require.ErrorIs(t, got, context.DeadlineExceeded)
 	})
 	t.Run("context with deadline exceeded contextExpireThreshold", func(t *testing.T) {
 		ctx, _ := context.WithTimeout(context.Background(), contextExpireThreshold/2)
-		got := IsValidContext(ctx)
+		got := common.IsValidContext(ctx)
 		require.Error(t, got)
 		require.ErrorIs(t, got, context.DeadlineExceeded, "context.DeadlineExceeded should be returned, because context timeout is not later than now + contextExpireThreshold")
 	})
 	t.Run("valid context", func(t *testing.T) {
 		ctx, _ := context.WithTimeout(context.Background(), contextExpireThreshold*2)
-		require.NoError(t, IsValidContext(ctx), "nil should be returned, because context timeout is later than now + contextExpireThreshold")
+		require.NoError(t, common.IsValidContext(ctx), "nil should be returned, because context timeout is later than now + contextExpireThreshold")
 	})
 }
 
 func TestCreateChildContext(t *testing.T) {
 	t.Run("nil parent", func(t *testing.T) {
-		gotCtx, gotFunc := CreateChildContext(nil, 0)
+		gotCtx, gotFunc := common.CreateChildContext(nil, 0)
 		require.Nil(t, gotCtx)
-		require.Equal(t, funcName(emptyCancelFunc), funcName(gotFunc))
+		require.NotNil(t, gotFunc)
 	})
 	t.Run("canceled parent", func(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		cancel()
-		gotCtx, gotFunc := CreateChildContext(ctx, 0)
+		gotCtx, gotFunc := common.CreateChildContext(ctx, 0)
 		require.Equal(t, ctx, gotCtx)
-		require.Equal(t, funcName(emptyCancelFunc), funcName(gotFunc))
+		require.NotNil(t, gotFunc)
 	})
 	t.Run("non-canceled parent without deadline", func(t *testing.T) {
 		ctx, _ := context.WithCancel(context.Background())
-		gotCtx, gotFunc := CreateChildContext(ctx, 0)
+		gotCtx, gotFunc := common.CreateChildContext(ctx, 0)
 		require.Equal(t, ctx, gotCtx)
-		require.Equal(t, funcName(emptyCancelFunc), funcName(gotFunc))
+		require.NotNil(t, gotFunc)
 	})
 	t.Run("context with deadline exceeded", func(t *testing.T) {
 		ctx, _ := context.WithTimeout(context.Background(), -time.Second)
-		gotCtx, gotFunc := CreateChildContext(ctx, 0)
+		gotCtx, gotFunc := common.CreateChildContext(ctx, 0)
 		require.Equal(t, ctx, gotCtx)
-		require.Equal(t, funcName(emptyCancelFunc), funcName(gotFunc))
+		require.NotNil(t, gotFunc)
 	})
 
 	t.Run("tailroom is less or equal to 0", func(t *testing.T) {
 		testCase := func(t *testing.T, tailroom float64) {
 			deadline := time.Now().Add(time.Hour)
 			ctx, _ := context.WithDeadline(context.Background(), deadline)
-			gotCtx, gotFunc := CreateChildContext(ctx, tailroom)
+			gotCtx, gotFunc := common.CreateChildContext(ctx, tailroom)
 
 			gotDeadline, ok := gotCtx.Deadline()
 			require.True(t, ok)
 			require.Equal(t, deadline, gotDeadline, "deadline should be equal to parent deadline")
 
 			require.NotEqual(t, ctx, gotCtx)
-			require.NotEqual(t, funcName(emptyCancelFunc), funcName(gotFunc))
+			require.NotNil(t, gotFunc)
 		}
 
 		t.Run("0", func(t *testing.T) {
@@ -988,7 +1027,7 @@ func TestCreateChildContext(t *testing.T) {
 			// we can't mock time.Now, but we know that the deadline should be in
 			// range between the start and finish of function's execution
 			beforeNow := time.Now()
-			gotCtx, gotFunc := CreateChildContext(ctx, tailroom)
+			gotCtx, _ := common.CreateChildContext(ctx, tailroom)
 			afterNow := time.Now()
 
 			gotDeadline, ok := gotCtx.Deadline()
@@ -1001,7 +1040,6 @@ func TestCreateChildContext(t *testing.T) {
 			require.LessOrEqual(t, beforeNow, gotDeadline)
 
 			require.NotEqual(t, ctx, gotCtx)
-			require.NotEqual(t, funcName(emptyCancelFunc), funcName(gotFunc))
 		}
 		t.Run("1", func(t *testing.T) {
 			testCase(t, 1)
@@ -1015,7 +1053,7 @@ func TestCreateChildContext(t *testing.T) {
 		deadline := now.Add(time.Hour)
 
 		ctx, _ := context.WithDeadline(context.Background(), deadline)
-		gotCtx, gotFunc := CreateChildContext(ctx, 0.5)
+		gotCtx, _ := common.CreateChildContext(ctx, 0.5)
 
 		gotDeadline, ok := gotCtx.Deadline()
 		require.True(t, ok)
@@ -1032,7 +1070,6 @@ func TestCreateChildContext(t *testing.T) {
 		require.LessOrEqual(t, minDeadline, gotDeadline)
 
 		require.NotEqual(t, ctx, gotCtx)
-		require.NotEqual(t, funcName(emptyCancelFunc), funcName(gotFunc))
 	})
 }
 
@@ -1114,7 +1151,7 @@ func TestDeserializeSearchAttributeValue_Success(t *testing.T) {
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
-			gotValue, err := DeserializeSearchAttributeValue([]byte(c.value), c.valueType)
+			gotValue, err := common.DeserializeSearchAttributeValue([]byte(c.value), c.valueType)
 			require.NoError(t, err)
 			require.Equal(t, c.wantValue, gotValue)
 		})
@@ -1165,7 +1202,7 @@ func TestDeserializeSearchAttributeValue_Error(t *testing.T) {
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
-			gotValue, err := DeserializeSearchAttributeValue([]byte(c.value), c.valueType)
+			gotValue, err := common.DeserializeSearchAttributeValue([]byte(c.value), c.valueType)
 			require.Error(t, err)
 			require.ErrorContains(t, err, c.wantErrorMsg)
 			require.Nil(t, gotValue)
@@ -1187,12 +1224,12 @@ const someBytesArraySize = 17
 var someBytesArray = []byte("some random bytes")
 
 func TestGetSizeOfMapStringToByteArray(t *testing.T) {
-	require.Equal(t, someMapStringToByteArraySize, GetSizeOfMapStringToByteArray(someMapStringToByteArray))
+	require.Equal(t, someMapStringToByteArraySize, common.GetSizeOfMapStringToByteArray(someMapStringToByteArray))
 }
 
 func TestGetSizeOfHistoryEvent_NilEvent(t *testing.T) {
-	require.Equal(t, uint64(0), GetSizeOfHistoryEvent(nil))
-	require.Equal(t, uint64(0), GetSizeOfHistoryEvent(&types.HistoryEvent{}), "should be zero, because eventType is nil")
+	require.Equal(t, uint64(0), common.GetSizeOfHistoryEvent(nil))
+	require.Equal(t, uint64(0), common.GetSizeOfHistoryEvent(&types.HistoryEvent{}), "should be zero, because eventType is nil")
 }
 
 func TestGetSizeOfHistoryEvent(t *testing.T) {
@@ -1483,7 +1520,7 @@ func TestGetSizeOfHistoryEvent(t *testing.T) {
 				c.event.EventType = &eventType
 			}
 
-			got := GetSizeOfHistoryEvent(c.event)
+			got := common.GetSizeOfHistoryEvent(c.event)
 			require.Equal(t, c.want, got)
 		})
 	}
@@ -1512,7 +1549,7 @@ func TestIsAdvancedVisibilityWritingEnabled(t *testing.T) {
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
-			got := IsAdvancedVisibilityWritingEnabled(c.advancedVisibilityWritingMode, c.isAdvancedVisConfigExist)
+			got := common.IsAdvancedVisibilityWritingEnabled(c.advancedVisibilityWritingMode, c.isAdvancedVisConfigExist)
 			require.Equal(t, c.want, got)
 		})
 	}
@@ -1528,14 +1565,14 @@ func TestValidateLongPollContextTimeout(t *testing.T) {
 			"Context timeout not set for long poll API.",
 			[]tag.Tag{
 				tag.WorkflowHandlerName(handlerName),
-				tag.Error(ErrContextTimeoutNotSet),
+				tag.Error(common.ErrContextTimeoutNotSet),
 			},
 		)
 
 		ctx := context.Background()
-		got := ValidateLongPollContextTimeout(ctx, handlerName, logger)
+		got := common.ValidateLongPollContextTimeout(ctx, handlerName, logger)
 		require.Error(t, got)
-		require.ErrorIs(t, got, ErrContextTimeoutNotSet)
+		require.ErrorIs(t, got, common.ErrContextTimeoutNotSet)
 		logger.AssertExpectations(t)
 	})
 
@@ -1548,9 +1585,9 @@ func TestValidateLongPollContextTimeout(t *testing.T) {
 			mock.Anything,
 		)
 		ctx, _ := context.WithTimeout(context.Background(), time.Second)
-		got := ValidateLongPollContextTimeout(ctx, handlerName, logger)
+		got := common.ValidateLongPollContextTimeout(ctx, handlerName, logger)
 		require.Error(t, got)
-		require.ErrorIs(t, got, ErrContextTimeoutTooShort, "should return ErrContextTimeoutTooShort, because context timeout is less than MinLongPollTimeout")
+		require.ErrorIs(t, got, common.ErrContextTimeoutTooShort, "should return ErrContextTimeoutTooShort, because context timeout is less than MinLongPollTimeout")
 		logger.AssertExpectations(t)
 
 	})
@@ -1564,7 +1601,7 @@ func TestValidateLongPollContextTimeout(t *testing.T) {
 			mock.Anything,
 		)
 		ctx, _ := context.WithTimeout(context.Background(), 15*time.Second)
-		got := ValidateLongPollContextTimeout(ctx, handlerName, logger)
+		got := common.ValidateLongPollContextTimeout(ctx, handlerName, logger)
 		require.NoError(t, got)
 		logger.AssertExpectations(t)
 
@@ -1573,7 +1610,7 @@ func TestValidateLongPollContextTimeout(t *testing.T) {
 	t.Run("context timeout is set, but greater than CriticalLongPollTimeout", func(t *testing.T) {
 		logger := new(log.MockLogger)
 		ctx, _ := context.WithTimeout(context.Background(), 30*time.Second)
-		got := ValidateLongPollContextTimeout(ctx, handlerName, logger)
+		got := common.ValidateLongPollContextTimeout(ctx, handlerName, logger)
 		require.NoError(t, got)
 		logger.AssertExpectations(t)
 	})
@@ -1588,7 +1625,7 @@ func TestDurationToDays(t *testing.T) {
 		48 * time.Hour: 2,
 	} {
 		t.Run(duration.String(), func(t *testing.T) {
-			got := DurationToDays(duration)
+			got := common.DurationToDays(duration)
 			require.Equal(t, want, got)
 		})
 	}
@@ -1602,7 +1639,7 @@ func TestDurationToSeconds(t *testing.T) {
 		2 * time.Second:             2,
 	} {
 		t.Run(duration.String(), func(t *testing.T) {
-			got := DurationToSeconds(duration)
+			got := common.DurationToSeconds(duration)
 			require.Equal(t, want, got)
 		})
 	}
@@ -1615,7 +1652,7 @@ func TestDaysToDuration(t *testing.T) {
 		2: 48 * time.Hour,
 	} {
 		t.Run(strconv.Itoa(int(days)), func(t *testing.T) {
-			got := DaysToDuration(days)
+			got := common.DaysToDuration(days)
 			require.Equal(t, want, got)
 		})
 	}
@@ -1628,13 +1665,74 @@ func TestSecondsToDuration(t *testing.T) {
 		2: 2 * time.Second,
 	} {
 		t.Run(strconv.Itoa(int(seconds)), func(t *testing.T) {
-			got := SecondsToDuration(seconds)
+			got := common.SecondsToDuration(seconds)
 			require.Equal(t, want, got)
 		})
 	}
 }
 
 func TestNewPerTaskListScope(t *testing.T) {
-	assert.NotNil(t, NewPerTaskListScope("test-domain", "test-tasklist", types.TaskListKindNormal, metrics.NewNoopMetricsClient(), 0))
-	assert.NotNil(t, NewPerTaskListScope("test-domain", "test-tasklist", types.TaskListKindSticky, metrics.NewNoopMetricsClient(), 0))
+	assert.NotNil(t, common.NewPerTaskListScope("test-domain", "test-tasklist", types.TaskListKindNormal, metrics.NewNoopMetricsClient(), 0))
+	assert.NotNil(t, common.NewPerTaskListScope("test-domain", "test-tasklist", types.TaskListKindSticky, metrics.NewNoopMetricsClient(), 0))
+}
+
+func TestCheckEventBlobSizeLimit(t *testing.T) {
+	for name, c := range map[string]struct {
+		blobSize int
+		warnSize int
+		errSize  int
+		wantErr  error
+	}{
+		"blob size is less than limit": {
+			blobSize: 10,
+			warnSize: 20,
+			errSize:  30,
+			wantErr:  nil,
+		},
+		"blob size is greater than warn limit": {
+			blobSize: 21,
+			warnSize: 20,
+			errSize:  30,
+			wantErr:  nil,
+		},
+		"blob size is greater than error limit": {
+			blobSize: 31,
+			warnSize: 20,
+			errSize:  30,
+			wantErr:  common.ErrBlobSizeExceedsLimit,
+		},
+		"error limit is less then warn limit": {
+			blobSize: 21,
+			warnSize: 30,
+			errSize:  20,
+			wantErr:  common.ErrBlobSizeExceedsLimit,
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			testScope := tally.NewTestScope("test", nil)
+			metricsClient := metrics.NewClient(testScope, metrics.History)
+			logger := testlogger.New(t)
+
+			const (
+				domainID   = "testDomainID"
+				domainName = "testDomainName"
+				workflowID = "testWorkflowID"
+				runID      = "testRunID"
+			)
+
+			got := common.CheckEventBlobSizeLimit(
+				c.blobSize,
+				c.warnSize,
+				c.errSize,
+				domainID,
+				domainName,
+				workflowID,
+				runID,
+				metricsClient.Scope(1),
+				logger,
+				tag.OperationName("testOperation"),
+			)
+			require.Equal(t, c.wantErr, got)
+		})
+	}
 }
