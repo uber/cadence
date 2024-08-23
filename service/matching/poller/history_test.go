@@ -113,5 +113,5 @@ func TestGetPollerIsolationGroups(t *testing.T) {
 		history: mockCache,
 	}
 	groups := p.GetPollerIsolationGroups(time.UnixMilli(500))
-	assert.Equal(t, map[string]struct{}{"dca1": struct{}{}}, groups)
+	assert.Equal(t, map[string]int{"dca1": 1}, groups)
 }
