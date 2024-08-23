@@ -624,9 +624,6 @@ func CheckEventBlobSizeLimit(
 			tag.WorkflowSize(int64(actualSize)),
 			blobSizeViolationOperationTag,
 		}
-		if logger != nil {
-			logger.Warn("Blob size close to the limit.", tags...)
-		}
 
 		if actualSize > errorLimit {
 			scope.Tagged(metrics.DomainTag(domainName)).IncCounter(metrics.EventBlobSizeExceedLimit)
@@ -634,6 +631,8 @@ func CheckEventBlobSizeLimit(
 				logger.Error("Blob size exceeds limit.", tags...)
 			}
 			return ErrBlobSizeExceedsLimit
+		} else if logger != nil {
+			logger.Warn("Blob size close to the limit.", tags...)
 		}
 	}
 	return nil
