@@ -40,6 +40,23 @@ type readerImpl[T any] struct {
 	comparisonFn       ComparisonFn[*T]
 }
 
+func NewDualReaderWithDiffComparison[T any](
+	rolloutCtrl dynamicconfig.StringPropertyFn,
+	doResultComparison dynamicconfig.BoolPropertyFn,
+	log log.Logger,
+	scope metrics.Scope,
+	backgroundTimeout time.Duration,
+) Reader[T] {
+	return &readerImpl[T]{
+		log:                log,
+		scope:              scope,
+		rolloutCtrl:        rolloutCtrl,
+		doResultComparison: doResultComparison,
+		backgroundTimeout:  backgroundTimeout,
+		comparisonFn:       defaultComparisonFn[*T],
+	}
+}
+
 func NewDualReaderWithCustomComparisonFn[T any](
 	rolloutCtrl dynamicconfig.StringPropertyFn,
 	doResultComparison dynamicconfig.BoolPropertyFn,
