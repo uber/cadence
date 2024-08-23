@@ -57,6 +57,8 @@ func ParseFilter(filterName string) Filter {
 		return WorkflowType
 	case "ratelimitKey":
 		return RatelimitKey
+	case "operation":
+		return Operation
 	default:
 		return UnknownFilter
 	}
@@ -73,6 +75,7 @@ var filters = []string{
 	"workflowID",
 	"workflowType",
 	"ratelimitKey",
+	"operation",
 }
 
 const (
