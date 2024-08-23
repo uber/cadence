@@ -517,7 +517,7 @@ func boostRPS(target, fallback rate.Limit, weight float64, usedRPS float64) rate
 			// currently this isn't really a concern, but this could be adjusted
 			// by num-of-low-hosts or something if needed.
 			float64(baseline)+unused,
-			// can't exceed te local fallback value though.
+			// can't exceed the local fallback value though.
 			// this is also what would be allowed if this limit was garbage collected,
 			// so it's already established as a "safe enough" value.
 			float64(fallback),
@@ -525,8 +525,8 @@ func boostRPS(target, fallback rate.Limit, weight float64, usedRPS float64) rate
 		return rate.Limit(boosted)
 	}
 
-	// any host with a weighted target higher than this value will already be
-	// allowing more than the fallback's worth of growth room, so they don't
-	// need this boost.
+	// any host with a weighted target higher than the fallback will already be
+	// allowing a relatively large "growth room" on top of its actual usage, so
+	// they don't need this boost.
 	return baseline
 }
