@@ -56,7 +56,7 @@ type (
 		// optional to use Signed Certificates over https
 		TLS TLS `yaml:"tls"`
 		// optional to add custom headers
-		CustomHeaders CustomHeaders `yaml:"customHeaders"`
+		CustomHeaders map[string]string `yaml:"customHeaders,omitempty"`
 	}
 
 	// AWSSigning contains config to enable signing,
@@ -83,12 +83,6 @@ type (
 	// See more in https://github.com/aws/aws-sdk-go/blob/3974dd034387fbc7cf09c8cd2400787ce07f3285/aws/session/session.go#L147
 	AWSEnvironmentCredential struct {
 		Region string `yaml:"region"`
-	}
-
-	// CustomHeaders will add custom http header when create OpenSearch client
-	CustomHeaders struct {
-		Caller  string `yaml:"caller"`
-		Service string `yaml:"service"`
 	}
 )
 
@@ -146,4 +140,12 @@ func (a AWSSigning) GetCredentials() (*credentials.Credentials, *string, error) 
 	)
 
 	return awsCredentials, &a.StaticCredential.Region, nil
+}
+
+// GetCustomHeader returns the header for the specified key
+func (cfg *ElasticSearchConfig) GetCustomHeader(headerKey string) string {
+	if headerValue, ok := cfg.CustomHeaders[headerKey]; ok {
+		return headerValue
+	}
+	return ""
 }
