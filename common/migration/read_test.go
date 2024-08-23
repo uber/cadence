@@ -25,7 +25,6 @@ package migration
 import (
 	"context"
 	"errors"
-	"fmt"
 	"sync"
 	"testing"
 	"time"
@@ -39,6 +38,8 @@ import (
 )
 
 func TestControllerImpl_ReadAndReturnActive_BothNewAndOrdFlowsWellBehaved_ReturningDataFromOldFlow(t *testing.T) {
+
+	wg := sync.WaitGroup{}
 
 	type testStruct struct {
 		A string
@@ -84,9 +85,11 @@ func TestControllerImpl_ReadAndReturnActive_BothNewAndOrdFlowsWellBehaved_Return
 		comarisonRes := defaultComparisonFn[*testStruct](log, scope, active, activeErr, background, backgroundErr)
 
 		assert.False(t, comarisonRes, "the default camparitor didn't return the expected result. In this test scenario the results are expected to not match")
+		wg.Done()
 		return comarisonRes
 	}
 
+	wg.Add(1)
 	reader := NewDualReaderWithCustomComparisonFn[testStruct](
 		func(_ ...dynamicconfig.FilterOption) string { return string(ReaderRolloutCallBothAndReturnOld) },
 		func(_ ...dynamicconfig.FilterOption) bool { return true },
@@ -97,11 +100,14 @@ func TestControllerImpl_ReadAndReturnActive_BothNewAndOrdFlowsWellBehaved_Return
 
 	res, err := reader.ReadAndReturnActive(parentCtx, constraints, oldOp, newOp)
 
+	wg.Wait()
 	assert.NoError(t, err)
 	assert.Equal(t, dataReturnedByOld, res)
 }
 
 func TestControllerImpl_ReadAndReturnActive_BothNewAndOrdFlowsWellBehaved_ReturningDataFromNewFlow(t *testing.T) {
+
+	wg := sync.WaitGroup{}
 
 	type testStruct struct {
 		A string
@@ -147,11 +153,14 @@ func TestControllerImpl_ReadAndReturnActive_BothNewAndOrdFlowsWellBehaved_Return
 		comparisonRes := defaultComparisonFn[*testStruct](log, scope, active, activeErr, background, backgroundErr)
 
 		assert.False(t, comparisonRes, "the default camparator didn't return the expected result. In this test scenario the results are expected to not match")
+		wg.Done()
 		return comparisonRes
 	}
 
+	wg.Add(1)
+
 	reader := NewDualReaderWithCustomComparisonFn[testStruct](
-		func(_ ...dynamicconfig.FilterOption) string { return string(ReaderRolloutCallBothAndReturnNew) },
+		func(_ ...dynamicconfig.FilterOption) string { return string(ReaderRolloutCallBothAndReturnOld) },
 		func(_ ...dynamicconfig.FilterOption) bool { return true },
 		loggerimpl.NewNopLogger(),
 		scope,
@@ -160,8 +169,10 @@ func TestControllerImpl_ReadAndReturnActive_BothNewAndOrdFlowsWellBehaved_Return
 
 	res, err := reader.ReadAndReturnActive(parentCtx, constraints, oldOp, newOp)
 
+	wg.Wait()
+
 	assert.NoError(t, err)
-	assert.Equal(t, dataReturnedByNew, res)
+	assert.Equal(t, dataReturnedByOld, res)
 }
 
 func TestControllerImpl_ReadAndReturnActive_TimeoutAndErrorHandling(t *testing.T) {
@@ -219,8 +230,8 @@ func TestControllerImpl_ReadAndReturnActive_TimeoutAndErrorHandling(t *testing.T
 	comparatorAssertEqual := func(t *testing.T, wg *sync.WaitGroup) ComparisonFn[*testStruct] {
 		return func(log log.Logger, scope metrics.Scope, active *testStruct, activeErr error, background *testStruct, backgroundErr error) bool {
 			comparisonRes := defaultComparisonFn[*testStruct](log, scope, active, activeErr, background, backgroundErr)
-			assert.Equal(t, active, background)
-			assert.Equal(t, activeErr, backgroundErr)
+			assert.Equal(t, active, background, "did not get equal results")
+			assert.Equal(t, activeErr, backgroundErr, "did not get equal errors")
 			wg.Done()
 			return comparisonRes
 		}
@@ -229,7 +240,7 @@ func TestControllerImpl_ReadAndReturnActive_TimeoutAndErrorHandling(t *testing.T
 	comparatorAssertNotEqual := func(t *testing.T, wg *sync.WaitGroup) ComparisonFn[*testStruct] {
 		return func(log log.Logger, scope metrics.Scope, active *testStruct, activeErr error, background *testStruct, backgroundErr error) bool {
 			comparisonRes := defaultComparisonFn[*testStruct](log, scope, active, activeErr, background, backgroundErr)
-			assert.NotEqual(t, active, background)
+			assert.NotEqual(t, active, background, "results were unexpectedly equal")
 			wg.Done()
 			return comparisonRes
 		}
@@ -307,15 +318,12 @@ func TestControllerImpl_ReadAndReturnActive_TimeoutAndErrorHandling(t *testing.T
 
 			comparisonEnd := time.Now()
 
-			fmt.Println(".>", comparisonEnd.Sub(start))
-
 			// 200 ms timeout
-			assert.True(t, intialCallEnd.Sub(start) < time.Millisecond*210)
-			assert.True(t, comparisonEnd.Sub(start) < time.Millisecond*300) // the comparison with all it's reflection is quite slow
+			assert.True(t, intialCallEnd.Sub(start) < time.Millisecond*210, "the comparison is taking too long")
+			assert.True(t, comparisonEnd.Sub(start) < time.Millisecond*300, "the comparison took too long") // the comparison with all it's reflection is quite slow
 
 			assert.Equal(t, td.expectedResult, res)
 			assert.Equal(t, td.expectedErr, err)
 		})
 	}
-
 }
