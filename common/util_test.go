@@ -26,7 +26,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"golang.org/x/exp/maps"
 	"math/rand"
 	"reflect"
 	"runtime"
@@ -41,6 +40,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/uber-go/tally"
 	"go.uber.org/yarpc/yarpcerrors"
+	"golang.org/x/exp/maps"
 
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/log"
