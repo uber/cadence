@@ -26,6 +26,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"golang.org/x/exp/maps"
 	"math/rand"
 	"reflect"
 	"runtime"
@@ -1642,10 +1643,12 @@ func TestNewPerTaskListScope(t *testing.T) {
 
 func TestCheckEventBlobSizeLimit(t *testing.T) {
 	for name, c := range map[string]struct {
-		blobSize int
-		warnSize int
-		errSize  int
-		wantErr  error
+		blobSize      int
+		warnSize      int
+		errSize       int
+		wantErr       error
+		prepareLogger func(*log.MockLogger)
+		assertMetrics func(tally.Snapshot)
 	}{
 		"blob size is less than limit": {
 			blobSize: 10,
@@ -1658,24 +1661,46 @@ func TestCheckEventBlobSizeLimit(t *testing.T) {
 			warnSize: 20,
 			errSize:  30,
 			wantErr:  nil,
+			prepareLogger: func(logger *log.MockLogger) {
+				logger.On("Warn", "Blob size close to the limit.", mock.Anything).Once()
+			},
 		},
 		"blob size is greater than error limit": {
 			blobSize: 31,
 			warnSize: 20,
 			errSize:  30,
 			wantErr:  ErrBlobSizeExceedsLimit,
+			prepareLogger: func(logger *log.MockLogger) {
+				logger.On("Error", "Blob size exceeds limit.", mock.Anything).Once()
+			},
+			assertMetrics: func(snapshot tally.Snapshot) {
+				counters := snapshot.Counters()
+				assert.Len(t, counters, 1)
+				values := maps.Values(counters)
+				assert.Equal(t, "test.blob_size_exceed_limit", values[0].Name())
+				assert.Equal(t, int64(1), values[0].Value())
+			},
 		},
 		"error limit is less then warn limit": {
 			blobSize: 21,
 			warnSize: 30,
 			errSize:  20,
 			wantErr:  ErrBlobSizeExceedsLimit,
+			prepareLogger: func(logger *log.MockLogger) {
+				logger.On("Warn", "Error limit is less than warn limit.", mock.Anything).Once()
+				logger.On("Error", "Blob size exceeds limit.", mock.Anything).Once()
+			},
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
 			testScope := tally.NewTestScope("test", nil)
 			metricsClient := metrics.NewClient(testScope, metrics.History)
-			logger := log.NewNoop()
+			logger := &log.MockLogger{}
+			defer logger.AssertExpectations(t)
+
+			if c.prepareLogger != nil {
+				c.prepareLogger(logger)
+			}
 
 			const (
 				domainID   = "testDomainID"
@@ -1697,6 +1722,9 @@ func TestCheckEventBlobSizeLimit(t *testing.T) {
 				tag.OperationName("testOperation"),
 			)
 			require.Equal(t, c.wantErr, got)
+			if c.assertMetrics != nil {
+				c.assertMetrics(testScope.Snapshot())
+			}
 		})
 	}
 }

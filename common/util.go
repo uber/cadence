@@ -613,27 +613,30 @@ func CheckEventBlobSizeLimit(
 		warnLimit = errorLimit
 	}
 
-	if actualSize > warnLimit {
-		tags := []tag.Tag{
-			tag.WorkflowDomainName(domainName),
-			tag.WorkflowDomainID(domainID),
-			tag.WorkflowID(workflowID),
-			tag.WorkflowRunID(runID),
-			tag.WorkflowSize(int64(actualSize)),
-			blobSizeViolationOperationTag,
-		}
-
-		if actualSize > errorLimit {
-			scope.Tagged(metrics.DomainTag(domainName)).IncCounter(metrics.EventBlobSizeExceedLimit)
-
-			logger.Error("Blob size exceeds limit.", tags...)
-
-			return ErrBlobSizeExceedsLimit
-		} else {
-			logger.Warn("Blob size close to the limit.", tags...)
-		}
+	if actualSize < warnLimit {
+		return nil
 	}
-	return nil
+
+	tags := []tag.Tag{
+		tag.WorkflowDomainName(domainName),
+		tag.WorkflowDomainID(domainID),
+		tag.WorkflowID(workflowID),
+		tag.WorkflowRunID(runID),
+		tag.WorkflowSize(int64(actualSize)),
+		blobSizeViolationOperationTag,
+	}
+
+	if actualSize < errorLimit {
+		logger.Warn("Blob size close to the limit.", tags...)
+
+		return nil
+	}
+
+	scope.Tagged(metrics.DomainTag(domainName)).IncCounter(metrics.EventBlobSizeExceedLimit)
+
+	logger.Error("Blob size exceeds limit.", tags...)
+
+	return ErrBlobSizeExceedsLimit
 }
 
 // ValidateLongPollContextTimeout check if the context timeout for a long poll handler is too short or below a normal value.
