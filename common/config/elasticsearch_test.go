@@ -96,3 +96,37 @@ func TestAWSSigning_ValidateEmpty(t *testing.T) {
 	}
 
 }
+
+func TestGetCustomHeader(t *testing.T) {
+
+	tests := []struct {
+		config   ElasticSearchConfig
+		header   string
+		expected string
+	}{
+		{
+			config: ElasticSearchConfig{
+				CustomHeaders: map[string]string{
+					"key1": "value1",
+				},
+			},
+			header:   "key1",
+			expected: "value1",
+		},
+		{
+			config: ElasticSearchConfig{
+				CustomHeaders: map[string]string{
+					"key1": "value1",
+				},
+			},
+			header:   "key2",
+			expected: "",
+		},
+	}
+
+	for _, tc := range tests {
+		val := tc.config.GetCustomHeader(tc.header)
+		assert.Equal(t, val, tc.expected)
+	}
+
+}
