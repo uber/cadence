@@ -613,7 +613,7 @@ func CheckEventBlobSizeLimit(
 		warnLimit = errorLimit
 	}
 
-	if actualSize < warnLimit {
+	if actualSize <= warnLimit {
 		return nil
 	}
 
@@ -626,7 +626,7 @@ func CheckEventBlobSizeLimit(
 		blobSizeViolationOperationTag,
 	}
 
-	if actualSize < errorLimit {
+	if actualSize <= errorLimit {
 		logger.Warn("Blob size close to the limit.", tags...)
 
 		return nil
