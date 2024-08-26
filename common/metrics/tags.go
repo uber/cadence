@@ -62,6 +62,7 @@ const (
 	asyncWFRequestType        = "async_wf_request_type"
 	workflowTerminationReason = "workflow_termination_reason"
 	workflowCloseStatus       = "workflow_close_status"
+	isolationEnabled          = "isolation_enabled"
 
 	// limiter-side tags
 	globalRatelimitKey            = "global_ratelimit_key"
@@ -305,4 +306,13 @@ func PartitionConfigTags(partitionConfig map[string]string) []Tag {
 		tags = append(tags, simpleMetric{key: sanitizer.Value(fmt.Sprintf("pk_%s", k)), value: sanitizer.Value(v)})
 	}
 	return tags
+}
+
+// IsolationEnabledTag returns whether isolation is enabled
+func IsolationEnabledTag(enabled bool) Tag {
+	v := "false"
+	if enabled {
+		v = "true"
+	}
+	return simpleMetric{key: isolationEnabled, value: v}
 }

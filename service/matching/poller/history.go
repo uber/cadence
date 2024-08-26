@@ -99,8 +99,8 @@ func (pollers *History) GetPollerInfo(earliestAccessTime time.Time) []*types.Pol
 	return result
 }
 
-func (pollers *History) GetPollerIsolationGroups(earliestAccessTime time.Time) map[string]struct{} {
-	groupSet := make(map[string]struct{})
+func (pollers *History) GetPollerIsolationGroups(earliestAccessTime time.Time) map[string]int {
+	groupSet := make(map[string]int)
 	ite := pollers.history.Iterator()
 	defer ite.Close()
 	for ite.HasNext() {
@@ -109,7 +109,7 @@ func (pollers *History) GetPollerIsolationGroups(earliestAccessTime time.Time) m
 		lastAccessTime := entry.CreateTime()
 		if earliestAccessTime.Before(lastAccessTime) {
 			if value.IsolationGroup != "" {
-				groupSet[value.IsolationGroup] = struct{}{}
+				groupSet[value.IsolationGroup]++
 			}
 		}
 	}

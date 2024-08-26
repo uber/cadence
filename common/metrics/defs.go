@@ -2567,6 +2567,8 @@ const (
 	PollLocalMatchAfterForwardFailedLatencyPerTaskList
 	PollDecisionTaskAlreadyStartedCounterPerTaskList
 	PollActivityTaskAlreadyStartedCounterPerTaskList
+	TaskListReadWritePartitionMismatchGauge
+	TaskListPollerPartitionMismatchGauge
 
 	NumMatchingMetrics
 )
@@ -3240,6 +3242,8 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		PollLocalMatchAfterForwardFailedLatencyPerTaskList:      {metricName: "poll_local_match_after_forward_failed_latency_per_tl", metricRollupName: "poll_local_match_after_forward_failed_latency", metricType: Timer},
 		PollDecisionTaskAlreadyStartedCounterPerTaskList:        {metricName: "poll_decision_task_already_started_per_tl", metricType: Counter},
 		PollActivityTaskAlreadyStartedCounterPerTaskList:        {metricName: "poll_activity_task_already_started_per_tl", metricType: Counter},
+		TaskListReadWritePartitionMismatchGauge:                 {metricName: "tasklist_read_write_partition_mismatch", metricType: Gauge},
+		TaskListPollerPartitionMismatchGauge:                    {metricName: "tasklist_poller_partition_mismatch", metricType: Gauge},
 	},
 	Worker: {
 		ReplicatorMessages:                            {metricName: "replicator_messages"},
