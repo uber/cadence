@@ -63,6 +63,7 @@ const (
 	workflowTerminationReason = "workflow_termination_reason"
 	workflowCloseStatus       = "workflow_close_status"
 	isolationEnabled          = "isolation_enabled"
+	topic                     = "topic"
 
 	// limiter-side tags
 	globalRatelimitKey            = "global_ratelimit_key"
@@ -315,4 +316,8 @@ func IsolationEnabledTag(enabled bool) Tag {
 		v = "true"
 	}
 	return simpleMetric{key: isolationEnabled, value: v}
+}
+
+func TopicTag(value string) Tag {
+	return metricWithUnknown(topic, value)
 }

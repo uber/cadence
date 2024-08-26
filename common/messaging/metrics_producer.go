@@ -26,38 +26,52 @@ import (
 	"github.com/uber/cadence/common/metrics"
 )
 
-type (
-	metricsProducer struct {
-		producer      Producer
-		metricsClient metrics.Client
+type MetricsProducer struct {
+	producer Producer
+	scope    metrics.Scope
+	tags     []metrics.Tag
+}
+
+type MetricProducerOptions func(*MetricsProducer)
+
+func WithMetricTags(tags ...metrics.Tag) MetricProducerOptions {
+	return func(p *MetricsProducer) {
+		p.tags = tags
 	}
-)
+}
 
 // NewMetricProducer creates a new instance of producer that emits metrics
 func NewMetricProducer(
 	producer Producer,
 	metricsClient metrics.Client,
+	opts ...MetricProducerOptions,
 ) Producer {
-	return &metricsProducer{
-		producer:      producer,
-		metricsClient: metricsClient,
+	p := &MetricsProducer{
+		producer: producer,
 	}
+
+	for _, opt := range opts {
+		opt(p)
+	}
+
+	p.scope = metricsClient.Scope(metrics.MessagingClientPublishScope, p.tags...)
+	return p
 }
 
-func (p *metricsProducer) Publish(ctx context.Context, msg interface{}) error {
-	p.metricsClient.IncCounter(metrics.MessagingClientPublishScope, metrics.CadenceClientRequests)
+func (p *MetricsProducer) Publish(ctx context.Context, msg interface{}) error {
+	p.scope.IncCounter(metrics.CadenceClientRequests)
 
-	sw := p.metricsClient.StartTimer(metrics.MessagingClientPublishScope, metrics.CadenceClientLatency)
+	sw := p.scope.StartTimer(metrics.CadenceClientLatency)
 	err := p.producer.Publish(ctx, msg)
 	sw.Stop()
 
 	if err != nil {
-		p.metricsClient.IncCounter(metrics.MessagingClientPublishScope, metrics.CadenceClientFailures)
+		p.scope.IncCounter(metrics.CadenceClientFailures)
 	}
 	return err
 }
 
-func (p *metricsProducer) Close() error {
+func (p *MetricsProducer) Close() error {
 	if closeableProducer, ok := p.producer.(CloseableProducer); ok {
 		return closeableProducer.Close()
 	}
