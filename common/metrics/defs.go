@@ -2085,6 +2085,8 @@ const (
 	HistoryCount
 	EventBlobSize
 
+	EventBlobSizeExceedLimit
+
 	DecisionResultCount
 
 	ArchivalConfigFailures
@@ -2746,6 +2748,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		DomainCacheCallbacksCount:                                    {metricName: "domain_cache_callbacks_count", metricType: Counter},
 		HistorySize:                                                  {metricName: "history_size", metricType: Timer},
 		HistoryCount:                                                 {metricName: "history_count", metricType: Timer},
+		EventBlobSizeExceedLimit:                                     {metricName: "blob_size_exceed_limit", metricType: Counter},
 		EventBlobSize:                                                {metricName: "event_blob_size", metricType: Timer},
 		DecisionResultCount:                                          {metricName: "decision_result_count", metricType: Timer},
 		ArchivalConfigFailures:                                       {metricName: "archivalconfig_failures", metricType: Counter},
