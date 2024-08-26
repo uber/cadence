@@ -44,7 +44,6 @@ const (
 	RootCauseTypePollersStatus                       RootCause = "There are pollers for the tasklist. Check backlog status"
 	RootCauseTypeHeartBeatingNotEnabled              RootCause = "HeartBeating not enabled for activity"
 	RootCauseTypeHeartBeatingEnabledMissingHeartbeat RootCause = "HeartBeating enabled for activity but timed out due to missing heartbeat"
-	RootCauseTypeHeartBeatingEnabledActivityTimedOut RootCause = "HeartBeating enabled for activity but activity timed out due to other configured timeouts"
 )
 
 func (tt TimeoutType) String() string {

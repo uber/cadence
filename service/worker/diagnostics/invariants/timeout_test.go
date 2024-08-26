@@ -87,7 +87,7 @@ func Test__Check(t *testing.T) {
 				{
 					InvariantType: TimeoutTypeActivity.String(),
 					Reason:        "SCHEDULE_TO_START",
-					Metadata:      activityTimeoutDataInBytes(t),
+					Metadata:      activityScheduleToStartTimeoutDataInBytes(t),
 				},
 				{
 					InvariantType: TimeoutTypeActivity.String(),
@@ -302,7 +302,7 @@ func wfTimeoutDataInBytes(t *testing.T) []byte {
 	return dataInBytes
 }
 
-func activityTimeoutData() ActivityTimeoutMetadata {
+func activityScheduleToStartTimeoutData() ActivityTimeoutMetadata {
 	return ActivityTimeoutMetadata{
 		TimeoutType:       types.TimeoutTypeScheduleToStart.Ptr(),
 		ConfiguredTimeout: 50 * time.Second,
@@ -315,15 +315,37 @@ func activityTimeoutData() ActivityTimeoutMetadata {
 		},
 	}
 }
-func activityTimeoutDataInBytes(t *testing.T) []byte {
-	data := activityTimeoutData()
+
+func activityStartToCloseTimeoutData() ActivityTimeoutMetadata {
+	return ActivityTimeoutMetadata{
+		TimeoutType:       types.TimeoutTypeStartToClose.Ptr(),
+		ConfiguredTimeout: 50 * time.Second,
+		TimeElapsed:       50 * time.Second,
+		RetryPolicy:       nil,
+		HeartBeatTimeout:  0,
+		Tasklist: &types.TaskList{
+			Name: testTasklist,
+			Kind: nil,
+		},
+	}
+}
+
+func activityScheduleToStartTimeoutDataInBytes(t *testing.T) []byte {
+	data := activityScheduleToStartTimeoutData()
+	dataInBytes, err := json.Marshal(data)
+	require.NoError(t, err)
+	return dataInBytes
+}
+
+func activityStartToCloseTimeoutDataInBytes(t *testing.T) []byte {
+	data := activityStartToCloseTimeoutData()
 	dataInBytes, err := json.Marshal(data)
 	require.NoError(t, err)
 	return dataInBytes
 }
 
 func activityHeartBeatTimeoutDataInBytes(t *testing.T) []byte {
-	actTimeoutData := activityTimeoutData()
+	actTimeoutData := activityStartToCloseTimeoutData()
 	actTimeoutData.TimeoutType = types.TimeoutTypeHeartbeat.Ptr()
 	actTimeoutData.HeartBeatTimeout = 50 * time.Second
 	actHeartBeatTimeoutDataInBytes, err := json.Marshal(actTimeoutData)
@@ -346,7 +368,7 @@ func childWfTimeoutDataInBytes(t *testing.T) []byte {
 }
 
 func Test__RootCause(t *testing.T) {
-	actTimeoutData := activityTimeoutData()
+	actStartToCloseTimeoutData := activityStartToCloseTimeoutData()
 	testCases := []struct {
 		name           string
 		input          []InvariantCheckResult
@@ -414,7 +436,7 @@ func Test__RootCause(t *testing.T) {
 				{
 					InvariantType: TimeoutTypeActivity.String(),
 					Reason:        "START_TO_CLOSE",
-					Metadata:      activityTimeoutDataInBytes(t),
+					Metadata:      activityStartToCloseTimeoutDataInBytes(t),
 				},
 			},
 			clientExpects: func(client *frontend.MockClient) {
@@ -436,18 +458,18 @@ func Test__RootCause(t *testing.T) {
 				},
 				{
 					RootCause: RootCauseTypeHeartBeatingNotEnabled,
-					Metadata:  []byte(actTimeoutData.TimeElapsed.String()),
+					Metadata:  []byte(actStartToCloseTimeoutData.TimeElapsed.String()),
 				},
 			},
 			err: nil,
 		},
 		{
-			name: "activity timeout and heart beating not enabled",
+			name: "activity schedule to start timeout",
 			input: []InvariantCheckResult{
 				{
 					InvariantType: TimeoutTypeActivity.String(),
-					Reason:        "START_TO_CLOSE",
-					Metadata:      activityTimeoutDataInBytes(t),
+					Reason:        "SCHEDULE_TO_START",
+					Metadata:      activityScheduleToStartTimeoutDataInBytes(t),
 				},
 			},
 			clientExpects: func(client *frontend.MockClient) {
@@ -466,10 +488,6 @@ func Test__RootCause(t *testing.T) {
 				{
 					RootCause: RootCauseTypePollersStatus,
 					Metadata:  taskListBacklogInBytes(testTaskListBacklog),
-				},
-				{
-					RootCause: RootCauseTypeHeartBeatingNotEnabled,
-					Metadata:  []byte(actTimeoutData.TimeElapsed.String()),
 				},
 			},
 			err: nil,
@@ -502,7 +520,7 @@ func Test__RootCause(t *testing.T) {
 				},
 				{
 					RootCause: RootCauseTypeHeartBeatingEnabledMissingHeartbeat,
-					Metadata:  []byte(actTimeoutData.TimeElapsed.String()),
+					Metadata:  []byte(actStartToCloseTimeoutData.TimeElapsed.String()),
 				},
 			},
 			err: nil,
