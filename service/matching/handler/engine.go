@@ -515,8 +515,7 @@ pollLoop:
 		task, err := e.getTask(pollerCtx, taskListID, nil, taskListKind)
 		if err != nil {
 			// TODO: Is empty poll the best reply for errPumpClosed?
-			var taskListNotOwnedByHostError *cadence_errors.TaskListNotOwnedByHostError
-			if errors.Is(err, tasklist.ErrNoTasks) || errors.Is(err, errPumpClosed) || errors.As(err, &taskListNotOwnedByHostError) {
+			if errors.Is(err, tasklist.ErrNoTasks) || errors.Is(err, errPumpClosed) {
 				e.logger.Debug("no decision tasks",
 					tag.WorkflowTaskListName(taskListName),
 					tag.WorkflowDomainID(domainID),
@@ -684,8 +683,7 @@ pollLoop:
 		task, err := e.getTask(pollerCtx, taskListID, maxDispatch, taskListKind)
 		if err != nil {
 			// TODO: Is empty poll the best reply for errPumpClosed?
-			var taskListNotOwnedByHostError *cadence_errors.TaskListNotOwnedByHostError
-			if errors.Is(err, tasklist.ErrNoTasks) || errors.Is(err, errPumpClosed) || errors.As(err, &taskListNotOwnedByHostError) {
+			if errors.Is(err, tasklist.ErrNoTasks) || errors.Is(err, errPumpClosed) {
 				return emptyPollForActivityTaskResponse, nil
 			}
 			e.logger.Error("Received unexpected err while getting task",
