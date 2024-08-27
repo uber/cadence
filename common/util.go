@@ -38,6 +38,7 @@ import (
 	"go.uber.org/yarpc/yarpcerrors"
 
 	"github.com/uber/cadence/common/backoff"
+	cadence_errors "github.com/uber/cadence/common/errors"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
@@ -266,10 +267,11 @@ func IsExpectedError(err error) bool {
 func IsServiceTransientError(err error) bool {
 
 	var (
-		typesInternalServiceError    *types.InternalServiceError
-		typesServiceBusyError        *types.ServiceBusyError
-		typesShardOwnershipLostError *types.ShardOwnershipLostError
-		yarpcErrorsStatus            *yarpcerrors.Status
+		typesInternalServiceError        *types.InternalServiceError
+		typesServiceBusyError            *types.ServiceBusyError
+		typesShardOwnershipLostError     *types.ShardOwnershipLostError
+		typesTaskListNotOwnedByHostError *cadence_errors.TaskListNotOwnedByHostError
+		yarpcErrorsStatus                *yarpcerrors.Status
 	)
 
 	switch {
@@ -278,6 +280,8 @@ func IsServiceTransientError(err error) bool {
 	case errors.As(err, &typesServiceBusyError):
 		return true
 	case errors.As(err, &typesShardOwnershipLostError):
+		return true
+	case errors.As(err, &typesTaskListNotOwnedByHostError):
 		return true
 	case errors.As(err, &yarpcErrorsStatus):
 		// We only selectively retry the following yarpc errors client can safe retry with a backoff
@@ -597,6 +601,7 @@ func CheckEventBlobSizeLimit(
 	warnLimit int,
 	errorLimit int,
 	domainID string,
+	domainName string,
 	workflowID string,
 	runID string,
 	scope metrics.Scope,
@@ -606,21 +611,36 @@ func CheckEventBlobSizeLimit(
 
 	scope.RecordTimer(metrics.EventBlobSize, time.Duration(actualSize))
 
-	if actualSize > warnLimit {
-		if logger != nil {
-			logger.Warn("Blob size exceeds limit.",
-				tag.WorkflowDomainID(domainID),
-				tag.WorkflowID(workflowID),
-				tag.WorkflowRunID(runID),
-				tag.WorkflowSize(int64(actualSize)),
-				blobSizeViolationOperationTag)
-		}
+	if errorLimit < warnLimit {
+		logger.Warn("Error limit is less than warn limit.", tag.WorkflowDomainName(domainName), tag.WorkflowDomainID(domainID))
 
-		if actualSize > errorLimit {
-			return ErrBlobSizeExceedsLimit
-		}
+		warnLimit = errorLimit
 	}
-	return nil
+
+	if actualSize <= warnLimit {
+		return nil
+	}
+
+	tags := []tag.Tag{
+		tag.WorkflowDomainName(domainName),
+		tag.WorkflowDomainID(domainID),
+		tag.WorkflowID(workflowID),
+		tag.WorkflowRunID(runID),
+		tag.WorkflowSize(int64(actualSize)),
+		blobSizeViolationOperationTag,
+	}
+
+	if actualSize <= errorLimit {
+		logger.Warn("Blob size close to the limit.", tags...)
+
+		return nil
+	}
+
+	scope.Tagged(metrics.DomainTag(domainName)).IncCounter(metrics.EventBlobSizeExceedLimit)
+
+	logger.Error("Blob size exceeds limit.", tags...)
+
+	return ErrBlobSizeExceedsLimit
 }
 
 // ValidateLongPollContextTimeout check if the context timeout for a long poll handler is too short or below a normal value.

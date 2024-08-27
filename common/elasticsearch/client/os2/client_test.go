@@ -79,6 +79,9 @@ func TestNewClient(t *testing.T) {
 			config: &config.ElasticSearchConfig{
 				URL:          *url,
 				DisableSniff: false,
+				CustomHeaders: map[string]string{
+					"key": "value",
+				},
 			},
 			expectedErr: false,
 		},

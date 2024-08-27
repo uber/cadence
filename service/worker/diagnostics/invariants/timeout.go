@@ -122,7 +122,8 @@ func (t *timeout) RootCause(ctx context.Context, issues []InvariantCheckResult) 
 			if err != nil {
 				return nil, err
 			}
-			result = append(result, heartbeatStatus)
+			result = append(result, heartbeatStatus...)
+
 		}
 	}
 	return result, nil
@@ -173,29 +174,34 @@ func (t *timeout) checkTasklist(ctx context.Context, issue InvariantCheckResult)
 
 }
 
-func checkHeartbeatStatus(issue InvariantCheckResult) (InvariantRootCauseResult, error) {
+func checkHeartbeatStatus(issue InvariantCheckResult) ([]InvariantRootCauseResult, error) {
 	var metadata ActivityTimeoutMetadata
 	err := json.Unmarshal(issue.Metadata, &metadata)
 	if err != nil {
-		return InvariantRootCauseResult{}, err
+		return nil, err
 	}
 
-	if metadata.HeartBeatTimeout == 0 {
-		return InvariantRootCauseResult{
-			RootCause: RootCauseTypeHeartBeatingNotEnabled,
-			Metadata:  []byte(metadata.TimeElapsed.String()),
+	if metadata.HeartBeatTimeout == 0 && activityStarted(metadata) {
+		return []InvariantRootCauseResult{
+			{
+				RootCause: RootCauseTypeHeartBeatingNotEnabled,
+				Metadata:  []byte(metadata.TimeElapsed.String()),
+			},
 		}, nil
 	}
 
 	if metadata.HeartBeatTimeout > 0 && metadata.TimeoutType.String() == types.TimeoutTypeHeartbeat.String() {
-		return InvariantRootCauseResult{
-			RootCause: RootCauseTypeHeartBeatingEnabledMissingHeartbeat,
-			Metadata:  []byte(metadata.TimeElapsed.String()),
+		return []InvariantRootCauseResult{
+			{
+				RootCause: RootCauseTypeHeartBeatingEnabledMissingHeartbeat,
+				Metadata:  []byte(metadata.TimeElapsed.String()),
+			},
 		}, nil
 	}
 
-	return InvariantRootCauseResult{
-		RootCause: RootCauseTypeHeartBeatingEnabledActivityTimedOut,
-		Metadata:  []byte(metadata.TimeElapsed.String()),
-	}, nil
+	return nil, nil
+}
+
+func activityStarted(metadata ActivityTimeoutMetadata) bool {
+	return metadata.TimeoutType.String() != types.TimeoutTypeScheduleToStart.String()
 }

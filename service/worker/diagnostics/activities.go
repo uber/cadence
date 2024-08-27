@@ -29,44 +29,46 @@ import (
 	"github.com/uber/cadence/service/worker/diagnostics/invariants"
 )
 
+const linkToTimeoutsRunbook = "https://cadenceworkflow.io/docs/workflow-troubleshooting/timeouts/"
+
 type retrieveExecutionHistoryInputParams struct {
-	domain    string
-	execution *types.WorkflowExecution
+	Domain    string
+	Execution *types.WorkflowExecution
 }
 
 func (w *dw) retrieveExecutionHistory(ctx context.Context, info retrieveExecutionHistoryInputParams) (*types.GetWorkflowExecutionHistoryResponse, error) {
 	frontendClient := w.clientBean.GetFrontendClient()
 	return frontendClient.GetWorkflowExecutionHistory(ctx, &types.GetWorkflowExecutionHistoryRequest{
-		Domain:    info.domain,
-		Execution: info.execution,
+		Domain:    info.Domain,
+		Execution: info.Execution,
 	})
 }
 
 type identifyTimeoutsInputParams struct {
-	history *types.GetWorkflowExecutionHistoryResponse
-	domain  string
+	History *types.GetWorkflowExecutionHistoryResponse
+	Domain  string
 }
 
 func (w *dw) identifyTimeouts(ctx context.Context, info identifyTimeoutsInputParams) ([]invariants.InvariantCheckResult, error) {
 	timeoutInvariant := invariants.NewTimeout(invariants.NewTimeoutParams{
-		WorkflowExecutionHistory: info.history,
-		Domain:                   info.domain,
+		WorkflowExecutionHistory: info.History,
+		Domain:                   info.Domain,
 		ClientBean:               w.clientBean,
 	})
 	return timeoutInvariant.Check(ctx)
 }
 
 type rootCauseTimeoutsParams struct {
-	history *types.GetWorkflowExecutionHistoryResponse
-	domain  string
-	issues  []invariants.InvariantCheckResult
+	History *types.GetWorkflowExecutionHistoryResponse
+	Domain  string
+	Issues  []invariants.InvariantCheckResult
 }
 
 func (w *dw) rootCauseTimeouts(ctx context.Context, info rootCauseTimeoutsParams) ([]invariants.InvariantRootCauseResult, error) {
 	timeoutInvariant := invariants.NewTimeout(invariants.NewTimeoutParams{
-		WorkflowExecutionHistory: info.history,
+		WorkflowExecutionHistory: info.History,
 		ClientBean:               w.clientBean,
-		Domain:                   info.domain,
+		Domain:                   info.Domain,
 	})
-	return timeoutInvariant.RootCause(ctx, info.issues)
+	return timeoutInvariant.RootCause(ctx, info.Issues)
 }
