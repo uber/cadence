@@ -83,6 +83,10 @@ service MatchingAPI {
 
   // GetTaskListsByDomain returns all tasklist for a given domain
   rpc GetTaskListsByDomain(GetTaskListsByDomainRequest) returns (GetTaskListsByDomainResponse);
+
+  // CompleteStartedTask is called by the history service when a task completed event is received through replication,
+  // so that it can be deleted from the tasks table by the MatchingEngine.
+  rpc CompleteStartedTask(CompleteStartedTaskRequest) returns (CompleteStartedTaskResponse);
 }
 
 message PollForDecisionTaskRequest {
@@ -243,3 +247,11 @@ message GetTaskListsByDomainResponse {
   map <string,DescribeTaskListResponse> activity_task_list_map = 2;
 }
 
+message CompleteStartedTaskRequest {
+  string domain_id = 1;
+  api.v1.WorkflowExecution workflow_execution = 2;
+  int64 schedule_id = 3;
+}
+
+message CompleteStartedTaskResponse {
+}

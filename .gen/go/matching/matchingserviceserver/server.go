@@ -55,6 +55,11 @@ type Interface interface {
 		Request *matching.CancelOutstandingPollRequest,
 	) error
 
+	CompleteStartedTask(
+		ctx context.Context,
+		Request *matching.CompleteStartedTaskRequest,
+	) (*matching.CompleteStartedTaskResponse, error)
+
 	DescribeTaskList(
 		ctx context.Context,
 		Request *matching.DescribeTaskListRequest,
@@ -135,6 +140,18 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					NoWire: canceloutstandingpoll_NoWireHandler{impl},
 				},
 				Signature:    "CancelOutstandingPoll(Request *matching.CancelOutstandingPollRequest)",
+				ThriftModule: matching.ThriftModule,
+			},
+
+			thrift.Method{
+				Name: "CompleteStartedTask",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.CompleteStartedTask),
+					NoWire: completestartedtask_NoWireHandler{impl},
+				},
+				Signature:    "CompleteStartedTask(Request *matching.CompleteStartedTaskRequest) (*matching.CompleteStartedTaskResponse)",
 				ThriftModule: matching.ThriftModule,
 			},
 
@@ -224,7 +241,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 		},
 	}
 
-	procedures := make([]transport.Procedure, 0, 10)
+	procedures := make([]transport.Procedure, 0, 11)
 	procedures = append(procedures, thrift.BuildProcedures(service, opts...)...)
 	return procedures
 }
@@ -306,6 +323,36 @@ func (h handler) CancelOutstandingPoll(ctx context.Context, body wire.Value) (th
 
 	hadError := appErr != nil
 	result, err := matching.MatchingService_CancelOutstandingPoll_Helper.WrapResponse(appErr)
+
+	var response thrift.Response
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+
+	return response, err
+}
+
+func (h handler) CompleteStartedTask(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args matching.MatchingService_CompleteStartedTask_Args
+	if err := args.FromWire(body); err != nil {
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'MatchingService' procedure 'CompleteStartedTask': %w", err)
+	}
+
+	success, appErr := h.impl.CompleteStartedTask(ctx, args.Request)
+
+	hadError := appErr != nil
+	result, err := matching.MatchingService_CompleteStartedTask_Helper.WrapResponse(success, appErr)
 
 	var response thrift.Response
 	if err == nil {
@@ -628,6 +675,43 @@ func (h canceloutstandingpoll_NoWireHandler) HandleNoWire(ctx context.Context, n
 
 	hadError := appErr != nil
 	result, err := matching.MatchingService_CancelOutstandingPoll_Helper.WrapResponse(appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type completestartedtask_NoWireHandler struct{ impl Interface }
+
+func (h completestartedtask_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args matching.MatchingService_CompleteStartedTask_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'MatchingService' procedure 'CompleteStartedTask': %w", err)
+	}
+
+	success, appErr := h.impl.CompleteStartedTask(ctx, args.Request)
+
+	hadError := appErr != nil
+	result, err := matching.MatchingService_CompleteStartedTask_Helper.WrapResponse(success, appErr)
 	response := thrift.NoWireResponse{ResponseWriter: rw}
 	if err == nil {
 		response.IsApplicationError = hadError

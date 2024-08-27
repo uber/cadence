@@ -102,6 +102,21 @@ func (mr *MockEngineMockRecorder) CancelOutstandingPoll(hCtx, request interface{
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CancelOutstandingPoll", reflect.TypeOf((*MockEngine)(nil).CancelOutstandingPoll), hCtx, request)
 }
 
+// CompleteStartedTask mocks base method.
+func (m *MockEngine) CompleteStartedTask(hCtx *handlerContext, request *types.CompleteStartedTaskRequest) (*types.CompleteStartedTaskResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CompleteStartedTask", hCtx, request)
+	ret0, _ := ret[0].(*types.CompleteStartedTaskResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CompleteStartedTask indicates an expected call of CompleteStartedTask.
+func (mr *MockEngineMockRecorder) CompleteStartedTask(hCtx, request interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CompleteStartedTask", reflect.TypeOf((*MockEngine)(nil).CompleteStartedTask), hCtx, request)
+}
+
 // DescribeTaskList mocks base method.
 func (m *MockEngine) DescribeTaskList(hCtx *handlerContext, request *types.MatchingDescribeTaskListRequest) (*types.DescribeTaskListResponse, error) {
 	m.ctrl.T.Helper()
@@ -293,6 +308,21 @@ func (m *MockHandler) CancelOutstandingPoll(arg0 context.Context, arg1 *types.Ca
 func (mr *MockHandlerMockRecorder) CancelOutstandingPoll(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CancelOutstandingPoll", reflect.TypeOf((*MockHandler)(nil).CancelOutstandingPoll), arg0, arg1)
+}
+
+// CompleteStartedTask mocks base method.
+func (m *MockHandler) CompleteStartedTask(arg0 context.Context, arg1 *types.CompleteStartedTaskRequest) (*types.CompleteStartedTaskResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CompleteStartedTask", arg0, arg1)
+	ret0, _ := ret[0].(*types.CompleteStartedTaskResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CompleteStartedTask indicates an expected call of CompleteStartedTask.
+func (mr *MockHandlerMockRecorder) CompleteStartedTask(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CompleteStartedTask", reflect.TypeOf((*MockHandler)(nil).CompleteStartedTask), arg0, arg1)
 }
 
 // DescribeTaskList mocks base method.

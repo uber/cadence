@@ -58,6 +58,12 @@ type Interface interface {
 		opts ...yarpc.CallOption,
 	) error
 
+	CompleteStartedTask(
+		ctx context.Context,
+		Request *matching.CompleteStartedTaskRequest,
+		opts ...yarpc.CallOption,
+	) (*matching.CompleteStartedTaskResponse, error)
+
 	DescribeTaskList(
 		ctx context.Context,
 		Request *matching.DescribeTaskListRequest,
@@ -211,6 +217,34 @@ func (c client) CancelOutstandingPoll(
 	}
 
 	err = matching.MatchingService_CancelOutstandingPoll_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) CompleteStartedTask(
+	ctx context.Context,
+	_Request *matching.CompleteStartedTaskRequest,
+	opts ...yarpc.CallOption,
+) (success *matching.CompleteStartedTaskResponse, err error) {
+
+	var result matching.MatchingService_CompleteStartedTask_Result
+	args := matching.MatchingService_CompleteStartedTask_Helper.Args(_Request)
+
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
+
+		if err = result.FromWire(body); err != nil {
+			return
+		}
+	}
+
+	success, err = matching.MatchingService_CompleteStartedTask_Helper.UnwrapResponse(&result)
 	return
 }
 

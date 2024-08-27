@@ -425,6 +425,14 @@ func (h *handlerImpl) GetTaskListsByDomain(
 	return response, hCtx.handleErr(err)
 }
 
+func (h *handlerImpl) CompleteStartedTask(
+	ctx context.Context,
+	request *types.CompleteStartedTaskRequest,
+) (resp *types.CompleteStartedTaskResponse, retError error) {
+	panic("TODO")
+	return nil, nil
+}
+
 func (h *handlerImpl) domainName(id string) string {
 	domainName, err := h.domainCache.GetDomainName(id)
 	if err != nil {
