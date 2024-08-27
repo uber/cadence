@@ -38,6 +38,7 @@ import (
 	"go.uber.org/yarpc/yarpcerrors"
 
 	"github.com/uber/cadence/common/backoff"
+	cadence_errors "github.com/uber/cadence/common/errors"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
@@ -266,10 +267,11 @@ func IsExpectedError(err error) bool {
 func IsServiceTransientError(err error) bool {
 
 	var (
-		typesInternalServiceError    *types.InternalServiceError
-		typesServiceBusyError        *types.ServiceBusyError
-		typesShardOwnershipLostError *types.ShardOwnershipLostError
-		yarpcErrorsStatus            *yarpcerrors.Status
+		typesInternalServiceError        *types.InternalServiceError
+		typesServiceBusyError            *types.ServiceBusyError
+		typesShardOwnershipLostError     *types.ShardOwnershipLostError
+		typesTaskListNotOwnedByHostError *cadence_errors.TaskListNotOwnedByHostError
+		yarpcErrorsStatus                *yarpcerrors.Status
 	)
 
 	switch {
@@ -278,6 +280,8 @@ func IsServiceTransientError(err error) bool {
 	case errors.As(err, &typesServiceBusyError):
 		return true
 	case errors.As(err, &typesShardOwnershipLostError):
+		return true
+	case errors.As(err, &typesTaskListNotOwnedByHostError):
 		return true
 	case errors.As(err, &yarpcErrorsStatus):
 		// We only selectively retry the following yarpc errors client can safe retry with a backoff

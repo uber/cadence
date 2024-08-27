@@ -25,6 +25,7 @@ import (
 	"sync"
 
 	"github.com/uber/cadence/common"
+	cadence_errors "github.com/uber/cadence/common/errors"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
@@ -99,6 +100,9 @@ func (reqCtx *handlerContext) handleErr(err error) error {
 		return err
 	case *types.StickyWorkerUnavailableError:
 		reqCtx.scope.IncCounter(metrics.CadenceErrStickyWorkerUnavailablePerTaskListCounter)
+		return err
+	case *cadence_errors.TaskListNotOwnedByHostError:
+		reqCtx.scope.IncCounter(metrics.CadenceErrTaskListNotOwnedByHostPerTaskListCounter)
 		return err
 	default:
 		reqCtx.scope.IncCounter(metrics.CadenceFailuresPerTaskList)

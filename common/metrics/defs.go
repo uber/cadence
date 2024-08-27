@@ -2188,6 +2188,7 @@ const (
 	CadenceErrAuthorizeFailedPerTaskListCounter
 	CadenceErrRemoteSyncMatchFailedPerTaskListCounter
 	CadenceErrStickyWorkerUnavailablePerTaskListCounter
+	CadenceErrTaskListNotOwnedByHostPerTaskListCounter
 
 	CadenceShardSuccessGauge
 	CadenceShardFailureGauge
@@ -2253,6 +2254,7 @@ const (
 	TaskUnsupportedPerDomain
 	TaskAttemptTimerPerDomain
 	TaskStandbyRetryCounterPerDomain
+	TaskListNotOwnedByHostCounterPerDomain
 	TaskPendingActiveCounterPerDomain
 	TaskNotActiveCounterPerDomain
 	TaskTargetNotActiveCounterPerDomain
@@ -2880,6 +2882,9 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		CadenceErrStickyWorkerUnavailablePerTaskListCounter: {
 			metricName: "cadence_errors_sticky_worker_unavailable_per_tl", metricRollupName: "cadence_errors_sticky_worker_unavailable_per_tl", metricType: Counter,
 		},
+		CadenceErrTaskListNotOwnedByHostPerTaskListCounter: {
+			metricName: "cadence_errors_task_list_not_owned_by_host_per_tl", metricRollupName: "cadence_errors_task_list_not_owned_by_host", metricType: Counter,
+		},
 		CadenceShardSuccessGauge:             {metricName: "cadence_shard_success", metricType: Gauge},
 		CadenceShardFailureGauge:             {metricName: "cadence_shard_failure", metricType: Gauge},
 		DomainReplicationQueueSizeGauge:      {metricName: "domain_replication_queue_size", metricType: Gauge},
@@ -2937,6 +2942,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		TaskDiscardedPerDomain:                   {metricName: "task_errors_discarded_per_domain", metricRollupName: "task_errors_discarded", metricType: Counter},
 		TaskUnsupportedPerDomain:                 {metricName: "task_errors_unsupported_per_domain", metricRollupName: "task_errors_discarded", metricType: Counter},
 		TaskStandbyRetryCounterPerDomain:         {metricName: "task_errors_standby_retry_counter_per_domain", metricRollupName: "task_errors_standby_retry_counter", metricType: Counter},
+		TaskListNotOwnedByHostCounterPerDomain:   {metricName: "task_errors_task_list_not_owned_by_host_counter_per_domain", metricRollupName: "task_errors_task_list_not_owned_by_host_counter", metricType: Counter},
 		TaskPendingActiveCounterPerDomain:        {metricName: "task_errors_pending_active_counter_per_domain", metricRollupName: "task_errors_pending_active_counter", metricType: Counter},
 		TaskNotActiveCounterPerDomain:            {metricName: "task_errors_not_active_counter_per_domain", metricRollupName: "task_errors_not_active_counter", metricType: Counter},
 		TaskTargetNotActiveCounterPerDomain:      {metricName: "task_errors_target_not_active_counter_per_domain", metricRollupName: "task_errors_target_not_active_counter", metricType: Counter},
