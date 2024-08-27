@@ -47,7 +47,13 @@ type DiagnosticsWorkflowInput struct {
 	RunID      string
 }
 
-func (w *dw) DiagnosticsWorkflow(ctx workflow.Context, params DiagnosticsWorkflowInput) error {
+type DiagnosticsWorkflowResult struct {
+	Issues    []invariants.InvariantCheckResult
+	RootCause []invariants.InvariantRootCauseResult
+	Runbooks  []string
+}
+
+func (w *dw) DiagnosticsWorkflow(ctx workflow.Context, params DiagnosticsWorkflowInput) (DiagnosticsWorkflowResult, error) {
 	activityOptions := workflow.ActivityOptions{
 		ScheduleToCloseTimeout: time.Second * 10,
 		ScheduleToStartTimeout: time.Second * 5,
@@ -63,7 +69,7 @@ func (w *dw) DiagnosticsWorkflow(ctx workflow.Context, params DiagnosticsWorkflo
 			RunID:      params.RunID,
 		}}).Get(ctx, &wfExecutionHistory)
 	if err != nil {
-		return fmt.Errorf("RetrieveExecutionHistory: %w", err)
+		return DiagnosticsWorkflowResult{}, fmt.Errorf("RetrieveExecutionHistory: %w", err)
 	}
 
 	var checkResult []invariants.InvariantCheckResult
@@ -72,7 +78,7 @@ func (w *dw) DiagnosticsWorkflow(ctx workflow.Context, params DiagnosticsWorkflo
 		Domain:  params.Domain,
 	}).Get(ctx, &checkResult)
 	if err != nil {
-		return fmt.Errorf("IdentifyTimeouts: %w", err)
+		return DiagnosticsWorkflowResult{}, fmt.Errorf("IdentifyTimeouts: %w", err)
 	}
 
 	var rootCauseResult []invariants.InvariantRootCauseResult
@@ -82,8 +88,12 @@ func (w *dw) DiagnosticsWorkflow(ctx workflow.Context, params DiagnosticsWorkflo
 		Issues:  checkResult,
 	}).Get(ctx, &rootCauseResult)
 	if err != nil {
-		return fmt.Errorf("RootCauseTimeouts: %w", err)
+		return DiagnosticsWorkflowResult{}, fmt.Errorf("RootCauseTimeouts: %w", err)
 	}
 
-	return nil
+	return DiagnosticsWorkflowResult{
+		Issues:    checkResult,
+		RootCause: rootCauseResult,
+		Runbooks:  []string{linkToTimeoutsRunbook},
+	}, nil
 }

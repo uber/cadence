@@ -23,9 +23,11 @@
 package diagnostics
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/mock"
@@ -34,8 +36,11 @@ import (
 	"go.uber.org/cadence/testsuite"
 	"go.uber.org/cadence/workflow"
 
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/resource"
+	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/service/worker/diagnostics/invariants"
 )
 
 type diagnosticsWorkflowTestSuite struct {
@@ -79,11 +84,44 @@ func (s *diagnosticsWorkflowTestSuite) TestWorkflow() {
 		WorkflowID: "123",
 		RunID:      "abc",
 	}
+	workflowTimeoutData := invariants.ExecutionTimeoutMetadata{
+		ExecutionTime:     110 * time.Second,
+		ConfiguredTimeout: 110 * time.Second,
+		LastOngoingEvent: &types.HistoryEvent{
+			ID:        1,
+			Timestamp: common.Int64Ptr(testTimeStamp),
+			WorkflowExecutionStartedEventAttributes: &types.WorkflowExecutionStartedEventAttributes{
+				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(workflowTimeoutSecond),
+			},
+		},
+	}
+	workflowTimeoutDataInBytes, err := json.Marshal(workflowTimeoutData)
+	s.NoError(err)
+	issues := []invariants.InvariantCheckResult{
+		{
+			InvariantType: invariants.TimeoutTypeExecution.String(),
+			Reason:        "START_TO_CLOSE",
+			Metadata:      workflowTimeoutDataInBytes,
+		},
+	}
+	taskListBacklog := int64(10)
+	taskListBacklogInBytes, err := json.Marshal(taskListBacklog)
+	s.NoError(err)
+	rootCause := []invariants.InvariantRootCauseResult{
+		{
+			RootCause: invariants.RootCauseTypePollersStatus,
+			Metadata:  taskListBacklogInBytes,
+		},
+	}
 	s.workflowEnv.OnActivity(retrieveWfExecutionHistoryActivity, mock.Anything, mock.Anything).Return(nil, nil)
-	s.workflowEnv.OnActivity(identifyTimeoutsActivity, mock.Anything, mock.Anything).Return(nil, nil)
-	s.workflowEnv.OnActivity(rootCauseTimeoutsActivity, mock.Anything, mock.Anything).Return(nil, nil)
+	s.workflowEnv.OnActivity(identifyTimeoutsActivity, mock.Anything, mock.Anything).Return(issues, nil)
+	s.workflowEnv.OnActivity(rootCauseTimeoutsActivity, mock.Anything, mock.Anything).Return(rootCause, nil)
 	s.workflowEnv.ExecuteWorkflow(diagnosticsWorkflow, params)
 	s.True(s.workflowEnv.IsWorkflowCompleted())
+	var result DiagnosticsWorkflowResult
+	s.NoError(s.workflowEnv.GetWorkflowResult(&result))
+	s.ElementsMatch(issues, result.Issues)
+	s.ElementsMatch(rootCause, result.RootCause)
 }
 
 func (s *diagnosticsWorkflowTestSuite) TestWorkflow_Error() {

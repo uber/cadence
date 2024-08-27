@@ -29,6 +29,8 @@ import (
 	"github.com/uber/cadence/service/worker/diagnostics/invariants"
 )
 
+const linkToTimeoutsRunbook = "https://cadenceworkflow.io/docs/workflow-troubleshooting/timeouts/"
+
 type retrieveExecutionHistoryInputParams struct {
 	Domain    string
 	Execution *types.WorkflowExecution
