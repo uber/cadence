@@ -34,6 +34,7 @@ import (
 	"go.uber.org/atomic"
 	"go.uber.org/goleak"
 	"go.uber.org/zap/zapcore"
+	"golang.org/x/time/rate"
 
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/dynamicconfig"
@@ -228,8 +229,8 @@ func TestCollectionSubmitsDataAndUpdates(t *testing.T) {
 	}).DoAndReturn(func(ctx context.Context, period time.Duration, load map[shared.GlobalKey]rpc.Calls) rpc.UpdateResult {
 		called <- struct{}{}
 		return rpc.UpdateResult{
-			Weights: map[shared.GlobalKey]float64{
-				"test:something": 1, // should recover a token in 100ms
+			Weights: map[shared.GlobalKey]rpc.UpdateEntry{
+				"test:something": {Weight: 1, UsedRPS: 2}, // should recover a token in 100ms
 				// "test:other":   // not returned, should not change weight
 			},
 			Err: nil,
@@ -408,6 +409,56 @@ func TestTogglingMode(t *testing.T) {
 		assertLimiterKeys(t, c.local, "local")
 		assertLimiterKeys(t, c.global, "global")
 	})
+}
+
+func TestBoostRPS(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		targetLimit, fallbackLimit float64
+		weight                     float64
+		usedRPS                    float64
+		resultLimit                float64
+	}{
+		"low weight fully used": {
+			targetLimit:   10,
+			fallbackLimit: 3,
+			weight:        0.11,
+			usedRPS:       10,
+			resultLimit:   1.1, // no unused RPS free for boost, gets fair value
+		},
+		"low weight mostly unused": {
+			targetLimit:   10,
+			fallbackLimit: 3,
+			weight:        0.11,
+			usedRPS:       2,
+			resultLimit:   3, // min(1.1 + 8, 3)
+		},
+		"high weight fully used": {
+			targetLimit:   10,
+			fallbackLimit: 3,
+			weight:        0.89,
+			usedRPS:       10,
+			resultLimit:   8.9, // no unused RPS free for boost, gets fair value
+		},
+		"high weight mostly unused": {
+			targetLimit:   10,
+			fallbackLimit: 3,
+			weight:        0.89,
+			usedRPS:       2,
+			resultLimit:   8.9, // should not be boosted beyond fair, nor limited below it
+		},
+	}
+	for name, tc := range tests {
+		name, tc := name, tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			assert.GreaterOrEqual(t, tc.weight, float64(0), "sanity check on weight")
+			assert.LessOrEqual(t, tc.weight, float64(1), "sanity check on weight")
+			result := boostRPS(rate.Limit(tc.targetLimit), rate.Limit(tc.fallbackLimit), tc.weight, tc.usedRPS)
+			assert.InDeltaf(t, tc.resultLimit, float64(result), 0.01, "computed RPS does not match closely enough, should be %0.2f", tc.resultLimit)
+		})
+	}
 }
 
 func assertLimiterKeys[V any](t *testing.T, collection *internal.AtomicMap[shared.LocalKey, V], name string, keys ...shared.LocalKey) {

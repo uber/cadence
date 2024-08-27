@@ -58,7 +58,7 @@ type (
 		// all successfully-returned weights.
 		// this may be populated and is safe to use even if Errors is present,
 		// as some shards may have succeeded.
-		Weights map[shared.GlobalKey]float64
+		Weights map[shared.GlobalKey]UpdateEntry
 		// Any unexpected errors encountered, or nil if none.
 		// Weights is valid even if this is present, though it may be empty.
 		//
@@ -66,6 +66,10 @@ type (
 		// errors, e.g. failures to serialize or deserialize data (coding errors
 		// or incompatible server versions).
 		Err error
+	}
+	UpdateEntry struct {
+		Weight  float64
+		UsedRPS float64
 	}
 
 	Client interface {
@@ -122,7 +126,7 @@ func (c *client) Update(ctx context.Context, period time.Duration, load map[shar
 	}
 
 	var mut sync.Mutex
-	weights := make(map[shared.GlobalKey]float64, len(load)) // should get back most or all keys requested
+	weights := make(map[shared.GlobalKey]UpdateEntry, len(load)) // should get back most or all keys requested
 
 	var g errgroup.Group
 	// could limit max concurrency easily with `g.SetLimit(n)` if desired,
@@ -141,6 +145,11 @@ func (c *client) Update(ctx context.Context, period time.Duration, load map[shar
 			mut.Lock()
 			defer mut.Unlock()
 			for k, v := range result {
+				if _, ok := weights[k]; ok {
+					// should not happen as resolver.GlobalRatelimiterPeers ensures disjoint keys
+					// are requested, and only the requested keys are returned.
+					return fmt.Errorf("received duplicate key %q from peer %q", k, peer)
+				}
 				weights[k] = v
 			}
 			return nil
@@ -158,7 +167,7 @@ func (c *client) Update(ctx context.Context, period time.Duration, load map[shar
 	}
 }
 
-func (c *client) updateSinglePeer(ctx context.Context, peer history.Peer, period time.Duration, load map[shared.GlobalKey]Calls) (map[shared.GlobalKey]float64, error) {
+func (c *client) updateSinglePeer(ctx context.Context, peer history.Peer, period time.Duration, load map[shared.GlobalKey]Calls) (map[shared.GlobalKey]UpdateEntry, error) {
 	anyValue, err := updateToAny(c.thisHost, period, load)
 	if err != nil {
 		// serialization errors should never happen

@@ -3641,7 +3641,16 @@ func TestRatelimitUpdate(t *testing.T) {
 	w, err := rpc.TestAnyToWeights(t, resp.Any)
 	require.NoError(t, err)
 	assert.Equalf(t,
-		map[shared.GlobalKey]float64{"test:domain-user-limit": 1},
+		map[shared.GlobalKey]rpc.UpdateEntry{
+			"test:domain-user-limit": {
+				Weight: 1,
+				// re 10 vs 15: used RPS only tracks accepted.
+				//
+				// this way we don't consider any incorrectly-rejected requests
+				// when calculating our new limits.
+				UsedRPS: 10,
+			},
+		},
 		w,
 		"unexpected weights returned from aggregator or serialization.  if values differ in a reasonable way, possibly aggregator behavior changed?",
 	)

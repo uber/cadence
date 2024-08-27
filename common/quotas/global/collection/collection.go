@@ -37,6 +37,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"testing"
 	"time"
 
@@ -453,7 +454,7 @@ func (c *Collection) doUpdate(since time.Duration, usage map[shared.GlobalKey]rp
 		c.logger.Error("aggregator update error", tag.Error(res.Err))
 	}
 	// either way, process all weights we did successfully retrieve.
-	for gkey, weight := range res.Weights {
+	for gkey, info := range res.Weights {
 		delete(usage, gkey) // clean up the list so we know what was missed
 		lkey, err := c.km.GlobalToLocal(gkey)
 		if err != nil {
@@ -463,15 +464,18 @@ func (c *Collection) doUpdate(since time.Duration, usage map[shared.GlobalKey]rp
 			continue
 		}
 
-		if weight < 0 {
+		if info.Weight < 0 {
 			// negative values cannot be valid, so they're a failure.
 			//
 			// this is largely for future-proofing and to cover all possibilities,
 			// so unrecognized values lead to fallback behavior because they cannot be understood.
 			c.global.Load(lkey).FailedUpdate()
 		} else {
-			target := float64(c.targetRPS(lkey))
-			c.global.Load(lkey).Update(rate.Limit(weight * target))
+			target := rate.Limit(c.targetRPS(lkey))
+			limiter := c.global.Load(lkey)
+			fallbackTarget := limiter.FallbackLimit()
+			boosted := boostRPS(target, fallbackTarget, info.Weight, info.UsedRPS)
+			limiter.Update(boosted)
 		}
 	}
 
@@ -492,4 +496,37 @@ func (c *Collection) doUpdate(since time.Duration, usage map[shared.GlobalKey]rp
 		// requested but not returned, bump the fallback fuse
 		c.global.Load(localKey).FailedUpdate()
 	}
+}
+
+func boostRPS(target, fallback rate.Limit, weight float64, usedRPS float64) rate.Limit {
+	baseline := target * rate.Limit(weight)
+
+	// low weights lead to low per-host overage allowed, and this can lead to
+	// restricting low-RPS-slightly-bursty requests quite a lot more than intended,
+	// despite more than enough unused quota remaining at all times.
+	//
+	// as a partial mitigation, "boost" low-weight values, allowing them to use
+	// more of the unused RPS than their weight would normally imply, up to the
+	// fallback's limit.
+	// as overall usage increases, this "allowed overage" will shrink, helping
+	// ensure it keeps converging towards the global target RPS.
+	if baseline < fallback {
+		unused := float64(target) - usedRPS
+		boosted := math.Min(
+			// with many bursty low-weight hosts, this may allow too much.
+			// currently this isn't really a concern, but this could be adjusted
+			// by num-of-low-hosts or something if needed.
+			float64(baseline)+unused,
+			// can't exceed the local fallback value though.
+			// this is also what would be allowed if this limit was garbage collected,
+			// so it's already established as a "safe enough" value.
+			float64(fallback),
+		)
+		return rate.Limit(boosted)
+	}
+
+	// any host with a weighted target higher than the fallback will already be
+	// allowing a relatively large "growth room" on top of its actual usage, so
+	// they don't need this boost.
+	return baseline
 }

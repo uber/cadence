@@ -199,9 +199,9 @@ type (
 		// Elapsed time must be non-zero, but is not otherwise constrained.
 		Update(params UpdateParams) error
 
-		// HostWeights returns the per-[Limit] weights for all requested + known keys for this Identity,
+		// HostUsage returns the per-[Limit] weights for all requested + known keys for this Identity,
 		// as well as the Limit's overall used RPS (to decide RPS to allow for new hosts).
-		HostWeights(host Identity, limits []Limit) (weights map[Limit]HostWeight, usedRPS map[Limit]PerSecond, err error)
+		HostUsage(host Identity, limits []Limit) (weights map[Limit]HostUsage, err error)
 
 		// GC can be called periodically to pre-emptively prune old ratelimits.
 		//
@@ -244,6 +244,11 @@ type (
 		ID      Identity
 		Load    map[Limit]Requests
 		Elapsed time.Duration
+	}
+
+	HostUsage struct {
+		Weight HostWeight
+		Used   PerSecond
 	}
 
 	// configSnapshot holds a non-changing snapshot of the dynamic config values,
@@ -484,19 +489,18 @@ func (a *impl) getWeightsLocked(key Limit, snap configSnapshot) (weights map[Ide
 	return weights, usedRPS, met
 }
 
-func (a *impl) HostWeights(host Identity, limits []Limit) (weights map[Limit]HostWeight, usedRPS map[Limit]PerSecond, err error) {
+func (a *impl) HostUsage(host Identity, limits []Limit) (usage map[Limit]HostUsage, err error) {
 	a.mut.Lock()
 	once := newOnce()
 	defer once.Do(a.mut.Unlock)
 
-	var cumulative Metrics
-
-	weights = make(map[Limit]HostWeight, len(limits))
-	usedRPS = make(map[Limit]PerSecond, len(limits))
 	snap, err := a.snapshot()
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
+
+	var cumulative Metrics
+	usage = make(map[Limit]HostUsage, len(limits))
 	for _, lim := range limits {
 		hosts, used, met := a.getWeightsLocked(lim, snap)
 
@@ -506,9 +510,12 @@ func (a *impl) HostWeights(host Identity, limits []Limit) (weights map[Limit]Hos
 		cumulative.RemovedHostLimits += met.RemovedHostLimits
 
 		if len(hosts) > 0 {
-			usedRPS[lim] = used // limit is known, has some usage
-			if weight, ok := hosts[host]; ok {
-				weights[lim] = weight // host has a known weight
+			usage[lim] = HostUsage{
+				// limit is known, has some usage on at least one host
+				Used: used,
+				// either known weight if there is info for this host, or zero if not.
+				// zeros are interpreted as "unknown", the same as "not present".
+				Weight: hosts[host],
 			}
 		}
 	}
@@ -520,7 +527,7 @@ func (a *impl) HostWeights(host Identity, limits []Limit) (weights map[Limit]Hos
 	a.scope.RecordHistogramValue(metrics.GlobalRatelimiterRemovedLimits, float64(cumulative.RemovedLimits))
 	a.scope.RecordHistogramValue(metrics.GlobalRatelimiterRemovedHostLimits, float64(cumulative.RemovedHostLimits))
 
-	return weights, usedRPS, nil
+	return usage, nil
 }
 
 func (a *impl) GC() (Metrics, error) {
