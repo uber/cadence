@@ -115,9 +115,6 @@ func retryOnTimeoutActivity(ctx context.Context, scheduledTimeNanos int64) (int,
 	if info.Attempt < 3 {
 		activity.RecordHeartbeat(ctx, info.Attempt*100)
 		time.Sleep(2 * info.HeartbeatTimeout)
-		// Currently we have a server bug which accepts completion from different attempt
-		// For now fail the activity
-		return 0, errRetryableActivityError
 	}
 
 	return progress, nil
