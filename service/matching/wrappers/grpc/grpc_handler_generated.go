@@ -57,6 +57,11 @@ func (g GRPCHandler) CancelOutstandingPoll(ctx context.Context, request *matchin
 	return &matchingv1.CancelOutstandingPollResponse{}, proto.FromError(err)
 }
 
+func (g GRPCHandler) CompleteStartedTask(ctx context.Context, request *matchingv1.CompleteStartedTaskRequest) (*matchingv1.CompleteStartedTaskResponse, error) {
+	response, err := g.h.CompleteStartedTask(ctx, proto.ToMatchingCompleteStartedTaskRequest(request))
+	return proto.FromMatchingCompleteStartedTaskResponse(response), proto.FromError(err)
+}
+
 func (g GRPCHandler) DescribeTaskList(ctx context.Context, request *matchingv1.DescribeTaskListRequest) (*matchingv1.DescribeTaskListResponse, error) {
 	response, err := g.h.DescribeTaskList(ctx, proto.ToMatchingDescribeTaskListRequest(request))
 	return proto.FromMatchingDescribeTaskListResponse(response), proto.FromError(err)

@@ -49,6 +49,11 @@ func (g ThriftHandler) CancelOutstandingPoll(ctx context.Context, Request *match
 	return thrift.FromError(err)
 }
 
+func (g ThriftHandler) CompleteStartedTask(ctx context.Context, Request *matching.CompleteStartedTaskRequest) (cp1 *matching.CompleteStartedTaskResponse, err error) {
+	response, err := g.h.CompleteStartedTask(ctx, thrift.ToMatchingCompleteStartedTaskRequest(Request))
+	return thrift.FromMatchingCompleteStartedTaskResponse(response), thrift.FromError(err)
+}
+
 func (g ThriftHandler) DescribeTaskList(ctx context.Context, Request *matching.DescribeTaskListRequest) (dp1 *shared.DescribeTaskListResponse, err error) {
 	response, err := g.h.DescribeTaskList(ctx, thrift.ToMatchingDescribeTaskListRequest(Request))
 	return thrift.FromMatchingDescribeTaskListResponse(response), thrift.FromError(err)

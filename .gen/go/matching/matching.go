@@ -2770,6 +2770,482 @@ func (v *CancelOutstandingPollRequest) IsSetPollerID() bool {
 	return v != nil && v.PollerID != nil
 }
 
+type CompleteStartedTaskRequest struct {
+	DomainUUID *string                   `json:"domainUUID,omitempty"`
+	Execution  *shared.WorkflowExecution `json:"execution,omitempty"`
+	ScheduleId *int64                    `json:"scheduleId,omitempty"`
+}
+
+// ToWire translates a CompleteStartedTaskRequest struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
+//
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
+func (v *CompleteStartedTaskRequest) ToWire() (wire.Value, error) {
+	var (
+		fields [3]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.DomainUUID != nil {
+		w, err = wire.NewValueString(*(v.DomainUUID)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 10, Value: w}
+		i++
+	}
+	if v.Execution != nil {
+		w, err = v.Execution.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 20, Value: w}
+		i++
+	}
+	if v.ScheduleId != nil {
+		w, err = wire.NewValueI64(*(v.ScheduleId)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 30, Value: w}
+		i++
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+// FromWire deserializes a CompleteStartedTaskRequest struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a CompleteStartedTaskRequest struct
+// from the provided intermediate representation.
+//
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
+//
+//	var v CompleteStartedTaskRequest
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
+func (v *CompleteStartedTaskRequest) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 10:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.DomainUUID = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 20:
+			if field.Value.Type() == wire.TStruct {
+				v.Execution, err = _WorkflowExecution_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		case 30:
+			if field.Value.Type() == wire.TI64 {
+				var x int64
+				x, err = field.Value.GetI64(), error(nil)
+				v.ScheduleId = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	return nil
+}
+
+// Encode serializes a CompleteStartedTaskRequest struct directly into bytes, without going
+// through an intermediary type.
+//
+// An error is returned if a CompleteStartedTaskRequest struct could not be encoded.
+func (v *CompleteStartedTaskRequest) Encode(sw stream.Writer) error {
+	if err := sw.WriteStructBegin(); err != nil {
+		return err
+	}
+
+	if v.DomainUUID != nil {
+		if err := sw.WriteFieldBegin(stream.FieldHeader{ID: 10, Type: wire.TBinary}); err != nil {
+			return err
+		}
+		if err := sw.WriteString(*(v.DomainUUID)); err != nil {
+			return err
+		}
+		if err := sw.WriteFieldEnd(); err != nil {
+			return err
+		}
+	}
+
+	if v.Execution != nil {
+		if err := sw.WriteFieldBegin(stream.FieldHeader{ID: 20, Type: wire.TStruct}); err != nil {
+			return err
+		}
+		if err := v.Execution.Encode(sw); err != nil {
+			return err
+		}
+		if err := sw.WriteFieldEnd(); err != nil {
+			return err
+		}
+	}
+
+	if v.ScheduleId != nil {
+		if err := sw.WriteFieldBegin(stream.FieldHeader{ID: 30, Type: wire.TI64}); err != nil {
+			return err
+		}
+		if err := sw.WriteInt64(*(v.ScheduleId)); err != nil {
+			return err
+		}
+		if err := sw.WriteFieldEnd(); err != nil {
+			return err
+		}
+	}
+
+	return sw.WriteStructEnd()
+}
+
+// Decode deserializes a CompleteStartedTaskRequest struct directly from its Thrift-level
+// representation, without going through an intemediary type.
+//
+// An error is returned if a CompleteStartedTaskRequest struct could not be generated from the wire
+// representation.
+func (v *CompleteStartedTaskRequest) Decode(sr stream.Reader) error {
+
+	if err := sr.ReadStructBegin(); err != nil {
+		return err
+	}
+
+	fh, ok, err := sr.ReadFieldBegin()
+	if err != nil {
+		return err
+	}
+
+	for ok {
+		switch {
+		case fh.ID == 10 && fh.Type == wire.TBinary:
+			var x string
+			x, err = sr.ReadString()
+			v.DomainUUID = &x
+			if err != nil {
+				return err
+			}
+
+		case fh.ID == 20 && fh.Type == wire.TStruct:
+			v.Execution, err = _WorkflowExecution_Decode(sr)
+			if err != nil {
+				return err
+			}
+
+		case fh.ID == 30 && fh.Type == wire.TI64:
+			var x int64
+			x, err = sr.ReadInt64()
+			v.ScheduleId = &x
+			if err != nil {
+				return err
+			}
+
+		default:
+			if err := sr.Skip(fh.Type); err != nil {
+				return err
+			}
+		}
+
+		if err := sr.ReadFieldEnd(); err != nil {
+			return err
+		}
+
+		if fh, ok, err = sr.ReadFieldBegin(); err != nil {
+			return err
+		}
+	}
+
+	if err := sr.ReadStructEnd(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a CompleteStartedTaskRequest
+// struct.
+func (v *CompleteStartedTaskRequest) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [3]string
+	i := 0
+	if v.DomainUUID != nil {
+		fields[i] = fmt.Sprintf("DomainUUID: %v", *(v.DomainUUID))
+		i++
+	}
+	if v.Execution != nil {
+		fields[i] = fmt.Sprintf("Execution: %v", v.Execution)
+		i++
+	}
+	if v.ScheduleId != nil {
+		fields[i] = fmt.Sprintf("ScheduleId: %v", *(v.ScheduleId))
+		i++
+	}
+
+	return fmt.Sprintf("CompleteStartedTaskRequest{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this CompleteStartedTaskRequest match the
+// provided CompleteStartedTaskRequest.
+//
+// This function performs a deep comparison.
+func (v *CompleteStartedTaskRequest) Equals(rhs *CompleteStartedTaskRequest) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !_String_EqualsPtr(v.DomainUUID, rhs.DomainUUID) {
+		return false
+	}
+	if !((v.Execution == nil && rhs.Execution == nil) || (v.Execution != nil && rhs.Execution != nil && v.Execution.Equals(rhs.Execution))) {
+		return false
+	}
+	if !_I64_EqualsPtr(v.ScheduleId, rhs.ScheduleId) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of CompleteStartedTaskRequest.
+func (v *CompleteStartedTaskRequest) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.DomainUUID != nil {
+		enc.AddString("domainUUID", *v.DomainUUID)
+	}
+	if v.Execution != nil {
+		err = multierr.Append(err, enc.AddObject("execution", v.Execution))
+	}
+	if v.ScheduleId != nil {
+		enc.AddInt64("scheduleId", *v.ScheduleId)
+	}
+	return err
+}
+
+// GetDomainUUID returns the value of DomainUUID if it is set or its
+// zero value if it is unset.
+func (v *CompleteStartedTaskRequest) GetDomainUUID() (o string) {
+	if v != nil && v.DomainUUID != nil {
+		return *v.DomainUUID
+	}
+
+	return
+}
+
+// IsSetDomainUUID returns true if DomainUUID is not nil.
+func (v *CompleteStartedTaskRequest) IsSetDomainUUID() bool {
+	return v != nil && v.DomainUUID != nil
+}
+
+// GetExecution returns the value of Execution if it is set or its
+// zero value if it is unset.
+func (v *CompleteStartedTaskRequest) GetExecution() (o *shared.WorkflowExecution) {
+	if v != nil && v.Execution != nil {
+		return v.Execution
+	}
+
+	return
+}
+
+// IsSetExecution returns true if Execution is not nil.
+func (v *CompleteStartedTaskRequest) IsSetExecution() bool {
+	return v != nil && v.Execution != nil
+}
+
+// GetScheduleId returns the value of ScheduleId if it is set or its
+// zero value if it is unset.
+func (v *CompleteStartedTaskRequest) GetScheduleId() (o int64) {
+	if v != nil && v.ScheduleId != nil {
+		return *v.ScheduleId
+	}
+
+	return
+}
+
+// IsSetScheduleId returns true if ScheduleId is not nil.
+func (v *CompleteStartedTaskRequest) IsSetScheduleId() bool {
+	return v != nil && v.ScheduleId != nil
+}
+
+type CompleteStartedTaskResponse struct {
+}
+
+// ToWire translates a CompleteStartedTaskResponse struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
+//
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
+func (v *CompleteStartedTaskResponse) ToWire() (wire.Value, error) {
+	var (
+		fields [0]wire.Field
+		i      int = 0
+	)
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+// FromWire deserializes a CompleteStartedTaskResponse struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a CompleteStartedTaskResponse struct
+// from the provided intermediate representation.
+//
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
+//
+//	var v CompleteStartedTaskResponse
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
+func (v *CompleteStartedTaskResponse) FromWire(w wire.Value) error {
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		}
+	}
+
+	return nil
+}
+
+// Encode serializes a CompleteStartedTaskResponse struct directly into bytes, without going
+// through an intermediary type.
+//
+// An error is returned if a CompleteStartedTaskResponse struct could not be encoded.
+func (v *CompleteStartedTaskResponse) Encode(sw stream.Writer) error {
+	if err := sw.WriteStructBegin(); err != nil {
+		return err
+	}
+
+	return sw.WriteStructEnd()
+}
+
+// Decode deserializes a CompleteStartedTaskResponse struct directly from its Thrift-level
+// representation, without going through an intemediary type.
+//
+// An error is returned if a CompleteStartedTaskResponse struct could not be generated from the wire
+// representation.
+func (v *CompleteStartedTaskResponse) Decode(sr stream.Reader) error {
+
+	if err := sr.ReadStructBegin(); err != nil {
+		return err
+	}
+
+	fh, ok, err := sr.ReadFieldBegin()
+	if err != nil {
+		return err
+	}
+
+	for ok {
+		switch {
+		default:
+			if err := sr.Skip(fh.Type); err != nil {
+				return err
+			}
+		}
+
+		if err := sr.ReadFieldEnd(); err != nil {
+			return err
+		}
+
+		if fh, ok, err = sr.ReadFieldBegin(); err != nil {
+			return err
+		}
+	}
+
+	if err := sr.ReadStructEnd(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a CompleteStartedTaskResponse
+// struct.
+func (v *CompleteStartedTaskResponse) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [0]string
+	i := 0
+
+	return fmt.Sprintf("CompleteStartedTaskResponse{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this CompleteStartedTaskResponse match the
+// provided CompleteStartedTaskResponse.
+//
+// This function performs a deep comparison.
+func (v *CompleteStartedTaskResponse) Equals(rhs *CompleteStartedTaskResponse) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of CompleteStartedTaskResponse.
+func (v *CompleteStartedTaskResponse) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	return err
+}
+
 type DescribeTaskListRequest struct {
 	DomainUUID  *string                         `json:"domainUUID,omitempty"`
 	DescRequest *shared.DescribeTaskListRequest `json:"descRequest,omitempty"`
@@ -6746,14 +7222,14 @@ var ThriftModule = &thriftreflect.ThriftModule{
 	Name:     "matching",
 	Package:  "github.com/uber/cadence/.gen/go/matching",
 	FilePath: "matching.thrift",
-	SHA1:     "783f78afea40b3b610396c5ec94ec78f490a3f4c",
+	SHA1:     "6a912820050eb46e05833810d23366963288b583",
 	Includes: []*thriftreflect.ThriftModule{
 		shared.ThriftModule,
 	},
 	Raw: rawIDL,
 }
 
-const rawIDL = "// Copyright (c) 2017 Uber Technologies, Inc.\n//\n// Permission is hereby granted, free of charge, to any person obtaining a copy\n// of this software and associated documentation files (the \"Software\"), to deal\n// in the Software without restriction, including without limitation the rights\n// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell\n// copies of the Software, and to permit persons to whom the Software is\n// furnished to do so, subject to the following conditions:\n//\n// The above copyright notice and this permission notice shall be included in\n// all copies or substantial portions of the Software.\n//\n// THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\n// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\n// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\n// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\n// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\n// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN\n// THE SOFTWARE.\n\ninclude \"shared.thrift\"\n\nnamespace java com.uber.cadence.matching\n\n// TaskSource is the source from which a task was produced\nenum TaskSource {\n    HISTORY,    // Task produced by history service\n    DB_BACKLOG // Task produced from matching db backlog\n}\n\nstruct PollForDecisionTaskRequest {\n  10: optional string domainUUID\n  15: optional string pollerID\n  20: optional shared.PollForDecisionTaskRequest pollRequest\n  30: optional string forwardedFrom\n  40: optional string isolationGroup\n}\n\nstruct PollForDecisionTaskResponse {\n  10: optional binary taskToken\n  20: optional shared.WorkflowExecution workflowExecution\n  30: optional shared.WorkflowType workflowType\n  40: optional i64 (js.type = \"Long\") previousStartedEventId\n  50: optional i64 (js.type = \"Long\") startedEventId\n  51: optional i64 (js.type = \"Long\") attempt\n  60: optional i64 (js.type = \"Long\") nextEventId\n  65: optional i64 (js.type = \"Long\") backlogCountHint\n  70: optional bool stickyExecutionEnabled\n  80: optional shared.WorkflowQuery query\n  90: optional shared.TransientDecisionInfo decisionInfo\n  100: optional shared.TaskList WorkflowExecutionTaskList\n  110: optional i32 eventStoreVersion\n  120: optional binary branchToken\n  130: optional i64 (js.type = \"Long\") scheduledTimestamp\n  140: optional i64 (js.type = \"Long\") startedTimestamp\n  150: optional map<string, shared.WorkflowQuery> queries\n  160: optional i64 (js.type = \"Long\") totalHistoryBytes\n}\n\nstruct PollForActivityTaskRequest {\n  10: optional string domainUUID\n  15: optional string pollerID\n  20: optional shared.PollForActivityTaskRequest pollRequest\n  30: optional string forwardedFrom\n  40: optional string isolationGroup\n}\n\nstruct AddDecisionTaskRequest {\n  10: optional string domainUUID\n  20: optional shared.WorkflowExecution execution\n  30: optional shared.TaskList taskList\n  40: optional i64 (js.type = \"Long\") scheduleId\n  50: optional i32 scheduleToStartTimeoutSeconds\n  59: optional TaskSource source\n  60: optional string forwardedFrom\n  70: optional map<string, string> partitionConfig\n}\n\nstruct AddActivityTaskRequest {\n  10: optional string domainUUID\n  20: optional shared.WorkflowExecution execution\n  30: optional string sourceDomainUUID\n  40: optional shared.TaskList taskList\n  50: optional i64 (js.type = \"Long\") scheduleId\n  60: optional i32 scheduleToStartTimeoutSeconds\n  69: optional TaskSource source\n  70: optional string forwardedFrom\n  80: optional ActivityTaskDispatchInfo activityTaskDispatchInfo\n  90: optional map<string, string> partitionConfig\n}\n\nstruct ActivityTaskDispatchInfo {\n   10: optional shared.HistoryEvent scheduledEvent\n   20: optional i64 (js.type = \"Long\") startedTimestamp\n   30: optional i64 (js.type = \"Long\") attempt\n   40: optional i64 (js.type = \"Long\") scheduledTimestampOfThisAttempt\n   50: optional i64 (js.type = \"Long\") scheduledTimestamp\n   60: optional binary heartbeatDetails\n   70: optional shared.WorkflowType workflowType\n   80: optional string workflowDomain\n}\n\nstruct QueryWorkflowRequest {\n  10: optional string domainUUID\n  20: optional shared.TaskList taskList\n  30: optional shared.QueryWorkflowRequest queryRequest\n  40: optional string forwardedFrom\n}\n\nstruct RespondQueryTaskCompletedRequest {\n  10: optional string domainUUID\n  20: optional shared.TaskList taskList\n  30: optional string taskID\n  40: optional shared.RespondQueryTaskCompletedRequest completedRequest\n}\n\nstruct CancelOutstandingPollRequest {\n  10: optional string domainUUID\n  20: optional i32 taskListType\n  30: optional shared.TaskList taskList\n  40: optional string pollerID\n}\n\nstruct DescribeTaskListRequest {\n  10: optional string domainUUID\n  20: optional shared.DescribeTaskListRequest descRequest\n}\n\nstruct ListTaskListPartitionsRequest {\n  10: optional string domain\n  20: optional shared.TaskList taskList\n}\n\n/**\n* MatchingService API is exposed to provide support for polling from long running applications.\n* Such applications are expected to have a worker which regularly polls for DecisionTask and ActivityTask.  For each\n* DecisionTask, application is expected to process the history of events for that session and respond back with next\n* decisions.  For each ActivityTask, application is expected to execute the actual logic for that task and respond back\n* with completion or failure.\n**/\nservice MatchingService {\n  /**\n  * PollForDecisionTask is called by frontend to process DecisionTask from a specific taskList.  A\n  * DecisionTask is dispatched to callers for active workflow executions, with pending decisions.\n  **/\n  PollForDecisionTaskResponse PollForDecisionTask(1: PollForDecisionTaskRequest pollRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.LimitExceededError limitExceededError,\n      4: shared.ServiceBusyError serviceBusyError,\n    )\n\n  /**\n  * PollForActivityTask is called by frontend to process ActivityTask from a specific taskList.  ActivityTask\n  * is dispatched to callers whenever a ScheduleTask decision is made for a workflow execution.\n  **/\n  shared.PollForActivityTaskResponse PollForActivityTask(1: PollForActivityTaskRequest pollRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.LimitExceededError limitExceededError,\n      4: shared.ServiceBusyError serviceBusyError,\n    )\n\n  /**\n  * AddDecisionTask is called by the history service when a decision task is scheduled, so that it can be dispatched\n  * by the MatchingEngine.\n  **/\n  void AddDecisionTask(1: AddDecisionTaskRequest addRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.ServiceBusyError serviceBusyError,\n      4: shared.LimitExceededError limitExceededError,\n      5: shared.DomainNotActiveError domainNotActiveError,\n      6: shared.RemoteSyncMatchedError remoteSyncMatchedError,\n      7: shared.StickyWorkerUnavailableError stickyWorkerUnavailableError,\n      8: shared.TaskListNotOwnedByHostError taskListNotOwnedByHostError,\n    )\n\n  /**\n  * AddActivityTask is called by the history service when a decision task is scheduled, so that it can be dispatched\n  * by the MatchingEngine.\n  **/\n  void AddActivityTask(1: AddActivityTaskRequest addRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.ServiceBusyError serviceBusyError,\n      4: shared.LimitExceededError limitExceededError,\n      5: shared.DomainNotActiveError domainNotActiveError,\n      6: shared.RemoteSyncMatchedError remoteSyncMatchedError,\n      7: shared.TaskListNotOwnedByHostError taskListNotOwnedByHostError,\n    )\n\n  /**\n  * QueryWorkflow is called by frontend to query a workflow.\n  **/\n  shared.QueryWorkflowResponse QueryWorkflow(1: QueryWorkflowRequest queryRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.QueryFailedError queryFailedError,\n      5: shared.LimitExceededError limitExceededError,\n      6: shared.ServiceBusyError serviceBusyError,\n      7: shared.StickyWorkerUnavailableError stickyWorkerUnavailableError,\n      8: shared.TaskListNotOwnedByHostError taskListNotOwnedByHostError,\n    )\n\n  /**\n  * RespondQueryTaskCompleted is called by frontend to respond query completed.\n  **/\n  void RespondQueryTaskCompleted(1: RespondQueryTaskCompletedRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.LimitExceededError limitExceededError,\n      5: shared.ServiceBusyError serviceBusyError,\n    )\n\n  /**\n    * CancelOutstandingPoll is called by frontend to unblock long polls on matching for zombie pollers.\n    * Our rpc stack does not support context propagation, so when a client connection goes away frontend sees\n    * cancellation of context for that handler, but any corresponding calls (long-poll) to matching service does not\n    * see the cancellation propagated so it can unblock corresponding long-polls on its end.  This results is tasks\n    * being dispatched to zombie pollers in this situation.  This API is added so everytime frontend makes a long-poll\n    * api call to matching it passes in a pollerID and then calls this API when it detects client connection is closed\n    * to unblock long polls for this poller and prevent tasks being sent to these zombie pollers.\n    **/\n  void CancelOutstandingPoll(1: CancelOutstandingPollRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.ServiceBusyError serviceBusyError,\n      4: shared.TaskListNotOwnedByHostError taskListNotOwnedByHostError,\n    )\n\n  /**\n  * DescribeTaskList returns information about the target tasklist, right now this API returns the\n  * pollers which polled this tasklist in last few minutes.\n  **/\n  shared.DescribeTaskListResponse DescribeTaskList(1: DescribeTaskListRequest request)\n    throws (\n        1: shared.BadRequestError badRequestError,\n        2: shared.InternalServiceError internalServiceError,\n        3: shared.EntityNotExistsError entityNotExistError,\n        4: shared.ServiceBusyError serviceBusyError,\n        5: shared.TaskListNotOwnedByHostError taskListNotOwnedByHostError,\n      )\n\n  /**\n  * GetTaskListsByDomain returns the list of all the task lists for a domainName.\n  **/\n  shared.GetTaskListsByDomainResponse GetTaskListsByDomain(1: shared.GetTaskListsByDomainRequest request)\n    throws (\n        1: shared.BadRequestError badRequestError,\n        2: shared.InternalServiceError internalServiceError,\n        3: shared.EntityNotExistsError entityNotExistError,\n        4: shared.ServiceBusyError serviceBusyError,\n      )\n\n  /**\n  * ListTaskListPartitions returns a map of partitionKey and hostAddress for a taskList\n  **/\n  shared.ListTaskListPartitionsResponse ListTaskListPartitions(1: ListTaskListPartitionsRequest request)\n    throws (\n        1: shared.BadRequestError badRequestError,\n        2: shared.InternalServiceError internalServiceError,\n        4: shared.ServiceBusyError serviceBusyError,\n    )\n}\n"
+const rawIDL = "// Copyright (c) 2017 Uber Technologies, Inc.\n//\n// Permission is hereby granted, free of charge, to any person obtaining a copy\n// of this software and associated documentation files (the \"Software\"), to deal\n// in the Software without restriction, including without limitation the rights\n// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell\n// copies of the Software, and to permit persons to whom the Software is\n// furnished to do so, subject to the following conditions:\n//\n// The above copyright notice and this permission notice shall be included in\n// all copies or substantial portions of the Software.\n//\n// THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\n// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\n// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\n// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\n// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\n// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN\n// THE SOFTWARE.\n\ninclude \"shared.thrift\"\n\nnamespace java com.uber.cadence.matching\n\n// TaskSource is the source from which a task was produced\nenum TaskSource {\n    HISTORY,    // Task produced by history service\n    DB_BACKLOG // Task produced from matching db backlog\n}\n\nstruct PollForDecisionTaskRequest {\n  10: optional string domainUUID\n  15: optional string pollerID\n  20: optional shared.PollForDecisionTaskRequest pollRequest\n  30: optional string forwardedFrom\n  40: optional string isolationGroup\n}\n\nstruct PollForDecisionTaskResponse {\n  10: optional binary taskToken\n  20: optional shared.WorkflowExecution workflowExecution\n  30: optional shared.WorkflowType workflowType\n  40: optional i64 (js.type = \"Long\") previousStartedEventId\n  50: optional i64 (js.type = \"Long\") startedEventId\n  51: optional i64 (js.type = \"Long\") attempt\n  60: optional i64 (js.type = \"Long\") nextEventId\n  65: optional i64 (js.type = \"Long\") backlogCountHint\n  70: optional bool stickyExecutionEnabled\n  80: optional shared.WorkflowQuery query\n  90: optional shared.TransientDecisionInfo decisionInfo\n  100: optional shared.TaskList WorkflowExecutionTaskList\n  110: optional i32 eventStoreVersion\n  120: optional binary branchToken\n  130: optional i64 (js.type = \"Long\") scheduledTimestamp\n  140: optional i64 (js.type = \"Long\") startedTimestamp\n  150: optional map<string, shared.WorkflowQuery> queries\n  160: optional i64 (js.type = \"Long\") totalHistoryBytes\n}\n\nstruct PollForActivityTaskRequest {\n  10: optional string domainUUID\n  15: optional string pollerID\n  20: optional shared.PollForActivityTaskRequest pollRequest\n  30: optional string forwardedFrom\n  40: optional string isolationGroup\n}\n\nstruct AddDecisionTaskRequest {\n  10: optional string domainUUID\n  20: optional shared.WorkflowExecution execution\n  30: optional shared.TaskList taskList\n  40: optional i64 (js.type = \"Long\") scheduleId\n  50: optional i32 scheduleToStartTimeoutSeconds\n  59: optional TaskSource source\n  60: optional string forwardedFrom\n  70: optional map<string, string> partitionConfig\n}\n\nstruct AddActivityTaskRequest {\n  10: optional string domainUUID\n  20: optional shared.WorkflowExecution execution\n  30: optional string sourceDomainUUID\n  40: optional shared.TaskList taskList\n  50: optional i64 (js.type = \"Long\") scheduleId\n  60: optional i32 scheduleToStartTimeoutSeconds\n  69: optional TaskSource source\n  70: optional string forwardedFrom\n  80: optional ActivityTaskDispatchInfo activityTaskDispatchInfo\n  90: optional map<string, string> partitionConfig\n}\n\nstruct ActivityTaskDispatchInfo {\n   10: optional shared.HistoryEvent scheduledEvent\n   20: optional i64 (js.type = \"Long\") startedTimestamp\n   30: optional i64 (js.type = \"Long\") attempt\n   40: optional i64 (js.type = \"Long\") scheduledTimestampOfThisAttempt\n   50: optional i64 (js.type = \"Long\") scheduledTimestamp\n   60: optional binary heartbeatDetails\n   70: optional shared.WorkflowType workflowType\n   80: optional string workflowDomain\n}\n\nstruct QueryWorkflowRequest {\n  10: optional string domainUUID\n  20: optional shared.TaskList taskList\n  30: optional shared.QueryWorkflowRequest queryRequest\n  40: optional string forwardedFrom\n}\n\nstruct RespondQueryTaskCompletedRequest {\n  10: optional string domainUUID\n  20: optional shared.TaskList taskList\n  30: optional string taskID\n  40: optional shared.RespondQueryTaskCompletedRequest completedRequest\n}\n\nstruct CancelOutstandingPollRequest {\n  10: optional string domainUUID\n  20: optional i32 taskListType\n  30: optional shared.TaskList taskList\n  40: optional string pollerID\n}\n\nstruct DescribeTaskListRequest {\n  10: optional string domainUUID\n  20: optional shared.DescribeTaskListRequest descRequest\n}\n\nstruct ListTaskListPartitionsRequest {\n  10: optional string domain\n  20: optional shared.TaskList taskList\n}\n\nstruct CompleteStartedTaskRequest {\n  10: optional string domainUUID\n  20: optional shared.WorkflowExecution execution\n  30: optional i64 (js.type = \"Long\") scheduleId\n}\n\nstruct CompleteStartedTaskResponse {\n}\n\n/**\n* MatchingService API is exposed to provide support for polling from long running applications.\n* Such applications are expected to have a worker which regularly polls for DecisionTask and ActivityTask.  For each\n* DecisionTask, application is expected to process the history of events for that session and respond back with next\n* decisions.  For each ActivityTask, application is expected to execute the actual logic for that task and respond back\n* with completion or failure.\n**/\nservice MatchingService {\n  /**\n  * PollForDecisionTask is called by frontend to process DecisionTask from a specific taskList.  A\n  * DecisionTask is dispatched to callers for active workflow executions, with pending decisions.\n  **/\n  PollForDecisionTaskResponse PollForDecisionTask(1: PollForDecisionTaskRequest pollRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.LimitExceededError limitExceededError,\n      4: shared.ServiceBusyError serviceBusyError,\n    )\n\n  /**\n  * PollForActivityTask is called by frontend to process ActivityTask from a specific taskList.  ActivityTask\n  * is dispatched to callers whenever a ScheduleTask decision is made for a workflow execution.\n  **/\n  shared.PollForActivityTaskResponse PollForActivityTask(1: PollForActivityTaskRequest pollRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.LimitExceededError limitExceededError,\n      4: shared.ServiceBusyError serviceBusyError,\n    )\n\n  /**\n  * AddDecisionTask is called by the history service when a decision task is scheduled, so that it can be dispatched\n  * by the MatchingEngine.\n  **/\n  void AddDecisionTask(1: AddDecisionTaskRequest addRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.ServiceBusyError serviceBusyError,\n      4: shared.LimitExceededError limitExceededError,\n      5: shared.DomainNotActiveError domainNotActiveError,\n      6: shared.RemoteSyncMatchedError remoteSyncMatchedError,\n      7: shared.StickyWorkerUnavailableError stickyWorkerUnavailableError,\n      8: shared.TaskListNotOwnedByHostError taskListNotOwnedByHostError,\n    )\n\n  /**\n  * AddActivityTask is called by the history service when a decision task is scheduled, so that it can be dispatched\n  * by the MatchingEngine.\n  **/\n  void AddActivityTask(1: AddActivityTaskRequest addRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.ServiceBusyError serviceBusyError,\n      4: shared.LimitExceededError limitExceededError,\n      5: shared.DomainNotActiveError domainNotActiveError,\n      6: shared.RemoteSyncMatchedError remoteSyncMatchedError,\n      7: shared.TaskListNotOwnedByHostError taskListNotOwnedByHostError,\n    )\n\n  /**\n  * QueryWorkflow is called by frontend to query a workflow.\n  **/\n  shared.QueryWorkflowResponse QueryWorkflow(1: QueryWorkflowRequest queryRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.QueryFailedError queryFailedError,\n      5: shared.LimitExceededError limitExceededError,\n      6: shared.ServiceBusyError serviceBusyError,\n      7: shared.StickyWorkerUnavailableError stickyWorkerUnavailableError,\n      8: shared.TaskListNotOwnedByHostError taskListNotOwnedByHostError,\n    )\n\n  /**\n  * RespondQueryTaskCompleted is called by frontend to respond query completed.\n  **/\n  void RespondQueryTaskCompleted(1: RespondQueryTaskCompletedRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.LimitExceededError limitExceededError,\n      5: shared.ServiceBusyError serviceBusyError,\n    )\n\n  /**\n    * CancelOutstandingPoll is called by frontend to unblock long polls on matching for zombie pollers.\n    * Our rpc stack does not support context propagation, so when a client connection goes away frontend sees\n    * cancellation of context for that handler, but any corresponding calls (long-poll) to matching service does not\n    * see the cancellation propagated so it can unblock corresponding long-polls on its end.  This results is tasks\n    * being dispatched to zombie pollers in this situation.  This API is added so everytime frontend makes a long-poll\n    * api call to matching it passes in a pollerID and then calls this API when it detects client connection is closed\n    * to unblock long polls for this poller and prevent tasks being sent to these zombie pollers.\n    **/\n  void CancelOutstandingPoll(1: CancelOutstandingPollRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.ServiceBusyError serviceBusyError,\n      4: shared.TaskListNotOwnedByHostError taskListNotOwnedByHostError,\n    )\n\n  /**\n  * DescribeTaskList returns information about the target tasklist, right now this API returns the\n  * pollers which polled this tasklist in last few minutes.\n  **/\n  shared.DescribeTaskListResponse DescribeTaskList(1: DescribeTaskListRequest request)\n    throws (\n        1: shared.BadRequestError badRequestError,\n        2: shared.InternalServiceError internalServiceError,\n        3: shared.EntityNotExistsError entityNotExistError,\n        4: shared.ServiceBusyError serviceBusyError,\n        5: shared.TaskListNotOwnedByHostError taskListNotOwnedByHostError,\n      )\n\n  /**\n  * GetTaskListsByDomain returns the list of all the task lists for a domainName.\n  **/\n  shared.GetTaskListsByDomainResponse GetTaskListsByDomain(1: shared.GetTaskListsByDomainRequest request)\n    throws (\n        1: shared.BadRequestError badRequestError,\n        2: shared.InternalServiceError internalServiceError,\n        3: shared.EntityNotExistsError entityNotExistError,\n        4: shared.ServiceBusyError serviceBusyError,\n      )\n\n  /**\n  * ListTaskListPartitions returns a map of partitionKey and hostAddress for a taskList\n  **/\n  shared.ListTaskListPartitionsResponse ListTaskListPartitions(1: ListTaskListPartitionsRequest request)\n    throws (\n        1: shared.BadRequestError badRequestError,\n        2: shared.InternalServiceError internalServiceError,\n        4: shared.ServiceBusyError serviceBusyError,\n    )\n\n  /**\n  * CompleteStartedTask is called by the history service when it receives a task started event has been replicated\n  **/\n  CompleteStartedTaskResponse CompleteStartedTask(1: CompleteStartedTaskRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.ServiceBusyError serviceBusyError,\n      3: shared.LimitExceededError limitExceededError,\n    )\n}\n"
 
 // MatchingService_AddActivityTask_Args represents the arguments for the MatchingService.AddActivityTask function.
 //
@@ -9862,6 +10338,834 @@ func (v *MatchingService_CancelOutstandingPoll_Result) MethodName() string {
 //
 // This will always be Reply for this struct.
 func (v *MatchingService_CancelOutstandingPoll_Result) EnvelopeType() wire.EnvelopeType {
+	return wire.Reply
+}
+
+// MatchingService_CompleteStartedTask_Args represents the arguments for the MatchingService.CompleteStartedTask function.
+//
+// The arguments for CompleteStartedTask are sent and received over the wire as this struct.
+type MatchingService_CompleteStartedTask_Args struct {
+	Request *CompleteStartedTaskRequest `json:"request,omitempty"`
+}
+
+// ToWire translates a MatchingService_CompleteStartedTask_Args struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
+//
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
+func (v *MatchingService_CompleteStartedTask_Args) ToWire() (wire.Value, error) {
+	var (
+		fields [1]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.Request != nil {
+		w, err = v.Request.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func _CompleteStartedTaskRequest_Read(w wire.Value) (*CompleteStartedTaskRequest, error) {
+	var v CompleteStartedTaskRequest
+	err := v.FromWire(w)
+	return &v, err
+}
+
+// FromWire deserializes a MatchingService_CompleteStartedTask_Args struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a MatchingService_CompleteStartedTask_Args struct
+// from the provided intermediate representation.
+//
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
+//
+//	var v MatchingService_CompleteStartedTask_Args
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
+func (v *MatchingService_CompleteStartedTask_Args) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 1:
+			if field.Value.Type() == wire.TStruct {
+				v.Request, err = _CompleteStartedTaskRequest_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	return nil
+}
+
+// Encode serializes a MatchingService_CompleteStartedTask_Args struct directly into bytes, without going
+// through an intermediary type.
+//
+// An error is returned if a MatchingService_CompleteStartedTask_Args struct could not be encoded.
+func (v *MatchingService_CompleteStartedTask_Args) Encode(sw stream.Writer) error {
+	if err := sw.WriteStructBegin(); err != nil {
+		return err
+	}
+
+	if v.Request != nil {
+		if err := sw.WriteFieldBegin(stream.FieldHeader{ID: 1, Type: wire.TStruct}); err != nil {
+			return err
+		}
+		if err := v.Request.Encode(sw); err != nil {
+			return err
+		}
+		if err := sw.WriteFieldEnd(); err != nil {
+			return err
+		}
+	}
+
+	return sw.WriteStructEnd()
+}
+
+func _CompleteStartedTaskRequest_Decode(sr stream.Reader) (*CompleteStartedTaskRequest, error) {
+	var v CompleteStartedTaskRequest
+	err := v.Decode(sr)
+	return &v, err
+}
+
+// Decode deserializes a MatchingService_CompleteStartedTask_Args struct directly from its Thrift-level
+// representation, without going through an intemediary type.
+//
+// An error is returned if a MatchingService_CompleteStartedTask_Args struct could not be generated from the wire
+// representation.
+func (v *MatchingService_CompleteStartedTask_Args) Decode(sr stream.Reader) error {
+
+	if err := sr.ReadStructBegin(); err != nil {
+		return err
+	}
+
+	fh, ok, err := sr.ReadFieldBegin()
+	if err != nil {
+		return err
+	}
+
+	for ok {
+		switch {
+		case fh.ID == 1 && fh.Type == wire.TStruct:
+			v.Request, err = _CompleteStartedTaskRequest_Decode(sr)
+			if err != nil {
+				return err
+			}
+
+		default:
+			if err := sr.Skip(fh.Type); err != nil {
+				return err
+			}
+		}
+
+		if err := sr.ReadFieldEnd(); err != nil {
+			return err
+		}
+
+		if fh, ok, err = sr.ReadFieldBegin(); err != nil {
+			return err
+		}
+	}
+
+	if err := sr.ReadStructEnd(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a MatchingService_CompleteStartedTask_Args
+// struct.
+func (v *MatchingService_CompleteStartedTask_Args) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [1]string
+	i := 0
+	if v.Request != nil {
+		fields[i] = fmt.Sprintf("Request: %v", v.Request)
+		i++
+	}
+
+	return fmt.Sprintf("MatchingService_CompleteStartedTask_Args{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this MatchingService_CompleteStartedTask_Args match the
+// provided MatchingService_CompleteStartedTask_Args.
+//
+// This function performs a deep comparison.
+func (v *MatchingService_CompleteStartedTask_Args) Equals(rhs *MatchingService_CompleteStartedTask_Args) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !((v.Request == nil && rhs.Request == nil) || (v.Request != nil && rhs.Request != nil && v.Request.Equals(rhs.Request))) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of MatchingService_CompleteStartedTask_Args.
+func (v *MatchingService_CompleteStartedTask_Args) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.Request != nil {
+		err = multierr.Append(err, enc.AddObject("request", v.Request))
+	}
+	return err
+}
+
+// GetRequest returns the value of Request if it is set or its
+// zero value if it is unset.
+func (v *MatchingService_CompleteStartedTask_Args) GetRequest() (o *CompleteStartedTaskRequest) {
+	if v != nil && v.Request != nil {
+		return v.Request
+	}
+
+	return
+}
+
+// IsSetRequest returns true if Request is not nil.
+func (v *MatchingService_CompleteStartedTask_Args) IsSetRequest() bool {
+	return v != nil && v.Request != nil
+}
+
+// MethodName returns the name of the Thrift function as specified in
+// the IDL, for which this struct represent the arguments.
+//
+// This will always be "CompleteStartedTask" for this struct.
+func (v *MatchingService_CompleteStartedTask_Args) MethodName() string {
+	return "CompleteStartedTask"
+}
+
+// EnvelopeType returns the kind of value inside this struct.
+//
+// This will always be Call for this struct.
+func (v *MatchingService_CompleteStartedTask_Args) EnvelopeType() wire.EnvelopeType {
+	return wire.Call
+}
+
+// MatchingService_CompleteStartedTask_Helper provides functions that aid in handling the
+// parameters and return values of the MatchingService.CompleteStartedTask
+// function.
+var MatchingService_CompleteStartedTask_Helper = struct {
+	// Args accepts the parameters of CompleteStartedTask in-order and returns
+	// the arguments struct for the function.
+	Args func(
+		request *CompleteStartedTaskRequest,
+	) *MatchingService_CompleteStartedTask_Args
+
+	// IsException returns true if the given error can be thrown
+	// by CompleteStartedTask.
+	//
+	// An error can be thrown by CompleteStartedTask only if the
+	// corresponding exception type was mentioned in the 'throws'
+	// section for it in the Thrift file.
+	IsException func(error) bool
+
+	// WrapResponse returns the result struct for CompleteStartedTask
+	// given its return value and error.
+	//
+	// This allows mapping values and errors returned by
+	// CompleteStartedTask into a serializable result struct.
+	// WrapResponse returns a non-nil error if the provided
+	// error cannot be thrown by CompleteStartedTask
+	//
+	//   value, err := CompleteStartedTask(args)
+	//   result, err := MatchingService_CompleteStartedTask_Helper.WrapResponse(value, err)
+	//   if err != nil {
+	//     return fmt.Errorf("unexpected error from CompleteStartedTask: %v", err)
+	//   }
+	//   serialize(result)
+	WrapResponse func(*CompleteStartedTaskResponse, error) (*MatchingService_CompleteStartedTask_Result, error)
+
+	// UnwrapResponse takes the result struct for CompleteStartedTask
+	// and returns the value or error returned by it.
+	//
+	// The error is non-nil only if CompleteStartedTask threw an
+	// exception.
+	//
+	//   result := deserialize(bytes)
+	//   value, err := MatchingService_CompleteStartedTask_Helper.UnwrapResponse(result)
+	UnwrapResponse func(*MatchingService_CompleteStartedTask_Result) (*CompleteStartedTaskResponse, error)
+}{}
+
+func init() {
+	MatchingService_CompleteStartedTask_Helper.Args = func(
+		request *CompleteStartedTaskRequest,
+	) *MatchingService_CompleteStartedTask_Args {
+		return &MatchingService_CompleteStartedTask_Args{
+			Request: request,
+		}
+	}
+
+	MatchingService_CompleteStartedTask_Helper.IsException = func(err error) bool {
+		switch err.(type) {
+		case *shared.BadRequestError:
+			return true
+		case *shared.ServiceBusyError:
+			return true
+		case *shared.LimitExceededError:
+			return true
+		default:
+			return false
+		}
+	}
+
+	MatchingService_CompleteStartedTask_Helper.WrapResponse = func(success *CompleteStartedTaskResponse, err error) (*MatchingService_CompleteStartedTask_Result, error) {
+		if err == nil {
+			return &MatchingService_CompleteStartedTask_Result{Success: success}, nil
+		}
+
+		switch e := err.(type) {
+		case *shared.BadRequestError:
+			if e == nil {
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for MatchingService_CompleteStartedTask_Result.BadRequestError")
+			}
+			return &MatchingService_CompleteStartedTask_Result{BadRequestError: e}, nil
+		case *shared.ServiceBusyError:
+			if e == nil {
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for MatchingService_CompleteStartedTask_Result.ServiceBusyError")
+			}
+			return &MatchingService_CompleteStartedTask_Result{ServiceBusyError: e}, nil
+		case *shared.LimitExceededError:
+			if e == nil {
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for MatchingService_CompleteStartedTask_Result.LimitExceededError")
+			}
+			return &MatchingService_CompleteStartedTask_Result{LimitExceededError: e}, nil
+		}
+
+		return nil, err
+	}
+	MatchingService_CompleteStartedTask_Helper.UnwrapResponse = func(result *MatchingService_CompleteStartedTask_Result) (success *CompleteStartedTaskResponse, err error) {
+		if result.BadRequestError != nil {
+			err = result.BadRequestError
+			return
+		}
+		if result.ServiceBusyError != nil {
+			err = result.ServiceBusyError
+			return
+		}
+		if result.LimitExceededError != nil {
+			err = result.LimitExceededError
+			return
+		}
+
+		if result.Success != nil {
+			success = result.Success
+			return
+		}
+
+		err = errors.New("expected a non-void result")
+		return
+	}
+
+}
+
+// MatchingService_CompleteStartedTask_Result represents the result of a MatchingService.CompleteStartedTask function call.
+//
+// The result of a CompleteStartedTask execution is sent and received over the wire as this struct.
+//
+// Success is set only if the function did not throw an exception.
+type MatchingService_CompleteStartedTask_Result struct {
+	// Value returned by CompleteStartedTask after a successful execution.
+	Success            *CompleteStartedTaskResponse `json:"success,omitempty"`
+	BadRequestError    *shared.BadRequestError      `json:"badRequestError,omitempty"`
+	ServiceBusyError   *shared.ServiceBusyError     `json:"serviceBusyError,omitempty"`
+	LimitExceededError *shared.LimitExceededError   `json:"limitExceededError,omitempty"`
+}
+
+// ToWire translates a MatchingService_CompleteStartedTask_Result struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
+//
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
+func (v *MatchingService_CompleteStartedTask_Result) ToWire() (wire.Value, error) {
+	var (
+		fields [4]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.Success != nil {
+		w, err = v.Success.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 0, Value: w}
+		i++
+	}
+	if v.BadRequestError != nil {
+		w, err = v.BadRequestError.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
+	if v.ServiceBusyError != nil {
+		w, err = v.ServiceBusyError.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 2, Value: w}
+		i++
+	}
+	if v.LimitExceededError != nil {
+		w, err = v.LimitExceededError.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 3, Value: w}
+		i++
+	}
+
+	if i != 1 {
+		return wire.Value{}, fmt.Errorf("MatchingService_CompleteStartedTask_Result should have exactly one field: got %v fields", i)
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func _CompleteStartedTaskResponse_Read(w wire.Value) (*CompleteStartedTaskResponse, error) {
+	var v CompleteStartedTaskResponse
+	err := v.FromWire(w)
+	return &v, err
+}
+
+// FromWire deserializes a MatchingService_CompleteStartedTask_Result struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a MatchingService_CompleteStartedTask_Result struct
+// from the provided intermediate representation.
+//
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
+//
+//	var v MatchingService_CompleteStartedTask_Result
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
+func (v *MatchingService_CompleteStartedTask_Result) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 0:
+			if field.Value.Type() == wire.TStruct {
+				v.Success, err = _CompleteStartedTaskResponse_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		case 1:
+			if field.Value.Type() == wire.TStruct {
+				v.BadRequestError, err = _BadRequestError_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		case 2:
+			if field.Value.Type() == wire.TStruct {
+				v.ServiceBusyError, err = _ServiceBusyError_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		case 3:
+			if field.Value.Type() == wire.TStruct {
+				v.LimitExceededError, err = _LimitExceededError_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	count := 0
+	if v.Success != nil {
+		count++
+	}
+	if v.BadRequestError != nil {
+		count++
+	}
+	if v.ServiceBusyError != nil {
+		count++
+	}
+	if v.LimitExceededError != nil {
+		count++
+	}
+	if count != 1 {
+		return fmt.Errorf("MatchingService_CompleteStartedTask_Result should have exactly one field: got %v fields", count)
+	}
+
+	return nil
+}
+
+// Encode serializes a MatchingService_CompleteStartedTask_Result struct directly into bytes, without going
+// through an intermediary type.
+//
+// An error is returned if a MatchingService_CompleteStartedTask_Result struct could not be encoded.
+func (v *MatchingService_CompleteStartedTask_Result) Encode(sw stream.Writer) error {
+	if err := sw.WriteStructBegin(); err != nil {
+		return err
+	}
+
+	if v.Success != nil {
+		if err := sw.WriteFieldBegin(stream.FieldHeader{ID: 0, Type: wire.TStruct}); err != nil {
+			return err
+		}
+		if err := v.Success.Encode(sw); err != nil {
+			return err
+		}
+		if err := sw.WriteFieldEnd(); err != nil {
+			return err
+		}
+	}
+
+	if v.BadRequestError != nil {
+		if err := sw.WriteFieldBegin(stream.FieldHeader{ID: 1, Type: wire.TStruct}); err != nil {
+			return err
+		}
+		if err := v.BadRequestError.Encode(sw); err != nil {
+			return err
+		}
+		if err := sw.WriteFieldEnd(); err != nil {
+			return err
+		}
+	}
+
+	if v.ServiceBusyError != nil {
+		if err := sw.WriteFieldBegin(stream.FieldHeader{ID: 2, Type: wire.TStruct}); err != nil {
+			return err
+		}
+		if err := v.ServiceBusyError.Encode(sw); err != nil {
+			return err
+		}
+		if err := sw.WriteFieldEnd(); err != nil {
+			return err
+		}
+	}
+
+	if v.LimitExceededError != nil {
+		if err := sw.WriteFieldBegin(stream.FieldHeader{ID: 3, Type: wire.TStruct}); err != nil {
+			return err
+		}
+		if err := v.LimitExceededError.Encode(sw); err != nil {
+			return err
+		}
+		if err := sw.WriteFieldEnd(); err != nil {
+			return err
+		}
+	}
+
+	count := 0
+	if v.Success != nil {
+		count++
+	}
+	if v.BadRequestError != nil {
+		count++
+	}
+	if v.ServiceBusyError != nil {
+		count++
+	}
+	if v.LimitExceededError != nil {
+		count++
+	}
+
+	if count != 1 {
+		return fmt.Errorf("MatchingService_CompleteStartedTask_Result should have exactly one field: got %v fields", count)
+	}
+
+	return sw.WriteStructEnd()
+}
+
+func _CompleteStartedTaskResponse_Decode(sr stream.Reader) (*CompleteStartedTaskResponse, error) {
+	var v CompleteStartedTaskResponse
+	err := v.Decode(sr)
+	return &v, err
+}
+
+// Decode deserializes a MatchingService_CompleteStartedTask_Result struct directly from its Thrift-level
+// representation, without going through an intemediary type.
+//
+// An error is returned if a MatchingService_CompleteStartedTask_Result struct could not be generated from the wire
+// representation.
+func (v *MatchingService_CompleteStartedTask_Result) Decode(sr stream.Reader) error {
+
+	if err := sr.ReadStructBegin(); err != nil {
+		return err
+	}
+
+	fh, ok, err := sr.ReadFieldBegin()
+	if err != nil {
+		return err
+	}
+
+	for ok {
+		switch {
+		case fh.ID == 0 && fh.Type == wire.TStruct:
+			v.Success, err = _CompleteStartedTaskResponse_Decode(sr)
+			if err != nil {
+				return err
+			}
+
+		case fh.ID == 1 && fh.Type == wire.TStruct:
+			v.BadRequestError, err = _BadRequestError_Decode(sr)
+			if err != nil {
+				return err
+			}
+
+		case fh.ID == 2 && fh.Type == wire.TStruct:
+			v.ServiceBusyError, err = _ServiceBusyError_Decode(sr)
+			if err != nil {
+				return err
+			}
+
+		case fh.ID == 3 && fh.Type == wire.TStruct:
+			v.LimitExceededError, err = _LimitExceededError_Decode(sr)
+			if err != nil {
+				return err
+			}
+
+		default:
+			if err := sr.Skip(fh.Type); err != nil {
+				return err
+			}
+		}
+
+		if err := sr.ReadFieldEnd(); err != nil {
+			return err
+		}
+
+		if fh, ok, err = sr.ReadFieldBegin(); err != nil {
+			return err
+		}
+	}
+
+	if err := sr.ReadStructEnd(); err != nil {
+		return err
+	}
+
+	count := 0
+	if v.Success != nil {
+		count++
+	}
+	if v.BadRequestError != nil {
+		count++
+	}
+	if v.ServiceBusyError != nil {
+		count++
+	}
+	if v.LimitExceededError != nil {
+		count++
+	}
+	if count != 1 {
+		return fmt.Errorf("MatchingService_CompleteStartedTask_Result should have exactly one field: got %v fields", count)
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a MatchingService_CompleteStartedTask_Result
+// struct.
+func (v *MatchingService_CompleteStartedTask_Result) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [4]string
+	i := 0
+	if v.Success != nil {
+		fields[i] = fmt.Sprintf("Success: %v", v.Success)
+		i++
+	}
+	if v.BadRequestError != nil {
+		fields[i] = fmt.Sprintf("BadRequestError: %v", v.BadRequestError)
+		i++
+	}
+	if v.ServiceBusyError != nil {
+		fields[i] = fmt.Sprintf("ServiceBusyError: %v", v.ServiceBusyError)
+		i++
+	}
+	if v.LimitExceededError != nil {
+		fields[i] = fmt.Sprintf("LimitExceededError: %v", v.LimitExceededError)
+		i++
+	}
+
+	return fmt.Sprintf("MatchingService_CompleteStartedTask_Result{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this MatchingService_CompleteStartedTask_Result match the
+// provided MatchingService_CompleteStartedTask_Result.
+//
+// This function performs a deep comparison.
+func (v *MatchingService_CompleteStartedTask_Result) Equals(rhs *MatchingService_CompleteStartedTask_Result) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !((v.Success == nil && rhs.Success == nil) || (v.Success != nil && rhs.Success != nil && v.Success.Equals(rhs.Success))) {
+		return false
+	}
+	if !((v.BadRequestError == nil && rhs.BadRequestError == nil) || (v.BadRequestError != nil && rhs.BadRequestError != nil && v.BadRequestError.Equals(rhs.BadRequestError))) {
+		return false
+	}
+	if !((v.ServiceBusyError == nil && rhs.ServiceBusyError == nil) || (v.ServiceBusyError != nil && rhs.ServiceBusyError != nil && v.ServiceBusyError.Equals(rhs.ServiceBusyError))) {
+		return false
+	}
+	if !((v.LimitExceededError == nil && rhs.LimitExceededError == nil) || (v.LimitExceededError != nil && rhs.LimitExceededError != nil && v.LimitExceededError.Equals(rhs.LimitExceededError))) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of MatchingService_CompleteStartedTask_Result.
+func (v *MatchingService_CompleteStartedTask_Result) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.Success != nil {
+		err = multierr.Append(err, enc.AddObject("success", v.Success))
+	}
+	if v.BadRequestError != nil {
+		err = multierr.Append(err, enc.AddObject("badRequestError", v.BadRequestError))
+	}
+	if v.ServiceBusyError != nil {
+		err = multierr.Append(err, enc.AddObject("serviceBusyError", v.ServiceBusyError))
+	}
+	if v.LimitExceededError != nil {
+		err = multierr.Append(err, enc.AddObject("limitExceededError", v.LimitExceededError))
+	}
+	return err
+}
+
+// GetSuccess returns the value of Success if it is set or its
+// zero value if it is unset.
+func (v *MatchingService_CompleteStartedTask_Result) GetSuccess() (o *CompleteStartedTaskResponse) {
+	if v != nil && v.Success != nil {
+		return v.Success
+	}
+
+	return
+}
+
+// IsSetSuccess returns true if Success is not nil.
+func (v *MatchingService_CompleteStartedTask_Result) IsSetSuccess() bool {
+	return v != nil && v.Success != nil
+}
+
+// GetBadRequestError returns the value of BadRequestError if it is set or its
+// zero value if it is unset.
+func (v *MatchingService_CompleteStartedTask_Result) GetBadRequestError() (o *shared.BadRequestError) {
+	if v != nil && v.BadRequestError != nil {
+		return v.BadRequestError
+	}
+
+	return
+}
+
+// IsSetBadRequestError returns true if BadRequestError is not nil.
+func (v *MatchingService_CompleteStartedTask_Result) IsSetBadRequestError() bool {
+	return v != nil && v.BadRequestError != nil
+}
+
+// GetServiceBusyError returns the value of ServiceBusyError if it is set or its
+// zero value if it is unset.
+func (v *MatchingService_CompleteStartedTask_Result) GetServiceBusyError() (o *shared.ServiceBusyError) {
+	if v != nil && v.ServiceBusyError != nil {
+		return v.ServiceBusyError
+	}
+
+	return
+}
+
+// IsSetServiceBusyError returns true if ServiceBusyError is not nil.
+func (v *MatchingService_CompleteStartedTask_Result) IsSetServiceBusyError() bool {
+	return v != nil && v.ServiceBusyError != nil
+}
+
+// GetLimitExceededError returns the value of LimitExceededError if it is set or its
+// zero value if it is unset.
+func (v *MatchingService_CompleteStartedTask_Result) GetLimitExceededError() (o *shared.LimitExceededError) {
+	if v != nil && v.LimitExceededError != nil {
+		return v.LimitExceededError
+	}
+
+	return
+}
+
+// IsSetLimitExceededError returns true if LimitExceededError is not nil.
+func (v *MatchingService_CompleteStartedTask_Result) IsSetLimitExceededError() bool {
+	return v != nil && v.LimitExceededError != nil
+}
+
+// MethodName returns the name of the Thrift function as specified in
+// the IDL, for which this struct represent the result.
+//
+// This will always be "CompleteStartedTask" for this struct.
+func (v *MatchingService_CompleteStartedTask_Result) MethodName() string {
+	return "CompleteStartedTask"
+}
+
+// EnvelopeType returns the kind of value inside this struct.
+//
+// This will always be Reply for this struct.
+func (v *MatchingService_CompleteStartedTask_Result) EnvelopeType() wire.EnvelopeType {
 	return wire.Reply
 }
 

@@ -376,6 +376,23 @@ func ToMatchingRespondQueryTaskCompletedRequest(t *matching.RespondQueryTaskComp
 	}
 }
 
+// ToMatchingCompleteStartedTaskRequest converts thrift CompleteStartedTaskRequest type to internal
+func ToMatchingCompleteStartedTaskRequest(t *matching.CompleteStartedTaskRequest) *types.CompleteStartedTaskRequest {
+	if t == nil {
+		return nil
+	}
+	panic("not implemented")
+	return nil
+}
+
+func FromMatchingCompleteStartedTaskResponse(t *types.CompleteStartedTaskResponse) *matching.CompleteStartedTaskResponse {
+	if t == nil {
+		return nil
+	}
+	panic("not implemented")
+	return nil
+}
+
 // FromTaskSource converts internal TaskSource type to thrift
 func FromTaskSource(t *types.TaskSource) *matching.TaskSource {
 	if t == nil {

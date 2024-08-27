@@ -934,6 +934,14 @@ func (e *matchingEngineImpl) ListTaskListPartitions(
 	return resp, nil
 }
 
+func (e *matchingEngineImpl) CompleteStartedTask(
+	hCtx *handlerContext,
+	request *types.CompleteStartedTaskRequest,
+) (*types.CompleteStartedTaskResponse, error) {
+	panic("not implemented")
+	return nil, nil
+}
+
 func (e *matchingEngineImpl) listTaskListPartitions(
 	request *types.MatchingListTaskListPartitionsRequest,
 	taskListType int,

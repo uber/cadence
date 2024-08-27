@@ -610,3 +610,14 @@ const (
 	// TaskSourceDbBacklog is an option for TaskSource
 	TaskSourceDbBacklog
 )
+
+// CompleteStartedTaskRequest is an internal type (TBD...)
+type CompleteStartedTaskRequest struct {
+	DomainUUID string             `json:"domainUUID,omitempty"`
+	Execution  *WorkflowExecution `json:"execution,omitempty"`
+	ScheduleID int64              `json:"scheduleId,omitempty"`
+}
+
+// CompleteStartedTaskResponse is an internal type (TBD...)
+type CompleteStartedTaskResponse struct {
+}

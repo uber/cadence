@@ -517,3 +517,18 @@ func ToMatchingRespondQueryTaskCompletedRequest(t *matchingv1.RespondQueryTaskCo
 		TaskID:           t.TaskId,
 	}
 }
+
+func ToMatchingCompleteStartedTaskRequest(t *matchingv1.CompleteStartedTaskRequest) *types.CompleteStartedTaskRequest {
+	if t == nil {
+		return nil
+	}
+	panic("not implemented")
+	return &types.CompleteStartedTaskRequest{}
+}
+
+func FromMatchingCompleteStartedTaskResponse(t *types.CompleteStartedTaskResponse) *matchingv1.CompleteStartedTaskResponse {
+	if t == nil {
+		return nil
+	}
+	return &matchingv1.CompleteStartedTaskResponse{}
+}
