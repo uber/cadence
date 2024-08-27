@@ -26,9 +26,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/types"
-	"github.com/uber/cadence/service/worker/diagnostics/invariants"
 	"testing"
 	"time"
 
@@ -39,8 +36,11 @@ import (
 	"go.uber.org/cadence/testsuite"
 	"go.uber.org/cadence/workflow"
 
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/resource"
+	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/service/worker/diagnostics/invariants"
 )
 
 type diagnosticsWorkflowTestSuite struct {
