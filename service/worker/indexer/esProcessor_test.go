@@ -402,3 +402,28 @@ func (s *esProcessorSuite) TestIsErrorRetriable() {
 		s.Equal(test.expected, isResponseRetriable(test.input.Status))
 	}
 }
+
+func (s *esProcessorSuite) TestIsDeleteRequest() {
+	tests := []struct {
+		request   bulk.GenericBulkableRequest
+		bIsDelete bool
+	}{
+		{
+			request: bulk.NewBulkIndexRequest().
+				ID("request.ID").
+				Index("request.Index").
+				Version(int64(0)).
+				VersionType("request.VersionType").Doc("request.Doc"),
+			bIsDelete: false,
+		},
+		{
+			request: bulk.NewBulkDeleteRequest().
+				ID("request.ID").
+				Index("request.Index"),
+			bIsDelete: true,
+		},
+	}
+	for _, test := range tests {
+		s.Equal(test.bIsDelete, s.esProcessor.isDeleteRequest(test.request))
+	}
+}

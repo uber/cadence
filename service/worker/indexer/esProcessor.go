@@ -146,7 +146,20 @@ func (p *ESProcessorImpl) bulkAfterAction(id int64, requests []bulk.GenericBulka
 					tag.WorkflowID(wid),
 					tag.WorkflowRunID(rid),
 					tag.WorkflowDomainID(domainID))
-				p.nackKafkaMsg(key)
+
+				// check if it is a delete request and status code
+				// 409 means means the document's version does not match (or if the document has been updated or deleted by another process)
+				// this can happen during the data migration, the doc was deleted in the old index but not exists in the new index
+				if err.Status == 409 && p.isDeleteRequest(request) {
+					p.logger.Info("Delete request encountered a version conflict. Acknowledging to prevent retry.",
+						tag.ESResponseStatus(err.Status), tag.ESRequest(request.String()),
+						tag.WorkflowID(wid),
+						tag.WorkflowRunID(rid),
+						tag.WorkflowDomainID(domainID))
+					p.ackKafkaMsg(key)
+				} else {
+					p.nackKafkaMsg(key)
+				}
 			} else {
 				p.logger.Error("ES request failed", tag.ESRequest(request.String()))
 			}
@@ -285,6 +298,25 @@ func (p *ESProcessorImpl) hashFn(key interface{}) uint32 {
 	}
 	numOfShards := p.config.IndexerConcurrency()
 	return uint32(common.WorkflowIDToHistoryShard(id, numOfShards))
+}
+
+func (p *ESProcessorImpl) isDeleteRequest(request bulk.GenericBulkableRequest) bool {
+	req, err := request.Source()
+	if err != nil {
+		p.logger.Error("Get request source err.", tag.Error(err), tag.ESRequest(request.String()))
+		p.scope.IncCounter(metrics.ESProcessorCorruptedData)
+		return false // don't nack the message, let the processor retry
+	}
+
+	if len(req) == 1 {
+		// The Source() method typically returns a slice of strings, where each string represents a part of the bulk request in JSON format.
+		// For delete operations, the Source() method typically returns only one part
+		// The metadata that specifies the delete action, including _index and _id.
+		// "{\"delete\":{\"_index\":\"my-index\",\"_id\":\"1\"}}"
+		return true
+	}
+
+	return false
 }
 
 // 409 - Version Conflict
