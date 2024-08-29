@@ -351,14 +351,14 @@ func (c *Collection) backgroundUpdateLoop() {
 					if counts.Idle > gcAfterIdle || c.shouldDeleteKey(mode, true) {
 						c.logger.Debug(
 							"deleting local ratelimiter",
-							tag.GlobalRatelimiterKey(string(gkey)),
+							tag.GlobalRatelimiterKey(string(k)),
 							tag.GlobalRatelimiterIdleCount(counts.Idle),
 						)
 						c.local.Delete(k)
 						return true // continue iterating, possibly delete others too
 					}
 
-					c.sendMetrics(gkey, k, true, mode, counts)
+					c.sendMetrics(k, true, mode, counts)
 					return true
 				})
 			}()
@@ -374,7 +374,7 @@ func (c *Collection) backgroundUpdateLoop() {
 				if counts.Idle > gcAfterIdle || c.shouldDeleteKey(mode, false) {
 					c.logger.Debug(
 						"deleting global ratelimiter",
-						tag.GlobalRatelimiterKey(string(gkey)),
+						tag.GlobalRatelimiterKey(string(k)),
 						tag.GlobalRatelimiterIdleCount(counts.Idle),
 					)
 					c.global.Delete(k)
@@ -394,7 +394,7 @@ func (c *Collection) backgroundUpdateLoop() {
 					Allowed:  counts.Allowed,
 					Rejected: counts.Rejected,
 				}
-				c.sendMetrics(gkey, k, false, mode, counts)
+				c.sendMetrics(k, false, mode, counts)
 
 				return true
 			})
@@ -419,13 +419,13 @@ func (c *Collection) backgroundUpdateLoop() {
 	}
 }
 
-func (c *Collection) sendMetrics(gkey shared.GlobalKey, lkey shared.LocalKey, isLocalLimiter bool, mode keyMode, usage internal.UsageMetrics) {
+func (c *Collection) sendMetrics(lkey shared.LocalKey, isLocalLimiter bool, mode keyMode, usage internal.UsageMetrics) {
 	// emit quota information to make monitoring easier.
 	// regrettably this will only be emitted when the key is (recently) in use, but
 	// for active users this is probably sufficient.  other cases will probably need
 	// a continual "emit all quotas" loop somewhere.
 	c.scope.
-		Tagged(metrics.GlobalRatelimiterKeyTag(string(gkey))).
+		Tagged(metrics.GlobalRatelimiterKeyTag(string(lkey))).
 		UpdateGauge(metrics.GlobalRatelimiterQuota, float64(c.targetRPS(lkey)))
 
 	limitType := "global"
@@ -435,7 +435,7 @@ func (c *Collection) sendMetrics(gkey shared.GlobalKey, lkey shared.LocalKey, is
 	limitTypeIsPrimary := isLocalLimiter && mode.isLocalPrimary() || !isLocalLimiter && mode.isGlobalPrimary()
 
 	scope := c.scope.Tagged(
-		metrics.GlobalRatelimiterKeyTag(string(gkey)),
+		metrics.GlobalRatelimiterKeyTag(string(lkey)),
 		metrics.GlobalRatelimiterTypeTag(limitType),
 		// useful for being able to tell when a key is "in use" or not, e.g. for monitoring purposes
 		metrics.GlobalRatelimiterIsPrimary(limitTypeIsPrimary),
