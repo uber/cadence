@@ -211,7 +211,9 @@ getTasksPumpLoop:
 				}
 
 				if len(tasks) == 0 {
-					tr.taskAckManager.SetReadLevel(readLevel)
+					// even though we didn't handle any tasks, we want to advance the ack-level
+					// to avoid needless querying database the next time
+					tr.taskAckManager.SetAckLevel(readLevel)
 					if !isReadBatchDone {
 						tr.Signal()
 					}
