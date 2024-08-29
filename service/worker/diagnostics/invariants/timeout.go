@@ -131,6 +131,7 @@ func (t *timeout) RootCause(ctx context.Context, issues []InvariantCheckResult) 
 
 func (t *timeout) checkTasklist(ctx context.Context, issue InvariantCheckResult) (InvariantRootCauseResult, error) {
 	var taskList *types.TaskList
+	var tasklistType *types.TaskListType
 	switch issue.InvariantType {
 	case TimeoutTypeExecution.String():
 		var metadata ExecutionTimeoutMetadata
@@ -139,6 +140,7 @@ func (t *timeout) checkTasklist(ctx context.Context, issue InvariantCheckResult)
 			return InvariantRootCauseResult{}, err
 		}
 		taskList = metadata.Tasklist
+		tasklistType = types.TaskListTypeDecision.Ptr()
 	case TimeoutTypeActivity.String():
 		var metadata ActivityTimeoutMetadata
 		err := json.Unmarshal(issue.Metadata, &metadata)
@@ -146,6 +148,7 @@ func (t *timeout) checkTasklist(ctx context.Context, issue InvariantCheckResult)
 			return InvariantRootCauseResult{}, err
 		}
 		taskList = metadata.Tasklist
+		tasklistType = types.TaskListTypeActivity.Ptr()
 	}
 	if taskList == nil {
 		return InvariantRootCauseResult{}, fmt.Errorf("tasklist not set")
@@ -153,8 +156,9 @@ func (t *timeout) checkTasklist(ctx context.Context, issue InvariantCheckResult)
 
 	frontendClient := t.clientBean.GetFrontendClient()
 	resp, err := frontendClient.DescribeTaskList(ctx, &types.DescribeTaskListRequest{
-		Domain:   t.domain,
-		TaskList: taskList,
+		Domain:       t.domain,
+		TaskList:     taskList,
+		TaskListType: tasklistType,
 	})
 	if err != nil {
 		return InvariantRootCauseResult{}, err
