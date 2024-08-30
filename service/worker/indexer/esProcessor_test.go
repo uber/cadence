@@ -283,16 +283,16 @@ func (s *esProcessorSuite) TestBulkAfterAction_Error_Nack() {
 	testKey := "testKey"
 	request := &mocks2.GenericBulkableRequest{}
 	request.On("String").Return("")
-	request.On("Source").Return([]string{string(`{"delete":{"_id":"testKey"}}`)}, nil)
+	request.On("Source").Return([]string{`{"delete":{"_index":"test-index","_id":"testKey"}}`}, nil)
 	requests := []bulk.GenericBulkableRequest{request}
 
 	mFailed := map[string]*bulk.GenericBulkResponseItem{
-		"index": {
+		"delete": {
 			Index:   testIndex,
 			Type:    testType,
 			ID:      testID,
 			Version: version,
-			Status:  404,
+			Status:  409,
 		},
 	}
 	response := &bulk.GenericBulkResponse{
@@ -310,9 +310,10 @@ func (s *esProcessorSuite) TestBulkAfterAction_Error_Nack() {
 	mapVal := newKafkaMessageWithMetrics(mockKafkaMsg, &testStopWatch)
 	s.esProcessor.mapToKafkaMsg.Put(testKey, mapVal)
 	mockKafkaMsg.On("Nack").Return(nil).Once()
+	mockKafkaMsg.On("Ack").Return(nil).Once() // Expect Ack to be called
 	mockKafkaMsg.On("Value").Return(payload).Once()
 	s.mockScope.On("IncCounter", metrics.ESProcessorFailures).Once()
-	s.esProcessor.bulkAfterAction(0, requests, response, &bulk.GenericError{Details: fmt.Errorf("some error")})
+	s.esProcessor.bulkAfterAction(0, requests, response, &bulk.GenericError{Status: 404, Details: fmt.Errorf("some error")})
 }
 
 func (s *esProcessorSuite) TestAckKafkaMsg() {
