@@ -30,39 +30,22 @@ import (
 	"github.com/uber/cadence/common/metrics"
 )
 
-type readerImpl[T any] struct {
+type readerImpl[T comparable] struct {
 	log                log.Logger
 	scope              metrics.Scope
 	backgroundTimeout  time.Duration
 	rolloutCtrl        dynamicconfig.StringPropertyFn
 	doResultComparison dynamicconfig.BoolPropertyFn
-	comparisonFn       ComparisonFn[*T]
+	comparisonFn       ComparisonFn[T]
 }
 
-func NewDualReaderWithDiffComparison[T any](
+func NewDualReaderWithCustomComparisonFn[T comparable](
 	rolloutCtrl dynamicconfig.StringPropertyFn,
 	doResultComparison dynamicconfig.BoolPropertyFn,
 	log log.Logger,
 	scope metrics.Scope,
 	backgroundTimeout time.Duration,
-) Reader[T] {
-	return &readerImpl[T]{
-		log:                log,
-		scope:              scope,
-		rolloutCtrl:        rolloutCtrl,
-		doResultComparison: doResultComparison,
-		backgroundTimeout:  backgroundTimeout,
-		comparisonFn:       defaultComparisonFn[*T],
-	}
-}
-
-func NewDualReaderWithCustomComparisonFn[T any](
-	rolloutCtrl dynamicconfig.StringPropertyFn,
-	doResultComparison dynamicconfig.BoolPropertyFn,
-	log log.Logger,
-	scope metrics.Scope,
-	backgroundTimeout time.Duration,
-	comparisonFn ComparisonFn[*T],
+	comparisonFn ComparisonFn[T],
 ) Reader[T] {
 
 	return &readerImpl[T]{

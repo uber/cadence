@@ -47,24 +47,24 @@ func TestControllerImpl_ReadAndReturnActive_BothNewAndOrdFlowsWellBehaved_Return
 		c bool
 	}
 
-	dataReturnedByNew := &testStruct{
+	dataReturnedByNew := testStruct{
 		A: "A",
 		B: nil,
 		c: false,
 	}
 
-	dataReturnedByOld := &testStruct{
+	dataReturnedByOld := testStruct{
 		A: "B",
 		B: nil,
 		c: false,
 	}
 
-	newOp := func(ctx context.Context) (*testStruct, error) {
+	newOp := func(ctx context.Context) (testStruct, error) {
 		time.Sleep(time.Millisecond * 10)
 		return dataReturnedByNew, nil
 	}
 
-	oldOp := func(ctx context.Context) (*testStruct, error) {
+	oldOp := func(ctx context.Context) (testStruct, error) {
 		time.Sleep(time.Millisecond * 10)
 		return dataReturnedByOld, nil
 	}
@@ -75,14 +75,14 @@ func TestControllerImpl_ReadAndReturnActive_BothNewAndOrdFlowsWellBehaved_Return
 
 	scope := metrics.NewNoopMetricsClient().Scope(123)
 
-	comparator := func(log log.Logger, scope metrics.Scope, active *testStruct, activeErr error, background *testStruct, backgroundErr error) bool {
+	comparator := func(log log.Logger, scope metrics.Scope, callSite string, active testStruct, activeErr error, background testStruct, backgroundErr error) bool {
 		assert.Equal(t, dataReturnedByOld, active, "The data given to the comparison function didn't match that of the old flow as expected")
 		assert.Equal(t, dataReturnedByNew, background, "The data given to the comparison function didn't match that of the new flow as expected")
 
 		assert.NoError(t, activeErr, "no error was expected on the active flow")
 		assert.NoError(t, backgroundErr, background, "no error was expected on the background flow")
 
-		comarisonRes := defaultComparisonFn[*testStruct](log, scope, active, activeErr, background, backgroundErr)
+		comarisonRes := defaultComparisonFn[testStruct](log, scope, "", active, activeErr, background, backgroundErr)
 
 		assert.False(t, comarisonRes, "the default camparitor didn't return the expected result. In this test scenario the results are expected to not match")
 		wg.Done()
@@ -115,24 +115,24 @@ func TestControllerImpl_ReadAndReturnActive_BothNewAndOrdFlowsWellBehaved_Return
 		c bool
 	}
 
-	dataReturnedByNew := &testStruct{
+	dataReturnedByNew := testStruct{
 		A: "A",
 		B: nil,
 		c: false,
 	}
 
-	dataReturnedByOld := &testStruct{
+	dataReturnedByOld := testStruct{
 		A: "B",
 		B: nil,
 		c: false,
 	}
 
-	newOp := func(ctx context.Context) (*testStruct, error) {
+	newOp := func(ctx context.Context) (testStruct, error) {
 		time.Sleep(time.Millisecond * 10)
 		return dataReturnedByNew, nil
 	}
 
-	oldOp := func(ctx context.Context) (*testStruct, error) {
+	oldOp := func(ctx context.Context) (testStruct, error) {
 		time.Sleep(time.Millisecond * 10)
 		return dataReturnedByOld, nil
 	}
@@ -143,14 +143,14 @@ func TestControllerImpl_ReadAndReturnActive_BothNewAndOrdFlowsWellBehaved_Return
 
 	scope := metrics.NewNoopMetricsClient().Scope(123)
 
-	comparator := func(log log.Logger, scope metrics.Scope, active *testStruct, activeErr error, background *testStruct, backgroundErr error) bool {
+	comparator := func(log log.Logger, scope metrics.Scope, callsite string, active testStruct, activeErr error, background testStruct, backgroundErr error) bool {
 		assert.Equal(t, dataReturnedByOld, active, "The data given to the comparison function didn't match that of the old flow as expected")
 		assert.Equal(t, dataReturnedByNew, background, "The data given to the comparison function didn't match that of the new flow as expected")
 
 		assert.NoError(t, activeErr, "no error was expected on the active flow")
 		assert.NoError(t, backgroundErr, background, "no error was expected on the background flow")
 
-		comparisonRes := defaultComparisonFn[*testStruct](log, scope, active, activeErr, background, backgroundErr)
+		comparisonRes := defaultComparisonFn[testStruct](log, scope, "", active, activeErr, background, backgroundErr)
 
 		assert.False(t, comparisonRes, "the default camparator didn't return the expected result. In this test scenario the results are expected to not match")
 		wg.Done()
@@ -183,41 +183,41 @@ func TestControllerImpl_ReadAndReturnActive_TimeoutAndErrorHandling(t *testing.T
 		c bool
 	}
 
-	dataReturnedA := &testStruct{
+	dataReturnedA := testStruct{
 		A: "A",
 		B: nil,
 		c: false,
 	}
 
-	dataReturnedB := &testStruct{
+	dataReturnedB := testStruct{
 		A: "B",
 		B: nil,
 		c: false,
 	}
 
-	opFastA := func(ctx context.Context) (*testStruct, error) {
+	opFastA := func(ctx context.Context) (testStruct, error) {
 		time.Sleep(time.Millisecond * 10)
 		return dataReturnedA, nil
 	}
 
-	opSlowA := func(ctx context.Context) (*testStruct, error) {
+	opSlowA := func(ctx context.Context) (testStruct, error) {
 		time.Sleep(time.Second * 10)
 		return dataReturnedA, nil
 	}
 
-	opFastB := func(ctx context.Context) (*testStruct, error) {
+	opFastB := func(ctx context.Context) (testStruct, error) {
 		time.Sleep(time.Millisecond * 10)
 		return dataReturnedB, nil
 	}
 
-	opSlowB := func(ctx context.Context) (*testStruct, error) {
+	opSlowB := func(ctx context.Context) (testStruct, error) {
 		time.Sleep(time.Second * 10)
 		return dataReturnedB, nil
 	}
 
-	opSlowErr := func(ctx context.Context) (*testStruct, error) {
+	opSlowErr := func(ctx context.Context) (testStruct, error) {
 		time.Sleep(time.Second * 10)
-		return nil, errors.New("A slow error")
+		return testStruct{}, errors.New("A slow error")
 	}
 
 	constraints := Constraints{Domain: "testdomain"}
@@ -227,9 +227,9 @@ func TestControllerImpl_ReadAndReturnActive_TimeoutAndErrorHandling(t *testing.T
 
 	scope := metrics.NewNoopMetricsClient().Scope(123)
 
-	comparatorAssertEqual := func(t *testing.T, wg *sync.WaitGroup) ComparisonFn[*testStruct] {
-		return func(log log.Logger, scope metrics.Scope, active *testStruct, activeErr error, background *testStruct, backgroundErr error) bool {
-			comparisonRes := defaultComparisonFn[*testStruct](log, scope, active, activeErr, background, backgroundErr)
+	comparatorAssertEqual := func(t *testing.T, wg *sync.WaitGroup) ComparisonFn[testStruct] {
+		return func(log log.Logger, scope metrics.Scope, cs string, active testStruct, activeErr error, background testStruct, backgroundErr error) bool {
+			comparisonRes := defaultComparisonFn[testStruct](log, scope, "", active, activeErr, background, backgroundErr)
 			assert.Equal(t, active, background, "did not get equal results")
 			assert.Equal(t, activeErr, backgroundErr, "did not get equal errors")
 			wg.Done()
@@ -237,9 +237,9 @@ func TestControllerImpl_ReadAndReturnActive_TimeoutAndErrorHandling(t *testing.T
 		}
 	}
 
-	comparatorAssertNotEqual := func(t *testing.T, wg *sync.WaitGroup) ComparisonFn[*testStruct] {
-		return func(log log.Logger, scope metrics.Scope, active *testStruct, activeErr error, background *testStruct, backgroundErr error) bool {
-			comparisonRes := defaultComparisonFn[*testStruct](log, scope, active, activeErr, background, backgroundErr)
+	comparatorAssertNotEqual := func(t *testing.T, wg *sync.WaitGroup) ComparisonFn[testStruct] {
+		return func(log log.Logger, scope metrics.Scope, cs string, active testStruct, activeErr error, background testStruct, backgroundErr error) bool {
+			comparisonRes := defaultComparisonFn[testStruct](log, scope, "", active, activeErr, background, backgroundErr)
 			assert.NotEqual(t, active, background, "results were unexpectedly equal")
 			wg.Done()
 			return comparisonRes
@@ -247,13 +247,13 @@ func TestControllerImpl_ReadAndReturnActive_TimeoutAndErrorHandling(t *testing.T
 	}
 
 	tests := map[string]struct {
-		operationNew func(ctx context.Context) (*testStruct, error)
-		operationOld func(ctx context.Context) (*testStruct, error)
+		operationNew func(ctx context.Context) (testStruct, error)
+		operationOld func(ctx context.Context) (testStruct, error)
 
 		migrationStatus ReaderRolloutState
-		comparator      func(t *testing.T, group *sync.WaitGroup) ComparisonFn[*testStruct]
+		comparator      func(t *testing.T, group *sync.WaitGroup) ComparisonFn[testStruct]
 
-		expectedResult *testStruct
+		expectedResult testStruct
 		expectedErr    error
 	}{
 		"Both operations fast, no errors, happy path, matching responses": {

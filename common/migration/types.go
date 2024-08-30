@@ -33,18 +33,26 @@ type ReaderRolloutState string
 type WriterRolloutState string
 
 // A function for doing comparisons on data returned. Returns true if they're equal
-type ComparisonFn[T any] func(log.Logger, metrics.Scope, T, error, T, error) bool
+type ComparisonFn[T comparable] func(
+	log log.Logger,
+	scope metrics.Scope,
+	callsite string,
+	activeRes T,
+	activeErr error,
+	backgroundRes T,
+	backgroundErr error,
+) bool
 
 type Constraints struct {
 	Operation string
 	Domain    string
 }
 
-type Reader[T any] interface {
+type Reader[T comparable] interface {
 	ReadAndReturnActive(
 		ctx context.Context,
 		constraints Constraints,
-		old func(ctx context.Context) (*T, error),
-		new func(ctx context.Context) (*T, error),
-	) (*T, error)
+		old func(ctx context.Context) (T, error),
+		new func(ctx context.Context) (T, error),
+	) (T, error)
 }

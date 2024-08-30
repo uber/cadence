@@ -38,7 +38,7 @@ const (
 	ReaderRolloutCallOnlyNewAndReturnNew ReaderRolloutState = "only-call-new"
 )
 
-type resultPair[T any] struct {
+type resultPair[T comparable] struct {
 	res T
 	err error
 }
@@ -46,14 +46,14 @@ type resultPair[T any] struct {
 func (c *readerImpl[T]) ReadAndReturnActive(
 	ctx context.Context,
 	constraints Constraints,
-	old func(ctx context.Context) (*T, error),
-	new func(ctx context.Context) (*T, error),
-) (*T, error) {
+	old func(ctx context.Context) (T, error),
+	new func(ctx context.Context) (T, error),
+) (T, error) {
 
 	state := c.getReaderRolloutState(constraints)
 
-	var active func(ctx context.Context) (*T, error)
-	var background func(ctx context.Context) (*T, error)
+	var active func(ctx context.Context) (T, error)
+	var background func(ctx context.Context) (T, error)
 
 	switch state {
 	case ReaderRolloutCallOnlyOldAndReturnOld:
@@ -75,17 +75,19 @@ func (c *readerImpl[T]) ReadAndReturnActive(
 
 	// 0 is always active data, index 1 is background
 	// using a slice to avoid locking
-	results := make([]resultPair[*T], 2)
+	results := make([]resultPair[T], 2)
 
 	// run the shadow request in a goroutine, wait for the results and then gather them up
 	go func() {
+		var backgroundRes T
+		var backgroundErr error
+		defer wg.Done()
 		defer func() {
 			log.CapturePanic(recover(), c.log, nil)
 			c.scope.IncCounter(metrics.ShadowerBackgroundPanicRecoverCount)
 		}()
-		defer wg.Done()
 
-		backgroundRes, backgroundErr := c.callBackgroundAndCompare(ctx, background)
+		backgroundRes, backgroundErr = c.callBackgroundAndCompare(ctx, background)
 		results[1].res = backgroundRes
 		results[1].err = backgroundErr
 	}()
@@ -102,7 +104,7 @@ func (c *readerImpl[T]) ReadAndReturnActive(
 		}()
 
 		wg.Wait()
-		c.comparisonFn(c.log, c.scope, results[0].res, results[0].err, results[1].res, results[1].err)
+		c.comparisonFn(c.log, c.scope, "", results[0].res, results[0].err, results[1].res, results[1].err)
 	}()
 
 	activeRes, activeErr := active(ctx)
@@ -116,24 +118,27 @@ func (c *readerImpl[T]) ReadAndReturnActive(
 // in backgroundTimeout expires. The op() code is expected to be faulty, to possibly panic, take too long
 // or otherwise misbehave and so the hard deadline is intended as a last-ditch safety measure if the context
 // is not being obeyed
-func (c *readerImpl[T]) callBackgroundAndCompare(parentCtx context.Context, op func(ctx context.Context) (*T, error)) (*T, error) {
+func (c *readerImpl[T]) callBackgroundAndCompare(parentCtx context.Context, op func(ctx context.Context) (T, error)) (T, error) {
 
-	newRequestCtx, cancel := copyParentContextWhileBreakingParentCancellation(parentCtx)
+	newRequestCtx, cancel := c.copyParentContextWhileBreakingParentCancellation(parentCtx)
 	defer cancel()
 
 	timeoutCtx, cancel := context.WithTimeout(context.Background(), c.backgroundTimeout)
 	defer cancel()
 
-	completion := make(chan resultPair[*T])
+	completion := make(chan resultPair[T])
 	go func() {
+		var res T
+		var err error
+
+		defer close(completion)
 		defer func() {
 			log.CapturePanic(recover(), c.log, nil)
 			c.scope.IncCounter(metrics.ShadowerBackgroundPanicRecoverCount)
 		}()
-		defer close(completion)
 
-		res, err := op(newRequestCtx)
-		completion <- resultPair[*T]{
+		res, err = op(newRequestCtx)
+		completion <- resultPair[T]{
 			res: res,
 			err: err,
 		}
@@ -143,7 +148,8 @@ func (c *readerImpl[T]) callBackgroundAndCompare(parentCtx context.Context, op f
 	select {
 	case <-timeoutCtx.Done():
 		c.scope.IncCounter(metrics.ShadowerBackgroundRequestHardCutCount)
-		return nil, fmt.Errorf("shadower cut off a request taking too long: %w", timeoutCtx.Err())
+		var empty T
+		return empty, fmt.Errorf("shadower cut off a request taking too long: %w", timeoutCtx.Err())
 	case resPair := <-completion:
 		return resPair.res, resPair.err
 	}
@@ -153,10 +159,10 @@ func (c *readerImpl[T]) callBackgroundAndCompare(parentCtx context.Context, op f
 // because in shadowing, you're necessarily not going to want to block on a slow/maybe not working
 // new codepath, but we do need to wait for results for both (to compare). So when the active flow
 // is finishing first, we want to not have it's cancellation kill off the background context.
-func copyParentContextWhileBreakingParentCancellation(ctx context.Context) (c context.Context, cancelFunc func()) {
+func (c *readerImpl[T]) copyParentContextWhileBreakingParentCancellation(ctx context.Context) (returnCtx context.Context, cancelFunc func()) {
 	parentDeadline, ok := ctx.Deadline()
 	if !ok {
-		return ctx, func() {}
+		return context.WithTimeout(ctx, c.backgroundTimeout)
 	}
 
 	return context.WithDeadline(context.WithoutCancel(ctx), parentDeadline)

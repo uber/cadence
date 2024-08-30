@@ -50,8 +50,8 @@ func TestDefaultComparisonFn(t *testing.T) {
 			shouldBeEqual: true,
 		},
 		"Simple equality 1": {
-			active:        common.Ptr(struct{ A string }{A: "test123"}),
-			background:    common.Ptr(struct{ A string }{A: "test123"}),
+			active:        struct{ A string }{A: "test123"},
+			background:    struct{ A string }{A: "test123"},
 			shouldBeEqual: true,
 		},
 		"equality - same values, though one is a pointer": {
@@ -97,8 +97,8 @@ func TestDefaultComparisonFn(t *testing.T) {
 		},
 		"unexpected types handling": {
 			active:        struct{ a string }{a: "123"},
-			background:    struct{ a string }{a: "different"}, // we are ignoriing unexported fields
-			shouldBeEqual: true,
+			background:    struct{ a string }{a: "different"},
+			shouldBeEqual: false,
 		},
 	}
 
@@ -106,7 +106,7 @@ func TestDefaultComparisonFn(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			scope := tally.NewTestScope("", nil)
 			metricsClient := metrics.NewClient(scope, 0)
-			res := defaultComparisonFn[interface{}](loggerimpl.NewNopLogger(), metricsClient.Scope(123), &td.active, td.activeErr, &td.background, td.backgroundErr)
+			res := defaultComparisonFn[interface{}](loggerimpl.NewNopLogger(), metricsClient.Scope(123), "test", &td.active, td.activeErr, &td.background, td.backgroundErr)
 			assert.Equal(t, td.shouldBeEqual, res)
 		})
 	}
@@ -124,6 +124,7 @@ func TestFuzzTestComparisonForMatchingTypes(t *testing.T) {
 	equal := defaultComparisonFn[*types.HistoryEvent](
 		loggerimpl.NewNopLogger(),
 		metricsClient.Scope(123),
+		"test",
 		&e,
 		nil,
 		&e,

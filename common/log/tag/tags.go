@@ -968,6 +968,10 @@ func Dynamic(key string, v interface{}) Tag {
 	return newPredefinedDynamicTag(key, v)
 }
 
+func Callsite(s string) Tag {
+	return newStringTag("callsite", s)
+}
+
 func IsolationGroup(group string) Tag {
 	return newStringTag("isolation-group", group)
 }
