@@ -278,6 +278,43 @@ func (s *esProcessorSuite) TestBulkAfterAction_Error() {
 	s.esProcessor.bulkAfterAction(0, requests, response, &bulk.GenericError{Details: fmt.Errorf("some error")})
 }
 
+func (s *esProcessorSuite) TestBulkAfterAction_Error_Nack() {
+	version := int64(3)
+	testKey := "testKey"
+	request := &mocks2.GenericBulkableRequest{}
+	request.On("String").Return("")
+	request.On("Source").Return([]string{string(`{"delete":{"_id":"testKey"}}`)}, nil)
+	requests := []bulk.GenericBulkableRequest{request}
+
+	mFailed := map[string]*bulk.GenericBulkResponseItem{
+		"index": {
+			Index:   testIndex,
+			Type:    testType,
+			ID:      testID,
+			Version: version,
+			Status:  404,
+		},
+	}
+	response := &bulk.GenericBulkResponse{
+		Took:   3,
+		Errors: true,
+		Items:  []map[string]*bulk.GenericBulkResponseItem{mFailed},
+	}
+
+	wid := "test-workflowID"
+	rid := "test-runID"
+	domainID := "test-domainID"
+	payload := s.getEncodedMsg(wid, rid, domainID)
+
+	mockKafkaMsg := &msgMocks.Message{}
+	mapVal := newKafkaMessageWithMetrics(mockKafkaMsg, &testStopWatch)
+	s.esProcessor.mapToKafkaMsg.Put(testKey, mapVal)
+	mockKafkaMsg.On("Nack").Return(nil).Once()
+	mockKafkaMsg.On("Value").Return(payload).Once()
+	s.mockScope.On("IncCounter", metrics.ESProcessorFailures).Once()
+	s.esProcessor.bulkAfterAction(0, requests, response, &bulk.GenericError{Details: fmt.Errorf("some error")})
+}
+
 func (s *esProcessorSuite) TestAckKafkaMsg() {
 	key := "test-key"
 	// no msg in map, nothing called
@@ -426,4 +463,23 @@ func (s *esProcessorSuite) TestIsDeleteRequest() {
 	for _, test := range tests {
 		s.Equal(test.bIsDelete, s.esProcessor.isDeleteRequest(test.request))
 	}
+}
+
+func (s *esProcessorSuite) TestIsDeleteRequest_Error() {
+	request := &MockBulkableRequest{}
+	s.mockScope.On("IncCounter", mock.AnythingOfType("int")).Return()
+	s.False(s.esProcessor.isDeleteRequest(request))
+}
+
+// MockBulkableRequest is a mock implementation of the GenericBulkableRequest interface
+type MockBulkableRequest struct{}
+
+// String returns a mock string
+func (m *MockBulkableRequest) String() string {
+	return "mock request"
+}
+
+// Source returns an error to simulate a failure
+func (m *MockBulkableRequest) Source() ([]string, error) {
+	return nil, fmt.Errorf("simulated source error")
 }

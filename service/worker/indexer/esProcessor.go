@@ -148,9 +148,10 @@ func (p *ESProcessorImpl) bulkAfterAction(id int64, requests []bulk.GenericBulka
 					tag.WorkflowDomainID(domainID))
 
 				// check if it is a delete request and status code
+				// 404 means the document does not exist
 				// 409 means means the document's version does not match (or if the document has been updated or deleted by another process)
 				// this can happen during the data migration, the doc was deleted in the old index but not exists in the new index
-				if err.Status == 409 && p.isDeleteRequest(request) {
+				if p.isDeleteRequest(request) && (err.Status == 409 || err.Status == 404) {
 					p.logger.Info("Delete request encountered a version conflict. Acknowledging to prevent retry.",
 						tag.ESResponseStatus(err.Status), tag.ESRequest(request.String()),
 						tag.WorkflowID(wid),
