@@ -42,6 +42,7 @@ type Compare[T any] interface {
 // DefaultComparisonFn is a simple, suitable-for-low-throughput comparison function which
 // uses reflection to determine if the results match. Probably not good for high RPS endpoints
 // as it'll cause a significant amount of log noise. This doesn't attempt to print diffs
+// unless implementing `Compare`
 func defaultComparisonFn[T comparable](
 	log log.Logger,
 	scope metrics.Scope,
