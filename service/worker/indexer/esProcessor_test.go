@@ -462,14 +462,17 @@ func (s *esProcessorSuite) TestIsDeleteRequest() {
 		},
 	}
 	for _, test := range tests {
-		s.Equal(test.bIsDelete, s.esProcessor.isDeleteRequest(test.request))
+		req, _ := test.request.Source()
+		s.Equal(test.bIsDelete, s.esProcessor.isDeleteRequest(req))
 	}
 }
 
 func (s *esProcessorSuite) TestIsDeleteRequest_Error() {
 	request := &MockBulkableRequest{}
 	s.mockScope.On("IncCounter", mock.AnythingOfType("int")).Return()
-	s.False(s.esProcessor.isDeleteRequest(request))
+	req, err := request.Source()
+	s.False(s.esProcessor.isDeleteRequest(req))
+	s.Error(err)
 }
 
 // MockBulkableRequest is a mock implementation of the GenericBulkableRequest interface
