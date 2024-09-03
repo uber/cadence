@@ -161,7 +161,7 @@ func (t *transferTaskExecutorBase) recordWorkflowStarted(
 	numClusters int16,
 	visibilityMemo *types.Memo,
 	updateTimeUnixNano int64,
-	searchAttributes map[string][]byte,
+	immutableSearchAttributes map[string][]byte,
 	headers map[string][]byte,
 ) error {
 
@@ -182,6 +182,7 @@ func (t *transferTaskExecutorBase) recordWorkflowStarted(
 	}
 
 	// headers are appended into search attributes if enabled
+	searchAttributes := copySearchAttributes(immutableSearchAttributes)
 	if t.config.EnableContextHeaderInVisibility(domainEntry.GetInfo().Name) {
 		// fail open, if error occurs, just log it; successfully appended headers will be stored
 		if searchAttributes, err = appendContextHeaderToSearchAttributes(searchAttributes, headers, t.config.ValidSearchAttributes()); err != nil {
@@ -245,7 +246,7 @@ func (t *transferTaskExecutorBase) upsertWorkflowExecution(
 	isCron bool,
 	numClusters int16,
 	updateTimeUnixNano int64,
-	searchAttributes map[string][]byte,
+	immutableSearchAttributes map[string][]byte,
 	headers map[string][]byte,
 ) error {
 
@@ -258,6 +259,7 @@ func (t *transferTaskExecutorBase) upsertWorkflowExecution(
 	}
 
 	// headers are appended into search attributes if enabled
+	searchAttributes := copySearchAttributes(immutableSearchAttributes)
 	if t.config.EnableContextHeaderInVisibility(domain) {
 		// fail open, if error occurs, just log it; successfully appended headers will be stored
 		if searchAttributes, err = appendContextHeaderToSearchAttributes(searchAttributes, headers, t.config.ValidSearchAttributes()); err != nil {
@@ -306,7 +308,7 @@ func (t *transferTaskExecutorBase) recordWorkflowClosed(
 	isCron bool,
 	numClusters int16,
 	updateTimeUnixNano int64,
-	searchAttributes map[string][]byte,
+	immutableSearchAttributes map[string][]byte,
 	headers map[string][]byte,
 ) error {
 
@@ -336,14 +338,16 @@ func (t *transferTaskExecutorBase) recordWorkflowClosed(
 		archiveVisibility = clusterConfiguredForVisibilityArchival && domainConfiguredForVisibilityArchival
 	}
 
-	if recordWorkflowClose {
-		// headers are appended into search attributes if enabled
-		if t.config.EnableContextHeaderInVisibility(domainEntry.GetInfo().Name) {
-			// fail open, if error occurs, just log it; successfully appended headers will be stored
-			if searchAttributes, err = appendContextHeaderToSearchAttributes(searchAttributes, headers, t.config.ValidSearchAttributes()); err != nil {
-				t.logger.Error("failed to add headers to search attributes", tag.Error(err))
-			}
+	// headers are appended into search attributes if enabled
+	searchAttributes := copySearchAttributes(immutableSearchAttributes)
+	if t.config.EnableContextHeaderInVisibility(domainEntry.GetInfo().Name) {
+		// fail open, if error occurs, just log it; successfully appended headers will be stored
+		if searchAttributes, err = appendContextHeaderToSearchAttributes(searchAttributes, headers, t.config.ValidSearchAttributes()); err != nil {
+			t.logger.Error("failed to add headers to search attributes", tag.Error(err))
 		}
+	}
+
+	if recordWorkflowClose {
 		if err := t.visibilityMgr.RecordWorkflowExecutionClosed(ctx, &persistence.RecordWorkflowExecutionClosedRequest{
 			DomainUUID: domainID,
 			Domain:     domain,
