@@ -366,6 +366,7 @@ func (c *taskListManagerImpl) GetTask(
 }
 
 func (c *taskListManagerImpl) getTask(ctx context.Context, maxDispatchPerSecond *float64) (*InternalTask, error) {
+	c.emitMisconfiguredPartitionMetrics()
 	// We need to set a shorter timeout than the original ctx; otherwise, by the time ctx deadline is
 	// reached, instead of emptyTask, context timeout error is returned to the frontend by the rpc stack,
 	// which counts against our SLO. By shortening the timeout by a very small amount, the emptyTask can be
@@ -639,7 +640,7 @@ func (c *taskListManagerImpl) getPollerIsolationGroups() []string {
 	groupSet := c.pollerHistory.GetPollerIsolationGroups(c.timeSource.Now().Add(-10 * time.Second))
 	c.outstandingPollsLock.Lock()
 	for _, poller := range c.outstandingPollsMap {
-		groupSet[poller.isolationGroup] = struct{}{}
+		groupSet[poller.isolationGroup]++
 	}
 	c.outstandingPollsLock.Unlock()
 	result := make([]string, 0, len(groupSet))
@@ -648,6 +649,28 @@ func (c *taskListManagerImpl) getPollerIsolationGroups() []string {
 	}
 	sort.Strings(result)
 	return result
+}
+
+func (c *taskListManagerImpl) emitMisconfiguredPartitionMetrics() {
+	if !c.taskListID.IsRoot() || c.taskListKind == types.TaskListKindSticky {
+		// only emit the metric in root partition of non-sticky tasklist
+		return
+	}
+	if c.config.NumReadPartitions() != c.config.NumWritePartitions() {
+		c.scope.UpdateGauge(metrics.TaskListReadWritePartitionMismatchGauge, 1)
+	}
+	pollerCount := len(c.pollerHistory.GetPollerInfo(time.Time{}))
+	if c.enableIsolation { // if isolation enabled, get the minimum poller count among the isolation groups
+		pollerCountsByIsolationGroup := c.pollerHistory.GetPollerIsolationGroups(time.Time{})
+		for _, count := range pollerCountsByIsolationGroup {
+			if count < pollerCount {
+				pollerCount = count
+			}
+		}
+	}
+	if pollerCount < c.config.NumReadPartitions() || pollerCount < c.config.NumWritePartitions() {
+		c.scope.Tagged(metrics.IsolationEnabledTag(c.enableIsolation)).UpdateGauge(metrics.TaskListPollerPartitionMismatchGauge, 1)
+	}
 }
 
 func getTaskListTypeTag(taskListType int) metrics.Tag {

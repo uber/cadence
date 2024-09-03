@@ -252,6 +252,7 @@ func (t *transferStandbyTaskExecutor) processCloseExecution(
 		workflowExecutionTimestamp := getWorkflowExecutionTimestamp(mutableState, startEvent)
 		visibilityMemo := getWorkflowMemo(executionInfo.Memo)
 		searchAttr := executionInfo.SearchAttributes
+		headers := getWorkflowHeaders(startEvent)
 		isCron := len(executionInfo.CronSchedule) > 0
 		updateTimestamp := t.shard.GetTimeSource().Now()
 
@@ -290,6 +291,7 @@ func (t *transferStandbyTaskExecutor) processCloseExecution(
 			numClusters,
 			updateTimestamp.UnixNano(),
 			searchAttr,
+			headers,
 		)
 	}
 
@@ -493,16 +495,7 @@ func (t *transferStandbyTaskExecutor) processRecordWorkflowStartedOrUpsertHelper
 	numClusters := (int16)(len(domainEntry.GetReplicationConfig().Clusters))
 
 	searchAttr := copySearchAttributes(executionInfo.SearchAttributes)
-	if t.config.EnableContextHeaderInVisibility(domainEntry.GetInfo().Name) {
-		if attributes := startEvent.GetWorkflowExecutionStartedEventAttributes(); attributes != nil && attributes.Header != nil {
-			// fail open to avoid blocking the task processing
-			if newSearchAttr, err := appendContextHeaderToSearchAttributes(searchAttr, attributes.Header.Fields, t.config.ValidSearchAttributes()); err != nil {
-				t.logger.Error("failed to add headers to search attributes", tag.Error(err))
-			} else {
-				searchAttr = newSearchAttr
-			}
-		}
-	}
+	headers := getWorkflowHeaders(startEvent)
 
 	if isRecordStart {
 		workflowStartedScope.IncCounter(metrics.WorkflowStartedCount)
@@ -522,6 +515,7 @@ func (t *transferStandbyTaskExecutor) processRecordWorkflowStartedOrUpsertHelper
 			visibilityMemo,
 			updateTimestamp.UnixNano(),
 			searchAttr,
+			headers,
 		)
 	}
 	return t.upsertWorkflowExecution(
@@ -540,6 +534,7 @@ func (t *transferStandbyTaskExecutor) processRecordWorkflowStartedOrUpsertHelper
 		numClusters,
 		updateTimestamp.UnixNano(),
 		searchAttr,
+		headers,
 	)
 
 }

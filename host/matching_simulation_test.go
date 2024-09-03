@@ -55,6 +55,7 @@ import (
 
 	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/common/dynamicconfig"
+	"github.com/uber/cadence/common/partition"
 	"github.com/uber/cadence/common/persistence"
 	pt "github.com/uber/cadence/common/persistence/persistence-tests"
 	"github.com/uber/cadence/common/types"
@@ -66,13 +67,16 @@ type operation string
 
 const (
 	operationPollForDecisionTask operation = "PollForDecisionTask"
+	operationPollReceivedTask    operation = "PollReceivedTask"
+	operationAddDecisionTask     operation = "AddDecisionTask"
 	defaultTestCase                        = "testdata/matching_simulation_default.yaml"
 )
 
 type operationStats struct {
-	op  operation
-	dur time.Duration
-	err error
+	op        operation
+	dur       time.Duration
+	err       error
+	timestamp time.Time
 }
 
 type operationAggStats struct {
@@ -95,6 +99,8 @@ func TestMatchingSimulationSuite(t *testing.T) {
 		t.Fatalf("failed creating cluster config from %s, err: %v", confPath, err)
 	}
 
+	isolationGroups := getIsolationGroups(&clusterConfig.MatchingConfig.SimulationConfig)
+
 	clusterConfig.MatchingDynamicConfigOverrides = map[dynamicconfig.Key]interface{}{
 		dynamicconfig.MatchingNumTasklistWritePartitions:   getPartitions(clusterConfig.MatchingConfig.SimulationConfig.TaskListWritePartitions),
 		dynamicconfig.MatchingNumTasklistReadPartitions:    getPartitions(clusterConfig.MatchingConfig.SimulationConfig.TaskListReadPartitions),
@@ -104,6 +110,8 @@ func TestMatchingSimulationSuite(t *testing.T) {
 		dynamicconfig.MatchingForwarderMaxChildrenPerNode:  getForwarderMaxChildPerNode(clusterConfig.MatchingConfig.SimulationConfig.ForwarderMaxChildrenPerNode),
 		dynamicconfig.LocalPollWaitTime:                    clusterConfig.MatchingConfig.SimulationConfig.LocalPollWaitTime,
 		dynamicconfig.LocalTaskWaitTime:                    clusterConfig.MatchingConfig.SimulationConfig.LocalTaskWaitTime,
+		dynamicconfig.EnableTasklistIsolation:              len(isolationGroups) > 0,
+		dynamicconfig.AllIsolationGroups:                   isolationGroups,
 	}
 
 	ctrl := gomock.NewController(t)
@@ -182,18 +190,21 @@ func (s *MatchingSimulationSuite) TestMatchingSimulation() {
 	collectorWG.Add(1)
 	go s.collectStats(statsCh, aggStats, &collectorWG)
 
+	totalTaskCount := getTotalTasks(s.testClusterConfig.MatchingConfig.SimulationConfig.Tasks)
+
 	// Start pollers
-	numPollers := getNumPollers(s.testClusterConfig.MatchingConfig.SimulationConfig.NumPollers)
-	pollDuration := getPollDuration(s.testClusterConfig.MatchingConfig.SimulationConfig.PollTimeout)
-	polledTasksCounter := int32(0)
-	maxTasksToGenerate := getMaxTaskstoGenerate(s.testClusterConfig.MatchingConfig.SimulationConfig.MaxTaskToGenerate)
-	taskProcessTime := getTaskProcessTime(s.testClusterConfig.MatchingConfig.SimulationConfig.TaskProcessTime)
+	numPollers := 0
 	var tasksToReceive sync.WaitGroup
-	tasksToReceive.Add(maxTasksToGenerate)
+	tasksToReceive.Add(totalTaskCount)
 	var pollerWG sync.WaitGroup
-	for i := 0; i < numPollers; i++ {
-		pollerWG.Add(1)
-		go s.poll(ctx, matchingClient, domainID, tasklist, &polledTasksCounter, &pollerWG, pollDuration, taskProcessTime, statsCh, &tasksToReceive)
+	for idx, pollerConfig := range s.testClusterConfig.MatchingConfig.SimulationConfig.Pollers {
+		for i := 0; i < pollerConfig.getNumPollers(); i++ {
+			numPollers++
+			pollerWG.Add(1)
+			pollerID := fmt.Sprintf("[%d]-%s-%d", idx, pollerConfig.getIsolationGroup(), i)
+			config := pollerConfig
+			go s.poll(ctx, matchingClient, domainID, tasklist, pollerID, &pollerWG, statsCh, &tasksToReceive, &config)
+		}
 	}
 
 	// wait a bit for pollers to start.
@@ -201,30 +212,27 @@ func (s *MatchingSimulationSuite) TestMatchingSimulation() {
 
 	startTime := time.Now()
 	// Start task generators
-	rps := getTaskQPS(s.testClusterConfig.MatchingConfig.SimulationConfig.TasksPerSecond)
-	burst := getTaskBurst(s.testClusterConfig.MatchingConfig.SimulationConfig.TasksBurst)
-	rateLimiter := rate.NewLimiter(rate.Limit(rps), burst)
-	generatedTasksCounter := int32(0)
-	lastTaskScheduleID := int32(0)
-	numGenerators := getNumGenerators(s.testClusterConfig.MatchingConfig.SimulationConfig.NumTaskGenerators)
-	var tasksToGenerate sync.WaitGroup
-	tasksToGenerate.Add(maxTasksToGenerate)
+	numGenerators := 0
 	var generatorWG sync.WaitGroup
-	for i := 1; i <= numGenerators; i++ {
-		generatorWG.Add(1)
-		go s.generate(ctx, matchingClient, domainID, tasklist, maxTasksToGenerate, rateLimiter, &generatedTasksCounter, &lastTaskScheduleID, &generatorWG, &tasksToGenerate)
+	lastTaskScheduleID := int32(0)
+	for _, taskConfig := range s.testClusterConfig.MatchingConfig.SimulationConfig.Tasks {
+		tasksGenerated := int32(0)
+		rateLimiter := rate.NewLimiter(rate.Limit(taskConfig.getTasksPerSecond()), taskConfig.getTasksBurst())
+		for i := 0; i < taskConfig.getNumTaskGenerators(); i++ {
+			numGenerators++
+			generatorWG.Add(1)
+			config := taskConfig
+			go s.generate(ctx, matchingClient, domainID, tasklist, rateLimiter, &tasksGenerated, &lastTaskScheduleID, &generatorWG, statsCh, &config)
+		}
 	}
 
 	// Let it run until all tasks have been polled.
 	// There's a test timeout configured in docker/buildkite/docker-compose-local-matching-simulation.yml that you
 	// can change if your test case needs more time
-	s.log("Waiting until all tasks are generated")
-	tasksToGenerate.Wait()
-	generationTime := time.Now().Sub(startTime)
 	s.log("Waiting until all tasks are received")
 	tasksToReceive.Wait()
 	executionTime := time.Now().Sub(startTime)
-	s.log("Completed benchmark in %v", (time.Now().Sub(startTime)))
+	s.log("Completed benchmark in %v", time.Now().Sub(startTime))
 	s.log("Canceling context to stop pollers and task generators")
 	cancel()
 	pollerWG.Wait()
@@ -240,12 +248,10 @@ func (s *MatchingSimulationSuite) TestMatchingSimulation() {
 	// Don't change the start/end line format as it is used by scripts to parse the summary info
 	testSummary := []string{}
 	testSummary = append(testSummary, "Simulation Summary:")
-	testSummary = append(testSummary, fmt.Sprintf("Task generate Duration: %v", generationTime))
+	testSummary = append(testSummary, fmt.Sprintf("Task generate Duration: %v", aggStats[operationAddDecisionTask].lastUpdated.Sub(startTime)))
 	testSummary = append(testSummary, fmt.Sprintf("Simulation Duration: %v", executionTime))
 	testSummary = append(testSummary, fmt.Sprintf("Num of Pollers: %d", numPollers))
-	testSummary = append(testSummary, fmt.Sprintf("Poll Timeout: %v", pollDuration))
 	testSummary = append(testSummary, fmt.Sprintf("Num of Task Generators: %d", numGenerators))
-	testSummary = append(testSummary, fmt.Sprintf("Task generated QPS: %v", rps))
 	testSummary = append(testSummary, fmt.Sprintf("Num of Write Partitions: %d", s.testClusterConfig.MatchingDynamicConfigOverrides[dynamicconfig.MatchingNumTasklistWritePartitions]))
 	testSummary = append(testSummary, fmt.Sprintf("Num of Read Partitions: %d", s.testClusterConfig.MatchingDynamicConfigOverrides[dynamicconfig.MatchingNumTasklistReadPartitions]))
 	testSummary = append(testSummary, fmt.Sprintf("Forwarder Max Outstanding Polls: %d", s.testClusterConfig.MatchingDynamicConfigOverrides[dynamicconfig.MatchingForwarderMaxOutstandingPolls]))
@@ -254,21 +260,12 @@ func (s *MatchingSimulationSuite) TestMatchingSimulation() {
 	testSummary = append(testSummary, fmt.Sprintf("Forwarder Max Children per Node: %d", s.testClusterConfig.MatchingDynamicConfigOverrides[dynamicconfig.MatchingForwarderMaxChildrenPerNode]))
 	testSummary = append(testSummary, fmt.Sprintf("Local Poll Wait Time: %v", s.testClusterConfig.MatchingDynamicConfigOverrides[dynamicconfig.LocalPollWaitTime]))
 	testSummary = append(testSummary, fmt.Sprintf("Local Task Wait Time: %v", s.testClusterConfig.MatchingDynamicConfigOverrides[dynamicconfig.LocalTaskWaitTime]))
-	testSummary = append(testSummary, fmt.Sprintf("Tasks generated: %d", generatedTasksCounter))
-	testSummary = append(testSummary, fmt.Sprintf("Tasks polled: %d", polledTasksCounter))
-	totalPollCnt := 0
-	if pollStats, ok := aggStats[operationPollForDecisionTask]; ok {
-		totalPollCnt = pollStats.successCnt + pollStats.failCnt
-	}
+	testSummary = append(testSummary, fmt.Sprintf("Tasks generated: %d", aggStats[operationAddDecisionTask].successCnt))
+	testSummary = append(testSummary, fmt.Sprintf("Tasks polled: %d", aggStats[operationPollReceivedTask].successCnt))
 
-	if totalPollCnt == 0 {
-		testSummary = append(testSummary, "No poll requests were made")
-	} else {
-		testSummary = append(testSummary, fmt.Sprintf("Total poll requests: %d", totalPollCnt))
-		testSummary = append(testSummary, fmt.Sprintf("Poll request failure rate %%: %d", 100*aggStats[operationPollForDecisionTask].failCnt/totalPollCnt))
-		testSummary = append(testSummary, fmt.Sprintf("Avg Poll latency (ms): %d", (aggStats[operationPollForDecisionTask].totalDuration/time.Duration(totalPollCnt)).Milliseconds()))
-		testSummary = append(testSummary, fmt.Sprintf("Max Poll latency (ms): %d", aggStats[operationPollForDecisionTask].maxDuration.Milliseconds()))
-	}
+	testSummary = appendMetric(testSummary, operationPollForDecisionTask, aggStats)
+	testSummary = appendMetric(testSummary, operationAddDecisionTask, aggStats)
+
 	testSummary = append(testSummary, "End of Simulation Summary")
 	fmt.Println(strings.Join(testSummary, "\n"))
 }
@@ -282,12 +279,12 @@ func (s *MatchingSimulationSuite) generate(
 	ctx context.Context,
 	matchingClient MatchingClient,
 	domainID, tasklist string,
-	maxTasksToGenerate int,
 	rateLimiter *rate.Limiter,
-	generatedTasksCounter *int32,
+	tasksGenerated *int32,
 	lastTaskScheduleID *int32,
 	wg *sync.WaitGroup,
-	tasksToGenerate *sync.WaitGroup) {
+	statsCh chan *operationStats,
+	taskConfig *SimulationTaskConfiguration) {
 	defer wg.Done()
 
 	for {
@@ -302,23 +299,31 @@ func (s *MatchingSimulationSuite) generate(
 				}
 				return
 			}
-			scheduleID := int(atomic.AddInt32(lastTaskScheduleID, 1))
-			if scheduleID > maxTasksToGenerate {
-				s.log("Generated %d tasks so generator will stop", maxTasksToGenerate)
+			newTasksGenerated := int(atomic.AddInt32(tasksGenerated, 1))
+			if newTasksGenerated > taskConfig.getMaxTasksToGenerate() {
+				s.log("Generated %d tasks so generator will stop", newTasksGenerated)
 				return
 			}
-			decisionTask := newDecisionTask(domainID, tasklist, scheduleID)
+			isolationGroup := ""
+			if len(taskConfig.getIsolationGroups()) > 0 {
+				isolationGroup = taskConfig.getIsolationGroups()[newTasksGenerated%len(taskConfig.getIsolationGroups())]
+			}
+			scheduleID := int(atomic.AddInt32(lastTaskScheduleID, 1))
+			start := time.Now()
+			decisionTask := newDecisionTask(domainID, tasklist, isolationGroup, scheduleID)
 			reqCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
 			err := matchingClient.AddDecisionTask(reqCtx, decisionTask)
+			statsCh <- &operationStats{
+				op:        operationAddDecisionTask,
+				dur:       time.Since(start),
+				err:       err,
+				timestamp: time.Now(),
+			}
 			cancel()
 			if err != nil {
 				s.log("Error when adding decision task, err: %v", err)
 				continue
 			}
-
-			s.log("Decision task %d added", scheduleID)
-			atomic.AddInt32(generatedTasksCounter, 1)
-			tasksToGenerate.Done()
 		}
 	}
 }
@@ -326,12 +331,11 @@ func (s *MatchingSimulationSuite) generate(
 func (s *MatchingSimulationSuite) poll(
 	ctx context.Context,
 	matchingClient MatchingClient,
-	domainID, tasklist string,
-	polledTasksCounter *int32,
+	domainID, tasklist, pollerID string,
 	wg *sync.WaitGroup,
-	pollDuration, taskProcessTime time.Duration,
 	statsCh chan *operationStats,
 	tasksToReceive *sync.WaitGroup,
+	pollerConfig *SimulationPollerConfiguration,
 ) {
 	defer wg.Done()
 
@@ -342,23 +346,26 @@ func (s *MatchingSimulationSuite) poll(
 			return
 		default:
 			s.log("Poller will initiate a poll")
-			reqCtx, cancel := context.WithTimeout(ctx, pollDuration)
+			reqCtx, cancel := context.WithTimeout(ctx, pollerConfig.getPollTimeout())
 			start := time.Now()
 			resp, err := matchingClient.PollForDecisionTask(reqCtx, &types.MatchingPollForDecisionTaskRequest{
 				DomainUUID: domainID,
+				PollerID:   pollerID,
 				PollRequest: &types.PollForDecisionTaskRequest{
 					TaskList: &types.TaskList{
 						Name: tasklist,
 						Kind: types.TaskListKindNormal.Ptr(),
 					},
 				},
+				IsolationGroup: pollerConfig.getIsolationGroup(),
 			})
 			cancel()
 
 			statsCh <- &operationStats{
-				op:  operationPollForDecisionTask,
-				dur: time.Since(start),
-				err: err,
+				op:        operationPollForDecisionTask,
+				dur:       time.Since(start),
+				err:       err,
+				timestamp: time.Now(),
 			}
 
 			if err != nil {
@@ -373,10 +380,14 @@ func (s *MatchingSimulationSuite) poll(
 				continue
 			}
 
-			atomic.AddInt32(polledTasksCounter, 1)
+			statsCh <- &operationStats{
+				op:        operationPollReceivedTask,
+				timestamp: time.Now(),
+			}
+
 			s.log("PollForDecisionTask got a task with startedid: %d. resp: %+v", resp.StartedEventID, resp)
 			tasksToReceive.Done()
-			time.Sleep(taskProcessTime)
+			time.Sleep(pollerConfig.getTaskProcessTime())
 		}
 	}
 }
@@ -389,8 +400,9 @@ func (s *MatchingSimulationSuite) collectStats(statsCh chan *operationStats, agg
 			opAggStats = &operationAggStats{}
 			aggStats[stat.op] = opAggStats
 		}
-
-		opAggStats.lastUpdated = time.Now()
+		if stat.timestamp.After(opAggStats.lastUpdated) {
+			opAggStats.lastUpdated = stat.timestamp
+		}
 		if stat.err != nil {
 			opAggStats.failCnt++
 		} else {
@@ -419,7 +431,7 @@ func (s *MatchingSimulationSuite) domainID(ctx context.Context) string {
 	return domainID
 }
 
-func newDecisionTask(domainID, tasklist string, i int) *types.AddDecisionTaskRequest {
+func newDecisionTask(domainID, tasklist, isolationGroup string, i int) *types.AddDecisionTaskRequest {
 	return &types.AddDecisionTaskRequest{
 		DomainUUID: domainID,
 		Execution: &types.WorkflowExecution{
@@ -431,42 +443,87 @@ func newDecisionTask(domainID, tasklist string, i int) *types.AddDecisionTaskReq
 			Kind: types.TaskListKindNormal.Ptr(),
 		},
 		ScheduleID: int64(i),
+		PartitionConfig: map[string]string{
+			partition.IsolationGroupKey: isolationGroup,
+		},
 	}
 }
 
-func getMaxTaskstoGenerate(i int) int {
-	if i == 0 {
-		return 2000
+func appendMetric(testSummary []string, op operation, aggStats map[operation]*operationAggStats) []string {
+	total := 0
+	if pollStats, ok := aggStats[op]; ok {
+		total = pollStats.successCnt + pollStats.failCnt
 	}
-	return i
+	testSummary = append(testSummary, fmt.Sprintf("Operation Summary (%v): ", op))
+
+	if total == 0 {
+		testSummary = append(testSummary, "  N/A")
+	} else {
+		testSummary = append(testSummary, fmt.Sprintf("  Total: %d", total))
+		testSummary = append(testSummary, fmt.Sprintf("  Failure rate %%: %d", 100*aggStats[op].failCnt/total))
+		testSummary = append(testSummary, fmt.Sprintf("  Avg duration (ms): %d", (aggStats[op].totalDuration/time.Duration(total)).Milliseconds()))
+		testSummary = append(testSummary, fmt.Sprintf("  Max duration (ms): %d", aggStats[op].maxDuration.Milliseconds()))
+	}
+	return testSummary
 }
 
-func getTaskGenerateInterval(i time.Duration) time.Duration {
-	if i == 0 {
-		return 50 * time.Millisecond
+func getTotalTasks(tasks []SimulationTaskConfiguration) int {
+	total := 0
+	for _, taskConfiguration := range tasks {
+		total += taskConfiguration.getMaxTasksToGenerate()
 	}
-	return i
+	return total
 }
 
-func getNumGenerators(i int) int {
-	if i == 0 {
+func getIsolationGroups(c *MatchingSimulationConfig) []any {
+	groups := make(map[string]struct{})
+	for _, poller := range c.Pollers {
+		if poller.getIsolationGroup() != "" {
+			groups[poller.getIsolationGroup()] = struct{}{}
+		}
+	}
+	for _, tasks := range c.Tasks {
+		for _, group := range tasks.getIsolationGroups() {
+			groups[group] = struct{}{}
+		}
+	}
+	var uniqueGroups []any
+	for group, _ := range groups {
+		uniqueGroups = append(uniqueGroups, group)
+	}
+	return uniqueGroups
+}
+
+func (c *SimulationTaskConfiguration) getNumTaskGenerators() int {
+	if c.NumTaskGenerators == 0 {
 		return 1
 	}
-	return i
+	return c.NumTaskGenerators
 }
 
-func getNumPollers(i int) int {
-	if i == 0 {
-		return 10
+func (c *SimulationTaskConfiguration) getMaxTasksToGenerate() int {
+	if c.MaxTaskToGenerate == 0 {
+		return 2000
 	}
-	return i
+	return c.MaxTaskToGenerate
 }
 
-func getPollDuration(d time.Duration) time.Duration {
-	if d == 0 {
-		return 1 * time.Second
+func (c *SimulationTaskConfiguration) getTasksPerSecond() int {
+	if c.TasksPerSecond == 0 {
+		return 40
 	}
-	return d
+	return c.TasksPerSecond
+}
+
+func (c *SimulationTaskConfiguration) getTasksBurst() int {
+	if c.TasksBurst == 0 {
+		return 1
+	}
+	return c.TasksBurst
+}
+
+func (c *SimulationTaskConfiguration) getIsolationGroups() []string {
+	return c.IsolationGroups
 }
 
 func getPartitions(i int) int {
@@ -498,25 +555,29 @@ func getForwarderMaxChildPerNode(i int) int {
 	return i
 }
 
-func getTaskQPS(i int) int {
-	if i == 0 {
-		return 40
-	}
-	return i
-}
-
-func getTaskBurst(i int) int {
-	if i == 0 {
+func (c *SimulationPollerConfiguration) getNumPollers() int {
+	if c.NumPollers == 0 {
 		return 1
 	}
-	return i
+	return c.NumPollers
 }
 
-func getTaskProcessTime(duration time.Duration) time.Duration {
-	if duration == 0 {
+func (c *SimulationPollerConfiguration) getTaskProcessTime() time.Duration {
+	if c.TaskProcessTime == 0 {
 		return time.Millisecond
 	}
-	return duration
+	return c.TaskProcessTime
+}
+
+func (c *SimulationPollerConfiguration) getPollTimeout() time.Duration {
+	if c.PollTimeout == 0 {
+		return 15 * time.Second
+	}
+	return c.PollTimeout
+}
+
+func (c *SimulationPollerConfiguration) getIsolationGroup() string {
+	return c.IsolationGroup
 }
 
 func getRecordDecisionTaskStartedTime(duration time.Duration) time.Duration {

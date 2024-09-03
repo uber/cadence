@@ -30,6 +30,7 @@ import (
 
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
+	cadence_errors "github.com/uber/cadence/common/errors"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/common/types/mapper/testutils"
 	"github.com/uber/cadence/common/types/testdata"
@@ -3311,6 +3312,19 @@ func TestStickyWorkerUnavailableErrorConversion(t *testing.T) {
 	for _, original := range testCases {
 		thriftObj := FromStickyWorkerUnavailableError(original)
 		roundTripObj := ToStickyWorkerUnavailableError(thriftObj)
+		assert.Equal(t, original, roundTripObj)
+	}
+}
+
+func TestFromTaskListNotOwnedByHostError(t *testing.T) {
+	testCases := []*cadence_errors.TaskListNotOwnedByHostError{
+		nil,
+		&testdata.TaskListNotOwnedByHostError,
+	}
+
+	for _, original := range testCases {
+		thriftObj := FromTaskListNotOwnedByHostError(original)
+		roundTripObj := ToTaskListNotOwnedByHostError(thriftObj)
 		assert.Equal(t, original, roundTripObj)
 	}
 }

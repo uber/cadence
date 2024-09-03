@@ -45,6 +45,7 @@ const (
 	SignalName           = "SignalName"
 	QueryType            = "QueryType"
 	HostName             = "HostName"
+	HostName2            = "HostName2"
 	Identity             = "Identity"
 	CronSchedule         = "CronSchedule"
 	Checksum             = "Checksum"

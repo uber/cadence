@@ -170,6 +170,14 @@ func TestLimiterNotRacy(t *testing.T) {
 			return nil
 		})
 		g.Go(func() error {
+			lim.Limit()
+			return nil
+		})
+		g.Go(func() error {
+			lim.FallbackLimit()
+			return nil
+		})
+		g.Go(func() error {
 			ctx, cancel := context.WithTimeout(context.Background(), time.Microsecond)
 			defer cancel()
 			_ = lim.Wait(ctx)
@@ -187,6 +195,7 @@ type allowres struct{}
 func (allowlimiter) Allow() bool                  { return true }
 func (a allowlimiter) Wait(context.Context) error { return nil }
 func (a allowlimiter) Reserve() clock.Reservation { return allowres{} }
+func (a allowlimiter) Limit() rate.Limit          { return rate.Inf }
 
 func (a allowres) Allow() bool { return true }
 func (a allowres) Used(bool)   {}

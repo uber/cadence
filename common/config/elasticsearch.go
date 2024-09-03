@@ -55,6 +55,8 @@ type (
 		AWSSigning AWSSigning `yaml:"awsSigning"`
 		// optional to use Signed Certificates over https
 		TLS TLS `yaml:"tls"`
+		// optional to add custom headers
+		CustomHeaders map[string]string `yaml:"customHeaders,omitempty"`
 	}
 
 	// AWSSigning contains config to enable signing,
@@ -138,4 +140,12 @@ func (a AWSSigning) GetCredentials() (*credentials.Credentials, *string, error) 
 	)
 
 	return awsCredentials, &a.StaticCredential.Region, nil
+}
+
+// GetCustomHeader returns the header for the specified key
+func (cfg *ElasticSearchConfig) GetCustomHeader(headerKey string) string {
+	if headerValue, ok := cfg.CustomHeaders[headerKey]; ok {
+		return headerValue
+	}
+	return ""
 }

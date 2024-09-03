@@ -62,6 +62,8 @@ const (
 	asyncWFRequestType        = "async_wf_request_type"
 	workflowTerminationReason = "workflow_termination_reason"
 	workflowCloseStatus       = "workflow_close_status"
+	isolationEnabled          = "isolation_enabled"
+	topic                     = "topic"
 
 	// limiter-side tags
 	globalRatelimitKey            = "global_ratelimit_key"
@@ -255,10 +257,12 @@ func AsyncWFRequestTypeTag(value string) Tag {
 	return metricWithUnknown(asyncWFRequestType, value)
 }
 
-// GlobalRatelimiterKeyTag reports the full (global) ratelimit key being used, e.g. "user:domain-x",
-// though the value will be sanitized and may appear as "user_domain_x" or similar.
+// GlobalRatelimiterKeyTag reports the local ratelimit key being used, e.g. "domain-x".
+// This will likely be ambiguous if it is not combined with the collection name,
+// but keeping this untouched helps keep the values template-friendly and correlate-able
+// in metrics dashboards and queries.
 func GlobalRatelimiterKeyTag(value string) Tag {
-	return simpleMetric{key: globalRatelimitKey, value: sanitizer.Value(value)}
+	return simpleMetric{key: globalRatelimitKey, value: value}
 }
 
 // GlobalRatelimiterTypeTag reports the "limit usage type" being reported, e.g. global vs local
@@ -305,4 +309,17 @@ func PartitionConfigTags(partitionConfig map[string]string) []Tag {
 		tags = append(tags, simpleMetric{key: sanitizer.Value(fmt.Sprintf("pk_%s", k)), value: sanitizer.Value(v)})
 	}
 	return tags
+}
+
+// IsolationEnabledTag returns whether isolation is enabled
+func IsolationEnabledTag(enabled bool) Tag {
+	v := "false"
+	if enabled {
+		v = "true"
+	}
+	return simpleMetric{key: isolationEnabled, value: v}
+}
+
+func TopicTag(value string) Tag {
+	return metricWithUnknown(topic, value)
 }

@@ -70,9 +70,9 @@ func (s *clientSuite) SetupTest() {
 		log.NewNoop(),
 		nil,
 		dynamicconfig.GetIntPropertyFn(1000),
-		quotas.NewSimpleRateLimiter(1000),
-		quotas.NewSimpleRateLimiter(1),
-		quotas.NewSimpleRateLimiter(1),
+		quotas.NewSimpleRateLimiter(s.T(), 1000),
+		quotas.NewSimpleRateLimiter(s.T(), 1),
+		quotas.NewSimpleRateLimiter(s.T(), 1),
 		s.archiverProvider,
 		dynamicconfig.GetBoolPropertyFn(false),
 	).(*client)

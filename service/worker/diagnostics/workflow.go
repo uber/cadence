@@ -38,6 +38,7 @@ const (
 
 	retrieveWfExecutionHistoryActivity = "retrieveWfExecutionHistory"
 	identifyTimeoutsActivity           = "identifyTimeouts"
+	rootCauseTimeoutsActivity          = "rootCauseTimeouts"
 )
 
 type DiagnosticsWorkflowInput struct {
@@ -46,7 +47,13 @@ type DiagnosticsWorkflowInput struct {
 	RunID      string
 }
 
-func (w *dw) DiagnosticsWorkflow(ctx workflow.Context, params DiagnosticsWorkflowInput) error {
+type DiagnosticsWorkflowResult struct {
+	Issues    []invariants.InvariantCheckResult
+	RootCause []invariants.InvariantRootCauseResult
+	Runbooks  []string
+}
+
+func (w *dw) DiagnosticsWorkflow(ctx workflow.Context, params DiagnosticsWorkflowInput) (DiagnosticsWorkflowResult, error) {
 	activityOptions := workflow.ActivityOptions{
 		ScheduleToCloseTimeout: time.Second * 10,
 		ScheduleToStartTimeout: time.Second * 5,
@@ -56,23 +63,37 @@ func (w *dw) DiagnosticsWorkflow(ctx workflow.Context, params DiagnosticsWorkflo
 
 	var wfExecutionHistory *types.GetWorkflowExecutionHistoryResponse
 	err := workflow.ExecuteActivity(activityCtx, w.retrieveExecutionHistory, retrieveExecutionHistoryInputParams{
-		domain: params.Domain,
-		execution: &types.WorkflowExecution{
+		Domain: params.Domain,
+		Execution: &types.WorkflowExecution{
 			WorkflowID: params.WorkflowID,
 			RunID:      params.RunID,
 		}}).Get(ctx, &wfExecutionHistory)
 	if err != nil {
-		return fmt.Errorf("RetrieveExecutionHistory: %w", err)
+		return DiagnosticsWorkflowResult{}, fmt.Errorf("RetrieveExecutionHistory: %w", err)
 	}
 
 	var checkResult []invariants.InvariantCheckResult
 	err = workflow.ExecuteActivity(activityCtx, w.identifyTimeouts, identifyTimeoutsInputParams{
-		history: wfExecutionHistory,
-		domain:  params.Domain,
+		History: wfExecutionHistory,
+		Domain:  params.Domain,
 	}).Get(ctx, &checkResult)
 	if err != nil {
-		return fmt.Errorf("IdentifyTimeouts: %w", err)
+		return DiagnosticsWorkflowResult{}, fmt.Errorf("IdentifyTimeouts: %w", err)
 	}
 
-	return nil
+	var rootCauseResult []invariants.InvariantRootCauseResult
+	err = workflow.ExecuteActivity(activityCtx, w.rootCauseTimeouts, rootCauseTimeoutsParams{
+		History: wfExecutionHistory,
+		Domain:  params.Domain,
+		Issues:  checkResult,
+	}).Get(ctx, &rootCauseResult)
+	if err != nil {
+		return DiagnosticsWorkflowResult{}, fmt.Errorf("RootCauseTimeouts: %w", err)
+	}
+
+	return DiagnosticsWorkflowResult{
+		Issues:    checkResult,
+		RootCause: rootCauseResult,
+		Runbooks:  []string{linkToTimeoutsRunbook},
+	}, nil
 }

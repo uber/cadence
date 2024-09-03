@@ -375,6 +375,7 @@ func TestGetPollerIsolationGroup(t *testing.T) {
 
 	config := defaultTestConfig()
 	config.LongPollExpirationInterval = dynamicconfig.GetDurationPropertyFnFilteredByTaskListInfo(30 * time.Second)
+	config.EnableTasklistIsolation = dynamicconfig.GetBoolPropertyFnFilteredByDomainID(true)
 	tlm := createTestTaskListManagerWithConfig(t, logger, controller, config)
 
 	bgCtx := ContextWithPollerID(context.Background(), "poller0")

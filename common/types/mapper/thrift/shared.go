@@ -22,6 +22,7 @@ package thrift
 
 import (
 	"github.com/uber/cadence/.gen/go/shared"
+	cadence_errors "github.com/uber/cadence/common/errors"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -8057,6 +8058,30 @@ func ToStickyWorkerUnavailableError(t *shared.StickyWorkerUnavailableError) *typ
 	}
 	return &types.StickyWorkerUnavailableError{
 		Message: t.Message,
+	}
+}
+
+// FromTaskListNotOwnedByHostError converts internal TaskListNotOwnedByHostError type to thrift
+func FromTaskListNotOwnedByHostError(t *cadence_errors.TaskListNotOwnedByHostError) *shared.TaskListNotOwnedByHostError {
+	if t == nil {
+		return nil
+	}
+	return &shared.TaskListNotOwnedByHostError{
+		OwnedByIdentity: t.OwnedByIdentity,
+		MyIdentity:      t.MyIdentity,
+		TasklistName:    t.TasklistName,
+	}
+}
+
+// ToTaskListNotOwnedByHostError converts thrift TaskListNotOwnedByHostError type to internal
+func ToTaskListNotOwnedByHostError(t *shared.TaskListNotOwnedByHostError) *cadence_errors.TaskListNotOwnedByHostError {
+	if t == nil {
+		return nil
+	}
+	return &cadence_errors.TaskListNotOwnedByHostError{
+		OwnedByIdentity: t.OwnedByIdentity,
+		MyIdentity:      t.MyIdentity,
+		TasklistName:    t.TasklistName,
 	}
 }
 

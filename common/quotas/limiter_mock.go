@@ -31,6 +31,7 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
+	rate "golang.org/x/time/rate"
 
 	clock "github.com/uber/cadence/common/clock"
 )
@@ -70,6 +71,20 @@ func (m *MockLimiter) Allow() bool {
 func (mr *MockLimiterMockRecorder) Allow() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Allow", reflect.TypeOf((*MockLimiter)(nil).Allow))
+}
+
+// Limit mocks base method.
+func (m *MockLimiter) Limit() rate.Limit {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Limit")
+	ret0, _ := ret[0].(rate.Limit)
+	return ret0
+}
+
+// Limit indicates an expected call of Limit.
+func (mr *MockLimiterMockRecorder) Limit() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Limit", reflect.TypeOf((*MockLimiter)(nil).Limit))
 }
 
 // Reserve mocks base method.
