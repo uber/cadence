@@ -25,6 +25,7 @@ package pinot
 import (
 	"errors"
 	"fmt"
+	"github.com/uber/cadence/.gen/go/shared"
 	"strconv"
 	"strings"
 	"time"
@@ -412,6 +413,11 @@ func (qv *VisibilityQueryValidator) processCustomKey(expr sqlparser.Expr) (strin
 	case types.IndexedValueTypeString:
 		return processCustomString(comparisonExpr, colNameStr, colValStr), nil
 	case types.IndexedValueTypeKeyword:
+		if colValStr == "" {
+			return "", &shared.BadRequestError{
+				Message: fmt.Sprintf("Empty custom keyword value in pinot_query_validator. "),
+			}
+		}
 		return processCustomKeyword(operator, colNameStr, colValStr), nil
 	case types.IndexedValueTypeDatetime:
 		var err error

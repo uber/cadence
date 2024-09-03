@@ -301,6 +301,11 @@ func TestValidateQuery(t *testing.T) {
 			validated: "",
 			err:       "failed to process a bool key to SQLVal: &{<nil> abc { }}",
 		},
+		"case22-1: test empty keyword value": {
+			query:     "CustomKeywordField = ''",
+			validated: "",
+			err:       "BadRequestError{Message: Empty custom keyword value in pinot_query_validator. }",
+		},
 	}
 
 	for name, test := range tests {
