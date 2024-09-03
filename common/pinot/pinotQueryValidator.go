@@ -25,13 +25,13 @@ package pinot
 import (
 	"errors"
 	"fmt"
-	"github.com/uber/cadence/.gen/go/shared"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/xwb1989/sqlparser"
 
+	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/dynamicconfig"
