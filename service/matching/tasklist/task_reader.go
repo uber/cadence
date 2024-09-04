@@ -203,7 +203,10 @@ getTasksPumpLoop:
 			break getTasksPumpLoop
 		case <-tr.notifyC:
 			{
-				tasks, readLevel, isReadBatchDone, err := tr.getTaskBatch()
+				initialReadLevel := tr.taskAckManager.GetReadLevel()
+				maxReadLevel := tr.taskWriter.GetMaxReadLevel()
+
+				tasks, readLevel, isReadBatchDone, err := tr.getTaskBatch(initialReadLevel, maxReadLevel)
 				if err != nil {
 					tr.Signal() // re-enqueue the event
 					// TODO: Should we ever stop retrying on db errors?
@@ -211,9 +214,15 @@ getTasksPumpLoop:
 				}
 
 				if len(tasks) == 0 {
-					// even though we didn't handle any tasks, we want to advance the ack-level
-					// to avoid needless querying database the next time
-					tr.taskAckManager.SetAckLevel(readLevel)
+					tr.taskAckManager.SetReadLevel(readLevel)
+
+					if tr.taskAckManager.GetAckLevel() == initialReadLevel {
+						// Even though we didn't handle any tasks, we want to advance the ack-level
+						// in order to avoid needless querying database the next time.
+						// This is safe since we started reading exactly from the current AckLevel and read no tasks
+						tr.taskAckManager.SetAckLevel(readLevel)
+					}
+
 					if !isReadBatchDone {
 						tr.Signal()
 					}
@@ -267,10 +276,8 @@ func (tr *taskReader) getTaskBatchWithRange(readLevel int64, maxReadLevel int64)
 // Returns a batch of tasks from persistence starting form current read level.
 // Also return a number that can be used to update readLevel
 // Also return a bool to indicate whether read is finished
-func (tr *taskReader) getTaskBatch() ([]*persistence.TaskInfo, int64, bool, error) {
+func (tr *taskReader) getTaskBatch(readLevel, maxReadLevel int64) ([]*persistence.TaskInfo, int64, bool, error) {
 	var tasks []*persistence.TaskInfo
-	readLevel := tr.taskAckManager.GetReadLevel()
-	maxReadLevel := tr.taskWriter.GetMaxReadLevel()
 
 	// counter i is used to break and let caller check whether tasklist is still alive and need resume read.
 	for i := 0; i < 10 && readLevel < maxReadLevel; i++ {
