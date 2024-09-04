@@ -146,6 +146,28 @@ func (p *ESProcessorImpl) bulkAfterAction(id int64, requests []bulk.GenericBulka
 					tag.WorkflowID(wid),
 					tag.WorkflowRunID(rid),
 					tag.WorkflowDomainID(domainID))
+
+				// check if it is a delete request and status code
+				// 404 means the document does not exist
+				// 409 means means the document's version does not match (or if the document has been updated or deleted by another process)
+				// this can happen during the data migration, the doc was deleted in the old index but not exists in the new index
+				if err.Status == 409 || err.Status == 404 {
+					status := err.Status
+					req, err := request.Source()
+					if err == nil {
+						if p.isDeleteRequest(req) {
+							p.logger.Info("Delete request encountered a version conflict. Acknowledging to prevent retry.",
+								tag.ESResponseStatus(status), tag.ESRequest(request.String()),
+								tag.WorkflowID(wid),
+								tag.WorkflowRunID(rid),
+								tag.WorkflowDomainID(domainID))
+							p.ackKafkaMsg(key)
+						}
+					} else {
+						p.logger.Error("Get request source err.", tag.Error(err), tag.ESRequest(request.String()))
+						p.scope.IncCounter(metrics.ESProcessorCorruptedData)
+					}
+				}
 				p.nackKafkaMsg(key)
 			} else {
 				p.logger.Error("ES request failed", tag.ESRequest(request.String()))
@@ -224,7 +246,7 @@ func (p *ESProcessorImpl) retrieveKafkaKey(request bulk.GenericBulkableRequest) 
 	}
 
 	var key string
-	if len(req) == 2 { // index or update requests
+	if !p.isDeleteRequest(req) { // index or update requests
 		var body map[string]interface{}
 		if err := json.Unmarshal([]byte(req[1]), &body); err != nil {
 			p.logger.Error("Unmarshal index request body err.", tag.Error(err))
@@ -285,6 +307,16 @@ func (p *ESProcessorImpl) hashFn(key interface{}) uint32 {
 	}
 	numOfShards := p.config.IndexerConcurrency()
 	return uint32(common.WorkflowIDToHistoryShard(id, numOfShards))
+}
+
+func (p *ESProcessorImpl) isDeleteRequest(request []string) bool {
+	// The Source() method typically returns a slice of strings, where each string represents a part of the bulk request in JSON format.
+	// For delete operations, the Source() method typically returns only one part
+	// The metadata that specifies the delete action, including _index and _id.
+	// "{\"delete\":{\"_index\":\"my-index\",\"_id\":\"1\"}}"
+	// For index/update operations, the Source() method typically returns two parts
+	// reference: https://www.elastic.co/guide/en/elasticsearch/reference/6.8/docs-bulk.html
+	return len(request) == 1
 }
 
 // 409 - Version Conflict
