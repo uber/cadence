@@ -674,6 +674,93 @@ func TestTaskListManagerGetTaskBatch(t *testing.T) {
 	tlm.Stop()
 }
 
+func TestTaskListReaderPumpAdvancesAckLevelAfterEmptyReads(t *testing.T) {
+	const taskCount = 5
+	const rangeSize = 10
+	const nLeaseRenewals = 15
+
+	controller := gomock.NewController(t)
+	mockPartitioner := partition.NewMockPartitioner(controller)
+	mockPartitioner.EXPECT().GetIsolationGroupByDomainID(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("", nil).AnyTimes()
+	mockDomainCache := cache.NewMockDomainCache(controller)
+	mockDomainCache.EXPECT().GetDomainByID(gomock.Any()).Return(cache.CreateDomainCacheEntry("domainName"), nil).AnyTimes()
+	mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return("domainName", nil).AnyTimes()
+
+	logger := testlogger.New(t)
+	timeSource := clock.NewRealTimeSource()
+	tm := NewTestTaskManager(t, logger, timeSource)
+	taskListID := NewTestTaskListID(t, "domainId", "tl", 0)
+	cfg := defaultTestConfig()
+	cfg.RangeSize = rangeSize
+
+	tlMgr, err := NewManager(
+		mockDomainCache,
+		logger,
+		metrics.NewClient(tally.NoopScope, metrics.Matching),
+		tm,
+		cluster.GetTestClusterMetadata(true),
+		mockPartitioner,
+		nil,
+		func(Manager) {},
+		taskListID,
+		types.TaskListKindNormal.Ptr(),
+		cfg,
+		timeSource,
+		timeSource.Now(),
+	)
+	require.NoError(t, err)
+	tlm := tlMgr.(*taskListManagerImpl)
+
+	// simulate lease renewal multiple times without writing any tasks
+	for i := 0; i < nLeaseRenewals; i++ {
+		tlm.taskWriter.renewLeaseWithRetry()
+	}
+
+	err = tlm.Start() // this call will also renew lease
+	require.NoError(t, err)
+	defer tlm.Stop()
+
+	// we expect AckLevel to advance
+	expectedAckLevel := int64(rangeSize) * nLeaseRenewals
+
+	// wait until all tasks are read by the task pump and enqeued into the in-memory buffer
+	// at the end of this step, ackManager readLevel will also be equal to the buffer size
+	assert.True(t, awaitCondition(func() bool {
+		return tlm.taskAckManager.GetAckLevel() == expectedAckLevel
+	}, time.Second))
+
+	assert.Equal(
+		t,
+		expectedAckLevel,
+		tlm.taskAckManager.GetAckLevel(),
+		"we should ack ranges of all the previously acquired leases",
+	)
+
+	assert.Equal(
+		t,
+		tlm.taskWriter.GetMaxReadLevel(),
+		tlm.taskAckManager.GetAckLevel(),
+		"we should have been acked everything possible",
+	)
+
+	maxReadLevelBeforeAddingTasks := tlm.taskWriter.GetMaxReadLevel()
+
+	// verify new task writes go beyond the MaxReadLevel/AckLevel
+	for i := int64(0); i < taskCount; i++ {
+		addParams := AddTaskParams{
+			TaskInfo: &persistence.TaskInfo{
+				DomainID:   "domainId",
+				RunID:      "run1",
+				WorkflowID: "workflow1",
+				ScheduleID: i,
+			},
+		}
+		_, err = tlm.AddTask(context.Background(), addParams)
+		require.NoError(t, err)
+		assert.Equal(t, maxReadLevelBeforeAddingTasks+i+1, tlm.taskWriter.GetMaxReadLevel())
+	}
+}
+
 func TestTaskListManagerGetTaskBatch_ReadBatchDone(t *testing.T) {
 	const rangeSize = 10
 	const maxReadLevel = int64(120)
