@@ -1036,13 +1036,13 @@ func (e *matchingEngineImpl) createPollForDecisionTaskResponse(
 	if task.IsQuery() {
 		// for a query task
 		queryRequest := task.Query.Request
+		execution := task.WorkflowExecution()
 		taskToken := &common.QueryTaskToken{
-			DomainID:     queryRequest.DomainUUID,
-			WorkflowID:   task.Event.WorkflowID,
-			WorkflowType: historyResponse.WorkflowType.GetName(),
-			RunID:        task.Event.RunID,
-			TaskList:     queryRequest.TaskList.Name,
-			TaskID:       task.Query.TaskID,
+			DomainID:   queryRequest.DomainUUID,
+			WorkflowID: execution.WorkflowID,
+			RunID:      execution.RunID,
+			TaskList:   queryRequest.TaskList.Name,
+			TaskID:     task.Query.TaskID,
 		}
 		token, _ = e.tokenSerializer.SerializeQueryTaskToken(taskToken)
 	} else {

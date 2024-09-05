@@ -51,12 +51,11 @@ func TestJsonTaskTokenSerializer_Token_RoundTrip(t *testing.T) {
 
 func TestNewJSONTaskTokenSerializer_QueryToken_Roundtrip(t *testing.T) {
 	token := QueryTaskToken{
-		DomainID:     "test-domain",
-		WorkflowID:   "test-workflow-id",
-		WorkflowType: "test-workflow-type",
-		RunID:        "test-run-id",
-		TaskList:     "test-task-list",
-		TaskID:       "test-task-id",
+		DomainID:   "test-domain",
+		WorkflowID: "test-workflow-id",
+		RunID:      "test-run-id",
+		TaskList:   "test-task-list",
+		TaskID:     "test-task-id",
 	}
 	serializer := NewJSONTaskTokenSerializer()
 
