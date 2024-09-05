@@ -309,6 +309,48 @@ func TestValidateQuery(t *testing.T) {
 			query:     "CustomStringField != ''",
 			validated: "JSON_MATCH(Attr, '\"$.CustomStringField\" is not null') AND NOT REGEXP_LIKE(JSON_EXTRACT_SCALAR(Attr, '$.CustomStringField', 'string'), '^$')",
 		},
+		// ES also doesn't support this kind of query
+		"case22-3: custom string is missing": {
+			query: "CustomStringField is missing",
+			err:   "Invalid query: syntax error at position 55 near 'missing'",
+		},
+		// ES also doesn't support this kind of query
+		"case22-4: custom string is not missing": {
+			query: "CustomStringField is not missing",
+			err:   "Invalid query: syntax error at position 59 near 'missing'",
+		},
+		"case22-5: 2 custom string not equal with and clause": {
+			query:     "CustomStringField != 'abc' AND CustomStringField != 'def'",
+			validated: "JSON_MATCH(Attr, '\"$.CustomStringField\" is not null') AND NOT REGEXP_LIKE(JSON_EXTRACT_SCALAR(Attr, '$.CustomStringField', 'string'), 'abc*') and JSON_MATCH(Attr, '\"$.CustomStringField\" is not null') AND NOT REGEXP_LIKE(JSON_EXTRACT_SCALAR(Attr, '$.CustomStringField', 'string'), 'def*')",
+		},
+		"case22-6: 2 custom string , equal and not equal with and clause": {
+			query:     "CustomStringField = 'abc' AND CustomStringField != 'def'",
+			validated: "JSON_MATCH(Attr, '\"$.CustomStringField\" is not null') AND REGEXP_LIKE(JSON_EXTRACT_SCALAR(Attr, '$.CustomStringField', 'string'), 'abc*') and JSON_MATCH(Attr, '\"$.CustomStringField\" is not null') AND NOT REGEXP_LIKE(JSON_EXTRACT_SCALAR(Attr, '$.CustomStringField', 'string'), 'def*')",
+		},
+		"case22-7: 2 custom string , not equal and equal with and clause": {
+			query:     "CustomStringField != 'abc' AND CustomStringField = 'def'",
+			validated: "JSON_MATCH(Attr, '\"$.CustomStringField\" is not null') AND NOT REGEXP_LIKE(JSON_EXTRACT_SCALAR(Attr, '$.CustomStringField', 'string'), 'abc*') and JSON_MATCH(Attr, '\"$.CustomStringField\" is not null') AND REGEXP_LIKE(JSON_EXTRACT_SCALAR(Attr, '$.CustomStringField', 'string'), 'def*')",
+		},
+		"case22-8: 2 custom string equal with and clause": {
+			query:     "CustomStringField = 'abc' AND CustomStringField = 'def'",
+			validated: "JSON_MATCH(Attr, '\"$.CustomStringField\" is not null') AND REGEXP_LIKE(JSON_EXTRACT_SCALAR(Attr, '$.CustomStringField', 'string'), 'abc*') and JSON_MATCH(Attr, '\"$.CustomStringField\" is not null') AND REGEXP_LIKE(JSON_EXTRACT_SCALAR(Attr, '$.CustomStringField', 'string'), 'def*')",
+		},
+		"case22-9: 2 custom string not equal with or clause": {
+			query:     "CustomStringField != 'abc' OR CustomStringField != 'def'",
+			validated: "(JSON_MATCH(Attr, '\"$.CustomStringField\" is not null') AND NOT REGEXP_LIKE(JSON_EXTRACT_SCALAR(Attr, '$.CustomStringField', 'string'), 'abc*') or JSON_MATCH(Attr, '\"$.CustomStringField\" is not null') AND NOT REGEXP_LIKE(JSON_EXTRACT_SCALAR(Attr, '$.CustomStringField', 'string'), 'def*'))",
+		},
+		"case22-10: 2 custom string , equal and not equal with or clause": {
+			query:     "CustomStringField = 'abc' OR CustomStringField != 'def'",
+			validated: "(JSON_MATCH(Attr, '\"$.CustomStringField\" is not null') AND REGEXP_LIKE(JSON_EXTRACT_SCALAR(Attr, '$.CustomStringField', 'string'), 'abc*') or JSON_MATCH(Attr, '\"$.CustomStringField\" is not null') AND NOT REGEXP_LIKE(JSON_EXTRACT_SCALAR(Attr, '$.CustomStringField', 'string'), 'def*'))",
+		},
+		"case22-11: 2 custom string , not equal and equal with or clause": {
+			query:     "CustomStringField != 'abc' OR CustomStringField = 'def'",
+			validated: "(JSON_MATCH(Attr, '\"$.CustomStringField\" is not null') AND NOT REGEXP_LIKE(JSON_EXTRACT_SCALAR(Attr, '$.CustomStringField', 'string'), 'abc*') or JSON_MATCH(Attr, '\"$.CustomStringField\" is not null') AND REGEXP_LIKE(JSON_EXTRACT_SCALAR(Attr, '$.CustomStringField', 'string'), 'def*'))",
+		},
+		"case22-12: 2 custom string equal with or clause": {
+			query:     "CustomStringField = 'abc' OR CustomStringField = 'def'",
+			validated: "(JSON_MATCH(Attr, '\"$.CustomStringField\" is not null') AND REGEXP_LIKE(JSON_EXTRACT_SCALAR(Attr, '$.CustomStringField', 'string'), 'abc*') or JSON_MATCH(Attr, '\"$.CustomStringField\" is not null') AND REGEXP_LIKE(JSON_EXTRACT_SCALAR(Attr, '$.CustomStringField', 'string'), 'def*'))",
+		},
 	}
 
 	for name, test := range tests {
