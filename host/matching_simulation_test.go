@@ -184,7 +184,7 @@ func (s *MatchingSimulationSuite) TestMatchingSimulation() {
 	tasklist := "my-tasklist"
 
 	// Start stat collector
-	statsCh := make(chan *operationStats, 10000)
+	statsCh := make(chan *operationStats, 200000)
 	aggStats := make(map[operation]*operationAggStats)
 	var collectorWG sync.WaitGroup
 	collectorWG.Add(1)
@@ -252,6 +252,7 @@ func (s *MatchingSimulationSuite) TestMatchingSimulation() {
 	testSummary = append(testSummary, fmt.Sprintf("Simulation Duration: %v", executionTime))
 	testSummary = append(testSummary, fmt.Sprintf("Num of Pollers: %d", numPollers))
 	testSummary = append(testSummary, fmt.Sprintf("Num of Task Generators: %d", numGenerators))
+	testSummary = append(testSummary, fmt.Sprintf("Record Decision Task Started Time: %v", s.testClusterConfig.MatchingConfig.SimulationConfig.RecordDecisionTaskStartedTime))
 	testSummary = append(testSummary, fmt.Sprintf("Num of Write Partitions: %d", s.testClusterConfig.MatchingDynamicConfigOverrides[dynamicconfig.MatchingNumTasklistWritePartitions]))
 	testSummary = append(testSummary, fmt.Sprintf("Num of Read Partitions: %d", s.testClusterConfig.MatchingDynamicConfigOverrides[dynamicconfig.MatchingNumTasklistReadPartitions]))
 	testSummary = append(testSummary, fmt.Sprintf("Forwarder Max Outstanding Polls: %d", s.testClusterConfig.MatchingDynamicConfigOverrides[dynamicconfig.MatchingForwarderMaxOutstandingPolls]))
