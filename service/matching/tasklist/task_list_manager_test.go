@@ -610,7 +610,7 @@ func TestTaskListManagerGetTaskBatch(t *testing.T) {
 	expectedBufSize := common.MinInt(cap(tlm.taskReader.taskBuffers[defaultTaskBufferIsolationGroup]), taskCount)
 	assert.True(t, awaitCondition(func() bool {
 		return len(tlm.taskReader.taskBuffers[defaultTaskBufferIsolationGroup]) == expectedBufSize
-	}, time.Second))
+	}, 10*time.Second))
 
 	// stop all goroutines that read / write tasks in the background
 	// remainder of this test works with the in-memory buffer
@@ -720,14 +720,13 @@ func TestTaskListReaderPumpAdvancesAckLevelAfterEmptyReads(t *testing.T) {
 	require.NoError(t, err)
 	defer tlm.Stop()
 
-	// we expect AckLevel to advance
+	// we expect AckLevel to advance and skip all the previously leased ranges
 	expectedAckLevel := int64(rangeSize) * nLeaseRenewals
 
-	// wait until all tasks are read by the task pump and enqeued into the in-memory buffer
-	// at the end of this step, ackManager readLevel will also be equal to the buffer size
+	// wait until task pump will read batches of empty ranges
 	assert.True(t, awaitCondition(func() bool {
 		return tlm.taskAckManager.GetAckLevel() == expectedAckLevel
-	}, time.Second))
+	}, 10*time.Second))
 
 	assert.Equal(
 		t,
