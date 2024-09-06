@@ -326,6 +326,7 @@ var (
 	FrontendClientOperationDescribeDomain                        = clientOperation("frontend-describe-domain")
 	FrontendClientOperationDescribeTaskList                      = clientOperation("frontend-describe-task-list")
 	FrontendClientOperationDescribeWorkflowExecution             = clientOperation("frontend-describe-wf-execution")
+	FrontendClientOperationDiagnoseWorkflowExecution             = clientOperation("frontend-diagnose-wf-execution")
 	FrontendClientOperationGetWorkflowExecutionHistory           = clientOperation("frontend-get-wf-execution-history")
 	FrontendClientOperationListArchivedWorkflowExecutions        = clientOperation("frontend-list-archived-wf-executions")
 	FrontendClientOperationListClosedWorkflowExecutions          = clientOperation("frontend-list-closed-wf-executions")

@@ -432,6 +432,8 @@ const (
 	FrontendClientDescribeTaskListScope
 	// FrontendClientDescribeWorkflowExecutionScope tracks RPC calls to frontend service
 	FrontendClientDescribeWorkflowExecutionScope
+	// FrontendClientDiagnoseWorkflowExecutionScope tracks RPC calls to frontend service
+	FrontendClientDiagnoseWorkflowExecutionScope
 	// FrontendClientGetWorkflowExecutionHistoryScope tracks RPC calls to frontend service
 	FrontendClientGetWorkflowExecutionHistoryScope
 	// FrontendClientGetWorkflowExecutionRawHistoryScope tracks RPC calls to frontend service
@@ -602,6 +604,8 @@ const (
 	DCRedirectionDescribeTaskListScope
 	// DCRedirectionDescribeWorkflowExecutionScope tracks RPC calls for dc redirection
 	DCRedirectionDescribeWorkflowExecutionScope
+	// DCRedirectionDiagnoseWorkflowExecutionScope tracks RPC calls for dc redirection
+	DCRedirectionDiagnoseWorkflowExecutionScope
 	// DCRedirectionGetWorkflowExecutionHistoryScope tracks RPC calls for dc redirection
 	DCRedirectionGetWorkflowExecutionHistoryScope
 	// DCRedirectionGetWorkflowExecutionRawHistoryScope tracks RPC calls for dc redirection
@@ -990,6 +994,8 @@ const (
 	FrontendQueryWorkflowScope
 	// FrontendDescribeWorkflowExecutionScope is the metric scope for frontend.DescribeWorkflowExecution
 	FrontendDescribeWorkflowExecutionScope
+	// FrontendDiagnoseWorkflowExecutionScope is the metric scope for frontend.DescribeWorkflowExecution
+	FrontendDiagnoseWorkflowExecutionScope
 	// FrontendDescribeWorkflowExecutionStatusScope is a custom metric for more
 	// rich details about workflow description calls, including workflow open/closed status
 	FrontendDescribeWorkflowExecutionStatusScope

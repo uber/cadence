@@ -235,6 +235,16 @@ func TestDescribeWorkflowExecutionResponse(t *testing.T) {
 		assert.Equal(t, item, ToDescribeWorkflowExecutionResponse(FromDescribeWorkflowExecutionResponse(item)))
 	}
 }
+func TestDiagnoseWorkflowExecutionRequest(t *testing.T) {
+	for _, item := range []*types.DiagnoseWorkflowExecutionRequest{nil, {}, &testdata.DiagnoseWorkflowExecutionRequest} {
+		assert.Equal(t, item, ToDiagnoseWorkflowExecutionRequest(FromDiagnoseWorkflowExecutionRequest(item)))
+	}
+}
+func TestDiagnoseWorkflowExecutionResponse(t *testing.T) {
+	for _, item := range []*types.DiagnoseWorkflowExecutionResponse{nil, {}, &testdata.DiagnoseWorkflowExecutionResponse} {
+		assert.Equal(t, item, ToDiagnoseWorkflowExecutionResponse(FromDiagnoseWorkflowExecutionResponse(item)))
+	}
+}
 func TestExternalWorkflowExecutionCancelRequestedEventAttributes(t *testing.T) {
 	for _, item := range []*types.ExternalWorkflowExecutionCancelRequestedEventAttributes{nil, {}, &testdata.ExternalWorkflowExecutionCancelRequestedEventAttributes} {
 		assert.Equal(t, item, ToExternalWorkflowExecutionCancelRequestedEventAttributes(FromExternalWorkflowExecutionCancelRequestedEventAttributes(item)))

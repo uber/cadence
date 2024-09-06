@@ -1825,6 +1825,50 @@ func ToDescribeWorkflowExecutionResponse(t *shared.DescribeWorkflowExecutionResp
 	}
 }
 
+// FromDiagnoseWorkflowExecutionRequest converts internal DiagnoseWorkflowExecutionRequest type to thrift
+func FromDiagnoseWorkflowExecutionRequest(t *types.DiagnoseWorkflowExecutionRequest) *shared.DiagnoseWorkflowExecutionRequest {
+	if t == nil {
+		return nil
+	}
+	return &shared.DiagnoseWorkflowExecutionRequest{
+		Domain:            &t.Domain,
+		WorkflowExecution: FromWorkflowExecution(t.GetWorkflowExecution()),
+	}
+}
+
+// ToDiagnoseWorkflowExecutionRequest converts thrift DiagnoseWorkflowExecutionRequest type to internal
+func ToDiagnoseWorkflowExecutionRequest(t *shared.DiagnoseWorkflowExecutionRequest) *types.DiagnoseWorkflowExecutionRequest {
+	if t == nil {
+		return nil
+	}
+	return &types.DiagnoseWorkflowExecutionRequest{
+		Domain:            t.GetDomain(),
+		WorkflowExecution: ToWorkflowExecution(t.GetWorkflowExecution()),
+	}
+}
+
+// FromDiagnoseWorkflowExecutionResponse converts internal DiagnoseWorkflowExecutionResponse type to thrift
+func FromDiagnoseWorkflowExecutionResponse(t *types.DiagnoseWorkflowExecutionResponse) *shared.DiagnoseWorkflowExecutionResponse {
+	if t == nil {
+		return nil
+	}
+	return &shared.DiagnoseWorkflowExecutionResponse{
+		Domain:                      &t.Domain,
+		DiagnosticWorkflowExecution: FromWorkflowExecution(t.GetDiagnosticWorkflowExecution()),
+	}
+}
+
+// ToDiagnoseWorkflowExecutionResponse converts thrift DiagnoseeWorkflowExecutionResponse type to internal
+func ToDiagnoseWorkflowExecutionResponse(t *shared.DiagnoseWorkflowExecutionResponse) *types.DiagnoseWorkflowExecutionResponse {
+	if t == nil {
+		return nil
+	}
+	return &types.DiagnoseWorkflowExecutionResponse{
+		Domain:                      t.GetDomain(),
+		DiagnosticWorkflowExecution: ToWorkflowExecution(t.GetDiagnosticWorkflowExecution()),
+	}
+}
+
 // FromDomainAlreadyExistsError converts internal DomainAlreadyExistsError type to thrift
 func FromDomainAlreadyExistsError(t *types.DomainAlreadyExistsError) *shared.DomainAlreadyExistsError {
 	if t == nil {
