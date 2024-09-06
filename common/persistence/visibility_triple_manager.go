@@ -277,7 +277,7 @@ func (v *visibilityTripleManager) chooseVisibilityManagerForWrite(ctx context.Co
 		} else if v.destinationVisibilityManager != nil {
 			v.logger.Warn("Source advanced visibility is not available to write, fall back to destination advanced visibility")
 			return destinationVisFunc()
-		} else if v.destinationVisibilityManager != nil {
+		} else if v.sourceVisibilityManager != nil {
 			v.logger.Warn("Destination advanced visibility is not available to write, fall back to source advanced visibility")
 			return sourceVisFunc()
 		} else {
