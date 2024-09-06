@@ -569,8 +569,8 @@ func TestPinotTripleChooseVisibilityModeForAdmin(t *testing.T) {
 		nil, nil, nil, log.NewNoop())
 	tripleManager := mgr.(*visibilityTripleManager)
 	tripleManager.dbVisibilityManager = nil
-	tripleManager.primaryVisibilityManager = nil
-	tripleManager.secondaryVisibilityManager = nil
+	tripleManager.destinationVisibilityManager = nil
+	tripleManager.sourceVisibilityManager = nil
 	assert.Equal(t, "INVALID_ADMIN_MODE", tripleManager.chooseVisibilityModeForAdmin())
 }
 
