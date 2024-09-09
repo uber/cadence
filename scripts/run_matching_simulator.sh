@@ -44,6 +44,11 @@ echo "Avg Task latency (ms): $tmp" | tee -a $testSummaryFile
 
 tmp=$(cat "$eventLogsFile" \
   | jq -c 'select(.EventName == "PollForDecisionTask returning task")' \
+  | jq .Payload.Latency | sort -n | awk '{a[NR]=$0}END{print a[int(NR*0.50)]}')
+echo "P50 Task latency (ms): $tmp" | tee -a $testSummaryFile
+
+tmp=$(cat "$eventLogsFile" \
+  | jq -c 'select(.EventName == "PollForDecisionTask returning task")' \
   | jq .Payload.Latency | sort -n | awk '{a[NR]=$0}END{print a[int(NR*0.75)]}')
 echo "P75 Task latency (ms): $tmp" | tee -a $testSummaryFile
 
