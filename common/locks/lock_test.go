@@ -65,6 +65,7 @@ func BenchmarkLock(b *testing.B) {
 		l.Unlock()
 	}
 }
+
 func BenchmarkStdlibLock(b *testing.B) {
 	var m sync.Mutex
 	for n := 0; n < b.N; n++ {
