@@ -218,7 +218,7 @@ func (c *taskListManagerImpl) Start() error {
 	return nil
 }
 
-// Stops pump that fills up taskBuffer from persistence.
+// Stop stops task list manager and calls Stop on all background child objects
 func (c *taskListManagerImpl) Stop() {
 	if !atomic.CompareAndSwapInt32(&c.stopped, 0, 1) {
 		return
@@ -227,6 +227,7 @@ func (c *taskListManagerImpl) Stop() {
 	c.liveness.Stop()
 	c.taskWriter.Stop()
 	c.taskReader.Stop()
+	c.matcher.DisconnectBlockedPollers()
 	c.logger.Info("Task list manager state changed", tag.LifeCycleStopped)
 }
 

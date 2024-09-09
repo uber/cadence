@@ -60,14 +60,26 @@ type TaskMatcher struct {
 	scope  metrics.Scope // domain metric scope
 	config *config.TaskListConfig
 
+	cancelCtx  context.Context // used to cancel long polling
+	cancelFunc context.CancelFunc
+
 	tasklist     *Identifier
 	tasklistKind types.TaskListKind
+
+	observability matcherObservability
+}
+
+// ErrMatcherClosed is used when matcher for task-list is closed
+var ErrMatcherClosed = errors.New("task list matcher is shutting down")
+
+type matcherObservability struct {
+	tm *TaskMatcher
 }
 
 // ErrTasklistThrottled implies a tasklist was throttled
 var ErrTasklistThrottled = errors.New("tasklist limit exceeded")
 
-// newTaskMatcher returns an task matcher instance. The returned instance can be
+// newTaskMatcher returns a task matcher instance. The returned instance can be
 // used by task producers and consumers to find a match. Both sync matches and non-sync
 // matches should use this implementation
 func newTaskMatcher(
@@ -84,7 +96,10 @@ func newTaskMatcher(
 	for _, g := range isolationGroups {
 		isolatedTaskC[g] = make(chan *InternalTask)
 	}
-	return &TaskMatcher{
+
+	cancelCtx, cancelFunc := context.WithCancel(context.Background())
+
+	res := &TaskMatcher{
 		log:           log,
 		limiter:       limiter,
 		scope:         scope,
@@ -95,7 +110,17 @@ func newTaskMatcher(
 		config:        config,
 		tasklist:      tasklist,
 		tasklistKind:  tasklistKind,
+		cancelCtx:     cancelCtx,
+		cancelFunc:    cancelFunc,
 	}
+
+	res.observability.tm = res
+	return res
+}
+
+// DisconnectBlockedPollers gradually disconnects pollers which are blocked on long polling
+func (tm *TaskMatcher) DisconnectBlockedPollers() {
+	tm.cancelFunc()
 }
 
 // Offer offers a task to a potential consumer (poller)
@@ -375,6 +400,7 @@ forLoop:
 // Poll blocks until a task is found or context deadline is exceeded
 // On success, the returned task could be a query task or a regular task
 // Returns ErrNoTasks when context deadline is exceeded
+// Returns ErrMatcherClosed when matching is closed
 func (tm *TaskMatcher) Poll(ctx context.Context, isolationGroup string) (*InternalTask, error) {
 	startT := time.Now()
 	isolatedTaskC, ok := tm.isolatedTaskC[isolationGroup]
@@ -407,6 +433,7 @@ func (tm *TaskMatcher) Poll(ctx context.Context, isolationGroup string) (*Intern
 
 // PollForQuery blocks until a *query* task is found or context deadline is exceeded
 // Returns ErrNoTasks when context deadline is exceeded
+// Returns ErrMatcherClosed when matching is closed
 func (tm *TaskMatcher) PollForQuery(ctx context.Context) (*InternalTask, error) {
 	startT := time.Now()
 	// try local match first without blocking until context timeout
@@ -501,6 +528,9 @@ func (tm *TaskMatcher) pollOrForward(
 			EventName:    "Poll Timeout",
 		})
 		return nil, ErrNoTasks
+	case <-tm.cancelCtx.Done():
+		tm.observability.onCancelPolling()
+		return nil, ErrMatcherClosed
 	case token := <-tm.fwdrPollReqTokenC(isolationGroup):
 		event.Log(event.E{
 			TaskListName: tm.tasklist.GetName(),
@@ -585,6 +615,9 @@ func (tm *TaskMatcher) poll(
 			EventName:    "Poll Timeout",
 		})
 		return nil, ErrNoTasks
+	case <-tm.cancelCtx.Done():
+		tm.observability.onCancelPolling()
+		return nil, ErrMatcherClosed
 	}
 }
 
@@ -645,6 +678,9 @@ func (tm *TaskMatcher) pollLocalWait(
 			EventName:    "Matcher Found No Tasks Nonblocking",
 		})
 		return nil, ErrNoTasks
+	case <-tm.cancelCtx.Done():
+		tm.observability.onCancelPolling()
+		return nil, ErrMatcherClosed
 	}
 }
 
@@ -751,4 +787,14 @@ func (tm *TaskMatcher) getTaskC(task *InternalTask) chan<- *InternalTask {
 		taskC = isolatedTaskC
 	}
 	return taskC
+}
+
+func (obs *matcherObservability) onCancelPolling() {
+	obs.tm.scope.IncCounter(metrics.TaskListDisconnectedPollerDuringMatchingShutdown)
+	event.Log(event.E{
+		TaskListName: obs.tm.tasklist.GetName(),
+		TaskListType: obs.tm.tasklist.GetType(),
+		TaskListKind: obs.tm.tasklistKind.Ptr(),
+		EventName:    "Cancelled polling",
+	})
 }

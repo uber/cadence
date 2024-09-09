@@ -2582,6 +2582,7 @@ const (
 	PollActivityTaskAlreadyStartedCounterPerTaskList
 	TaskListReadWritePartitionMismatchGauge
 	TaskListPollerPartitionMismatchGauge
+	TaskListDisconnectedPollerDuringMatchingShutdown
 
 	NumMatchingMetrics
 )
@@ -3262,6 +3263,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		PollActivityTaskAlreadyStartedCounterPerTaskList:        {metricName: "poll_activity_task_already_started_per_tl", metricType: Counter},
 		TaskListReadWritePartitionMismatchGauge:                 {metricName: "tasklist_read_write_partition_mismatch", metricType: Gauge},
 		TaskListPollerPartitionMismatchGauge:                    {metricName: "tasklist_poller_partition_mismatch", metricType: Gauge},
+		TaskListDisconnectedPollerDuringMatchingShutdown:        {metricName: "disconnected_poller_during_shutdown_per_tl", metricRollupName: "disconnected_poller_during_shutdown", metricType: Counter},
 	},
 	Worker: {
 		ReplicatorMessages:                            {metricName: "replicator_messages"},
