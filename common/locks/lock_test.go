@@ -65,7 +65,7 @@ func BenchmarkLock(b *testing.B) {
 		l.Unlock()
 	}
 }
-func BenchmarkPrimitiveLock(b *testing.B) {
+func BenchmarkStdlibLock(b *testing.B) {
 	var m sync.Mutex
 	for n := 0; n < b.N; n++ {
 		m.Lock()
@@ -84,7 +84,7 @@ func BenchmarkParallelLock(b *testing.B) {
 	})
 }
 
-func BenchmarkParallelPrimitiveLock(b *testing.B) {
+func BenchmarkParallelStdlibLock(b *testing.B) {
 	var m sync.Mutex
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
