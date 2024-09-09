@@ -65,6 +65,34 @@ func BenchmarkLock(b *testing.B) {
 		l.Unlock()
 	}
 }
+func BenchmarkPrimitiveLock(b *testing.B) {
+	var m sync.Mutex
+	for n := 0; n < b.N; n++ {
+		m.Lock()
+		m.Unlock()
+	}
+}
+
+func BenchmarkParallelLock(b *testing.B) {
+	l := NewMutex()
+	ctx := context.Background()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			_ = l.Lock(ctx)
+			l.Unlock()
+		}
+	})
+}
+
+func BenchmarkParallelPrimitiveLock(b *testing.B) {
+	var m sync.Mutex
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			m.Lock()
+			m.Unlock()
+		}
+	})
+}
 
 func TestConcurrently(t *testing.T) {
 	defer goleak.VerifyNone(t)
