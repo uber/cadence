@@ -410,7 +410,7 @@ func (qv *VisibilityQueryValidator) processCustomKey(expr sqlparser.Expr) (strin
 
 	switch indexValType {
 	case types.IndexedValueTypeString:
-		return processCustomString(comparisonExpr, colNameStr, colValStr), nil
+		return processCustomString(operator, colNameStr, colValStr), nil
 	case types.IndexedValueTypeKeyword:
 		return processCustomKeyword(operator, colNameStr, colValStr), nil
 	case types.IndexedValueTypeDatetime:
@@ -453,21 +453,22 @@ func processCustomKeyword(operator string, colNameStr string, colValStr string) 
 		colNameStr, operator, colValStr, colNameStr, operator, colValStr)
 }
 
-func processCustomString(comparisonExpr *sqlparser.ComparisonExpr, colNameStr string, colValStr string) string {
-	// change to like statement for partial match
-	comparisonExpr.Operator = sqlparser.LikeStr
-	comparisonExpr.Right = &sqlparser.SQLVal{
-		Type: sqlparser.StrVal,
-		Val:  []byte("%" + colValStr + "%"),
+func processCustomString(operator string, colNameStr string, colValStr string) string {
+	if operator == "!=" {
+		return createCustomStringQuery(colNameStr, colValStr, "NOT ")
 	}
 
+	return createCustomStringQuery(colNameStr, colValStr, "")
+}
+
+func createCustomStringQuery(colNameStr string, colValStr string, notEqual string) string {
 	if colValStr == "" {
-		return fmt.Sprintf("(JSON_MATCH(Attr, '\"$.%s\" is not null') "+
-			"AND REGEXP_LIKE(JSON_EXTRACT_SCALAR(Attr, '$.%s', 'string'), '^$'))", colNameStr, colNameStr)
+		return fmt.Sprintf("JSON_MATCH(Attr, '\"$.%s\" is not null') "+
+			"AND %sREGEXP_LIKE(JSON_EXTRACT_SCALAR(Attr, '$.%s', 'string'), '^$')", colNameStr, notEqual, colNameStr)
 	}
 
-	return fmt.Sprintf("(JSON_MATCH(Attr, '\"$.%s\" is not null') "+
-		"AND REGEXP_LIKE(JSON_EXTRACT_SCALAR(Attr, '$.%s', 'string'), '%s*'))", colNameStr, colNameStr, colValStr)
+	return fmt.Sprintf("JSON_MATCH(Attr, '\"$.%s\" is not null') "+
+		"AND %sREGEXP_LIKE(JSON_EXTRACT_SCALAR(Attr, '$.%s', 'string'), '%s*')", colNameStr, notEqual, colNameStr, colValStr)
 }
 
 func trimTimeFieldValueFromNanoToMilliSeconds(original *sqlparser.SQLVal) (*sqlparser.SQLVal, error) {
