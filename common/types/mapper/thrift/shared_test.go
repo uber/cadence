@@ -1134,6 +1134,34 @@ func TestDescribeWorkflowExecutionResponseConversion(t *testing.T) {
 	}
 }
 
+func TestDiagnoseWorkflowExecutionRequestConversion(t *testing.T) {
+	testCases := []*types.DiagnoseWorkflowExecutionRequest{
+		nil,
+		{},
+		&testdata.DiagnoseWorkflowExecutionRequest,
+	}
+
+	for _, original := range testCases {
+		thriftObj := FromDiagnoseWorkflowExecutionRequest(original)
+		roundTripObj := ToDiagnoseWorkflowExecutionRequest(thriftObj)
+		assert.Equal(t, original, roundTripObj)
+	}
+}
+
+func TestDiagnoseWorkflowExecutionResponseConversion(t *testing.T) {
+	testCases := []*types.DiagnoseWorkflowExecutionResponse{
+		nil,
+		{},
+		&testdata.DiagnoseWorkflowExecutionResponse,
+	}
+
+	for _, original := range testCases {
+		thriftObj := FromDiagnoseWorkflowExecutionResponse(original)
+		roundTripObj := ToDiagnoseWorkflowExecutionResponse(thriftObj)
+		assert.Equal(t, original, roundTripObj)
+	}
+}
+
 func TestDomainAlreadyExistsErrorConversion(t *testing.T) {
 	testCases := []*types.DomainAlreadyExistsError{
 		nil,
