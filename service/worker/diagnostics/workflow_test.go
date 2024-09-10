@@ -122,6 +122,10 @@ func (s *diagnosticsWorkflowTestSuite) TestWorkflow() {
 	s.NoError(s.workflowEnv.GetWorkflowResult(&result))
 	s.ElementsMatch(issues, result.Issues)
 	s.ElementsMatch(rootCause, result.RootCause)
+
+	queriedResult := s.queryDiagnostics()
+	s.ElementsMatch(queriedResult.Issues, result.Issues)
+	s.ElementsMatch(queriedResult.RootCause, result.RootCause)
 }
 
 func (s *diagnosticsWorkflowTestSuite) TestWorkflow_Error() {
@@ -138,4 +142,14 @@ func (s *diagnosticsWorkflowTestSuite) TestWorkflow_Error() {
 	s.True(s.workflowEnv.IsWorkflowCompleted())
 	s.Error(s.workflowEnv.GetWorkflowError())
 	s.EqualError(s.workflowEnv.GetWorkflowError(), errExpected.Error())
+}
+
+func (s *diagnosticsWorkflowTestSuite) queryDiagnostics() DiagnosticsWorkflowResult {
+	queryFuture, err := s.workflowEnv.QueryWorkflow(queryDiagnosticsReport)
+	s.NoError(err)
+
+	var result DiagnosticsWorkflowResult
+	err = queryFuture.Get(&result)
+	s.NoError(err)
+	return result
 }
