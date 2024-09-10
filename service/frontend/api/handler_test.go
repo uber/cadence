@@ -596,6 +596,66 @@ func (s *workflowHandlerSuite) TestStartWorkflowExecution_IsolationGroupDrained(
 	s.IsType(err, &types.BadRequestError{})
 }
 
+func (s *workflowHandlerSuite) TestDiagnoseWorkflowExecution_Success() {
+	wh := s.getWorkflowHandler(s.newConfig(dc.NewInMemoryClient()))
+
+	req := &types.DiagnoseWorkflowExecutionRequest{
+		Domain: testDomain,
+		WorkflowExecution: &types.WorkflowExecution{
+			WorkflowID: testWorkflowID,
+			RunID:      testRunID,
+		},
+		Identity: "",
+	}
+	diagnosticWfDomain := "cadence-system"
+	diagnosticWfID := fmt.Sprintf("%s-%s-%s", testDomain, testWorkflowID, testRunID)
+	diagnosticWfRunID := "123"
+	resp := &types.DiagnoseWorkflowExecutionResponse{
+		Domain: diagnosticWfDomain,
+		DiagnosticWorkflowExecution: &types.WorkflowExecution{
+			WorkflowID: diagnosticWfID,
+			RunID:      diagnosticWfRunID,
+		},
+	}
+
+	s.mockDomainCache.EXPECT().GetDomainID(diagnosticWfDomain).Return(s.testDomainID, nil).Times(2)
+	s.mockHistoryClient.EXPECT().StartWorkflowExecution(gomock.Any(), gomock.Any()).Return(&types.StartWorkflowExecutionResponse{RunID: diagnosticWfRunID}, nil)
+	result, err := wh.DiagnoseWorkflowExecution(context.Background(), req)
+	s.NoError(err)
+	s.Equal(resp, result)
+}
+
+func (s *workflowHandlerSuite) TestDiagnoseWorkflowExecution_Failed_RequestNotSet() {
+	wh := s.getWorkflowHandler(s.newConfig(dc.NewInMemoryClient()))
+
+	result, err := wh.DiagnoseWorkflowExecution(context.Background(), nil)
+	s.Error(err)
+	s.Equal(validate.ErrRequestNotSet, err)
+	s.Nil(result)
+}
+
+func (s *workflowHandlerSuite) TestDiagnoseWorkflowExecution_Failed_DomainNotSet() {
+	wh := s.getWorkflowHandler(s.newConfig(dc.NewInMemoryClient()))
+
+	result, err := wh.DiagnoseWorkflowExecution(context.Background(), &types.DiagnoseWorkflowExecutionRequest{
+		Domain: "",
+	})
+	s.Error(err)
+	s.Equal(validate.ErrDomainNotSet, err)
+	s.Nil(result)
+}
+
+func (s *workflowHandlerSuite) TestDiagnoseWorkflowExecution_Failed_ExecutionNotSet() {
+	wh := s.getWorkflowHandler(s.newConfig(dc.NewInMemoryClient()))
+
+	result, err := wh.DiagnoseWorkflowExecution(context.Background(), &types.DiagnoseWorkflowExecutionRequest{
+		Domain: testDomain,
+	})
+	s.Error(err)
+	s.Equal(validate.ErrExecutionNotSet, err)
+	s.Nil(result)
+}
+
 func (s *workflowHandlerSuite) TestRecordActivityTaskHeartbeat_Success() {
 	wh := s.getWorkflowHandler(s.newConfig(dc.NewInMemoryClient()))
 	taskToken := common.TaskToken{

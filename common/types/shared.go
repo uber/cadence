@@ -6285,6 +6285,56 @@ func (v *RestartWorkflowExecutionRequest) GetWorkflowExecution() (o *WorkflowExe
 	return
 }
 
+type DiagnoseWorkflowExecutionRequest struct {
+	Domain            string             `json:"domain,omitempty"`
+	WorkflowExecution *WorkflowExecution `json:"workflowExecution,omitempty"`
+	Identity          string             `json:"identity,omitempty"`
+}
+
+func (v *DiagnoseWorkflowExecutionRequest) SerializeForLogging() (string, error) {
+	if v == nil {
+		return "", nil
+	}
+	return SerializeRequest(v)
+}
+
+// GetDomain returns the domain
+func (v *DiagnoseWorkflowExecutionRequest) GetDomain() (o string) {
+	if v != nil {
+		return v.Domain
+	}
+	return
+}
+
+// GetWorkflowExecution returns the workflow execution
+func (v *DiagnoseWorkflowExecutionRequest) GetWorkflowExecution() (o *WorkflowExecution) {
+	if v != nil && v.WorkflowExecution != nil {
+		return v.WorkflowExecution
+	}
+	return
+}
+
+type DiagnoseWorkflowExecutionResponse struct {
+	Domain                      string             `json:"domain,omitempty"`
+	DiagnosticWorkflowExecution *WorkflowExecution `json:"workflowExecution,omitempty"`
+}
+
+// GetDomain returns the fomain
+func (v *DiagnoseWorkflowExecutionResponse) GetDomain() (o string) {
+	if v != nil {
+		return v.Domain
+	}
+	return
+}
+
+// GetDiagnosticWorkflowExecution returns the workflow execution
+func (v *DiagnoseWorkflowExecutionResponse) GetDiagnosticWorkflowExecution() (o *WorkflowExecution) {
+	if v != nil && v.DiagnosticWorkflowExecution != nil {
+		return v.DiagnosticWorkflowExecution
+	}
+	return
+}
+
 // StartWorkflowExecutionRequest is an internal type (TBD...)
 type StartWorkflowExecutionRequest struct {
 	Domain                              string                 `json:"domain,omitempty"`

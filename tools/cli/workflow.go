@@ -39,6 +39,13 @@ func newWorkflowCommands() []cli.Command {
 			Action:  RestartWorkflow,
 		},
 		{
+			Name:    "diagnose",
+			Aliases: []string{"diag"},
+			Usage:   "diagnoses a previous workflow execution",
+			Flags:   flagsForExecution,
+			Action:  DiagnoseWorkflow,
+		},
+		{
 			Name:        "activity",
 			Aliases:     []string{"act"},
 			Usage:       "operate activities of workflow",

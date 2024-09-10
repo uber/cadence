@@ -53,6 +53,7 @@ import (
 	"github.com/uber/cadence/common/types/mapper/thrift"
 	"github.com/uber/cadence/service/frontend/config"
 	"github.com/uber/cadence/service/frontend/validate"
+	"github.com/uber/cadence/service/worker/diagnostics"
 )
 
 const (
@@ -191,6 +192,71 @@ func (wh *WorkflowHandler) Health(ctx context.Context) (*types.HealthStatus, err
 	return &types.HealthStatus{
 		Ok:  status == HealthStatusOK,
 		Msg: msg,
+	}, nil
+}
+
+// DiagnoseWorkflowExecution is to diagnose a workflow execution
+func (wh *WorkflowHandler) DiagnoseWorkflowExecution(ctx context.Context, request *types.DiagnoseWorkflowExecutionRequest) (*types.DiagnoseWorkflowExecutionResponse, error) {
+	if wh.isShuttingDown() {
+		return nil, validate.ErrShuttingDown
+	}
+
+	if err := wh.versionChecker.ClientSupported(ctx, wh.config.EnableClientVersionCheck()); err != nil {
+		return nil, err
+	}
+
+	if request == nil {
+		return nil, validate.ErrRequestNotSet
+	}
+
+	if request.GetDomain() == "" {
+		return nil, validate.ErrDomainNotSet
+	}
+
+	if request.GetWorkflowExecution().GetWorkflowID() == "" || request.GetWorkflowExecution().GetRunID() == "" {
+		return nil, validate.ErrExecutionNotSet
+	}
+
+	wfExecution := request.GetWorkflowExecution()
+	diagnosticWorkflowID := fmt.Sprintf("%s-%s-%s", request.GetDomain(), wfExecution.GetWorkflowID(), wfExecution.GetRunID())
+	diagnosticWorkflowDomain := "cadence-system"
+
+	diagnosticWorkflowInput := diagnostics.DiagnosticsWorkflowInput{
+		Domain:     request.GetDomain(),
+		WorkflowID: request.GetWorkflowExecution().GetWorkflowID(),
+		RunID:      request.GetWorkflowExecution().GetRunID(),
+	}
+	inputInBytes, err := json.Marshal(diagnosticWorkflowInput)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := wh.StartWorkflowExecution(ctx, &types.StartWorkflowExecutionRequest{
+		Domain:     diagnosticWorkflowDomain,
+		WorkflowID: diagnosticWorkflowID,
+		WorkflowType: &types.WorkflowType{
+			Name: "diagnostics-workflow",
+		},
+		TaskList: &types.TaskList{
+			Name: "wf-diagnostics",
+		},
+		Input:                               inputInBytes,
+		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(86400), // 24 hours
+		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(300),   // 5 minutes
+		Identity:                            request.Identity,
+		RequestID:                           uuid.New().String(),
+		WorkflowIDReusePolicy:               types.WorkflowIDReusePolicyAllowDuplicate.Ptr(),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &types.DiagnoseWorkflowExecutionResponse{
+		Domain: diagnosticWorkflowDomain,
+		DiagnosticWorkflowExecution: &types.WorkflowExecution{
+			WorkflowID: diagnosticWorkflowID,
+			RunID:      resp.GetRunID(),
+		},
 	}, nil
 }
 

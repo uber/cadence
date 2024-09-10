@@ -43,6 +43,7 @@ type (
 		DescribeDomain(context.Context, *types.DescribeDomainRequest) (*types.DescribeDomainResponse, error)
 		DescribeTaskList(context.Context, *types.DescribeTaskListRequest) (*types.DescribeTaskListResponse, error)
 		DescribeWorkflowExecution(context.Context, *types.DescribeWorkflowExecutionRequest) (*types.DescribeWorkflowExecutionResponse, error)
+		DiagnoseWorkflowExecution(context.Context, *types.DiagnoseWorkflowExecutionRequest) (*types.DiagnoseWorkflowExecutionResponse, error)
 		GetClusterInfo(context.Context) (*types.ClusterInfo, error)
 		GetSearchAttributes(context.Context) (*types.GetSearchAttributesResponse, error)
 		GetWorkflowExecutionHistory(context.Context, *types.GetWorkflowExecutionHistoryRequest) (*types.GetWorkflowExecutionHistoryResponse, error)

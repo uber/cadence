@@ -1265,6 +1265,47 @@ func ToDescribeWorkflowExecutionResponse(t *apiv1.DescribeWorkflowExecutionRespo
 	}
 }
 
+func FromDiagnoseWorkflowExecutionRequest(t *types.DiagnoseWorkflowExecutionRequest) *apiv1.DiagnoseWorkflowExecutionRequest {
+	if t == nil {
+		return nil
+	}
+	return &apiv1.DiagnoseWorkflowExecutionRequest{
+		Domain:            t.GetDomain(),
+		WorkflowExecution: FromWorkflowExecution(t.GetWorkflowExecution()),
+	}
+}
+
+func ToDiagnoseWorkflowExecutionRequest(t *apiv1.DiagnoseWorkflowExecutionRequest) *types.DiagnoseWorkflowExecutionRequest {
+	if t == nil {
+		return nil
+	}
+	return &types.DiagnoseWorkflowExecutionRequest{
+		Domain:            t.GetDomain(),
+		WorkflowExecution: ToWorkflowExecution(t.GetWorkflowExecution()),
+		Identity:          t.Identity,
+	}
+}
+
+func FromDiagnoseWorkflowExecutionResponse(t *types.DiagnoseWorkflowExecutionResponse) *apiv1.DiagnoseWorkflowExecutionResponse {
+	if t == nil {
+		return nil
+	}
+	return &apiv1.DiagnoseWorkflowExecutionResponse{
+		Domain:                      t.GetDomain(),
+		DiagnosticWorkflowExecution: FromWorkflowExecution(t.GetDiagnosticWorkflowExecution()),
+	}
+}
+
+func ToDiagnoseWorkflowExecutionResponse(t *apiv1.DiagnoseWorkflowExecutionResponse) *types.DiagnoseWorkflowExecutionResponse {
+	if t == nil {
+		return nil
+	}
+	return &types.DiagnoseWorkflowExecutionResponse{
+		Domain:                      t.GetDomain(),
+		DiagnosticWorkflowExecution: ToWorkflowExecution(t.GetDiagnosticWorkflowExecution()),
+	}
+}
+
 func FromDomainStatus(t *types.DomainStatus) apiv1.DomainStatus {
 	if t == nil {
 		return apiv1.DomainStatus_DOMAIN_STATUS_INVALID

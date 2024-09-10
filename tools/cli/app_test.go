@@ -361,6 +361,19 @@ func (s *cliAppSuite) TestRestartWorkflow_Failed() {
 	s.Equal(1, errorCode)
 }
 
+func (s *cliAppSuite) TestDiagnoseWorkflow() {
+	resp := &types.DiagnoseWorkflowExecutionResponse{Domain: "test", DiagnosticWorkflowExecution: &types.WorkflowExecution{WorkflowID: "123", RunID: uuid.New()}}
+	s.serverFrontendClient.EXPECT().DiagnoseWorkflowExecution(gomock.Any(), gomock.Any()).Return(resp, nil).Times(1)
+	err := s.app.Run([]string{"", "--do", domainName, "workflow", "diagnose", "-w", "wid", "-r", "rid"})
+	s.Nil(err)
+}
+
+func (s *cliAppSuite) TestDiagnoseWorkflow_Failed() {
+	s.serverFrontendClient.EXPECT().DiagnoseWorkflowExecution(gomock.Any(), gomock.Any()).Return(nil, &types.BadRequestError{"faked error"})
+	errorCode := s.RunErrorExitCode([]string{"", "--do", domainName, "workflow", "diagnose", "-w", "wid", "-r", "rid"})
+	s.Equal(1, errorCode)
+}
+
 func (s *cliAppSuite) TestStartWorkflow() {
 	resp := &types.StartWorkflowExecutionResponse{RunID: uuid.New()}
 	s.serverFrontendClient.EXPECT().StartWorkflowExecution(gomock.Any(), gomock.Any()).Return(resp, nil).Times(2)

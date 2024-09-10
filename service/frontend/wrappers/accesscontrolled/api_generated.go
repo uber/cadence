@@ -150,6 +150,10 @@ func (a *apiHandler) DescribeWorkflowExecution(ctx context.Context, dp1 *types.D
 	return a.handler.DescribeWorkflowExecution(ctx, dp1)
 }
 
+func (a *apiHandler) DiagnoseWorkflowExecution(ctx context.Context, dp1 *types.DiagnoseWorkflowExecutionRequest) (dp2 *types.DiagnoseWorkflowExecutionResponse, err error) {
+	return a.handler.DiagnoseWorkflowExecution(ctx, dp1)
+}
+
 func (a *apiHandler) GetClusterInfo(ctx context.Context) (cp1 *types.ClusterInfo, err error) {
 	return a.handler.GetClusterInfo(ctx)
 }

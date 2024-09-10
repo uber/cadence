@@ -393,6 +393,14 @@ var (
 		PendingChildren:        PendingChildExecutionInfoArray,
 		PendingDecision:        &PendingDecisionInfo,
 	}
+	DiagnoseWorkflowExecutionRequest = types.DiagnoseWorkflowExecutionRequest{
+		Domain:            DomainName,
+		WorkflowExecution: &WorkflowExecution,
+	}
+	DiagnoseWorkflowExecutionResponse = types.DiagnoseWorkflowExecutionResponse{
+		Domain:                      DomainName,
+		DiagnosticWorkflowExecution: &WorkflowExecution,
+	}
 	QueryWorkflowRequest = types.QueryWorkflowRequest{
 		Domain:                DomainName,
 		Execution:             &WorkflowExecution,
