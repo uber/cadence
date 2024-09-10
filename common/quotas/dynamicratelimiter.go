@@ -39,14 +39,24 @@ type DynamicRateLimiter struct {
 	burstWindow time.Duration
 }
 
-// NewDynamicRateLimiter returns a rate limiter which handles dynamic config
-func NewDynamicRateLimiter(rps RPSFunc, burstWindow time.Duration) *DynamicRateLimiter {
+// NewDynamicRateLimiter returns a rate limiter which handles dynamic config.
+// This limiter allows one second of requests to burst.
+func NewDynamicRateLimiter(rps RPSFunc) *DynamicRateLimiter {
 	initialRps := rps()
 	rl := NewRateLimiter(&initialRps, _defaultRPSTTL, _burstSize)
 	return &DynamicRateLimiter{
-		rps:         rps,
-		rl:          rl,
-		burstWindow: burstWindow,
+		rps: rps,
+		rl:  rl,
+	}
+}
+
+// NewWindowedDynamicRateLimiter allows a configurable burst window, rather than one second.
+func NewWindowedDynamicRateLimiter(rps RPSFunc, burstWindow time.Duration) *DynamicRateLimiter {
+	initialRPS := rps()
+	rl := NewRateLimiterWithBurstWindow(&initialRPS, _defaultRPSTTL, burstWindow)
+	return &DynamicRateLimiter{
+		rps: rps,
+		rl:  rl,
 	}
 }
 

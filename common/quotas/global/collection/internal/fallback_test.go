@@ -55,7 +55,7 @@ func TestLimiter(t *testing.T) {
 	})
 	t.Run("uses primary after update", func(t *testing.T) {
 		lim := NewFallbackLimiter(allowlimiter{})
-		lim.Update(1_000_000) // large enough to allow millisecond sleeps to refill
+		lim.Update(1_000_000, 10) // large enough to allow millisecond sleeps to refill
 
 		time.Sleep(time.Millisecond) // allow some tokens to fill
 		assert.True(t, lim.Allow(), "limiter allows after enough time has passed")
@@ -69,7 +69,7 @@ func TestLimiter(t *testing.T) {
 
 	t.Run("collecting usage data resets counts", func(t *testing.T) {
 		lim := NewFallbackLimiter(allowlimiter{})
-		lim.Update(1)
+		lim.Update(1, 1)
 		lim.Allow()
 		limit, _, _ := lim.Collect()
 		assert.Equal(t, 1, limit.Allowed+limit.Rejected, "should count one request")
@@ -88,7 +88,7 @@ func TestLimiter(t *testing.T) {
 
 		t.Run("falls back after too many failures", func(t *testing.T) {
 			lim := NewFallbackLimiter(allowlimiter{}) // fallback behavior is ignored
-			lim.Update(1)
+			lim.Update(1, 1)
 			_, startup, failing := lim.Collect()
 			require.False(t, failing, "should not be using fallback")
 			require.False(t, startup, "should not be starting up, has had an update")
@@ -124,8 +124,8 @@ func TestLimiter(t *testing.T) {
 	t.Run("coverage", func(t *testing.T) {
 		// easy line to cover to bring to 100%
 		lim := NewFallbackLimiter(nil)
-		lim.Update(1)
-		lim.Update(1) // should go down "no changes needed, return early" path
+		lim.Update(1, 1)
+		lim.Update(1, 1) // should go down "no changes needed, return early" path
 	})
 }
 
@@ -145,7 +145,7 @@ func TestLimiterNotRacy(t *testing.T) {
 		// this should randomly clear occasionally via failures.
 		if rand.Intn(10) == 0 {
 			g.Go(func() error {
-				lim.Update(rate.Limit(1 / rand.Float64())) // essentially never exercises "same value, do nothing" logic
+				lim.Update(rate.Limit(1/rand.Float64()), 1) // essentially never exercises "same value, do nothing" logic
 				return nil
 			})
 		} else {

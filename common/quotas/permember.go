@@ -53,39 +53,14 @@ func NewPerMemberDynamicRateLimiterFactory(
 	globalRPS dynamicconfig.IntPropertyFnWithDomainFilter,
 	instanceRPS dynamicconfig.IntPropertyFnWithDomainFilter,
 	resolver membership.Resolver,
+	burstWindow time.Duration,
 ) LimiterFactory {
 	return perMemberFactory{
 		service:     service,
 		globalRPS:   globalRPS,
 		instanceRPS: instanceRPS,
 		resolver:    resolver,
-		burstWindow: time.Second,
-	}
-}
-
-// NewPerMemberUserDynamicRateLimiterFactory is a minor fork off NewPerMemberDynamicRateLimiterFactory,
-// targeted exclusively at user-facing limits like the high-level ones in our frontend API (user/worker/visibility/async).
-//
-// This creates ratelimiters that allow *ten seconds* of burst time, rather than one second,
-// intentionally preferring to not-reject small intermittent requests over tightly controlling overall rate.
-//
-//   - Low-configured-RPS bursts are more likely to be allowed, particularly when there are many
-//     frontends in the cluster -> the per-host limit is very small, and this is the primary goal.
-//   - Constant requesters will not notice any change, as the limiters refill at the same rate as before.
-//   - Blended traffic should average towards the target RPS across 10 seconds, rather than 1 second.
-//     This more closely matches our internal metrics systems, but if would be easy to make configurable.
-func NewPerMemberUserDynamicRateLimiterFactory(
-	service string,
-	globalRPS dynamicconfig.IntPropertyFnWithDomainFilter,
-	instanceRPS dynamicconfig.IntPropertyFnWithDomainFilter,
-	resolver membership.Resolver,
-) LimiterFactory {
-	return perMemberFactory{
-		service:     service,
-		globalRPS:   globalRPS,
-		instanceRPS: instanceRPS,
-		resolver:    resolver,
-		burstWindow: 10 * time.Second,
+		burstWindow: burstWindow,
 	}
 }
 
@@ -96,12 +71,14 @@ type perMemberFactory struct {
 	resolver    membership.Resolver
 
 	// burstWindow is the maximum token-rps burst size.
-	// 1s = `burst==int(limitRPS)`, which is what we have historically used everywhere.
+	//
+	// By default this should be 1 second, which is what most non-user-facing
+	// limiters use, and the only value we have used historically.
 	burstWindow time.Duration
 }
 
 func (f perMemberFactory) GetLimiter(domain string) Limiter {
-	return NewDynamicRateLimiter(func() float64 {
+	return NewWindowedDynamicRateLimiter(func() float64 {
 		return PerMember(
 			f.service,
 			float64(f.globalRPS(domain)),

@@ -78,7 +78,6 @@ type (
 	// they should likely be configured to behave identically, but they need to be separate instances.
 	Collection struct {
 		updateInterval dynamicconfig.DurationPropertyFn
-		burstWindow    dynamicconfig.DurationPropertyFn
 
 		// targetRPS is a small type-casting wrapper around dynamicconfig.IntPropertyFnWithDomainFilter
 		// to prevent accidentally using the wrong key type.
@@ -170,7 +169,6 @@ func New(
 	// events on the fallback.
 	globalFallback quotas.ICollection,
 	updateInterval dynamicconfig.DurationPropertyFn,
-	burstWindow dynamicconfig.DurationPropertyFn,
 	targetRPS dynamicconfig.IntPropertyFnWithDomainFilter,
 	keyModes dynamicconfig.StringPropertyWithRatelimitKeyFilter,
 	aggs rpc.Client,
@@ -194,7 +192,6 @@ func New(
 		disabled:       local,
 		aggs:           aggs,
 		updateInterval: updateInterval,
-		burstWindow:    burstWindow,
 		targetRPS: func(lkey shared.LocalKey) int {
 			// wrapper just ensures only local keys are used, as each
 			// collection uses a separate dynamic config value.
@@ -457,8 +454,11 @@ func (c *Collection) doUpdate(since time.Duration, usage map[shared.GlobalKey]rp
 		c.logger.Error("aggregator update error", tag.Error(res.Err))
 	}
 
-	// gather only once as it does not change per key
-	burstWindow := c.burstWindow()
+	// currently hardcoded, but may be useful to make configurable?
+	// 10s could be larger than desired.
+	const (
+		burstWindow = 10 * time.Second
+	)
 
 	// either way, process all weights we did successfully retrieve.
 	for gkey, info := range res.Weights {
@@ -532,7 +532,7 @@ func boostBurst(target, boosted rate.Limit, window time.Duration) int {
 
 	burst := float64(boosted) * (float64(window) / float64(time.Second)) // rps * num seconds in window, without flooring
 	if burst > float64(target) {
-		return int(target) // do not exceed cluster RPS
+		return int(target) // do not exceed cluster RPS, that seems overly dangerous
 	}
 
 	return int(burst)

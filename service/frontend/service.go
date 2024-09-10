@@ -240,7 +240,8 @@ func (s *Service) createGlobalQuotaCollections() (globalRatelimiterCollections, 
 	// to safely shadow global ratelimits, we must make duplicate *quota.Collection collections
 	// so they do not share data when the global limiter decides to use its local fallback.
 	// these are then combined into the global/algorithm.Collection to handle all limiting calls
-	local, global := s.createBaseLimiters(), s.createBaseLimiters()
+	local := s.createBaseLimiters(time.Second)       // historical value, matches disabled mode: burst == rps
+	global := s.createBaseLimiters(10 * time.Second) // new value: burst == 10*rps for fallback, dynamic for truly global
 
 	user, err := create("user", local.user, global.user, s.config.GlobalDomainUserRPS)
 	combinedErr = multierr.Combine(combinedErr, err)
@@ -261,13 +262,14 @@ func (s *Service) createGlobalQuotaCollections() (globalRatelimiterCollections, 
 		async:      async,
 	}, combinedErr
 }
-func (s *Service) createBaseLimiters() ratelimiterCollections {
+func (s *Service) createBaseLimiters(burstWindow time.Duration) ratelimiterCollections {
 	create := func(shared, perInstance dynamicconfig.IntPropertyFnWithDomainFilter) *quotas.Collection {
 		return quotas.NewCollection(quotas.NewPerMemberDynamicRateLimiterFactory(
 			service.Frontend,
 			shared,
 			perInstance,
 			s.GetMembershipResolver(),
+			burstWindow,
 		))
 	}
 	return ratelimiterCollections{
