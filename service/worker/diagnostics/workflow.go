@@ -34,7 +34,7 @@ import (
 
 const (
 	diagnosticsWorkflow    = "diagnostics-workflow"
-	tasklist               = "wf-diagnostics"
+	tasklist               = "diagnostics-wf-tasklist"
 	queryDiagnosticsReport = "query-diagnostics-report"
 
 	retrieveWfExecutionHistoryActivity = "retrieveWfExecutionHistory"
@@ -54,13 +54,13 @@ type DiagnosticsWorkflowResult struct {
 	Runbooks  []string
 }
 
-func (w *dw) DiagnosticsWorkflow(ctx workflow.Context, params DiagnosticsWorkflowInput) (DiagnosticsWorkflowResult, error) {
+func (w *dw) DiagnosticsWorkflow(ctx workflow.Context, params DiagnosticsWorkflowInput) (*DiagnosticsWorkflowResult, error) {
 	var result DiagnosticsWorkflowResult
 	err := workflow.SetQueryHandler(ctx, queryDiagnosticsReport, func() (DiagnosticsWorkflowResult, error) {
 		return result, nil
 	})
 	if err != nil {
-		return result, err
+		return nil, err
 	}
 
 	activityOptions := workflow.ActivityOptions{
@@ -78,7 +78,7 @@ func (w *dw) DiagnosticsWorkflow(ctx workflow.Context, params DiagnosticsWorkflo
 			RunID:      params.RunID,
 		}}).Get(ctx, &wfExecutionHistory)
 	if err != nil {
-		return result, fmt.Errorf("RetrieveExecutionHistory: %w", err)
+		return nil, fmt.Errorf("RetrieveExecutionHistory: %w", err)
 	}
 
 	result.Runbooks = []string{linkToTimeoutsRunbook}
@@ -89,7 +89,7 @@ func (w *dw) DiagnosticsWorkflow(ctx workflow.Context, params DiagnosticsWorkflo
 		Domain:  params.Domain,
 	}).Get(ctx, &checkResult)
 	if err != nil {
-		return result, fmt.Errorf("IdentifyTimeouts: %w", err)
+		return nil, fmt.Errorf("IdentifyTimeouts: %w", err)
 	}
 	result.Issues = checkResult
 
@@ -100,9 +100,9 @@ func (w *dw) DiagnosticsWorkflow(ctx workflow.Context, params DiagnosticsWorkflo
 		Issues:  checkResult,
 	}).Get(ctx, &rootCauseResult)
 	if err != nil {
-		return result, fmt.Errorf("RootCauseTimeouts: %w", err)
+		return nil, fmt.Errorf("RootCauseTimeouts: %w", err)
 	}
 	result.RootCause = rootCauseResult
 
-	return result, nil
+	return &result, nil
 }
