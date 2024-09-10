@@ -22,6 +22,7 @@ package locks
 
 import (
 	"context"
+	"os"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -93,6 +94,34 @@ func BenchmarkParallelStdlibLock(b *testing.B) {
 			m.Unlock()
 		}
 	})
+}
+
+func TestShouldBeFatal(t *testing.T) {
+	t.Run("stdlib", func(t *testing.T) {
+		fatalTest(t)
+		var m sync.Mutex
+		m.Unlock()
+	})
+	t.Run("custom", func(t *testing.T) {
+		fatalTest(t)
+		NewMutex().Unlock()
+	})
+}
+
+func fatalTest(t *testing.T) {
+	t.Helper()
+	if os.Getenv("RUN_FATAL_TESTS") != "true" {
+		t.Skipf(
+			"This test intentionally crashes the process, and cannot be tested normally.\n"+
+				"Check output manually when running this test on its own:\n"+
+				"\tRUN_FATAL_TESTS=true go test -test.run %q %v",
+			t.Name(), "github.com/uber/cadence/common/locks",
+		)
+	} else {
+		t.Cleanup(func() {
+			t.Fatal("process should have crashed, and this should be unreachable")
+		})
+	}
 }
 
 func TestConcurrently(t *testing.T) {
