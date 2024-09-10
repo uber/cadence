@@ -24,6 +24,7 @@ package quotas
 
 import (
 	"context"
+	"time"
 
 	"golang.org/x/time/rate"
 
@@ -33,15 +34,20 @@ import (
 // DynamicRateLimiter implements a dynamic config wrapper around the rate limiter,
 // checks for updates to the dynamic config and updates the rate limiter accordingly
 type DynamicRateLimiter struct {
-	rps RPSFunc
-	rl  *RateLimiter
+	rps         RPSFunc
+	rl          *RateLimiter
+	burstWindow time.Duration
 }
 
 // NewDynamicRateLimiter returns a rate limiter which handles dynamic config
-func NewDynamicRateLimiter(rps RPSFunc) *DynamicRateLimiter {
+func NewDynamicRateLimiter(rps RPSFunc, burstWindow time.Duration) *DynamicRateLimiter {
 	initialRps := rps()
 	rl := NewRateLimiter(&initialRps, _defaultRPSTTL, _burstSize)
-	return &DynamicRateLimiter{rps, rl}
+	return &DynamicRateLimiter{
+		rps:         rps,
+		rl:          rl,
+		burstWindow: burstWindow,
+	}
 }
 
 // Allow immediately returns with true or false indicating if a rate limit
