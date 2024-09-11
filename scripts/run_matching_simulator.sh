@@ -154,6 +154,11 @@ tmp=$(cat "$eventLogsFile" \
   | jq -c '.' | wc -l)
 echo "Async matches: $tmp" | tee -a $testSummaryFile
 
+echo "Matched tasks per tasklist:" | tee -a $testSummaryFile
+cat "$eventLogsFile" \
+  | jq -c 'select(.EventName | contains("Matched Task"))' \
+  | jq '.TaskListName' \
+  | jq -c '.' | sort -n | uniq -c | sed -e 's/^/     /' | tee -a $testSummaryFile
 
 echo "AddDecisionTask request per tasklist (excluding forwarded):" | tee -a $testSummaryFile
 cat "$eventLogsFile" \
