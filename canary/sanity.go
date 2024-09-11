@@ -21,8 +21,8 @@
 package canary
 
 import (
-	"errors"
 	"fmt"
+	"go.uber.org/multierr"
 
 	"go.uber.org/cadence/workflow"
 	"go.uber.org/zap"
@@ -116,9 +116,7 @@ func joinChildWorkflows(ctx workflow.Context, names []string, selector workflow.
 		selector.Select(ctx)
 		var err1 error
 		resultC.Receive(ctx, &err1)
-		if err1 != nil {
-			err = errors.Join(err, err1)
-		}
+		err = multierr.Append(err, err1)
 	}
 	return err
 }
