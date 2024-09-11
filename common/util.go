@@ -25,7 +25,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"go.uber.org/zap"
 	"math"
 	"math/rand"
 	"sort"
@@ -580,17 +579,6 @@ func CreateHistoryStartWorkflowRequest(
 		} else if jitterStartSeconds > 0 {
 			// Add a random jitter to start time, if requested.
 			firstDecisionTaskBackoffSeconds += rand.Int31n(jitterStartSeconds + 1)
-
-			// need a logger to log firstDecisionTaskBackoffSeconds and jitter start time for debug purpose
-			// will remove after the debug
-			// don't check err because don't want to break the function
-			logger, _ := zap.NewProduction()
-			if startRequest.Domain == "cadence-canary" {
-				logger.Info("Canary jitter start time debug log. ",
-					zap.Int32("jitterStartSeconds", jitterStartSeconds),
-					zap.Int32("firstDecisionTaskBackoffSeconds", firstDecisionTaskBackoffSeconds),
-				)
-			}
 		}
 	}
 

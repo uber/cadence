@@ -1889,11 +1889,24 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 	if err != nil {
 		return nil, err
 	}
-	wh.GetLogger().Debug("Start workflow execution request domainID", tag.WorkflowDomainID(domainID))
 	historyRequest, err := common.CreateHistoryStartWorkflowRequest(
 		domainID, startRequest, time.Now(), wh.getPartitionConfig(ctx, domainName))
 	if err != nil {
 		return nil, err
+	}
+
+	// for debugging jitter workflow
+	// will be removed later
+	jitterStartSeconds := startRequest.GetJitterStartSeconds()
+	if historyRequest.StartRequest.Domain == "cadence-canary" && jitterStartSeconds > 0 {
+		wh.GetLogger().Debug("Start workflow execution request domainID",
+			tag.WorkflowDomainID(domainID),
+			tag.WorkflowID(startRequest.WorkflowID),
+			tag.Dynamic("JitterStartSeconds", jitterStartSeconds),
+			tag.Dynamic("firstDecisionTaskBackoffSeconds", historyRequest.GetFirstDecisionTaskBackoffSeconds()),
+		)
+	} else {
+		wh.GetLogger().Debug("Start workflow execution request domainID", tag.WorkflowDomainID(domainID))
 	}
 
 	resp, err = wh.GetHistoryClient().StartWorkflowExecution(ctx, historyRequest)
