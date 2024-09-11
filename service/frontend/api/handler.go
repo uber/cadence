@@ -1898,7 +1898,7 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 	// for debugging jitter workflow
 	// will be removed later
 	jitterStartSeconds := startRequest.GetJitterStartSeconds()
-	if startRequest.Domain == "cadence-canary" && jitterStartSeconds > 0 {
+	if startRequest.GetDomain() == "cadence-canary" && jitterStartSeconds > 0 {
 		wh.GetLogger().Debug("Start workflow execution request domainID",
 			tag.WorkflowDomainID(domainID),
 			tag.WorkflowID(startRequest.WorkflowID),
