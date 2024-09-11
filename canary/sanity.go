@@ -21,6 +21,9 @@
 package canary
 
 import (
+	"errors"
+	"fmt"
+
 	"go.uber.org/cadence/workflow"
 	"go.uber.org/zap"
 )
@@ -94,6 +97,7 @@ func forkChildWorkflows(ctx workflow.Context, domain string, names []string) (wo
 		selector.AddFuture(future, func(f workflow.Future) {
 			if err := f.Get(ctx, nil); err != nil {
 				workflow.GetLogger(ctx).Error("child workflow failed", zap.Error(err))
+				err = fmt.Errorf("child workflow %s failed: %w", childName, err)
 				resultC.Send(ctx, err)
 				return
 			}
@@ -113,7 +117,7 @@ func joinChildWorkflows(ctx workflow.Context, names []string, selector workflow.
 		var err1 error
 		resultC.Receive(ctx, &err1)
 		if err1 != nil {
-			err = err1
+			err = errors.Join(err, err1)
 		}
 	}
 	return err
