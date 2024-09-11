@@ -22,9 +22,9 @@ package canary
 
 import (
 	"fmt"
-	"go.uber.org/multierr"
 
 	"go.uber.org/cadence/workflow"
+	"go.uber.org/multierr"
 	"go.uber.org/zap"
 )
 
