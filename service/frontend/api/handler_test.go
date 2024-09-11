@@ -61,6 +61,7 @@ import (
 const (
 	numHistoryShards          = 10
 	testDomain                = "test-domain"
+	canaryDomain              = "cadence-canary"
 	testDomainID              = "e4f90ec0-1313-45be-9877-8aa41f72a45a"
 	testWorkflowID            = "test-workflow-id"
 	testRunID                 = "2c8b555f-1f55-4955-9d1c-b980194555c9"
@@ -594,6 +595,39 @@ func (s *workflowHandlerSuite) TestStartWorkflowExecution_IsolationGroupDrained(
 	_, err := wh.StartWorkflowExecution(ctx, startWorkflowExecutionRequest)
 	s.Error(err)
 	s.IsType(err, &types.BadRequestError{})
+}
+
+func (s *workflowHandlerSuite) TestStartWorkflowExecution_LogJitterTime() {
+	config := s.newConfig(dc.NewInMemoryClient())
+	config.UserRPS = dc.GetIntPropertyFn(10)
+	wh := s.getWorkflowHandler(config)
+	jitterStart := int32(10)
+
+	startWorkflowExecutionRequest := &types.StartWorkflowExecutionRequest{
+		Domain:     canaryDomain,
+		WorkflowID: "workflow-id",
+		WorkflowType: &types.WorkflowType{
+			Name: "workflow-type",
+		},
+		TaskList: &types.TaskList{
+			Name: "task-list",
+		},
+		JitterStartSeconds:                  &jitterStart,
+		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
+		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
+		RetryPolicy: &types.RetryPolicy{
+			InitialIntervalInSeconds:    1,
+			BackoffCoefficient:          2,
+			MaximumIntervalInSeconds:    2,
+			MaximumAttempts:             1,
+			ExpirationIntervalInSeconds: 1,
+		},
+		RequestID: uuid.New(),
+	}
+	s.mockDomainCache.EXPECT().GetDomainID(canaryDomain).Return(s.testDomainID, nil).Times(2)
+	s.mockHistoryClient.EXPECT().StartWorkflowExecution(gomock.Any(), gomock.Any()).Return(&types.StartWorkflowExecutionResponse{RunID: "test-rid"}, nil)
+	_, err := wh.StartWorkflowExecution(context.Background(), startWorkflowExecutionRequest)
+	s.NoError(err)
 }
 
 func (s *workflowHandlerSuite) TestDiagnoseWorkflowExecution_Success() {
