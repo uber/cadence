@@ -43,6 +43,7 @@ import (
 
 // ErrInsufficientHosts is thrown when there are not enough hosts to serve the request
 var ErrInsufficientHosts = &types.InternalServiceError{Message: "Not enough hosts to serve the request"}
+var emptyEvent = &ChangedEvent{}
 
 const (
 	minRefreshInternal     = time.Second * 4
@@ -162,7 +163,7 @@ func (r *ring) Lookup(
 	addr, found := r.ring().Lookup(key)
 	if !found {
 		select {
-		case r.refreshChan <- &ChangedEvent{}:
+		case r.refreshChan <- emptyEvent:
 		default:
 		}
 		return HostInfo{}, ErrInsufficientHosts
@@ -264,6 +265,16 @@ func (r *ring) refresh() (refreshed bool, err error) {
 	return true, nil
 }
 
+func (r *ring) refreshAndNotifySubscribers(event *ChangedEvent) {
+	refreshed, err := r.refresh()
+	if err != nil {
+		r.logger.Error("refreshing ring", tag.Error(err))
+	}
+	if refreshed {
+		r.notifySubscribers(event)
+	}
+}
+
 func (r *ring) refreshRingWorker() {
 	defer r.shutdownWG.Done()
 
@@ -274,18 +285,10 @@ func (r *ring) refreshRingWorker() {
 		case <-r.shutdownCh:
 			return
 		case event := <-r.refreshChan: // local signal or signal from provider
-			refreshed, err := r.refresh()
-			if err != nil {
-				r.logger.Error("refreshing ring", tag.Error(err))
-			}
-			if refreshed {
-				r.notifySubscribers(event)
-			}
+			r.refreshAndNotifySubscribers(event)
 		case <-refreshTicker.C: // periodically refresh membership
 			r.emitHashIdentifier()
-			if _, err := r.refresh(); err != nil {
-				r.logger.Error("periodically refreshing ring", tag.Error(err))
-			}
+			r.refreshAndNotifySubscribers(emptyEvent)
 		}
 	}
 }
