@@ -31,6 +31,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/goleak"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/clock"
@@ -99,6 +100,7 @@ func Test_ring_compareMembers(t *testing.T) {
 }
 
 type hashringTestData struct {
+	t                *testing.T
 	mockPeerProvider *MockPeerProvider
 	mockTimeSource   clock.MockedTimeSource
 	hashRing         *ring
@@ -108,6 +110,7 @@ func newHashringTestData(t *testing.T) *hashringTestData {
 	var td hashringTestData
 
 	ctrl := gomock.NewController(t)
+	td.t = t
 	td.mockPeerProvider = NewMockPeerProvider(ctrl)
 	td.mockTimeSource = clock.NewMockedTimeSourceAt(time.Now())
 
@@ -122,13 +125,25 @@ func newHashringTestData(t *testing.T) *hashringTestData {
 	return &td
 }
 
+// starts hashring' background work and verifies all the goroutines closed at the end
+func (td *hashringTestData) startHashRing() {
+	td.mockPeerProvider.EXPECT().Stop()
+
+	td.t.Cleanup(func() {
+		td.hashRing.Stop()
+		goleak.VerifyNone(td.t)
+	})
+
+	td.hashRing.Start()
+}
+
 func TestFailedLookupWillAskProvider(t *testing.T) {
 	td := newHashringTestData(t)
 
 	td.mockPeerProvider.EXPECT().Subscribe(gomock.Any(), gomock.Any()).Times(1)
 	td.mockPeerProvider.EXPECT().GetMembers("test-service").Times(1)
 
-	td.hashRing.Start()
+	td.startHashRing()
 	_, err := td.hashRing.Lookup("a")
 
 	assert.Error(t, err)
@@ -141,7 +156,7 @@ func TestRefreshUpdatesRingOnlyWhenRingHasChanged(t *testing.T) {
 	td.mockPeerProvider.EXPECT().GetMembers("test-service").Times(1).Return(randomHostInfo(3), nil)
 
 	// Start will also call .refresh()
-	td.hashRing.Start()
+	td.startHashRing()
 	updatedAt := td.hashRing.members.refreshed
 	td.hashRing.refresh()
 	refreshed, err := td.hashRing.refresh()
@@ -149,7 +164,6 @@ func TestRefreshUpdatesRingOnlyWhenRingHasChanged(t *testing.T) {
 	assert.NoError(t, err)
 	assert.False(t, refreshed)
 	assert.Equal(t, updatedAt, td.hashRing.members.refreshed)
-
 }
 
 func TestRefreshWillNotifySubscribers(t *testing.T) {
@@ -168,7 +182,7 @@ func TestRefreshWillNotifySubscribers(t *testing.T) {
 		HostsRemoved: []string{"c"},
 	}
 
-	td.hashRing.Start()
+	td.startHashRing()
 
 	var changeCh = make(chan *ChangedEvent, 2)
 	// Check if multiple subscribers will get notified
@@ -206,7 +220,7 @@ func TestSubscribersAreNotifiedPeriodically(t *testing.T) {
 	})
 	td.mockPeerProvider.EXPECT().WhoAmI().AnyTimes()
 
-	td.hashRing.Start()
+	td.startHashRing()
 
 	var changeCh = make(chan *ChangedEvent, 1)
 	assert.NoError(t, td.hashRing.Subscribe("subscriber1", changeCh))
@@ -301,7 +315,7 @@ func TestLookupAndRefreshRaceCondition(t *testing.T) {
 		return randomHostInfo(5), nil
 	})
 
-	td.hashRing.Start()
+	td.startHashRing()
 	wg.Add(2)
 	go func() {
 		for i := 0; i < 50; i++ {
@@ -323,7 +337,6 @@ func TestLookupAndRefreshRaceCondition(t *testing.T) {
 }
 
 func TestEmitHashringView(t *testing.T) {
-
 	tests := map[string]struct {
 		hosts          []HostInfo
 		lookuperr      error
@@ -362,7 +375,6 @@ func TestEmitHashringView(t *testing.T) {
 	}
 
 	for testName, testInput := range tests {
-
 		t.Run(testName, func(t *testing.T) {
 			td := newHashringTestData(t)
 
