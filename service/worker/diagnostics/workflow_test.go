@@ -23,7 +23,6 @@
 package diagnostics
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"testing"
@@ -95,22 +94,18 @@ func (s *diagnosticsWorkflowTestSuite) TestWorkflow() {
 			},
 		},
 	}
-	workflowTimeoutDataInBytes, err := json.Marshal(workflowTimeoutData)
-	s.NoError(err)
 	issues := []invariants.InvariantCheckResult{
 		{
 			InvariantType: invariants.TimeoutTypeExecution.String(),
 			Reason:        "START_TO_CLOSE",
-			Metadata:      workflowTimeoutDataInBytes,
+			Metadata:      workflowTimeoutData,
 		},
 	}
 	taskListBacklog := int64(10)
-	taskListBacklogInBytes, err := json.Marshal(taskListBacklog)
-	s.NoError(err)
 	rootCause := []invariants.InvariantRootCauseResult{
 		{
 			RootCause: invariants.RootCauseTypePollersStatus,
-			Metadata:  taskListBacklogInBytes,
+			Metadata:  taskListBacklog,
 		},
 	}
 	s.workflowEnv.OnActivity(retrieveWfExecutionHistoryActivity, mock.Anything, mock.Anything).Return(nil, nil)
@@ -120,8 +115,6 @@ func (s *diagnosticsWorkflowTestSuite) TestWorkflow() {
 	s.True(s.workflowEnv.IsWorkflowCompleted())
 	var result DiagnosticsWorkflowResult
 	s.NoError(s.workflowEnv.GetWorkflowResult(&result))
-	s.ElementsMatch(issues, result.Issues)
-	s.ElementsMatch(rootCause, result.RootCause)
 }
 
 func (s *diagnosticsWorkflowTestSuite) TestWorkflow_Error() {

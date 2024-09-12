@@ -24,7 +24,6 @@ package diagnostics
 
 import (
 	"context"
-	"encoding/json"
 	"testing"
 	"time"
 
@@ -70,13 +69,11 @@ func Test__identifyTimeouts(t *testing.T) {
 			},
 		},
 	}
-	workflowTimeoutDataInBytes, err := json.Marshal(workflowTimeoutData)
-	require.NoError(t, err)
 	expectedResult := []invariants.InvariantCheckResult{
 		{
 			InvariantType: invariants.TimeoutTypeExecution.String(),
 			Reason:        "START_TO_CLOSE",
-			Metadata:      workflowTimeoutDataInBytes,
+			Metadata:      workflowTimeoutData,
 		},
 	}
 	result, err := dwtest.identifyTimeouts(context.Background(), identifyTimeoutsInputParams{History: testWorkflowExecutionHistoryResponse()})
@@ -101,22 +98,18 @@ func Test__rootCauseTimeouts(t *testing.T) {
 			Kind: nil,
 		},
 	}
-	workflowTimeoutDataInBytes, err := json.Marshal(workflowTimeoutData)
-	require.NoError(t, err)
 	issues := []invariants.InvariantCheckResult{
 		{
 			InvariantType: invariants.TimeoutTypeExecution.String(),
 			Reason:        "START_TO_CLOSE",
-			Metadata:      workflowTimeoutDataInBytes,
+			Metadata:      workflowTimeoutData,
 		},
 	}
 	taskListBacklog := int64(10)
-	taskListBacklogInBytes, err := json.Marshal(taskListBacklog)
-	require.NoError(t, err)
 	expectedRootCause := []invariants.InvariantRootCauseResult{
 		{
 			RootCause: invariants.RootCauseTypePollersStatus,
-			Metadata:  taskListBacklogInBytes,
+			Metadata:  taskListBacklog,
 		},
 	}
 	result, err := dwtest.rootCauseTimeouts(context.Background(), rootCauseTimeoutsParams{History: testWorkflowExecutionHistoryResponse(), Domain: "test-domain", Issues: issues})

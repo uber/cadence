@@ -23,7 +23,6 @@
 package invariants
 
 import (
-	"encoding/json"
 	"fmt"
 	"sort"
 	"time"
@@ -32,19 +31,22 @@ import (
 	"github.com/uber/cadence/common/types"
 )
 
-func reasonForDecisionTaskTimeouts(event *types.HistoryEvent, allEvents []*types.HistoryEvent) (string, []byte) {
+func reasonForDecisionTaskTimeouts(event *types.HistoryEvent, allEvents []*types.HistoryEvent) (string, DecisionTimeoutMetadata) {
 	eventScheduledID := event.GetDecisionTaskTimedOutEventAttributes().GetScheduledEventID()
 	attr := event.GetDecisionTaskTimedOutEventAttributes()
 	cause := attr.GetCause()
+	var reason string
 	switch cause {
 	case types.DecisionTaskTimedOutCauseTimeout:
-		return attr.TimeoutType.String(), timeoutLimitInBytes(getDecisionTaskConfiguredTimeout(eventScheduledID, allEvents))
+		reason = attr.TimeoutType.String()
 	case types.DecisionTaskTimedOutCauseReset:
 		newRunID := attr.GetNewRunID()
-		return attr.Reason, []byte(newRunID)
-	default:
-		return "valid cause not available for decision task timeout", nil
+		reason = fmt.Sprintf("%s - New run ID: %s", attr.Reason, newRunID)
 	}
+	return reason, DecisionTimeoutMetadata{
+		ConfiguredTimeout: time.Duration(getDecisionTaskConfiguredTimeout(eventScheduledID, allEvents)) * time.Second,
+	}
+
 }
 
 func getWorkflowExecutionConfiguredTimeout(events []*types.HistoryEvent) int32 {
@@ -123,16 +125,6 @@ func getChildWorkflowExecutionConfiguredTimeout(e *types.HistoryEvent, events []
 	return 0
 }
 
-func timeoutLimitInBytes(val int32) []byte {
-	valInBytes, _ := json.Marshal(val)
-	return valInBytes
-}
-
-func taskListBacklogInBytes(val int64) []byte {
-	valInBytes, _ := json.Marshal(val)
-	return valInBytes
-}
-
 func getExecutionTime(startID, timeoutID int64, events []*types.HistoryEvent) time.Duration {
 	sort.SliceStable(events, func(i, j int) bool {
 		return events[i].ID < events[j].ID
@@ -141,9 +133,4 @@ func getExecutionTime(startID, timeoutID int64, events []*types.HistoryEvent) ti
 	firstEvent := events[startID-1]
 	lastEvent := events[timeoutID-1]
 	return time.Unix(0, common.Int64Default(lastEvent.Timestamp)).Sub(time.Unix(0, common.Int64Default(firstEvent.Timestamp)))
-}
-
-func marshalData(rc any) []byte {
-	data, _ := json.Marshal(rc)
-	return data
 }

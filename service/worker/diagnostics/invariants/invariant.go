@@ -28,13 +28,13 @@ import "context"
 type InvariantCheckResult struct {
 	InvariantType string
 	Reason        string
-	Metadata      []byte
+	Metadata      any
 }
 
 // InvariantRootCauseResult is the root cause for the issues identified in the invariant check
 type InvariantRootCauseResult struct {
 	RootCause RootCause
-	Metadata  []byte
+	Metadata  any
 }
 
 // Invariant represents a condition of a workflow execution.
