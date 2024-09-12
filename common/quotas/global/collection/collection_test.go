@@ -451,9 +451,9 @@ func TestBoostRPS(t *testing.T) {
 		"usage over target": {
 			targetLimit:   10,
 			fallbackLimit: 3,
-			weight:        0.1,
+			weight:        0.089,
 			usedRPS:       100,
-			resultLimit:   1, // should be weight-based at worst, and not be reduced by excess usage
+			resultLimit:   0.89, // should be weight-based at worst, and not be reduced by excess usage
 		},
 	}
 	for name, tc := range tests {
