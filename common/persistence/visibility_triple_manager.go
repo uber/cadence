@@ -232,13 +232,13 @@ func (v *visibilityTripleManager) UpsertWorkflowExecution(
 func (v *visibilityTripleManager) chooseVisibilityModeForAdmin() string {
 	switch {
 	case v.dbVisibilityManager != nil && v.sourceVisibilityManager != nil && v.destinationVisibilityManager != nil:
-		return common.AdvancedVisibilityWritingModeTriple
-	case v.dbVisibilityManager != nil && v.destinationVisibilityManager != nil:
-		return common.AdvancedVisibilityWritingModeDual
+		return common.AdvancedVisibilityMigrationWritingModeTriple
+	case v.sourceVisibilityManager != nil && v.destinationVisibilityManager != nil:
+		return common.AdvancedVisibilityMigrationWritingModeDual
 	case v.destinationVisibilityManager != nil:
-		return common.AdvancedVisibilityWritingModeOn
+		return common.AdvancedVisibilityMigrationWritingModeDestination
 	case v.dbVisibilityManager != nil:
-		return common.AdvancedVisibilityWritingModeOff
+		return common.AdvancedVisibilityMigrationWritingModeOff
 	default:
 		return "INVALID_ADMIN_MODE"
 	}
@@ -258,17 +258,28 @@ func (v *visibilityTripleManager) chooseVisibilityManagerForWrite(ctx context.Co
 	switch writeMode {
 	// only perform as triple manager during migration by setting write mode to triple,
 	// other time perform as a dual visibility manager and db
-	case common.AdvancedVisibilityWritingModeOff:
+	case common.AdvancedVisibilityMigrationWritingModeOff:
 		if v.dbVisibilityManager != nil {
 			return dbVisFunc()
 		}
 		v.logger.Warn("basic visibility is not available to write, fall back to advanced visibility")
 		return destinationVisFunc()
-	case common.AdvancedVisibilityWritingModeOn:
-		// this is the way to make it work for migration, will clean up after migration is done
-		// by default the AdvancedVisibilityWritingMode is set to ON for ES
-		// if we change this dynamic config before deployment, ES will stop working and block task processing
-		// we have to change it after deployment. But need to make sure double writes are working, so the only way is changing the behavior of this function
+	case common.AdvancedVisibilityMigrationWritingModeSource:
+		if v.sourceVisibilityManager != nil {
+			return sourceVisFunc()
+		}
+		v.logger.Warn("advanced visibility is not available to write, fall back to basic visibility")
+		return dbVisFunc()
+	case common.AdvancedVisibilityMigrationWritingModeDestination:
+		if v.destinationVisibilityManager != nil {
+			return destinationVisFunc()
+		}
+		v.logger.Warn("advanced visibility is not available to write, fall back to basic visibility")
+		return dbVisFunc()
+	case common.AdvancedVisibilityWritingModeDual:
+		// by default the AdvancedVisibilityMigrationWritingMode is set to Dual
+		// this will enable double writes to both source and destination advanced visibility stores
+		// it is necessary during the migration period to ensure that both stores are in sync
 		if v.destinationVisibilityManager != nil && v.sourceVisibilityManager != nil {
 			if err := sourceVisFunc(); err != nil {
 				return err
@@ -284,38 +295,22 @@ func (v *visibilityTripleManager) chooseVisibilityManagerForWrite(ctx context.Co
 			v.logger.Warn("advanced visibility is not available to write, fall back to basic visibility")
 			return dbVisFunc()
 		}
-	case common.AdvancedVisibilityWritingModeDual:
-		if v.destinationVisibilityManager != nil {
-			if err := destinationVisFunc(); err != nil {
-				return err
-			}
-			if v.dbVisibilityManager != nil {
-				return dbVisFunc()
-			}
-			v.logger.Warn("basic visibility is not available to write")
-			return nil
-		}
-		v.logger.Warn("advanced visibility is not available to write")
-		return dbVisFunc()
-	case common.AdvancedVisibilityWritingModeTriple:
-		if v.destinationVisibilityManager != nil && v.sourceVisibilityManager != nil {
-			if err := destinationVisFunc(); err != nil {
-				return err
-			}
+	case common.AdvancedVisibilityMigrationWritingModeTriple:
+		if v.destinationVisibilityManager != nil && v.sourceVisibilityManager != nil && v.dbVisibilityManager != nil {
 			if err := sourceVisFunc(); err != nil {
 				return err
 			}
-			if v.dbVisibilityManager != nil {
-				return dbVisFunc()
+
+			if err := destinationVisFunc(); err != nil {
+				return err
 			}
-			v.logger.Warn("basic visibility is not available to write")
-			return nil
+			return dbVisFunc()
 		}
-		v.logger.Warn("advanced visibility is not available to write")
+		v.logger.Warn("advanced visibility is not available to write, fall back to basic visibility")
 		return dbVisFunc()
 	default:
 		return &types.InternalServiceError{
-			Message: fmt.Sprintf("Unknown visibility writing mode: %s", writeMode),
+			Message: fmt.Sprintf("Unknown visibility migration writing mode: %s", writeMode),
 		}
 	}
 }

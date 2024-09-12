@@ -201,6 +201,8 @@ func New(
 		ESConfig:          params.ESConfig,
 		PinotConfig:       params.PinotConfig,
 		PinotClient:       params.PinotClient,
+		OSClient:          params.OSClient,
+		OSConfig:          params.OSConfig,
 	}, serviceConfig)
 	if err != nil {
 		return nil, err

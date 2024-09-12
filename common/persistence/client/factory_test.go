@@ -208,7 +208,7 @@ func TestFactoryMethods(t *testing.T) {
 							// fields are unused but must be non-nil
 							Cluster: "cluster",
 							Broker:  "broker",
-							Migration: config.PinotMigration{
+							Migration: config.VisibilityMigration{
 								Enabled: false,
 							},
 						}, // fields are unused but must be non-nil
@@ -217,7 +217,7 @@ func TestFactoryMethods(t *testing.T) {
 			},
 			MessagingClient: mc,
 			PinotConfig: &config.PinotVisibilityConfig{
-				Migration: config.PinotMigration{
+				Migration: config.VisibilityMigration{
 					Enabled: true,
 				},
 			},
