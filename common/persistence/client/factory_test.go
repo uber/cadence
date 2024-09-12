@@ -183,7 +183,69 @@ func TestFactoryMethods(t *testing.T) {
 		ds.EXPECT().NewConfigStore().Return(nil, nil).MinTimes(1)
 		check(t, fact.NewConfigStoreManager)
 	})
-	t.Run("NewVisibilityManager_TripleVisibilityManager", func(t *testing.T) {
+	t.Run("NewVisibilityManager_TripleVisibilityManager_OpenSearch", func(t *testing.T) {
+		fact := makeFactory(t)
+		ds := mockDatastore(t, fact, storeTypeVisibility)
+
+		logger := testlogger.New(t)
+		mc := messaging.NewMockClient(gomock.NewController(t))
+		mc.EXPECT().NewProducer(gomock.Any()).Return(kafka.NewKafkaProducer("test-topic", mocks.NewSyncProducer(t, nil), logger), nil).MinTimes(1)
+		readFromClosed := true
+		testAttributes := map[string]interface{}{
+			"CustomAttribute": "test", // Define your custom attributes and types
+		}
+
+		ds.EXPECT().NewVisibilityStore(readFromClosed).Return(nil, nil).MinTimes(1)
+		_, err := fact.NewVisibilityManager(&Params{
+			PersistenceConfig: config.Persistence{
+				// a configured VisibilityStore uses the db store, which is mockable,
+				// unlike basically every other store.
+				AdvancedVisibilityStore: "os-visibility",
+				VisibilityStore:         "fake",
+				DataStores: map[string]config.DataStore{
+					"os-visibility": {
+						ElasticSearch: &config.ElasticSearchConfig{
+							// fields are unused but must be non-nil
+							Indices: map[string]string{
+								"visibility": "test-index",
+							},
+							Migration: config.VisibilityMigration{
+								Enabled: false,
+							},
+						}, // fields are unused but must be non-nil
+					},
+				},
+			},
+			MessagingClient: mc,
+			OSConfig: &config.ElasticSearchConfig{
+				Indices: map[string]string{
+					"visibility": "test-index",
+				},
+				Migration: config.VisibilityMigration{
+					Enabled: true,
+				},
+			},
+			ESConfig: &config.ElasticSearchConfig{
+				Indices: map[string]string{
+					"visibility": "test-index",
+				},
+			},
+		}, &service.Config{
+			// must be non-nil to create a "manager", else nil return from NewVisibilityManager is expected
+			EnableReadVisibilityFromES: func(domain string) bool {
+				return false // any value is fine as there are no read calls
+			},
+			// non-nil avoids a warning log
+			EnableReadDBVisibilityFromClosedExecutionV2: func(opts ...dynamicconfig.FilterOption) bool {
+				return readFromClosed // any value is fine as there are no read calls
+			},
+			ValidSearchAttributes: func(opts ...dynamicconfig.FilterOption) map[string]interface{} {
+				return testAttributes
+			},
+		})
+		assert.NoError(t, err)
+	})
+	t.Run("NewVisibilityManager_TripleVisibilityManager_Pinot", func(t *testing.T) {
 		fact := makeFactory(t)
 		ds := mockDatastore(t, fact, storeTypeVisibility)
 
