@@ -33,6 +33,7 @@ import (
 	"github.com/uber/ringpop-go/membership"
 
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
@@ -68,6 +69,7 @@ type ring struct {
 	refreshChan  chan *ChangedEvent
 	shutdownCh   chan struct{}
 	shutdownWG   sync.WaitGroup
+	timeSource   clock.TimeSource
 	scope        metrics.Scope
 	logger       log.Logger
 
@@ -88,6 +90,7 @@ type ring struct {
 func newHashring(
 	service string,
 	provider PeerProvider,
+	timeSource clock.TimeSource,
 	logger log.Logger,
 	scope metrics.Scope,
 ) *ring {
@@ -96,8 +99,9 @@ func newHashring(
 		service:      service,
 		peerProvider: provider,
 		shutdownCh:   make(chan struct{}),
-		logger:       logger,
 		refreshChan:  make(chan *ChangedEvent),
+		timeSource:   timeSource,
+		logger:       logger,
 		scope:        scope,
 	}
 
@@ -237,7 +241,7 @@ func (r *ring) Members() []HostInfo {
 }
 
 func (r *ring) refresh() (refreshed bool, err error) {
-	if r.members.refreshed.After(time.Now().Add(-minRefreshInternal)) {
+	if r.members.refreshed.After(r.timeSource.Now().Add(-minRefreshInternal)) {
 		// refreshed too frequently
 		return false, nil
 	}
@@ -258,7 +262,7 @@ func (r *ring) refresh() (refreshed bool, err error) {
 	ring.AddMembers(castToMembers(members)...)
 
 	r.members.keys = newMembersMap
-	r.members.refreshed = time.Now()
+	r.members.refreshed = r.timeSource.Now()
 	r.value.Store(ring)
 	r.logger.Info("refreshed ring members", tag.Value(members))
 
@@ -278,7 +282,7 @@ func (r *ring) refreshAndNotifySubscribers(event *ChangedEvent) {
 func (r *ring) refreshRingWorker() {
 	defer r.shutdownWG.Done()
 
-	refreshTicker := time.NewTicker(defaultRefreshInterval)
+	refreshTicker := r.timeSource.NewTicker(defaultRefreshInterval)
 	defer refreshTicker.Stop()
 	for {
 		select {
@@ -286,7 +290,7 @@ func (r *ring) refreshRingWorker() {
 			return
 		case event := <-r.refreshChan: // local signal or signal from provider
 			r.refreshAndNotifySubscribers(event)
-		case <-refreshTicker.C: // periodically refresh membership
+		case <-refreshTicker.Chan(): // periodically refresh membership
 			r.emitHashIdentifier()
 			r.refreshAndNotifySubscribers(emptyEvent)
 		}
