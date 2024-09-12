@@ -316,7 +316,7 @@ func (r *ratelimiter) SetBurst(newBurst int) {
 	//
 	// this prefers new burst/limit values over past values,
 	// as they are assumed to be "better", and in particular ensures the first
-	// time-advancing call fills the full limit (starting from 0 time, like
+	// time-advancing call fills with the full values (starting from 0 time, like
 	// the underlying limiter does).
 	r.limiter.SetBurstAt(r.latestNow, newBurst)
 }
@@ -331,7 +331,7 @@ func (r *ratelimiter) SetLimit(newLimit rate.Limit) {
 	//
 	// this prefers new burst/limit values over past values,
 	// as they are assumed to be "better", and in particular ensures the first
-	// time-advancing call fills the full limit (starting from 0 time, like
+	// time-advancing call fills with the full values (starting from 0 time, like
 	// the underlying limiter does).
 	r.limiter.SetLimitAt(r.latestNow, newLimit)
 }
