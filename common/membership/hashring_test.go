@@ -100,7 +100,7 @@ func Test_ring_compareMembers(t *testing.T) {
 
 type hashringTestData struct {
 	mockPeerProvider *MockPeerProvider
-	mockTimeSource   clock.TimeSource
+	mockTimeSource   clock.MockedTimeSource
 	hashRing         *ring
 }
 
@@ -111,7 +111,13 @@ func newHashringTestData(t *testing.T) *hashringTestData {
 	td.mockPeerProvider = NewMockPeerProvider(ctrl)
 	td.mockTimeSource = clock.NewMockedTimeSourceAt(time.Now())
 
-	td.hashRing = newHashring("test-service", td.mockPeerProvider, td.mockTimeSource, log.NewNoop(), metrics.NoopScope(0))
+	td.hashRing = newHashring(
+		"test-service",
+		td.mockPeerProvider,
+		td.mockTimeSource,
+		log.NewNoop(),
+		metrics.NoopScope(0),
+	)
 
 	return &td
 }
@@ -153,7 +159,6 @@ func TestRefreshWillNotifySubscribers(t *testing.T) {
 	td.mockPeerProvider.EXPECT().Subscribe(gomock.Any(), gomock.Any()).Times(1)
 	td.mockPeerProvider.EXPECT().GetMembers("test-service").Times(2).DoAndReturn(func(service string) ([]HostInfo, error) {
 		hostsToReturn = randomHostInfo(5)
-		time.Sleep(time.Millisecond * 70)
 		return hostsToReturn, nil
 	})
 
@@ -184,6 +189,41 @@ func TestRefreshWillNotifySubscribers(t *testing.T) {
 	td.hashRing.members.refreshed = time.Now().AddDate(0, 0, -1)
 	td.hashRing.refreshChan <- changed
 	wg.Wait() // wait until both subscribers will get notification
+	// Test if internal members are updated
+	assert.ElementsMatch(t, td.hashRing.Members(), hostsToReturn, "members should contain just-added nodes")
+}
+
+func TestSubscribersAreNotifiedPeriodically(t *testing.T) {
+	td := newHashringTestData(t)
+
+	var hostsToReturn []HostInfo
+
+	td.mockPeerProvider.EXPECT().Subscribe(gomock.Any(), gomock.Any()).Times(1)
+	td.mockPeerProvider.EXPECT().GetMembers("test-service").Times(3).DoAndReturn(func(service string) ([]HostInfo, error) {
+		// we have to change members since subscribers are only notified on change
+		hostsToReturn = randomHostInfo(5)
+		return hostsToReturn, nil
+	})
+	td.mockPeerProvider.EXPECT().WhoAmI().AnyTimes()
+
+	td.hashRing.Start()
+
+	var changeCh = make(chan *ChangedEvent, 1)
+	assert.NoError(t, td.hashRing.Subscribe("subscriber1", changeCh))
+
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		event := <-changeCh
+		assert.Empty(t, event, "event should be empty when periodical update happens")
+	}()
+
+	td.mockTimeSource.BlockUntil(1)                   // we should wait until ticker(defaultRefreshInterval) is created
+	td.mockTimeSource.Advance(defaultRefreshInterval) // and only then to advance time
+
+	wg.Wait() // wait until subscriber will get notification
+
 	// Test if internal members are updated
 	assert.ElementsMatch(t, td.hashRing.Members(), hostsToReturn, "members should contain just-added nodes")
 }
