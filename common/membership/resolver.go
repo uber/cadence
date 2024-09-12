@@ -29,6 +29,7 @@ import (
 	"sync/atomic"
 
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
@@ -116,7 +117,7 @@ func NewMultiringResolver(
 	}
 
 	for _, s := range services {
-		rpo.rings[s] = newHashring(s, provider, logger, metricsClient.Scope(metrics.HashringScope))
+		rpo.rings[s] = newHashring(s, provider, clock.NewRealTimeSource(), logger, metricsClient.Scope(metrics.HashringScope))
 	}
 	return rpo
 }

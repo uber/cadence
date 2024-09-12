@@ -31,8 +31,10 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/goleak"
 
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/metrics"
 )
@@ -97,48 +99,80 @@ func Test_ring_compareMembers(t *testing.T) {
 
 }
 
-func TestFailedLookupWillAskProvider(t *testing.T) {
+type hashringTestData struct {
+	t                *testing.T
+	mockPeerProvider *MockPeerProvider
+	mockTimeSource   clock.MockedTimeSource
+	hashRing         *ring
+}
+
+func newHashringTestData(t *testing.T) *hashringTestData {
+	var td hashringTestData
+
 	ctrl := gomock.NewController(t)
-	pp := NewMockPeerProvider(ctrl)
+	td.t = t
+	td.mockPeerProvider = NewMockPeerProvider(ctrl)
+	td.mockTimeSource = clock.NewMockedTimeSourceAt(time.Now())
 
-	pp.EXPECT().Subscribe(gomock.Any(), gomock.Any()).Times(1)
-	pp.EXPECT().GetMembers("test-service").Times(1)
+	td.hashRing = newHashring(
+		"test-service",
+		td.mockPeerProvider,
+		td.mockTimeSource,
+		log.NewNoop(),
+		metrics.NoopScope(0),
+	)
 
-	hr := newHashring("test-service", pp, log.NewNoop(), metrics.NoopScope(0))
-	hr.Start()
-	_, err := hr.Lookup("a")
+	return &td
+}
+
+// starts hashring' background work and verifies all the goroutines closed at the end
+func (td *hashringTestData) startHashRing() {
+	td.mockPeerProvider.EXPECT().Stop()
+
+	td.t.Cleanup(func() {
+		td.hashRing.Stop()
+		goleak.VerifyNone(td.t)
+	})
+
+	td.hashRing.Start()
+}
+
+func TestFailedLookupWillAskProvider(t *testing.T) {
+	td := newHashringTestData(t)
+
+	td.mockPeerProvider.EXPECT().Subscribe(gomock.Any(), gomock.Any()).Times(1)
+	td.mockPeerProvider.EXPECT().GetMembers("test-service").Times(1)
+
+	td.startHashRing()
+	_, err := td.hashRing.Lookup("a")
 
 	assert.Error(t, err)
 }
 
 func TestRefreshUpdatesRingOnlyWhenRingHasChanged(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	pp := NewMockPeerProvider(ctrl)
+	td := newHashringTestData(t)
 
-	pp.EXPECT().Subscribe(gomock.Any(), gomock.Any()).Times(1)
-	pp.EXPECT().GetMembers("test-service").Times(1).Return(randomHostInfo(3), nil)
+	td.mockPeerProvider.EXPECT().Subscribe(gomock.Any(), gomock.Any()).Times(1)
+	td.mockPeerProvider.EXPECT().GetMembers("test-service").Times(1).Return(randomHostInfo(3), nil)
 
-	hr := newHashring("test-service", pp, log.NewNoop(), metrics.NoopScope(0))
 	// Start will also call .refresh()
-	hr.Start()
-	updatedAt := hr.members.refreshed
-	hr.refresh()
-	refreshed, err := hr.refresh()
+	td.startHashRing()
+	updatedAt := td.hashRing.members.refreshed
+	td.hashRing.refresh()
+	refreshed, err := td.hashRing.refresh()
 
 	assert.NoError(t, err)
 	assert.False(t, refreshed)
-	assert.Equal(t, updatedAt, hr.members.refreshed)
-
+	assert.Equal(t, updatedAt, td.hashRing.members.refreshed)
 }
 
 func TestRefreshWillNotifySubscribers(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	pp := NewMockPeerProvider(ctrl)
+	td := newHashringTestData(t)
+
 	var hostsToReturn []HostInfo
-	pp.EXPECT().Subscribe(gomock.Any(), gomock.Any()).Times(1)
-	pp.EXPECT().GetMembers("test-service").Times(2).DoAndReturn(func(service string) ([]HostInfo, error) {
+	td.mockPeerProvider.EXPECT().Subscribe(gomock.Any(), gomock.Any()).Times(1)
+	td.mockPeerProvider.EXPECT().GetMembers("test-service").Times(2).DoAndReturn(func(service string) ([]HostInfo, error) {
 		hostsToReturn = randomHostInfo(5)
-		time.Sleep(time.Millisecond * 70)
 		return hostsToReturn, nil
 	})
 
@@ -148,13 +182,12 @@ func TestRefreshWillNotifySubscribers(t *testing.T) {
 		HostsRemoved: []string{"c"},
 	}
 
-	hr := newHashring("test-service", pp, log.NewNoop(), metrics.NoopScope(0))
-	hr.Start()
+	td.startHashRing()
 
 	var changeCh = make(chan *ChangedEvent, 2)
 	// Check if multiple subscribers will get notified
-	assert.NoError(t, hr.Subscribe("subscriber1", changeCh))
-	assert.NoError(t, hr.Subscribe("subscriber2", changeCh))
+	assert.NoError(t, td.hashRing.Subscribe("subscriber1", changeCh))
+	assert.NoError(t, td.hashRing.Subscribe("subscriber2", changeCh))
 
 	wg := sync.WaitGroup{}
 	wg.Add(1)
@@ -167,114 +200,134 @@ func TestRefreshWillNotifySubscribers(t *testing.T) {
 	}()
 
 	// to bypass internal check
-	hr.members.refreshed = time.Now().AddDate(0, 0, -1)
-	hr.refreshChan <- changed
+	td.hashRing.members.refreshed = time.Now().AddDate(0, 0, -1)
+	td.hashRing.refreshChan <- changed
 	wg.Wait() // wait until both subscribers will get notification
 	// Test if internal members are updated
-	assert.ElementsMatch(t, hr.Members(), hostsToReturn, "members should contain just-added nodes")
+	assert.ElementsMatch(t, td.hashRing.Members(), hostsToReturn, "members should contain just-added nodes")
+}
+
+func TestSubscribersAreNotifiedPeriodically(t *testing.T) {
+	td := newHashringTestData(t)
+
+	var hostsToReturn []HostInfo
+
+	td.mockPeerProvider.EXPECT().Subscribe(gomock.Any(), gomock.Any()).Times(1)
+	td.mockPeerProvider.EXPECT().GetMembers("test-service").Times(3).DoAndReturn(func(service string) ([]HostInfo, error) {
+		// we have to change members since subscribers are only notified on change
+		hostsToReturn = randomHostInfo(5)
+		return hostsToReturn, nil
+	})
+	td.mockPeerProvider.EXPECT().WhoAmI().AnyTimes()
+
+	td.startHashRing()
+
+	var changeCh = make(chan *ChangedEvent, 1)
+	assert.NoError(t, td.hashRing.Subscribe("subscriber1", changeCh))
+
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		event := <-changeCh
+		assert.Empty(t, event, "event should be empty when periodical update happens")
+	}()
+
+	td.mockTimeSource.BlockUntil(1)                   // we should wait until ticker(defaultRefreshInterval) is created
+	td.mockTimeSource.Advance(defaultRefreshInterval) // and only then to advance time
+
+	wg.Wait() // wait until subscriber will get notification
+
+	// Test if internal members are updated
+	assert.ElementsMatch(t, td.hashRing.Members(), hostsToReturn, "members should contain just-added nodes")
 }
 
 func TestSubscribeIgnoresDuplicates(t *testing.T) {
 	var changeCh = make(chan *ChangedEvent)
-	ctrl := gomock.NewController(t)
-	pp := NewMockPeerProvider(ctrl)
+	td := newHashringTestData(t)
 
-	hr := newHashring("test-watcher", pp, log.NewNoop(), metrics.NoopScope(0))
-
-	assert.NoError(t, hr.Subscribe("test-watcher", changeCh))
-	assert.Error(t, hr.Subscribe("test-watcher", changeCh))
-	assert.Equal(t, 1, len(hr.subscribers.keys))
+	assert.NoError(t, td.hashRing.Subscribe("test-service", changeCh))
+	assert.Error(t, td.hashRing.Subscribe("test-service", changeCh))
+	assert.Equal(t, 1, len(td.hashRing.subscribers.keys))
 }
 
 func TestUnsubcribeIgnoresDeletionOnEmpty(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	pp := NewMockPeerProvider(ctrl)
+	td := newHashringTestData(t)
 
-	hr := newHashring("test-service", pp, log.NewNoop(), metrics.NoopScope(0))
-	assert.Equal(t, 0, len(hr.subscribers.keys))
-	assert.NoError(t, hr.Unsubscribe("test-service"))
-	assert.NoError(t, hr.Unsubscribe("test-service"))
-	assert.NoError(t, hr.Unsubscribe("test-service"))
+	assert.Equal(t, 0, len(td.hashRing.subscribers.keys))
+	assert.NoError(t, td.hashRing.Unsubscribe("test-service"))
+	assert.NoError(t, td.hashRing.Unsubscribe("test-service"))
+	assert.NoError(t, td.hashRing.Unsubscribe("test-service"))
 }
 
 func TestUnsubcribeDeletes(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	pp := NewMockPeerProvider(ctrl)
+	td := newHashringTestData(t)
 	var changeCh = make(chan *ChangedEvent)
 
-	hr := newHashring("test-service", pp, log.NewNoop(), metrics.NoopScope(0))
-
-	assert.Equal(t, 0, len(hr.subscribers.keys))
-	assert.NoError(t, hr.Subscribe("testservice1", changeCh))
-	assert.Equal(t, 1, len(hr.subscribers.keys))
-	assert.NoError(t, hr.Unsubscribe("test-service"))
-	assert.Equal(t, 1, len(hr.subscribers.keys))
-	assert.NoError(t, hr.Unsubscribe("testservice1"))
-	assert.Equal(t, 0, len(hr.subscribers.keys))
+	assert.Equal(t, 0, len(td.hashRing.subscribers.keys))
+	assert.NoError(t, td.hashRing.Subscribe("testservice1", changeCh))
+	assert.Equal(t, 1, len(td.hashRing.subscribers.keys))
+	assert.NoError(t, td.hashRing.Unsubscribe("test-service"))
+	assert.Equal(t, 1, len(td.hashRing.subscribers.keys))
+	assert.NoError(t, td.hashRing.Unsubscribe("testservice1"))
+	assert.Equal(t, 0, len(td.hashRing.subscribers.keys))
 
 }
 
 func TestMemberCountReturnsNumber(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	pp := NewMockPeerProvider(ctrl)
+	td := newHashringTestData(t)
 
-	hr := newHashring("test-service", pp, log.NewNoop(), metrics.NoopScope(0))
-	assert.Equal(t, 0, hr.MemberCount())
+	assert.Equal(t, 0, td.hashRing.MemberCount())
 
 	ring := emptyHashring()
 	for _, addr := range []string{"127", "128"} {
 		host := NewHostInfo(addr)
 		ring.AddMembers(host)
 	}
-	hr.value.Store(ring)
-	assert.Equal(t, 2, hr.MemberCount())
+	td.hashRing.value.Store(ring)
+	assert.Equal(t, 2, td.hashRing.MemberCount())
 }
 
 func TestErrorIsPropagatedWhenProviderFails(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	pp := NewMockPeerProvider(ctrl)
-	pp.EXPECT().GetMembers(gomock.Any()).Return(nil, errors.New("error"))
+	td := newHashringTestData(t)
 
-	hr := newHashring("test-service", pp, log.NewNoop(), metrics.NoopScope(0))
-	_, err := hr.refresh()
+	td.mockPeerProvider.EXPECT().GetMembers(gomock.Any()).Return(nil, errors.New("error"))
+
+	_, err := td.hashRing.refresh()
 	assert.Error(t, err)
 }
 
 func TestStopWillStopProvider(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	pp := NewMockPeerProvider(ctrl)
+	td := newHashringTestData(t)
 
-	pp.EXPECT().Stop().Times(1)
+	td.mockPeerProvider.EXPECT().Stop().Times(1)
 
-	hr := newHashring("test-service", pp, log.NewNoop(), metrics.NoopScope(0))
-	hr.status = common.DaemonStatusStarted
-	hr.Stop()
-
+	td.hashRing.status = common.DaemonStatusStarted
+	td.hashRing.Stop()
 }
 
 func TestLookupAndRefreshRaceCondition(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	pp := NewMockPeerProvider(ctrl)
+	td := newHashringTestData(t)
 	var wg sync.WaitGroup
 
-	pp.EXPECT().Subscribe(gomock.Any(), gomock.Any()).Times(1)
-	pp.EXPECT().GetMembers("test-service").AnyTimes().DoAndReturn(func(service string) ([]HostInfo, error) {
+	td.mockPeerProvider.EXPECT().Subscribe(gomock.Any(), gomock.Any()).Times(1)
+	td.mockPeerProvider.EXPECT().GetMembers("test-service").AnyTimes().DoAndReturn(func(service string) ([]HostInfo, error) {
 		return randomHostInfo(5), nil
 	})
-	hr := newHashring("test-service", pp, log.NewNoop(), metrics.NoopScope(0))
-	hr.Start()
+
+	td.startHashRing()
 	wg.Add(2)
 	go func() {
 		for i := 0; i < 50; i++ {
-			_, _ = hr.Lookup("a")
+			_, _ = td.hashRing.Lookup("a")
 		}
 		wg.Done()
 	}()
 	go func() {
 		for i := 0; i < 50; i++ {
 			// to bypass internal check
-			hr.members.refreshed = time.Now().AddDate(0, 0, -1)
-			_, err := hr.refresh()
+			td.hashRing.members.refreshed = time.Now().AddDate(0, 0, -1)
+			_, err := td.hashRing.refresh()
 			assert.NoError(t, err)
 		}
 		wg.Done()
@@ -284,7 +337,6 @@ func TestLookupAndRefreshRaceCondition(t *testing.T) {
 }
 
 func TestEmitHashringView(t *testing.T) {
-
 	tests := map[string]struct {
 		hosts          []HostInfo
 		lookuperr      error
@@ -322,24 +374,18 @@ func TestEmitHashringView(t *testing.T) {
 		},
 	}
 
-	for name, td := range tests {
+	for testName, testInput := range tests {
+		t.Run(testName, func(t *testing.T) {
+			td := newHashringTestData(t)
 
-		t.Run(name, func(t *testing.T) {
-
-			ctrl := gomock.NewController(t)
-			pp := NewMockPeerProvider(ctrl)
-
-			pp.EXPECT().GetMembers("test-service").DoAndReturn(func(service string) ([]HostInfo, error) {
-				return td.hosts, td.lookuperr
+			td.mockPeerProvider.EXPECT().GetMembers("test-service").DoAndReturn(func(service string) ([]HostInfo, error) {
+				return testInput.hosts, testInput.lookuperr
 			})
 
-			pp.EXPECT().WhoAmI().DoAndReturn(func() (HostInfo, error) {
-				return td.selfInfo, td.selfErr
+			td.mockPeerProvider.EXPECT().WhoAmI().DoAndReturn(func() (HostInfo, error) {
+				return testInput.selfInfo, testInput.selfErr
 			})
-
-			hr := newHashring("test-service", pp, log.NewNoop(), metrics.NoopScope(0))
-
-			assert.Equal(t, td.expectedResult, hr.emitHashIdentifier())
+			assert.Equal(t, testInput.expectedResult, td.hashRing.emitHashIdentifier())
 		})
 	}
 }
