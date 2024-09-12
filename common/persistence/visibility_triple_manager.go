@@ -306,7 +306,7 @@ func (v *visibilityTripleManager) chooseVisibilityManagerForWrite(ctx context.Co
 			}
 			return dbVisFunc()
 		}
-		v.logger.Warn("advanced visibility is not available to write, fall back to basic visibility")
+		v.logger.Warn("advanced visibility is not available to write")
 		return dbVisFunc()
 	default:
 		return &types.InternalServiceError{

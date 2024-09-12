@@ -321,7 +321,7 @@ func TestPinotTripleRecordWorkflowExecutionClosed(t *testing.T) {
 			advancedVisibilityWritingMode: dynamicconfig.GetStringPropertyFn(common.AdvancedVisibilityMigrationWritingModeDual),
 			expectedError:                 fmt.Errorf("error"),
 		},
-		"Case0-5: error case with Pinot has errors in Triple mode": {
+		"Case0-5: error case with Pinot has errors in Dual mode": {
 			context:                 context.Background(),
 			request:                 request,
 			mockESVisibilityManager: NewMockVisibilityManager(ctrl),
@@ -335,7 +335,7 @@ func TestPinotTripleRecordWorkflowExecutionClosed(t *testing.T) {
 			advancedVisibilityWritingMode: dynamicconfig.GetStringPropertyFn(common.AdvancedVisibilityMigrationWritingModeDual),
 			expectedError:                 fmt.Errorf("error"),
 		},
-		"Case0-6: error case with ES has errors in Triple mode": {
+		"Case0-6: error case with ES has errors in Dual mode": {
 			context:                 context.Background(),
 			request:                 request,
 			mockESVisibilityManager: NewMockVisibilityManager(ctrl),
@@ -452,6 +452,16 @@ func TestPinotTripleRecordWorkflowExecutionClosed(t *testing.T) {
 			advancedVisibilityWritingMode: dynamicconfig.GetStringPropertyFn(common.AdvancedVisibilityMigrationWritingModeDual),
 			expectedError:                 nil,
 		},
+		"Case1-9: success case with source write": {
+			context:                 context.Background(),
+			request:                 request,
+			mockESVisibilityManager: NewMockVisibilityManager(ctrl),
+			mockESVisibilityManagerAffordance: func(mockESVisibilityManager *MockVisibilityManager) {
+				mockESVisibilityManager.EXPECT().RecordWorkflowExecutionClosed(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+			},
+			advancedVisibilityWritingMode: dynamicconfig.GetStringPropertyFn(common.AdvancedVisibilityMigrationWritingModeSource),
+			expectedError:                 nil,
+		},
 		"Case2-1: choose DB visibility manager when it is nil": {
 			context:                    context.Background(),
 			request:                    request,
@@ -487,6 +497,24 @@ func TestPinotTripleRecordWorkflowExecutionClosed(t *testing.T) {
 				mockPinotVisibilityManager.EXPECT().RecordWorkflowExecutionClosed(gomock.Any(), gomock.Any()).Return(nil).Times(1)
 			},
 			advancedVisibilityWritingMode: dynamicconfig.GetStringPropertyFn(common.AdvancedVisibilityWritingModeDual),
+		},
+		"Case2-5: choose source when ES is nil": {
+			context:                 context.Background(),
+			request:                 request,
+			mockDBVisibilityManager: NewMockVisibilityManager(ctrl),
+			mockDBVisibilityManagerAffordance: func(mockDBVisibilityManager *MockVisibilityManager) {
+				mockDBVisibilityManager.EXPECT().RecordWorkflowExecutionClosed(gomock.Any(), gomock.Any()).Return(nil).Times(1)
+			},
+			advancedVisibilityWritingMode: dynamicconfig.GetStringPropertyFn(common.AdvancedVisibilityMigrationWritingModeSource),
+		},
+		"Case2-5: choose destination when pinot is nil": {
+			context:                 context.Background(),
+			request:                 request,
+			mockDBVisibilityManager: NewMockVisibilityManager(ctrl),
+			mockDBVisibilityManagerAffordance: func(mockDBVisibilityManager *MockVisibilityManager) {
+				mockDBVisibilityManager.EXPECT().RecordWorkflowExecutionClosed(gomock.Any(), gomock.Any()).Return(nil).Times(1)
+			},
+			advancedVisibilityWritingMode: dynamicconfig.GetStringPropertyFn(common.AdvancedVisibilityMigrationWritingModeDestination),
 		},
 		"Case3-1: chooseVisibilityModeForAdmin when ES is nil": {
 			context:                 context.WithValue(context.Background(), VisibilityAdminDeletionKey("visibilityAdminDelete"), true),
