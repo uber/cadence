@@ -511,7 +511,9 @@ func boostRPS(target, fallback rate.Limit, weight float64, usedRPS float64) rate
 	// as overall usage increases, this "allowed overage" will shrink, helping
 	// ensure it keeps converging towards the global target RPS.
 	if baseline < fallback {
-		unused := float64(target) - usedRPS
+		// unused should not go below zero, e.g. if target was lowered,
+		// so this cannot reduce below the fair baseline.
+		unused := math.Max(0, float64(target)-usedRPS)
 		boosted := math.Min(
 			// with many bursty low-weight hosts, this may allow too much.
 			// currently this isn't really a concern, but this could be adjusted
