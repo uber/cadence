@@ -346,12 +346,19 @@ func (f *factoryImpl) NewVisibilityManager(
 			resourceConfig.AdvancedVisibilityWritingMode,
 			f.logger,
 		), nil
-
-	default:
+	case common.ESVisibilityStoreName:
 		visibilityFromES, err = setupESVisibilityManager(params, resourceConfig, f.logger)
 		if err != nil {
 			f.logger.Fatal("Creating advanced visibility manager failed", tag.Error(err))
 		}
+		return p.NewVisibilityDualManager(
+			visibilityFromDB,
+			visibilityFromES,
+			resourceConfig.EnableReadVisibilityFromES,
+			resourceConfig.AdvancedVisibilityWritingMode,
+			f.logger,
+		), nil
+	default:
 		return p.NewVisibilityDualManager(
 			visibilityFromDB,
 			visibilityFromES,
