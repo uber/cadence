@@ -101,9 +101,9 @@ func BuildCLIOptions() *cli.App {
 			EnvVars: []string{"SQL_PLUGIN"},
 		},
 		&cli.BoolFlag{
-			Name:  schema.CLIFlagQuiet,
+			Name:    schema.CLIFlagQuiet,
 			Aliases: []string{"q"},
-			Usage: "Don't set exit status to 1 on error",
+			Usage:   "Don't set exit status to 1 on error",
 		},
 		&cli.GenericFlag{
 			Name:    schema.CLIFlagConnectAttributes,
@@ -146,24 +146,24 @@ func BuildCLIOptions() *cli.App {
 			Usage:   "setup initial version of sql schema",
 			Flags: []cli.Flag{
 				&cli.StringFlag{
-					Name:  schema.CLIFlagVersion,
+					Name:    schema.CLIFlagVersion,
 					Aliases: []string{"v"},
-					Usage: "initial version of the schema, cannot be used with disable-versioning",
+					Usage:   "initial version of the schema, cannot be used with disable-versioning",
 				},
 				&cli.StringFlag{
-					Name:  schema.CLIFlagSchemaFile,
+					Name:    schema.CLIFlagSchemaFile,
 					Aliases: []string{"f"},
-					Usage: "path to the .sql schema file; if un-specified, will just setup versioning tables",
+					Usage:   "path to the .sql schema file; if un-specified, will just setup versioning tables",
 				},
 				&cli.BoolFlag{
-					Name:  schema.CLIFlagDisableVersioning,
+					Name:    schema.CLIFlagDisableVersioning,
 					Aliases: []string{"d"},
-					Usage: "disable setup of schema versioning",
+					Usage:   "disable setup of schema versioning",
 				},
 				&cli.BoolFlag{
-					Name:  schema.CLIFlagOverwrite,
+					Name:    schema.CLIFlagOverwrite,
 					Aliases: []string{"o"},
-					Usage: "drop all existing tables before setting up new schema",
+					Usage:   "drop all existing tables before setting up new schema",
 				},
 			},
 			Action: func(c *cli.Context) error {
@@ -176,14 +176,14 @@ func BuildCLIOptions() *cli.App {
 			Usage:   "update sql schema to a specific version",
 			Flags: []cli.Flag{
 				&cli.StringFlag{
-					Name:  schema.CLIFlagTargetVersion,
+					Name:    schema.CLIFlagTargetVersion,
 					Aliases: []string{"v"},
-					Usage: "target version for the schema update, defaults to latest",
+					Usage:   "target version for the schema update, defaults to latest",
 				},
 				&cli.StringFlag{
-					Name:  schema.CLIFlagSchemaDir,
+					Name:    schema.CLIFlagSchemaDir,
 					Aliases: []string{"d"},
-					Usage: "path to directory containing versioned schema",
+					Usage:   "path to directory containing versioned schema",
 				},
 				&cli.BoolFlag{
 					Name:  schema.CLIFlagDryrun,
@@ -200,9 +200,9 @@ func BuildCLIOptions() *cli.App {
 			Usage:   "creates a database",
 			Flags: []cli.Flag{
 				&cli.StringFlag{
-					Name:  schema.CLIFlagDatabase,
+					Name:    schema.CLIFlagDatabase,
 					Aliases: []string{"db"},
-					Usage: "name of the database",
+					Usage:   "name of the database",
 				},
 			},
 			Action: func(c *cli.Context) error {
