@@ -70,35 +70,41 @@ func BuildCLIOptions() *cli.App {
 	app.Flags = []cli.Flag{
 		&cli.StringFlag{
 			Name:    schema.CLIFlagEndpoint,
+			Aliases: []string{"ep"},
 			Value:   "127.0.0.1",
 			Usage:   "hostname or ip address of cassandra host to connect to",
 			EnvVars: []string{"CASSANDRA_HOST"},
 		},
 		&cli.IntFlag{
 			Name:    schema.CLIFlagPort,
+			Aliases: []string{"p"},
 			Value:   DefaultCassandraPort,
 			Usage:   "Port of cassandra host to connect to",
 			EnvVars: []string{"CASSANDRA_DB_PORT"},
 		},
 		&cli.StringFlag{
 			Name:    schema.CLIFlagUser,
+			Aliases: []string{"u"},
 			Value:   "",
 			Usage:   "User name used for authentication for connecting to cassandra host",
 			EnvVars: []string{"CASSANDRA_USER"},
 		},
 		&cli.StringFlag{
 			Name:    schema.CLIFlagPassword,
+			Aliases: []string{"pw"},
 			Value:   "",
 			Usage:   "Password used for authentication for connecting to cassandra host",
 			EnvVars: []string{"CASSANDRA_PASSWORD"},
 		},
 		&cli.StringSliceFlag{
 			Name:  schema.CLIFlagAllowedAuthenticators,
+			Aliases: []string{"aa"},
 			Value: cli.NewStringSlice(""),
 			Usage: "Set allowed authenticators for servers with custom authenticators",
 		},
 		&cli.IntFlag{
 			Name:    schema.CLIFlagTimeout,
+			Aliases: []string{"t"},
 			Value:   DefaultTimeout,
 			Usage:   "request Timeout in seconds used for cql client",
 			EnvVars: []string{"CASSANDRA_TIMEOUT"},
@@ -110,16 +116,19 @@ func BuildCLIOptions() *cli.App {
 		},
 		&cli.StringFlag{
 			Name:    schema.CLIFlagKeyspace,
+			Aliases: []string{"k"},
 			Value:   "cadence",
 			Usage:   "name of the cassandra Keyspace",
 			EnvVars: []string{"CASSANDRA_KEYSPACE"},
 		},
 		&cli.BoolFlag{
 			Name:  schema.CLIFlagQuiet,
+			Aliases: []string{"q"},
 			Usage: "Don't set exit status to 1 on error",
 		},
 		&cli.IntFlag{
 			Name:    schema.CLIFlagProtoVersion,
+			Aliases: []string{"pv"},
 			Usage:   "Protocol Version to connect to cassandra host",
 			EnvVars: []string{"CASSANDRA_PROTO_VERSION"},
 		},
@@ -164,18 +173,22 @@ func BuildCLIOptions() *cli.App {
 			Flags: []cli.Flag{
 				&cli.StringFlag{
 					Name:  schema.CLIFlagVersion,
+					Aliases: []string{"v"},
 					Usage: "initial version of the schema, cannot be used with disable-versioning",
 				},
 				&cli.StringFlag{
 					Name:  schema.CLIFlagSchemaFile,
+					Aliases: []string{"f"},
 					Usage: "path to the .cql schema file; if un-specified, will just setup versioning tables",
 				},
 				&cli.BoolFlag{
 					Name:  schema.CLIFlagDisableVersioning,
+					Aliases: []string{"d"},
 					Usage: "disable setup of schema versioning",
 				},
 				&cli.BoolFlag{
 					Name:  schema.CLIFlagOverwrite,
+					Aliases: []string{"o"},
 					Usage: "drop all existing tables before setting up new schema",
 				},
 			},
@@ -190,10 +203,12 @@ func BuildCLIOptions() *cli.App {
 			Flags: []cli.Flag{
 				&cli.StringFlag{
 					Name:  schema.CLIFlagTargetVersion,
+					Aliases: []string{"v"},
 					Usage: "target version for the schema update, defaults to latest",
 				},
 				&cli.StringFlag{
 					Name:  schema.CLIFlagSchemaDir,
+					Aliases: []string{"d"},
 					Usage: "path to directory containing versioned schema",
 				},
 				&cli.BoolFlag{
@@ -212,15 +227,18 @@ func BuildCLIOptions() *cli.App {
 			Flags: []cli.Flag{
 				&cli.StringFlag{
 					Name:  schema.CLIFlagKeyspace,
+					Aliases: []string{"k"},
 					Usage: "name of the Keyspace",
 				},
 				&cli.StringFlag{
 					Name:  schema.CLIFlagDatacenter,
+					Aliases: []string{"dc"},
 					Value: "",
 					Usage: "name of the cassandra datacenter, used when creating the keyspace with network topology strategy",
 				},
 				&cli.IntFlag{
 					Name:  schema.CLIFlagReplicationFactor,
+					Aliases: []string{"rf"},
 					Value: 1,
 					Usage: "replication factor for the Keyspace",
 				},

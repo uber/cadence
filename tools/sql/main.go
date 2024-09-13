@@ -60,46 +60,54 @@ func BuildCLIOptions() *cli.App {
 	app.Flags = []cli.Flag{
 		&cli.StringFlag{
 			Name:    schema.CLIFlagEndpoint,
+			Aliases: []string{"ep"},
 			Value:   "127.0.0.1",
 			Usage:   "hostname or ip address of sql host to connect to",
 			EnvVars: []string{"SQL_HOST"},
 		},
 		&cli.IntFlag{
 			Name:    schema.CLIFlagPort,
+			Aliases: []string{"p"},
 			Value:   defaultSQLPort,
 			Usage:   "port of sql host to connect to",
 			EnvVars: []string{"SQL_PORT"},
 		},
 		&cli.StringFlag{
 			Name:    schema.CLIFlagUser,
+			Aliases: []string{"u"},
 			Value:   "",
 			Usage:   "user name used for authentication when connecting to sql host",
 			EnvVars: []string{"SQL_USER"},
 		},
 		&cli.StringFlag{
 			Name:    schema.CLIFlagPassword,
+			Aliases: []string{"pw"},
 			Value:   "",
 			Usage:   "password used for authentication when connecting to sql host",
 			EnvVars: []string{"SQL_PASSWORD"},
 		},
 		&cli.StringFlag{
 			Name:    schema.CLIFlagDatabase,
+			Aliases: []string{"db"},
 			Value:   "cadence",
 			Usage:   "name of the sql database",
 			EnvVars: []string{"SQL_DATABASE"},
 		},
 		&cli.StringFlag{
 			Name:    schema.CLIFlagPluginName,
+			Aliases: []string{"pl"},
 			Value:   "mysql",
 			Usage:   "name of the sql plugin",
 			EnvVars: []string{"SQL_PLUGIN"},
 		},
 		&cli.BoolFlag{
 			Name:  schema.CLIFlagQuiet,
+			Aliases: []string{"q"},
 			Usage: "Don't set exit status to 1 on error",
 		},
 		&cli.GenericFlag{
 			Name:    schema.CLIFlagConnectAttributes,
+			Aliases: []string{"ca"},
 			Value:   &cliflag.StringMap{},
 			Usage:   "sql connect attributes (must be in key1=value1,key2=value2,...,keyN=valueN format, e.g. cluster=dca or cluster=dca,instance=cadence)",
 			EnvVars: []string{"SQL_CONNECT_ATTRIBUTES"},
@@ -139,18 +147,22 @@ func BuildCLIOptions() *cli.App {
 			Flags: []cli.Flag{
 				&cli.StringFlag{
 					Name:  schema.CLIFlagVersion,
+					Aliases: []string{"v"},
 					Usage: "initial version of the schema, cannot be used with disable-versioning",
 				},
 				&cli.StringFlag{
 					Name:  schema.CLIFlagSchemaFile,
+					Aliases: []string{"f"},
 					Usage: "path to the .sql schema file; if un-specified, will just setup versioning tables",
 				},
 				&cli.BoolFlag{
 					Name:  schema.CLIFlagDisableVersioning,
+					Aliases: []string{"d"},
 					Usage: "disable setup of schema versioning",
 				},
 				&cli.BoolFlag{
 					Name:  schema.CLIFlagOverwrite,
+					Aliases: []string{"o"},
 					Usage: "drop all existing tables before setting up new schema",
 				},
 			},
@@ -165,10 +177,12 @@ func BuildCLIOptions() *cli.App {
 			Flags: []cli.Flag{
 				&cli.StringFlag{
 					Name:  schema.CLIFlagTargetVersion,
+					Aliases: []string{"v"},
 					Usage: "target version for the schema update, defaults to latest",
 				},
 				&cli.StringFlag{
 					Name:  schema.CLIFlagSchemaDir,
+					Aliases: []string{"d"},
 					Usage: "path to directory containing versioned schema",
 				},
 				&cli.BoolFlag{
@@ -187,6 +201,7 @@ func BuildCLIOptions() *cli.App {
 			Flags: []cli.Flag{
 				&cli.StringFlag{
 					Name:  schema.CLIFlagDatabase,
+					Aliases: []string{"db"},
 					Usage: "name of the database",
 				},
 			},
