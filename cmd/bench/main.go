@@ -36,13 +36,9 @@ import (
 
 const (
 	flagRoot        = "root"
-	flagRootAlias   = "r"
 	flagConfig      = "config"
-	flagConfigAlias = "c"
 	flagEnv         = "env"
-	flagEnvAlias    = "e"
 	flagZone        = "zone"
-	flagZoneAlias   = "z"
 )
 
 const (
@@ -113,28 +109,28 @@ func buildCLI() *cli.App {
 	app.Flags = []cli.Flag{
 		&cli.StringFlag{
 			Name:    flagRoot,
-			Aliases: []string{flagRootAlias},
+			Aliases: []string{"r"},
 			Value:   defaultRoot,
 			Usage:   "root directory of execution environment",
 			EnvVars: []string{lib.EnvKeyRoot},
 		},
 		&cli.StringFlag{
 			Name:    flagConfig,
-			Aliases: []string{flagConfigAlias},
+			Aliases: []string{"c"},
 			Value:   defaultConfig,
 			Usage:   "config dir path relative to root",
 			EnvVars: []string{lib.EnvKeyConfigDir},
 		},
 		&cli.StringFlag{
 			Name:    flagEnv,
-			Aliases: []string{flagEnvAlias},
+			Aliases: []string{"e"},
 			Value:   defaultEnv,
 			Usage:   "runtime environment",
 			EnvVars: []string{lib.EnvKeyEnvironment},
 		},
 		&cli.StringFlag{
 			Name:    flagZone,
-			Aliases: []string{flagZoneAlias},
+			Aliases: []string{"z"},
 			Value:   defaultZone,
 			Usage:   "availability zone",
 			EnvVars: []string{lib.EnvKeyAvailabilityZone},
