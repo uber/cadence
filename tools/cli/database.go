@@ -24,7 +24,7 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/config"
@@ -42,106 +42,107 @@ var supportedDBs = append(sql.GetRegisteredPluginNames(), "cassandra")
 
 func getDBFlags() []cli.Flag {
 	return []cli.Flag{
-		cli.StringFlag{
-			Name:   FlagServiceConfigDirWithAlias,
-			Value:  "config",
-			Usage:  "service configuration dir",
-			EnvVar: config.EnvKeyConfigDir,
+		&cli.StringFlag{
+			Name:    FlagServiceConfigDir,
+			Aliases: []string{"scd"},
+			Value:   "config",
+			Usage:   "service configuration dir",
+			EnvVars: []string{config.EnvKeyConfigDir},
 		},
-		cli.StringFlag{
-			Name:   FlagServiceEnvWithAlias,
-			Usage:  "service env for loading service configuration",
-			EnvVar: config.EnvKeyEnvironment,
+		&cli.StringFlag{
+			Name:    FlagServiceEnv,
+			Aliases: []string{"se"},
+			Usage:   "service env for loading service configuration",
+			EnvVars: []string{config.EnvKeyEnvironment},
 		},
-		cli.StringFlag{
-			Name:   FlagServiceZoneWithAlias,
-			Usage:  "service zone for loading service configuration",
-			EnvVar: config.EnvKeyAvailabilityZone,
+		&cli.StringFlag{
+			Name:    FlagServiceZone,
+			Aliases: []string{"sz"},
+			Usage:   "service zone for loading service configuration",
+			EnvVars: []string{config.EnvKeyAvailabilityZone},
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  FlagDBType,
 			Value: "cassandra",
 			Usage: fmt.Sprintf("persistence type. Current supported options are %v", supportedDBs),
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  FlagDBAddress,
 			Value: "127.0.0.1",
 			Usage: "persistence address (right now only cassandra is fully supported)",
 		},
-		cli.IntFlag{
+		&cli.IntFlag{
 			Name:  FlagDBPort,
 			Value: 9042,
 			Usage: "persistence port",
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  FlagDBRegion,
 			Usage: "persistence region",
 		},
-		cli.IntFlag{
+		&cli.IntFlag{
 			Name:  FlagDBShard,
 			Usage: "number of db shards in a sharded SQL database",
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  FlagUsername,
 			Usage: "persistence username",
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  FlagPassword,
 			Usage: "persistence password",
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  FlagKeyspace,
 			Value: "cadence",
 			Usage: "cassandra keyspace",
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  FlagDatabaseName,
 			Value: "cadence",
 			Usage: "sql database name",
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  FlagEncodingType,
 			Value: "thriftrw",
 			Usage: "sql database encoding type",
 		},
-		cli.StringSliceFlag{
-			Name: FlagDecodingTypes,
-			Value: &cli.StringSlice{
-				"thriftrw",
-			},
+		&cli.StringSliceFlag{
+			Name:  FlagDecodingTypes,
+			Value: cli.NewStringSlice("thriftrw"),
 			Usage: "sql database decoding types",
 		},
-		cli.IntFlag{
+		&cli.IntFlag{
 			Name:  FlagProtoVersion,
 			Value: 4,
 			Usage: "cassandra protocol version",
 		},
-		cli.BoolFlag{
+		&cli.BoolFlag{
 			Name:  FlagEnableTLS,
 			Usage: "enable TLS over cassandra connection",
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  FlagTLSCertPath,
 			Usage: "cassandra tls client cert path (tls must be enabled)",
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  FlagTLSKeyPath,
 			Usage: "cassandra tls client key path (tls must be enabled)",
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  FlagTLSCaPath,
 			Usage: "cassandra tls client ca path (tls must be enabled)",
 		},
-		cli.BoolFlag{
+		&cli.BoolFlag{
 			Name:  FlagTLSEnableHostVerification,
 			Usage: "cassandra tls verify hostname and server cert (tls must be enabled)",
 		},
-		cli.GenericFlag{
+		&cli.GenericFlag{
 			Name:  FlagConnectionAttributes,
 			Usage: "a key-value set of sql database connection attributes (must be in key1=value1,key2=value2,...,keyN=valueN format, e.g. cluster=dca or cluster=dca,instance=cadence)",
 			Value: &flag.StringMap{},
 		},
-		cli.IntFlag{
+		&cli.IntFlag{
 			Name:  FlagRPS,
 			Usage: "target rps of database queries",
 			Value: 100,

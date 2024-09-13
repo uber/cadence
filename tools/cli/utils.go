@@ -41,7 +41,7 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 	"github.com/valyala/fastjson"
 
 	"github.com/uber/cadence/client/frontend"
@@ -524,6 +524,12 @@ func printError(msg string, err error) {
 	}
 }
 
+// ErrorAndPrint print easy to understand error msg first then error detail in a new line
+func ErrorAndPrint(msg string, err error) error {
+	printError(msg, err)
+	return err
+}
+
 // ErrorAndExit print easy to understand error msg first then error detail in a new line
 func ErrorAndExit(msg string, err error) {
 	printError(msg, err)
@@ -554,14 +560,6 @@ func getRequiredIntOption(c *cli.Context, optionName string) int {
 		ErrorAndExit(fmt.Sprintf("Option %s is required", optionName), nil)
 	}
 	return c.Int(optionName)
-}
-
-func getRequiredGlobalOption(c *cli.Context, optionName string) string {
-	value := c.GlobalString(optionName)
-	if len(value) == 0 {
-		ErrorAndExit(fmt.Sprintf("Global option %s is required", optionName), nil)
-	}
-	return value
 }
 
 func timestampPtrToStringPtr(unixNanoPtr *int64, onlyTime bool) *string {
@@ -602,7 +600,7 @@ func parseTime(timeStr string, defaultValue int64) int64 {
 	// treat as time range format
 	parsedTime, err = parseTimeRange(timeStr)
 	if err != nil {
-		ErrorAndExit(fmt.Sprintf("Cannot parse time '%s', use UTC format '2006-01-02T15:04:05Z', "+
+		ErrorAndPrint(fmt.Sprintf("Cannot parse time '%s', use UTC format '2006-01-02T15:04:05Z', "+
 			"time range or raw UnixNano directly. See help for more details.", timeStr), err)
 	}
 	return parsedTime.UnixNano()
@@ -759,15 +757,15 @@ func newContextForLongPoll(c *cli.Context) (context.Context, context.CancelFunc)
 }
 
 func newIndefiniteContext(c *cli.Context) (context.Context, context.CancelFunc) {
-	if c.GlobalIsSet(FlagContextTimeout) {
-		return newTimedContext(c, time.Duration(c.GlobalInt(FlagContextTimeout))*time.Second)
+	if c.IsSet(FlagContextTimeout) {
+		return newTimedContext(c, time.Duration(c.Int(FlagContextTimeout))*time.Second)
 	}
 
 	return context.WithCancel(populateContextFromCLIContext(context.Background(), c))
 }
 
 func newTimedContext(c *cli.Context, timeout time.Duration) (context.Context, context.CancelFunc) {
-	if overrideTimeout := c.GlobalInt(FlagContextTimeout); overrideTimeout > 0 {
+	if overrideTimeout := c.Int(FlagContextTimeout); overrideTimeout > 0 {
 		timeout = time.Duration(overrideTimeout) * time.Second
 	}
 	ctx := populateContextFromCLIContext(context.Background(), c)

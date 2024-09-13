@@ -29,7 +29,7 @@ import (
 	"io"
 	"os"
 
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
@@ -143,7 +143,7 @@ func (r *Reporter) Report() error {
 }
 
 // AdminTimers is used to list scheduled timers.
-func AdminTimers(c *cli.Context) {
+func AdminTimers(c *cli.Context) error {
 	timerTypes := c.IntSlice(FlagTimerType)
 	if !c.IsSet(FlagTimerType) || (len(timerTypes) == 1 && timerTypes[0] == -1) {
 		timerTypes = []int{
@@ -183,7 +183,7 @@ func AdminTimers(c *cli.Context) {
 			case "second":
 				timerFormat = "2006-01-02T15:04:05"
 			default:
-				ErrorAndExit("unknown bucket size: "+c.String(FlagBucketSize), nil)
+				return ErrorAndPrint("unknown bucket size: "+c.String(FlagBucketSize), nil)
 			}
 		}
 		printer = NewHistogramPrinter(c, timerFormat)
@@ -193,8 +193,9 @@ func AdminTimers(c *cli.Context) {
 
 	reporter := NewReporter(c.String(FlagDomainID), timerTypes, loader, printer)
 	if err := reporter.Report(); err != nil {
-		ErrorAndExit("Reporter failed", err)
+		return ErrorAndPrint("Reporter failed", err)
 	}
+	return nil
 }
 
 func (jp *jsonPrinter) Print(timers []*persistence.TimerTaskInfo) error {
@@ -205,7 +206,7 @@ func (jp *jsonPrinter) Print(timers []*persistence.TimerTaskInfo) error {
 		data, err := json.Marshal(t)
 		if err != nil {
 			if !jp.ctx.Bool(FlagSkipErrorMode) {
-				ErrorAndExit("cannot marshal timer to json", err)
+				return ErrorAndPrint("cannot marshal timer to json", err)
 			}
 			fmt.Println(err.Error())
 		} else {

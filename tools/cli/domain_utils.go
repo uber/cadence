@@ -25,7 +25,7 @@ import (
 
 	"github.com/stretchr/testify/mock"
 	"github.com/uber-go/tally"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 
 	"github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/client/frontend"
@@ -51,173 +51,197 @@ const (
 
 var (
 	registerDomainFlags = []cli.Flag{
-		cli.StringFlag{
-			Name:  FlagDescriptionWithAlias,
-			Usage: "Domain description",
+		&cli.StringFlag{
+			Name:    FlagDescription,
+			Aliases: []string{"desc"},
+			Usage:   "Domain description",
 		},
-		cli.StringFlag{
-			Name:  FlagOwnerEmailWithAlias,
-			Usage: "Owner email",
+		&cli.StringFlag{
+			Name:    FlagOwnerEmail,
+			Aliases: []string{"oe"},
+			Usage:   "Owner email",
 		},
-		cli.StringFlag{
-			Name:  FlagRetentionDaysWithAlias,
-			Usage: "Workflow execution retention in days",
+		&cli.StringFlag{
+			Name:    FlagRetentionDays,
+			Aliases: []string{"rd"},
+			Usage:   "Workflow execution retention in days",
 		},
-		cli.StringFlag{
-			Name:  FlagActiveClusterNameWithAlias,
-			Usage: "Active cluster name",
+		&cli.StringFlag{
+			Name:    FlagActiveClusterName,
+			Aliases: []string{"ac"},
+			Usage:   "Active cluster name",
 		},
-		cli.StringFlag{
-			// use StringFlag instead of buggy StringSliceFlag
-			// TODO when https://github.com/urfave/cli/pull/392 & v2 is released
-			//  consider update urfave/cli
-			Name:  FlagClustersWithAlias,
-			Usage: "Clusters",
+		&cli.StringFlag{
+			// TODO use StringFlag instead of buggy StringSliceFlag
+			Name:    FlagClusters,
+			Aliases: []string{"cl"},
+			Usage:   "Clusters",
 		},
-		cli.StringFlag{
-			Name:  FlagIsGlobalDomainWithAlias,
-			Usage: "Flag to indicate whether domain is a global domain. Default to true. Local domain is now legacy.",
-			Value: "true",
+		&cli.StringFlag{
+			Name:    FlagIsGlobalDomain,
+			Aliases: []string{"gd"},
+			Usage:   "Flag to indicate whether domain is a global domain. Default to true. Local domain is now legacy.",
+			Value:   "true",
 		},
-		cli.GenericFlag{
-			Name:  FlagDomainDataWithAlias,
-			Usage: "Domain data of key value pairs (must be in key1=value1,key2=value2,...,keyN=valueN format, e.g. cluster=dca or cluster=dca,instance=cadence)",
-			Value: &flag.StringMap{},
+		&cli.GenericFlag{
+			Name:    FlagDomainData,
+			Aliases: []string{"dmd"},
+			Usage:   "Domain data of key value pairs (must be in key1=value1,key2=value2,...,keyN=valueN format, e.g. cluster=dca or cluster=dca,instance=cadence)",
+			Value:   &flag.StringMap{},
 		},
-		cli.StringFlag{
-			Name:  FlagSecurityTokenWithAlias,
-			Usage: "Optional token for security check",
+		&cli.StringFlag{
+			Name:    FlagSecurityToken,
+			Aliases: []string{"st"},
+			Usage:   "Optional token for security check",
 		},
-		cli.StringFlag{
-			Name:  FlagHistoryArchivalStatusWithAlias,
-			Usage: "Flag to set history archival status, valid values are \"disabled\" and \"enabled\"",
+		&cli.StringFlag{
+			Name:    FlagHistoryArchivalStatus,
+			Aliases: []string{"has"},
+			Usage:   "Flag to set history archival status, valid values are \"disabled\" and \"enabled\"",
 		},
-		cli.StringFlag{
-			Name:  FlagHistoryArchivalURIWithAlias,
-			Usage: "Optionally specify history archival URI (cannot be changed after first time archival is enabled)",
+		&cli.StringFlag{
+			Name:    FlagHistoryArchivalURI,
+			Aliases: []string{"huri"},
+			Usage:   "Optionally specify history archival URI (cannot be changed after first time archival is enabled)",
 		},
-		cli.StringFlag{
-			Name:  FlagVisibilityArchivalStatusWithAlias,
-			Usage: "Flag to set visibility archival status, valid values are \"disabled\" and \"enabled\"",
+		&cli.StringFlag{
+			Name:    FlagVisibilityArchivalStatus,
+			Aliases: []string{"vas"},
+			Usage:   "Flag to set visibility archival status, valid values are \"disabled\" and \"enabled\"",
 		},
-		cli.StringFlag{
-			Name:  FlagVisibilityArchivalURIWithAlias,
-			Usage: "Optionally specify visibility archival URI (cannot be changed after first time archival is enabled)",
+		&cli.StringFlag{
+			Name:    FlagVisibilityArchivalURI,
+			Aliases: []string{"vuri"},
+			Usage:   "Optionally specify visibility archival URI (cannot be changed after first time archival is enabled)",
 		},
 	}
 
 	updateDomainFlags = []cli.Flag{
-		cli.StringFlag{
-			Name:  FlagDescriptionWithAlias,
-			Usage: "Domain description",
+		&cli.StringFlag{
+			Name:    FlagDescription,
+			Aliases: []string{"desc"},
+			Usage:   "Domain description",
 		},
-		cli.StringFlag{
-			Name:  FlagOwnerEmailWithAlias,
-			Usage: "Owner email",
+		&cli.StringFlag{
+			Name:    FlagOwnerEmail,
+			Aliases: []string{"oe"},
+			Usage:   "Owner email",
 		},
-		cli.StringFlag{
-			Name:  FlagRetentionDaysWithAlias,
-			Usage: "Workflow execution retention in days",
+		&cli.StringFlag{
+			Name:    FlagRetentionDays,
+			Aliases: []string{"rd"},
+			Usage:   "Workflow execution retention in days",
 		},
-		cli.StringFlag{
-			Name:  FlagActiveClusterNameWithAlias,
-			Usage: "Active cluster name",
+		&cli.StringFlag{
+			Name:    FlagActiveClusterName,
+			Aliases: []string{"ac"},
+			Usage:   "Active cluster name",
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			// use StringFlag instead of buggy StringSliceFlag
-			// TODO when https://github.com/urfave/cli/pull/392 & v2 is released
-			//  consider update urfave/cli
-			Name:  FlagClustersWithAlias,
-			Usage: "Clusters",
+			// TODO when https://github.com/urfave/cli/v2/pull/392 & v2 is released
+			//  consider update urfave/cli/v2
+			Name:    FlagClusters,
+			Aliases: []string{"cl"},
+			Usage:   "Clusters",
 		},
-		cli.GenericFlag{
-			Name:  FlagDomainDataWithAlias,
+		&cli.GenericFlag{
+			Name:  FlagDomainData,
 			Usage: "Domain data of key value pairs (must be in key1=value1,key2=value2,...,keyN=valueN format, e.g. cluster=dca or cluster=dca,instance=cadence)",
 			Value: &flag.StringMap{},
 		},
-		cli.StringFlag{
-			Name:  FlagSecurityTokenWithAlias,
-			Usage: "Optional token for security check",
+		&cli.StringFlag{
+			Name:    FlagSecurityToken,
+			Aliases: []string{"st"},
+			Usage:   "Optional token for security check",
 		},
-		cli.StringFlag{
-			Name:  FlagHistoryArchivalStatusWithAlias,
-			Usage: "Flag to set history archival status, valid values are \"disabled\" and \"enabled\"",
+		&cli.StringFlag{
+			Name:    FlagHistoryArchivalStatus,
+			Aliases: []string{"has"},
+			Usage:   "Flag to set history archival status, valid values are \"disabled\" and \"enabled\"",
 		},
-		cli.StringFlag{
-			Name:  FlagHistoryArchivalURIWithAlias,
-			Usage: "Optionally specify history archival URI (cannot be changed after first time archival is enabled)",
+		&cli.StringFlag{
+			Name:    FlagHistoryArchivalURI,
+			Aliases: []string{"huri"},
+			Usage:   "Optionally specify history archival URI (cannot be changed after first time archival is enabled)",
 		},
-		cli.StringFlag{
-			Name:  FlagVisibilityArchivalStatusWithAlias,
-			Usage: "Flag to set visibility archival status, valid values are \"disabled\" and \"enabled\"",
+		&cli.StringFlag{
+			Name:    FlagVisibilityArchivalStatus,
+			Aliases: []string{"vas"},
+			Usage:   "Flag to set visibility archival status, valid values are \"disabled\" and \"enabled\"",
 		},
-		cli.StringFlag{
-			Name:  FlagVisibilityArchivalURIWithAlias,
-			Usage: "Optionally specify visibility archival URI (cannot be changed after first time archival is enabled)",
+		&cli.StringFlag{
+			Name:    FlagVisibilityArchivalURI,
+			Aliases: []string{"vuri"},
+			Usage:   "Optionally specify visibility archival URI (cannot be changed after first time archival is enabled)",
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  FlagAddBadBinary,
 			Usage: "Binary checksum to add for resetting workflow",
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  FlagRemoveBadBinary,
 			Usage: "Binary checksum to remove for resetting workflow",
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  FlagReason,
 			Usage: "Reason for the operation",
 		},
-		cli.StringFlag{
-			Name:  FlagFailoverTypeWithAlias,
-			Usage: "Domain failover type. Default value: force. Options: [force,grace]",
+		&cli.StringFlag{
+			Name:    FlagFailoverType,
+			Aliases: []string{"ft"},
+			Usage:   "Domain failover type. Default value: force. Options: [force,grace]",
 		},
-		cli.IntFlag{
-			Name:  FlagFailoverTimeoutWithAlias,
-			Value: defaultGracefulFailoverTimeoutInSeconds,
-			Usage: "[Optional] Domain failover timeout in seconds.",
+		&cli.IntFlag{
+			Name:    FlagFailoverTimeout,
+			Aliases: []string{"fts"},
+			Value:   defaultGracefulFailoverTimeoutInSeconds,
+			Usage:   "[Optional] Domain failover timeout in seconds.",
 		},
 	}
 
 	deprecateDomainFlags = []cli.Flag{
-		cli.StringFlag{
-			Name:  FlagSecurityTokenWithAlias,
-			Usage: "Optional token for security check",
+		&cli.StringFlag{
+			Name:    FlagSecurityToken,
+			Aliases: []string{"st"},
+			Usage:   "Optional token for security check",
 		},
-		cli.BoolFlag{
+		&cli.BoolFlag{
 			Name:  FlagForce,
 			Usage: "Deprecate domain regardless of domain history.",
 		},
 	}
 
 	describeDomainFlags = []cli.Flag{
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  FlagDomainID,
 			Usage: "Domain UUID (required if not specify domainName)",
 		},
-		cli.BoolFlag{
-			Name:  FlagPrintJSONWithAlias,
-			Usage: "Print in raw JSON format",
+		&cli.BoolFlag{
+			Name:    FlagPrintJSON,
+			Aliases: []string{"pjson"},
+			Usage:   "Print in raw JSON format",
 		},
 		getFormatFlag(),
 	}
 
 	migrateDomainFlags = []cli.Flag{
 
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  FlagDestinationAddress,
 			Usage: "Destination cadence-frontend address in <host>:<port> format",
 		},
-		cli.StringFlag{
+		&cli.StringFlag{
 			Name:  FlagDestinationDomain,
 			Usage: "Destination domain name",
 		},
 
-		cli.StringSliceFlag{
+		&cli.StringSliceFlag{
 			Name:  FlagTaskList,
 			Usage: "All tasklists in the current domain",
 		},
 
-		cli.StringSliceFlag{
+		&cli.StringSliceFlag{
 			Name:  FlagSearchAttribute,
 			Usage: "Specify search attributes in the format key:type, available types are STRING, KEYWORD, INT, DOUBLE, BOOL, DATETIME",
 		},

@@ -26,12 +26,12 @@ import (
 	"fmt"
 	"text/tabwriter"
 
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 
 	"github.com/uber/cadence/common/types"
 )
 
-func AdminGetGlobalIsolationGroups(c *cli.Context) {
+func AdminGetGlobalIsolationGroups(c *cli.Context) error {
 	adminClient := cFactory.ServerAdminClient(c)
 
 	ctx, cancel := newContext(c)
@@ -40,7 +40,7 @@ func AdminGetGlobalIsolationGroups(c *cli.Context) {
 	req := &types.GetGlobalIsolationGroupsRequest{}
 	igs, err := adminClient.GetGlobalIsolationGroups(ctx, req)
 	if err != nil {
-		ErrorAndExit("failed to get isolation-groups:", err)
+		return ErrorAndPrint("failed to get isolation-groups:", err)
 	}
 
 	format := c.String(FlagFormat)
@@ -50,9 +50,10 @@ func AdminGetGlobalIsolationGroups(c *cli.Context) {
 	default:
 		fmt.Print(renderIsolationGroups(igs.IsolationGroups))
 	}
+	return nil
 }
 
-func AdminUpdateGlobalIsolationGroups(c *cli.Context) {
+func AdminUpdateGlobalIsolationGroups(c *cli.Context) error {
 	adminClient := cFactory.ServerAdminClient(c)
 
 	ctx, cancel := newContext(c)
@@ -60,14 +61,14 @@ func AdminUpdateGlobalIsolationGroups(c *cli.Context) {
 
 	err := validateIsolationGroupUpdateArgs(
 		c.String(FlagDomain),
-		c.GlobalString(FlagDomain),
+		c.String(FlagDomain),
 		c.StringSlice(FlagIsolationGroupSetDrains),
 		c.String(FlagJSON),
 		c.Bool(FlagIsolationGroupsRemoveAllDrains),
 		false,
 	)
 	if err != nil {
-		ErrorAndExit("invalid args:", err)
+		return ErrorAndPrint("invalid args:", err)
 	}
 
 	cfg, err := parseIsolationGroupCliInputCfg(
@@ -76,18 +77,19 @@ func AdminUpdateGlobalIsolationGroups(c *cli.Context) {
 		c.Bool(FlagIsolationGroupsRemoveAllDrains),
 	)
 	if err != nil {
-		ErrorAndExit("failed to parse input:", err)
+		return ErrorAndPrint("failed to parse input:", err)
 	}
 
 	_, err = adminClient.UpdateGlobalIsolationGroups(ctx, &types.UpdateGlobalIsolationGroupsRequest{
 		IsolationGroups: *cfg,
 	})
 	if err != nil {
-		ErrorAndExit("failed to update isolation-groups", fmt.Errorf("used %#v, got %v", cfg, err))
+		return ErrorAndPrint("failed to update isolation-groups", fmt.Errorf("used %#v, got %v", cfg, err))
 	}
+	return nil
 }
 
-func AdminGetDomainIsolationGroups(c *cli.Context) {
+func AdminGetDomainIsolationGroups(c *cli.Context) error {
 	adminClient := cFactory.ServerAdminClient(c)
 	domain := c.String(FlagDomain)
 
@@ -99,7 +101,7 @@ func AdminGetDomainIsolationGroups(c *cli.Context) {
 	}
 	igs, err := adminClient.GetDomainIsolationGroups(ctx, req)
 	if err != nil {
-		ErrorAndExit("failed to get isolation-groups:", err)
+		return ErrorAndPrint("failed to get isolation-groups:", err)
 	}
 
 	format := c.String(FlagFormat)
@@ -109,22 +111,23 @@ func AdminGetDomainIsolationGroups(c *cli.Context) {
 	default:
 		fmt.Print(renderIsolationGroups(igs.IsolationGroups))
 	}
+	return nil
 }
 
-func AdminUpdateDomainIsolationGroups(c *cli.Context) {
+func AdminUpdateDomainIsolationGroups(c *cli.Context) error {
 	adminClient := cFactory.ServerAdminClient(c)
 	domain := c.String(FlagDomain)
 
 	err := validateIsolationGroupUpdateArgs(
 		c.String(FlagDomain),
-		c.GlobalString(FlagDomain),
+		c.String(FlagDomain),
 		c.StringSlice(FlagIsolationGroupSetDrains),
 		c.String(FlagJSON),
 		c.Bool(FlagIsolationGroupsRemoveAllDrains),
 		true,
 	)
 	if err != nil {
-		ErrorAndExit("invalid args:", err)
+		return ErrorAndPrint("invalid args:", err)
 	}
 
 	ctx, cancel := newContext(c)
@@ -136,7 +139,7 @@ func AdminUpdateDomainIsolationGroups(c *cli.Context) {
 		c.Bool(FlagIsolationGroupsRemoveAllDrains),
 	)
 	if err != nil {
-		ErrorAndExit("failed to parse input:", err)
+		return ErrorAndPrint("failed to parse input:", err)
 	}
 
 	req := &types.UpdateDomainIsolationGroupsRequest{
@@ -146,8 +149,9 @@ func AdminUpdateDomainIsolationGroups(c *cli.Context) {
 	_, err = adminClient.UpdateDomainIsolationGroups(ctx, req)
 
 	if err != nil {
-		ErrorAndExit("failed to update isolation-groups", fmt.Errorf("used %#v, got %v", req, err))
+		return ErrorAndPrint("failed to update isolation-groups", fmt.Errorf("used %#v, got %v", req, err))
 	}
+	return nil
 }
 
 func validateIsolationGroupUpdateArgs(

@@ -28,7 +28,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 )
 
 func TestConstructStartWorkflowRequest(t *testing.T) {
@@ -71,8 +71,8 @@ func TestConstructStartWorkflowRequest(t *testing.T) {
 	c.Set(JitterStartSeconds, "2")
 	c.Set("first_run_at_time", "2024-07-24T12:00:00Z")
 
-	request := constructStartWorkflowRequest(c)
-
+	request, err := constructStartWorkflowRequest(c)
+	assert.NoError(t, err)
 	assert.NotNil(t, request)
 	assert.Equal(t, "test-domain", request.Domain)
 	assert.Equal(t, "test-task-list", request.TaskList.Name)

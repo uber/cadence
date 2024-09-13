@@ -24,7 +24,7 @@ import (
 	"os"
 	"sort"
 
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 )
 
 type (
@@ -46,14 +46,14 @@ func (s SearchAttributesTable) Less(i, j int) bool {
 }
 
 // GetSearchAttributes get valid search attributes
-func GetSearchAttributes(c *cli.Context) {
+func GetSearchAttributes(c *cli.Context) error {
 	wfClient := getWorkflowClient(c)
 	ctx, cancel := newContext(c)
 	defer cancel()
 
 	resp, err := wfClient.GetSearchAttributes(ctx)
 	if err != nil {
-		ErrorAndExit("Failed to get search attributes.", err)
+		return ErrorAndPrint("Failed to get search attributes.", err)
 	}
 
 	table := SearchAttributesTable{}
@@ -62,4 +62,5 @@ func GetSearchAttributes(c *cli.Context) {
 	}
 	sort.Sort(table)
 	RenderTable(os.Stdout, table, RenderOptions{Color: true, Border: true})
+	return nil
 }

@@ -32,7 +32,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 
 	"github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/client/frontend"
@@ -61,7 +61,7 @@ var (
       Name: {{.DomainInfo.Name}}
       UUID: {{.DomainInfo.UUID}}
   {{- end}}
-  {{- if ne (len .MismatchedDomainMetaData) 0 }}   
+  {{- if ne (len .MismatchedDomainMetaData) 0 }}
     Mismatched Domain Meta Data: {{.MismatchedDomainMetaData}}
   {{- end }}
   {{- if .LongRunningWorkFlowNum}}
@@ -167,7 +167,7 @@ func (d *domainMigrationCLIImpl) Validation(c *cli.Context) {
 }
 
 func (d *domainMigrationCLIImpl) DomainMetaDataCheck(c *cli.Context) DomainMigrationRow {
-	domain := c.GlobalString(FlagDomain)
+	domain := c.String(FlagDomain)
 	newDomain := c.String(FlagDestinationDomain)
 	ctx, cancel := newContext(c)
 	defer cancel()
@@ -220,7 +220,7 @@ func (d *domainMigrationCLIImpl) DomainWorkFlowCheck(c *cli.Context) DomainMigra
 }
 
 func (d *domainMigrationCLIImpl) countLongRunningWorkflow(c *cli.Context) int {
-	domain := c.GlobalString(FlagDomain)
+	domain := c.String(FlagDomain)
 	thresholdOfLongRunning := time.Now().Add(-longRunningDuration)
 	request := &types.CountWorkflowExecutionsRequest{
 		Domain: domain,
@@ -253,12 +253,12 @@ func (d *domainMigrationCLIImpl) SearchAttributesChecker(c *cli.Context) DomainM
 	for _, attr := range searchAttributes {
 		parts := strings.SplitN(attr, ":", 2)
 		if len(parts) != 2 {
-			ErrorAndExit(fmt.Sprintf("Invalid search attribute format: %s", attr), nil)
+			ErrorAndPrint(fmt.Sprintf("Invalid search attribute format: %s", attr), nil)
 		}
 		key, valueType := parts[0], parts[1]
 		ivt, err := parseIndexedValueType(valueType)
 		if err != nil {
-			ErrorAndExit(fmt.Sprintf("Invalid search attribute type for %s: %s", key, valueType), err)
+			ErrorAndPrint(fmt.Sprintf("Invalid search attribute type for %s: %s", key, valueType), err)
 		}
 		requiredAttributes[key] = ivt
 	}
@@ -326,7 +326,7 @@ func (d *domainMigrationCLIImpl) DynamicConfigCheck(c *cli.Context) DomainMigrat
 
 	resp := dynamicconfig.ListAllProductionKeys()
 
-	currDomain := c.GlobalString(FlagDomain)
+	currDomain := c.String(FlagDomain)
 	newDomain := c.String(FlagDestinationDomain)
 
 	ctx, cancel := newContext(c)

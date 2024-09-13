@@ -23,7 +23,7 @@ package cli
 import (
 	"fmt"
 
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 
 	"github.com/uber/cadence/common/client"
 	"github.com/uber/cadence/common/metrics"
@@ -47,45 +47,51 @@ func NewCliApp() *cli.App {
 	app.Usage = "A command-line tool for cadence users"
 	app.Version = version
 	app.Flags = []cli.Flag{
-		cli.StringFlag{
-			Name:   FlagAddressWithAlias,
-			Value:  "",
-			Usage:  "host:port for cadence frontend service",
-			EnvVar: "CADENCE_CLI_ADDRESS",
+		&cli.StringFlag{
+			Name:    FlagAddress,
+			Aliases: []string{"ad"},
+			Value:   "",
+			Usage:   "host:port for cadence frontend service",
+			EnvVars: []string{"CADENCE_CLI_ADDRESS"},
 		},
-		cli.StringFlag{
-			Name:   FlagDomainWithAlias,
-			Usage:  "cadence workflow domain",
-			EnvVar: "CADENCE_CLI_DOMAIN",
+		&cli.StringFlag{
+			Name:    FlagDomain,
+			Aliases: []string{"do"},
+			Usage:   "cadence workflow domain",
+			EnvVars: []string{"CADENCE_CLI_DOMAIN"},
 		},
-		cli.IntFlag{
-			Name:   FlagContextTimeoutWithAlias,
-			Value:  defaultContextTimeoutInSeconds,
-			Usage:  "optional timeout for context of RPC call in seconds",
-			EnvVar: "CADENCE_CONTEXT_TIMEOUT",
+		&cli.IntFlag{
+			Name:    FlagContextTimeout,
+			Aliases: []string{"ct"},
+			Value:   defaultContextTimeoutInSeconds,
+			Usage:   "optional timeout for context of RPC call in seconds",
+			EnvVars: []string{"CADENCE_CONTEXT_TIMEOUT"},
 		},
-		cli.StringFlag{
-			Name:   FlagJWT,
-			Usage:  "optional JWT for authorization. Either this or --jwt-private-key is needed for jwt authorization",
-			EnvVar: "CADENCE_CLI_JWT",
+		&cli.StringFlag{
+			Name:    FlagJWT,
+			Usage:   "optional JWT for authorization. Either this or --jwt-private-key is needed for jwt authorization",
+			EnvVars: []string{"CADENCE_CLI_JWT"},
 		},
-		cli.StringFlag{
-			Name:   FlagJWTPrivateKeyWithAlias,
-			Usage:  "optional private key path to create JWT. Either this or --jwt is needed for jwt authorization. --jwt flag has priority over this one if both provided",
-			EnvVar: "CADENCE_CLI_JWT_PRIVATE_KEY",
+		&cli.StringFlag{
+			Name:    FlagJWTPrivateKey,
+			Aliases: []string{"jwt-pk"},
+			Usage:   "optional private key path to create JWT. Either this or --jwt is needed for jwt authorization. --jwt flag has priority over this one if both provided",
+			EnvVars: []string{"CADENCE_CLI_JWT_PRIVATE_KEY"},
 		},
-		cli.StringFlag{
-			Name:   FlagTransportWithAlias,
-			Usage:  "optional argument for transport protocol format, either 'grpc' or 'tchannel'. Defaults to tchannel if not provided",
-			EnvVar: "CADENCE_CLI_TRANSPORT_PROTOCOL",
+		&cli.StringFlag{
+			Name:    FlagTransport,
+			Aliases: []string{"t"},
+			Usage:   "optional argument for transport protocol format, either 'grpc' or 'tchannel'. Defaults to tchannel if not provided",
+			EnvVars: []string{"CADENCE_CLI_TRANSPORT_PROTOCOL"},
 		},
-		cli.StringFlag{
-			Name:   FlagTLSCertPathWithAlias,
-			Usage:  "optional argument for path to TLS certificate. Defaults to an empty string if not provided",
-			EnvVar: "CADENCE_CLI_TLS_CERT_PATH",
+		&cli.StringFlag{
+			Name:    FlagTLSCertPath,
+			Aliases: []string{"tcp"},
+			Usage:   "optional argument for path to TLS certificate. Defaults to an empty string if not provided",
+			EnvVars: []string{"CADENCE_CLI_TLS_CERT_PATH"},
 		},
 	}
-	app.Commands = []cli.Command{
+	app.Commands = []*cli.Command{
 		{
 			Name:        "domain",
 			Aliases:     []string{"d"},
@@ -108,7 +114,7 @@ func NewCliApp() *cli.App {
 			Name:    "admin",
 			Aliases: []string{"adm"},
 			Usage:   "Run admin operation",
-			Subcommands: []cli.Command{
+			Subcommands: []*cli.Command{
 				{
 					Name:        "workflow",
 					Aliases:     []string{"wf"},

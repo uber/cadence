@@ -28,7 +28,7 @@ import (
 	"io"
 	"os"
 
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 	"go.uber.org/zap"
 
 	"github.com/uber/cadence/common"
@@ -42,11 +42,11 @@ import (
 
 // AdminDBClean is the command to clean up unhealthy executions.
 // Input is a JSON stream provided via STDIN or a file.
-func AdminDBClean(c *cli.Context) {
+func AdminDBClean(c *cli.Context) error {
 	scanType, err := executions.ScanTypeString(getRequiredOption(c, FlagScanType))
 
 	if err != nil {
-		ErrorAndExit("unknown scan type", err)
+		return ErrorAndPrint("unknown scan type", err)
 	}
 	collectionSlice := c.StringSlice(FlagInvariantCollection)
 	blob := scanType.ToBlobstoreEntity()
@@ -55,7 +55,7 @@ func AdminDBClean(c *cli.Context) {
 	for _, v := range collectionSlice {
 		collection, err := invariant.CollectionString(v)
 		if err != nil {
-			ErrorAndExit("unknown invariant collection", err)
+			return ErrorAndPrint("unknown invariant collection", err)
 		}
 		collections = append(collections, collection)
 	}
@@ -65,13 +65,13 @@ func AdminDBClean(c *cli.Context) {
 		logger, err = zap.NewDevelopment()
 		if err != nil {
 			// probably impossible with default config
-			ErrorAndExit("could not construct logger", err)
+			return ErrorAndPrint("could not construct logger", err)
 		}
 	}
 
 	invariants := scanType.ToInvariants(collections, logger)
 	if len(invariants) < 1 {
-		ErrorAndExit(
+		ErrorAndPrint(
 			fmt.Sprintf("no invariants for scantype %q and collections %q",
 				scanType.String(),
 				collectionSlice),
@@ -83,7 +83,7 @@ func AdminDBClean(c *cli.Context) {
 
 	dec := json.NewDecoder(input)
 	if err != nil {
-		ErrorAndExit("", err)
+		return ErrorAndPrint("", err)
 	}
 	var data []*store.ScanOutputEntity
 
@@ -115,6 +115,7 @@ func AdminDBClean(c *cli.Context) {
 
 		fmt.Println(string(data))
 	}
+	return nil
 }
 
 func fixExecution(

@@ -30,7 +30,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/persistence"
@@ -71,7 +71,7 @@ type HistoryDLQCountRow struct {
 }
 
 // AdminCountDLQMessages returns info how many and where DLQ messages are queued
-func AdminCountDLQMessages(c *cli.Context) {
+func AdminCountDLQMessages(c *cli.Context) error {
 	force := c.Bool(FlagForce)
 	ctx, cancel := newContext(c)
 	defer cancel()
@@ -79,12 +79,12 @@ func AdminCountDLQMessages(c *cli.Context) {
 	adminClient := cFactory.ServerAdminClient(c)
 	response, err := adminClient.CountDLQMessages(ctx, &types.CountDLQMessagesRequest{ForceFetch: force})
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error occurred while getting DLQ count, results may be partial: %v\n", err)
+		return fmt.Errorf("Error occurred while getting DLQ count, results may be partial: %w", err)
 	}
 
 	if c.String(FlagDLQType) == "domain" {
 		fmt.Println(response.Domain)
-		return
+		return nil
 	}
 
 	table := []HistoryDLQCountRow{}
@@ -118,10 +118,11 @@ func AdminCountDLQMessages(c *cli.Context) {
 	})
 
 	Render(c, table, RenderOptions{Color: true, DefaultTemplate: templateTable})
+	return nil
 }
 
 // AdminGetDLQMessages gets DLQ metadata
-func AdminGetDLQMessages(c *cli.Context) {
+func AdminGetDLQMessages(c *cli.Context) error {
 	ctx, cancel := newContext(c)
 	defer cancel()
 
@@ -142,20 +143,20 @@ func AdminGetDLQMessages(c *cli.Context) {
 
 	// Cache for domain names
 	domainNames := map[string]string{}
-	getDomainName := func(domainId string) string {
+	getDomainName := func(domainId string) (string, error) {
 		if domainName, ok := domainNames[domainId]; ok {
-			return domainName
+			return domainName, nil
 		}
 
 		resp, err := client.DescribeDomain(ctx, &types.DescribeDomainRequest{UUID: common.StringPtr(domainId)})
 		if err != nil {
-			ErrorAndExit("failed to describe domain", err)
+			return "", ErrorAndPrint("failed to describe domain", err)
 		}
 		domainNames[domainId] = resp.DomainInfo.Name
-		return resp.DomainInfo.Name
+		return resp.DomainInfo.Name, nil
 	}
 
-	readShard := func(shardID int) []DLQRow {
+	readShard := func(shardID int) ([]DLQRow, error) {
 		var rows []DLQRow
 		var pageToken []byte
 
@@ -169,7 +170,7 @@ func AdminGetDLQMessages(c *cli.Context) {
 				NextPageToken:         pageToken,
 			})
 			if err != nil {
-				ErrorAndExit(fmt.Sprintf("fail to read dlq message for shard: %d", shardID), err)
+				ErrorAndPrint(fmt.Sprintf("fail to read dlq message for shard: %d", shardID), err)
 			}
 
 			replicationTasks := map[int64]*types.ReplicationTask{}
@@ -188,9 +189,13 @@ func AdminGetDLQMessages(c *cli.Context) {
 				events := deserializeBatchEvents(task.GetHistoryTaskV2Attributes().GetEvents())
 				newRunEvents := deserializeBatchEvents(task.GetHistoryTaskV2Attributes().GetNewRunEvents())
 
+				domainName, err := getDomainName(info.DomainID)
+				if err != nil {
+					return nil, err
+				}
 				rows = append(rows, DLQRow{
 					ShardID:         shardID,
-					DomainName:      getDomainName(info.DomainID),
+					DomainName:      domainName,
 					DomainID:        info.DomainID,
 					WorkflowID:      info.WorkflowID,
 					RunID:           info.RunID,
@@ -209,7 +214,7 @@ func AdminGetDLQMessages(c *cli.Context) {
 
 				remainingMessageCount--
 				if remainingMessageCount <= 0 {
-					return rows
+					return rows, nil
 				}
 			}
 
@@ -218,7 +223,7 @@ func AdminGetDLQMessages(c *cli.Context) {
 			}
 			pageToken = resp.NextPageToken
 		}
-		return rows
+		return rows, nil
 	}
 
 	table := []DLQRow{}
@@ -226,14 +231,19 @@ func AdminGetDLQMessages(c *cli.Context) {
 		if remainingMessageCount <= 0 {
 			break
 		}
-		table = append(table, readShard(shardID)...)
+		tablesInShard, err := readShard(shardID)
+		if err != nil {
+			return err
+		}
+		table = append(table, tablesInShard...)
 	}
 
 	Render(c, table, RenderOptions{DefaultTemplate: templateTable, Color: true})
+	return nil
 }
 
 // AdminPurgeDLQMessages deletes messages from DLQ
-func AdminPurgeDLQMessages(c *cli.Context) {
+func AdminPurgeDLQMessages(c *cli.Context) error {
 	dlqType := getRequiredOption(c, FlagDLQType)
 	sourceCluster := getRequiredOption(c, FlagSourceCluster)
 	var lastMessageID *int64
@@ -258,10 +268,11 @@ func AdminPurgeDLQMessages(c *cli.Context) {
 		time.Sleep(10 * time.Millisecond)
 		fmt.Printf("Successfully purge DLQ Messages in shard %v.\n", shardID)
 	}
+	return nil
 }
 
 // AdminMergeDLQMessages merges message from DLQ
-func AdminMergeDLQMessages(c *cli.Context) {
+func AdminMergeDLQMessages(c *cli.Context) error {
 	dlqType := getRequiredOption(c, FlagDLQType)
 	sourceCluster := getRequiredOption(c, FlagSourceCluster)
 	var lastMessageID *int64
@@ -297,6 +308,7 @@ ShardIDLoop:
 		}
 		fmt.Printf("Successfully merged all messages in shard %v.\n", shardID)
 	}
+	return nil
 }
 
 func getShards(c *cli.Context) chan int {
