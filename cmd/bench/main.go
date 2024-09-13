@@ -35,10 +35,10 @@ import (
 )
 
 const (
-	flagRoot        = "root"
-	flagConfig      = "config"
-	flagEnv         = "env"
-	flagZone        = "zone"
+	flagRoot   = "root"
+	flagConfig = "config"
+	flagEnv    = "env"
+	flagZone   = "zone"
 )
 
 const (
