@@ -20,52 +20,18 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package quotas
+package stats
 
 import (
-	"testing"
-	"time"
-
-	"github.com/uber/cadence/common/clock"
+	"github.com/uber/cadence/common"
 )
 
-func TestEmaFixedWindowQPSReporter(t *testing.T) {
-	timeSource := clock.NewMockedTimeSourceAt(time.Now())
-	exp := 0.4
-	bucketInterval := time.Second
+// QPSTracker is an interface for reporting statistics related to quotas.
+type QPSTracker interface {
+	common.Daemon
+	// ReportCounter reports the value of a counter.
+	ReportCounter(int64)
 
-	r := NewEmaFixedWindowQPSReporter(timeSource, exp, bucketInterval)
-	r.Start()
-
-	// Test ReportCounter
-	r.ReportCounter(10)
-	r.ReportCounter(20)
-
-	qps := r.QPS()
-	if qps != 0 {
-		t.Errorf("QPS mismatch, expected: 0, got: %f", qps)
-	}
-
-	timeSource.BlockUntil(1)
-	timeSource.Advance(bucketInterval)
-	time.Sleep(10 * time.Millisecond)
-	// Test QPS
-	qps = r.QPS()
-	expectedQPS := float64(30) / (float64(bucketInterval) / float64(time.Second))
-	if qps != expectedQPS {
-		t.Errorf("QPS mismatch, expected: %f, got: %f", expectedQPS, qps)
-	}
-
-	r.ReportCounter(10)
-	timeSource.BlockUntil(1)
-	timeSource.Advance(bucketInterval)
-	time.Sleep(10 * time.Millisecond)
-	// Test QPS
-	qps = r.QPS()
-	expectedQPS = float64(22) / (float64(bucketInterval) / float64(time.Second))
-	if qps != expectedQPS {
-		t.Errorf("QPS mismatch, expected: %f, got: %f", expectedQPS, qps)
-	}
-
-	r.Stop()
+	// QPS returns the current queries per second (QPS) value.
+	QPS() float64
 }

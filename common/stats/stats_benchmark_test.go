@@ -20,7 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package quotas
+package stats
 
 import (
 	"sync"
@@ -34,7 +34,7 @@ import (
 func BenchmarkReportCounter(b *testing.B) {
 	timeSource := clock.NewRealTimeSource()
 	// Initialize the QPS reporter with a smoothing factor and a 1 second bucket interval
-	reporter := NewEmaFixedWindowQPSReporter(timeSource, 0.5, time.Second)
+	reporter := NewEmaFixedWindowQPSTracker(timeSource, 0.5, time.Second)
 	reporter.Start()
 
 	// Run the benchmark for b.N iterations
@@ -52,7 +52,7 @@ func BenchmarkReportCounter(b *testing.B) {
 func BenchmarkQPS(b *testing.B) {
 	timeSource := clock.NewRealTimeSource()
 	// Initialize the QPS reporter
-	reporter := NewEmaFixedWindowQPSReporter(timeSource, 0.5, time.Second)
+	reporter := NewEmaFixedWindowQPSTracker(timeSource, 0.5, time.Second)
 	reporter.Start()
 
 	// Simulate a number of report updates before calling QPS
@@ -75,7 +75,7 @@ func BenchmarkQPS(b *testing.B) {
 func BenchmarkFullReport(b *testing.B) {
 	timeSource := clock.NewRealTimeSource()
 	// Initialize the QPS reporter
-	reporter := NewEmaFixedWindowQPSReporter(timeSource, 0.5, time.Millisecond*100) // 100ms bucket interval
+	reporter := NewEmaFixedWindowQPSTracker(timeSource, 0.5, time.Millisecond*100) // 100ms bucket interval
 	reporter.Start()
 
 	var wg sync.WaitGroup

@@ -20,7 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package quotas
+package stats
 
 import (
 	"sync"
@@ -33,7 +33,8 @@ import (
 )
 
 type (
-	emaFixedWindowQPSReporter struct {
+	// emaFixedWindowQPSTracker is a QPSTracker that uses a fixed time period to calculate QPS and an exponential moving average algorithm to estimate QPS.
+	emaFixedWindowQPSTracker struct {
 		timeSource            clock.TimeSource
 		exp                   float64
 		bucketInterval        time.Duration
@@ -48,8 +49,8 @@ type (
 	}
 )
 
-func NewEmaFixedWindowQPSReporter(timeSource clock.TimeSource, exp float64, bucketInterval time.Duration) StatsReporter {
-	return &emaFixedWindowQPSReporter{
+func NewEmaFixedWindowQPSTracker(timeSource clock.TimeSource, exp float64, bucketInterval time.Duration) QPSTracker {
+	return &emaFixedWindowQPSTracker{
 		timeSource:            timeSource,
 		exp:                   exp,
 		bucketInterval:        bucketInterval,
@@ -62,7 +63,7 @@ func NewEmaFixedWindowQPSReporter(timeSource clock.TimeSource, exp float64, buck
 	}
 }
 
-func (r *emaFixedWindowQPSReporter) Start() {
+func (r *emaFixedWindowQPSTracker) Start() {
 	if !r.status.CompareAndSwap(common.DaemonStatusInitialized, common.DaemonStatusStarted) {
 		return
 	}
@@ -70,7 +71,7 @@ func (r *emaFixedWindowQPSReporter) Start() {
 	go r.reportLoop()
 }
 
-func (r *emaFixedWindowQPSReporter) reportLoop() {
+func (r *emaFixedWindowQPSTracker) reportLoop() {
 	defer r.wg.Done()
 	ticker := r.timeSource.NewTicker(r.bucketInterval)
 	defer ticker.Stop()
@@ -85,7 +86,7 @@ func (r *emaFixedWindowQPSReporter) reportLoop() {
 	}
 }
 
-func (r *emaFixedWindowQPSReporter) report() {
+func (r *emaFixedWindowQPSTracker) report() {
 	if r.firstBucket {
 		counter := r.counter.Swap(0)
 		r.qps.Store(float64(counter) / r.bucketIntervalSeconds)
@@ -97,7 +98,7 @@ func (r *emaFixedWindowQPSReporter) report() {
 	r.qps.Store(qps*(1-r.exp) + float64(counter)*r.exp/r.bucketIntervalSeconds)
 }
 
-func (r *emaFixedWindowQPSReporter) Stop() {
+func (r *emaFixedWindowQPSTracker) Stop() {
 	if !r.status.CompareAndSwap(common.DaemonStatusStarted, common.DaemonStatusStopped) {
 		return
 	}
@@ -105,10 +106,10 @@ func (r *emaFixedWindowQPSReporter) Stop() {
 	r.wg.Wait()
 }
 
-func (r *emaFixedWindowQPSReporter) ReportCounter(delta int64) {
+func (r *emaFixedWindowQPSTracker) ReportCounter(delta int64) {
 	r.counter.Add(delta)
 }
 
-func (r *emaFixedWindowQPSReporter) QPS() float64 {
+func (r *emaFixedWindowQPSTracker) QPS() float64 {
 	return r.qps.Load()
 }

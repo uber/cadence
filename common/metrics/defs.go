@@ -2582,6 +2582,7 @@ const (
 	PollActivityTaskAlreadyStartedCounterPerTaskList
 	TaskListReadWritePartitionMismatchGauge
 	TaskListPollerPartitionMismatchGauge
+	EstimatedAddTaskQPSGauge
 
 	NumMatchingMetrics
 )
@@ -2824,7 +2825,6 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		MatchingClientInvalidTaskListName:                         {metricName: "invalid_task_list_name", metricType: Counter},
 
 		// per task list common metrics
-
 		CadenceRequestsPerTaskList: {
 			metricName: "cadence_requests_per_tl", metricRollupName: "cadence_requests", metricType: Counter,
 		},
@@ -3262,6 +3262,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		PollActivityTaskAlreadyStartedCounterPerTaskList:        {metricName: "poll_activity_task_already_started_per_tl", metricType: Counter},
 		TaskListReadWritePartitionMismatchGauge:                 {metricName: "tasklist_read_write_partition_mismatch", metricType: Gauge},
 		TaskListPollerPartitionMismatchGauge:                    {metricName: "tasklist_poller_partition_mismatch", metricType: Gauge},
+		EstimatedAddTaskQPSGauge:                                {metricName: "estimated_add_task_qps_per_tl", metricType: Gauge},
 	},
 	Worker: {
 		ReplicatorMessages:                            {metricName: "replicator_messages"},
