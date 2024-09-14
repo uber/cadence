@@ -27,6 +27,7 @@ import (
 
 	"golang.org/x/time/rate"
 
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/clock"
 )
 
@@ -73,4 +74,14 @@ type Policy interface {
 	// immediately with a true or false indicating if the request can make
 	// progress
 	Allow(info Info) bool
+}
+
+// StatsReporter is an interface for reporting statistics related to quotas.
+type StatsReporter interface {
+	common.Daemon
+	// ReportCounter reports the value of a counter.
+	ReportCounter(int64)
+
+	// QPS returns the current queries per second (QPS) value.
+	QPS() float64
 }
