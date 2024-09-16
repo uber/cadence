@@ -114,6 +114,8 @@ var (
 	emptyPollForActivityTaskResponse   = &types.PollForActivityTaskResponse{}
 	historyServiceOperationRetryPolicy = common.CreateHistoryServiceRetryPolicy()
 
+	errPumpClosed = errors.New("task list pump closed its channel")
+
 	_stickyPollerUnavailableError = &types.StickyWorkerUnavailableError{Message: "sticky worker is unavailable, please use non-sticky task list."}
 )
 
@@ -512,7 +514,8 @@ pollLoop:
 		pollerCtx = tasklist.ContextWithIsolationGroup(pollerCtx, req.GetIsolationGroup())
 		task, err := e.getTask(pollerCtx, taskListID, nil, taskListKind)
 		if err != nil {
-			if errors.Is(err, tasklist.ErrNoTasks) || errors.Is(err, tasklist.ErrMatcherClosed) {
+			// TODO: Is empty poll the best reply for errPumpClosed?
+			if errors.Is(err, tasklist.ErrNoTasks) || errors.Is(err, errPumpClosed) {
 				e.logger.Debug("no decision tasks",
 					tag.WorkflowTaskListName(taskListName),
 					tag.WorkflowDomainID(domainID),
@@ -679,7 +682,8 @@ pollLoop:
 		taskListKind := request.TaskList.Kind
 		task, err := e.getTask(pollerCtx, taskListID, maxDispatch, taskListKind)
 		if err != nil {
-			if errors.Is(err, tasklist.ErrNoTasks) || errors.Is(err, tasklist.ErrMatcherClosed) {
+			// TODO: Is empty poll the best reply for errPumpClosed?
+			if errors.Is(err, tasklist.ErrNoTasks) || errors.Is(err, errPumpClosed) {
 				return emptyPollForActivityTaskResponse, nil
 			}
 			e.logger.Error("Received unexpected err while getting task",

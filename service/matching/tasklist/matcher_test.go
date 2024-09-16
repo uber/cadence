@@ -34,6 +34,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	"go.uber.org/goleak"
 	"go.uber.org/yarpc"
 	"golang.org/x/time/rate"
 
@@ -564,6 +565,7 @@ func (t *MatcherTestSuite) TestIsolationMustOfferRemoteMatch() {
 }
 
 func (t *MatcherTestSuite) TestPollersDisconnectedAfterDisconnectBlockedPollers() {
+	defer goleak.VerifyNone(t.T())
 	t.disableRemoteForwarding("")
 	t.matcher.DisconnectBlockedPollers()
 
@@ -571,7 +573,7 @@ func (t *MatcherTestSuite) TestPollersDisconnectedAfterDisconnectBlockedPollers(
 	defer cancel()
 
 	task, err := t.matcher.Poll(longPollingCtx, "")
-	t.ErrorIs(err, ErrMatcherClosed, "we should immediately be notified of closed matcher")
+	t.ErrorIs(err, ErrNoTasks, "closed matcher should result in no tasks")
 	t.Nil(task)
 }
 
