@@ -1,7 +1,7 @@
 
 This tool runs a set of matching simulation tests, extracts stats from their output and generates a csv to compare them easily.
 
-Note: The parsing logic turned out to be fragile and might break in the future if the `run_matching_simulator.sh` starts spitting different shaped lines. Alternative is to load all the event logs into a sqlite table and then run queries on top instead of parsing outputs of jq in this tool.
+Note: The parsing logic might break in the future if the `run_matching_simulator.sh` starts spitting different shaped lines. Alternative is to load all the event logs into a sqlite table and then run queries on top instead of parsing outputs of jq in this tool.
 
 
 Run all the scenarios and compare:
