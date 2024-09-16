@@ -59,3 +59,26 @@ func TestNewDualIndexer(t *testing.T) {
 	indexer := NewDualIndexer(config, mockMessagingClient, mockESClient, mockESClient, processorName, testlogger.New(t), metrics.NewNoopMetricsClient())
 	assert.NotNil(t, indexer)
 }
+
+func TestNewIndexer(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	config := &Config{
+		ESProcessorNumOfWorkers:  dynamicconfig.GetIntPropertyFn(1),
+		ESProcessorBulkActions:   dynamicconfig.GetIntPropertyFn(10),
+		ESProcessorBulkSize:      dynamicconfig.GetIntPropertyFn(2 << 20),
+		ESProcessorFlushInterval: dynamicconfig.GetDurationPropertyFn(1 * time.Minute),
+	}
+	processorName := "test-bulkProcessor"
+	mockESClient := &esMocks.GenericClient{}
+	mockESClient.On("RunBulkProcessor", mock.Anything, mock.MatchedBy(func(input *bulk.BulkProcessorParameters) bool {
+		return true
+	})).Return(&mocks2.GenericBulkProcessor{}, nil).Times(2)
+
+	mockMessagingClient := messaging.NewMockClient(ctrl)
+	mockMessagingClient.EXPECT().NewConsumer("visibility", "test-bulkProcessor-consumer").Return(nil, nil).Times(1)
+
+	indexer := NewIndexer(config, mockMessagingClient, mockESClient, processorName, testlogger.New(t), metrics.NewNoopMetricsClient())
+	assert.NotNil(t, indexer)
+}
