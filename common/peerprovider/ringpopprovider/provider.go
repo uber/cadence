@@ -23,13 +23,11 @@
 package ringpopprovider
 
 import (
-	"context"
 	"fmt"
 	"net"
 	"strconv"
 	"sync"
 	"sync/atomic"
-	"time"
 
 	"github.com/uber/ringpop-go"
 	"github.com/uber/ringpop-go/events"
@@ -39,7 +37,6 @@ import (
 	"go.uber.org/yarpc/transport/tchannel"
 
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/membership"
@@ -106,24 +103,6 @@ func New(
 	return NewRingpopProvider(service, rp, portMap, bootstrapOpts, logger), nil
 }
 
-func broadcastAddrResolver(ch *tcg.Channel, broadcastIP net.IP) func() (string, error) {
-	return func() (string, error) {
-		peerInfo := ch.PeerInfo()
-		if peerInfo.IsEphemeralHostPort() {
-			// not listening yet
-			return "", ringpop.ErrEphemeralAddress
-		}
-
-		_, port, err := net.SplitHostPort(peerInfo.HostPort)
-		if err != nil {
-			return "", fmt.Errorf("failed splitting tchannel's hostport %q, err: %w", peerInfo.HostPort, err)
-		}
-
-		// return broadcast_ip:listen_port
-		return net.JoinHostPort(broadcastIP.String(), port), nil
-	}
-}
-
 // NewRingpopProvider sets up ringpop based peer provider
 func NewRingpopProvider(
 	service string,
@@ -153,15 +132,8 @@ func (r *Provider) Start() {
 		return
 	}
 
-	op := func() error {
-		_, err := r.ringpop.Bootstrap(r.bootParams)
-		if err != nil {
-			r.logger.Warn("unable to bootstrap ringpop, will retry", tag.Error(err))
-		}
-		return err
-	}
-	retry := backoff.NewThrottleRetry(backoff.WithRetryPolicy(bootstrapRetryPolicy()))
-	if err := retry.Do(context.Background(), op); err != nil {
+	_, err := r.ringpop.Bootstrap(r.bootParams)
+	if err != nil {
 		r.logger.Fatal("unable to bootstrap ringpop", tag.Error(err))
 	}
 
@@ -337,9 +309,20 @@ func labelToPort(label string) (uint16, error) {
 	return uint16(port), nil
 }
 
-func bootstrapRetryPolicy() backoff.RetryPolicy {
-	policy := backoff.NewExponentialRetryPolicy(5 * time.Second)
-	policy.SetMaximumInterval(5 * time.Second)
-	policy.SetExpirationInterval(45 * time.Second)
-	return policy
+func broadcastAddrResolver(ch *tcg.Channel, broadcastIP net.IP) func() (string, error) {
+	return func() (string, error) {
+		peerInfo := ch.PeerInfo()
+		if peerInfo.IsEphemeralHostPort() {
+			// not listening yet
+			return "", ringpop.ErrEphemeralAddress
+		}
+
+		_, port, err := net.SplitHostPort(peerInfo.HostPort)
+		if err != nil {
+			return "", fmt.Errorf("failed splitting tchannel's hostport %q, err: %w", peerInfo.HostPort, err)
+		}
+
+		// return broadcast_ip:listen_port
+		return net.JoinHostPort(broadcastIP.String(), port), nil
+	}
 }
