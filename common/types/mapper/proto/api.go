@@ -1995,6 +1995,7 @@ func FromPendingActivityInfo(t *types.PendingActivityInfo) *apiv1.PendingActivit
 		LastFailure:           FromFailure(t.LastFailureReason, t.LastFailureDetails),
 		LastWorkerIdentity:    t.LastWorkerIdentity,
 		StartedWorkerIdentity: t.StartedWorkerIdentity,
+		ScheduleId:            t.ScheduleID,
 	}
 }
 
@@ -2017,6 +2018,7 @@ func ToPendingActivityInfo(t *apiv1.PendingActivityInfo) *types.PendingActivityI
 		LastFailureDetails:     ToFailureDetails(t.LastFailure),
 		LastWorkerIdentity:     t.LastWorkerIdentity,
 		StartedWorkerIdentity:  t.StartedWorkerIdentity,
+		ScheduleID:             t.ScheduleId,
 	}
 }
 
@@ -2086,6 +2088,7 @@ func FromPendingDecisionInfo(t *types.PendingDecisionInfo) *apiv1.PendingDecisio
 		StartedTime:           unixNanoToTime(t.StartedTimestamp),
 		Attempt:               int32(t.Attempt),
 		OriginalScheduledTime: unixNanoToTime(t.OriginalScheduledTimestamp),
+		ScheduleId:            t.ScheduleID,
 	}
 }
 
@@ -2099,6 +2102,7 @@ func ToPendingDecisionInfo(t *apiv1.PendingDecisionInfo) *types.PendingDecisionI
 		StartedTimestamp:           timeToUnixNano(t.StartedTime),
 		Attempt:                    int64(t.Attempt),
 		OriginalScheduledTimestamp: timeToUnixNano(t.OriginalScheduledTime),
+		ScheduleID:                 t.ScheduleId,
 	}
 }
 

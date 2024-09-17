@@ -123,6 +123,7 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(
 		for _, ai := range mutableState.GetPendingActivityInfos() {
 			p := &types.PendingActivityInfo{
 				ActivityID: ai.ActivityID,
+				ScheduleID: ai.ScheduleID,
 			}
 			state := types.PendingActivityStateScheduled
 			if ai.CancelRequested {
@@ -201,6 +202,7 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(
 			ScheduledTimestamp:         common.Int64Ptr(di.ScheduledTimestamp),
 			Attempt:                    di.Attempt,
 			OriginalScheduledTimestamp: common.Int64Ptr(di.OriginalScheduledTimestamp),
+			ScheduleID:                 di.ScheduleID,
 		}
 		if di.StartedID != common.EmptyEventID {
 			pendingDecision.State = types.PendingDecisionStateStarted.Ptr()

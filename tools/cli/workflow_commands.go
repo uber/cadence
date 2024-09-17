@@ -910,6 +910,7 @@ type pendingActivityInfo struct {
 	LastFailureReason      *string `json:",omitempty"`
 	LastWorkerIdentity     string  `json:",omitempty"`
 	LastFailureDetails     *string `json:",omitempty"` // change from []byte
+	ScheduleID             int64   `json:",omitempty"`
 }
 
 type pendingDecisionInfo struct {
@@ -918,6 +919,7 @@ type pendingDecisionInfo struct {
 	ScheduledTimestamp         *string `json:",omitempty"` // change from *int64
 	StartedTimestamp           *string `json:",omitempty"` // change from *int64
 	Attempt                    int64   `json:",omitempty"`
+	ScheduleID                 int64   `json:",omitempty"`
 }
 
 func convertDescribeWorkflowExecutionResponse(resp *types.DescribeWorkflowExecutionResponse,
@@ -954,6 +956,7 @@ func convertDescribeWorkflowExecutionResponse(resp *types.DescribeWorkflowExecut
 			ExpirationTimestamp:    timestampPtrToStringPtr(pa.ExpirationTimestamp, false),
 			LastFailureReason:      pa.LastFailureReason,
 			LastWorkerIdentity:     pa.LastWorkerIdentity,
+			ScheduleID:             pa.ScheduleID,
 		}
 		if pa.HeartbeatDetails != nil {
 			tmpAct.HeartbeatDetails = common.StringPtr(string(pa.HeartbeatDetails))
@@ -971,6 +974,7 @@ func convertDescribeWorkflowExecutionResponse(resp *types.DescribeWorkflowExecut
 			ScheduledTimestamp: timestampPtrToStringPtr(resp.PendingDecision.ScheduledTimestamp, false),
 			StartedTimestamp:   timestampPtrToStringPtr(resp.PendingDecision.StartedTimestamp, false),
 			Attempt:            resp.PendingDecision.Attempt,
+			ScheduleID:         resp.PendingDecision.ScheduleID,
 		}
 		// TODO: Idea here is only display decision task original scheduled timestamp if user are
 		// using decision heartbeat. And we should be able to tell whether a decision task has heartbeat
