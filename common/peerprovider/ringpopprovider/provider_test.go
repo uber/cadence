@@ -132,3 +132,39 @@ func (c *TestRingpopCluster) FindHostByAddr(addr string) (HostInfo, bool) {
 	}
 	return HostInfo{}, false
 }
+
+func TestLabelToPort(t *testing.T) {
+	tests := []struct {
+		label   string
+		want    uint16
+		wantErr bool
+	}{
+		{
+			label: "0",
+			want:  0,
+		},
+		{
+			label: "1234",
+			want:  1234,
+		},
+		{
+			label:   "-1",
+			wantErr: true,
+		},
+		{
+			label: "65535",
+			want:  65535,
+		},
+		{
+			label:   "65536", // greater than max uint16 (2^16-1)
+			wantErr: true,
+		},
+	}
+
+	for _, tc := range tests {
+		got, err := labelToPort(tc.label)
+		if got != tc.want || (err != nil) != tc.wantErr {
+			t.Errorf("labelToPort(%v) = %v, %v; want %v, %v", tc.label, got, err, tc.want, tc.wantErr)
+		}
+	}
+}

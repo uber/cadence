@@ -294,7 +294,7 @@ func (r *Provider) Subscribe(name string, notifyChannel chan<- *membership.Chang
 }
 
 func labelToPort(label string) (uint16, error) {
-	port, err := strconv.ParseInt(label, 0, 16)
+	port, err := strconv.ParseUint(label, 0, 16)
 	if err != nil {
 		return 0, err
 	}
