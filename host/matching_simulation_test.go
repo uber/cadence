@@ -24,12 +24,15 @@
 /*
 To run locally:
 
-1. Change the matchingconfig in host/testdata/matching_simulation.yaml as you wish
+1. Pick a scenario from the existing config files host/testdata/matching_simulation_.*.yaml or add a new one
 
-2. Run `./scripts/run_matching_simulator.sh`
+2. Run the scenario
+`./scripts/run_matching_simulator.sh default`
 
-Full test logs can be found at test.log file. Event json logs can be found at matching-simulator-output.json.
+Full test logs can be found at test.log file. Event json logs can be found at matching-simulator-output folder.
 See the run_matching_simulator.sh script for more details about how to parse events.
+
+If you want to run all the scenarios and compare them refer to tools/matchingsimulationcomparison/README.md
 */
 package host
 

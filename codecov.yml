@@ -70,3 +70,4 @@ ignore:
   - "testflags/**"
   - "tools/common/schema/test/**"
   - "tools/linter/**"
+  - "tools/matchingsimulationcomparison/**"

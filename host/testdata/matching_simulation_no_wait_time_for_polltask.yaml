@@ -9,12 +9,12 @@ matchingconfig:
   nummatchinghosts: 4
   simulationconfig:
     tasklistwritepartitions: 4
-    tasklistreadpartitions: 8
+    tasklistreadpartitions: 4
     forwardermaxoutstandingpolls: 1
     forwardermaxoutstandingtasks: 1
     forwardermaxratepersecond: 10
     forwardermaxchildrenpernode: 20
-    localpollwaittime: 10ms
+    localpollwaittime: 0ms
     localtaskwaittime: 10ms
     tasks:
       - numtaskgenerators: 2
