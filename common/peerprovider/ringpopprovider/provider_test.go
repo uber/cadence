@@ -152,6 +152,10 @@ func TestLabelToPort(t *testing.T) {
 			wantErr: true,
 		},
 		{
+			label: "32768",
+			want:  32768,
+		},
+		{
 			label: "65535",
 			want:  65535,
 		},
