@@ -328,7 +328,14 @@ func (r *ring) emitHashIdentifier() float64 {
 	// in-case it overflowed something. The number itself is meaningless, so additional precision
 	// doesn't really give any advantage, besides reducing the risk of collision
 	trimmedForMetric := float64(hashedView % 1000)
-	r.logger.Debug("Hashring view", tag.Dynamic("hashring-view", sb.String()), tag.Dynamic("trimmed-hash-id", trimmedForMetric), tag.Service(r.service))
+	r.logger.Debug("Hashring view",
+		tag.Dynamic("hashring-view", sb.String()),
+		tag.Dynamic("trimmed-hash-id", trimmedForMetric),
+		tag.Service(r.service),
+		tag.Dynamic("self-addr", self.addr),
+		tag.Dynamic("self-identity", self.identity),
+		tag.Dynamic("self-ip", self.ip),
+	)
 	r.scope.Tagged(
 		metrics.ServiceTag(r.service),
 		metrics.HostTag(self.identity),
