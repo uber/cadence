@@ -64,7 +64,7 @@ func TestRingpopProvider(t *testing.T) {
 	}
 
 	allServicesAndChs := append(matchingChs, irrelevantChs...)
-	cfg := &Config{
+	cfg := Config{
 		BootstrapMode:   BootstrapModeHosts,
 		Name:            "ring",
 		BootstrapHosts:  toHosts(t, allServicesAndChs),
@@ -75,9 +75,14 @@ func TestRingpopProvider(t *testing.T) {
 
 	// start ringpop provider for each channel
 	var wg sync.WaitGroup
-	for _, svc := range allServicesAndChs {
+	for i, svc := range allServicesAndChs {
 		svc := svc
-		p, err := New(svc.service, cfg, svc.ch, membership.PortMap{}, logger)
+		cfg := cfg
+		if i == 0 {
+			// set broadcast address for the first provider to test that path
+			cfg.BroadcastAddress = "127.0.0.1"
+		}
+		p, err := New(svc.service, &cfg, svc.ch, membership.PortMap{}, logger)
 		if err != nil {
 			t.Fatalf("Failed to create ringpop provider: %v", err)
 		}
@@ -100,10 +105,12 @@ func TestRingpopProvider(t *testing.T) {
 	time.Sleep(sleep)
 
 	provider := matchingChs[0].provider
-	_, err = provider.WhoAmI()
+	hostInfo, err := provider.WhoAmI()
 	if err != nil {
 		t.Fatalf("Failed to get who am I: %v", err)
 	}
+
+	t.Logf("Who am I: %+v", hostInfo.GetAddress())
 
 	members, err := provider.GetMembers(serviceName)
 	if err != nil {
