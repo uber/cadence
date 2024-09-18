@@ -111,7 +111,7 @@ func Test__rootCauseTimeouts(t *testing.T) {
 		},
 	}
 	taskListBacklog := int64(10)
-	taskListBacklogInBytes, err := json.Marshal(taskListBacklog)
+	taskListBacklogInBytes, err := json.Marshal(invariants.PollersMetadata{TaskListBacklog: taskListBacklog})
 	require.NoError(t, err)
 	expectedRootCause := []invariants.InvariantRootCauseResult{
 		{

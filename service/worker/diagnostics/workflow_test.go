@@ -104,13 +104,26 @@ func (s *diagnosticsWorkflowTestSuite) TestWorkflow() {
 			Metadata:      workflowTimeoutDataInBytes,
 		},
 	}
+	timeoutIssues := []*timeoutIssuesResult{
+		{
+			InvariantType:    invariants.TimeoutTypeExecution.String(),
+			Reason:           "START_TO_CLOSE",
+			ExecutionTimeout: &workflowTimeoutData,
+		},
+	}
 	taskListBacklog := int64(10)
-	taskListBacklogInBytes, err := json.Marshal(taskListBacklog)
+	pollersMetadataInBytes, err := json.Marshal(invariants.PollersMetadata{TaskListBacklog: taskListBacklog})
 	s.NoError(err)
 	rootCause := []invariants.InvariantRootCauseResult{
 		{
 			RootCause: invariants.RootCauseTypePollersStatus,
-			Metadata:  taskListBacklogInBytes,
+			Metadata:  pollersMetadataInBytes,
+		},
+	}
+	timeoutRootCause := []*timeoutRootCauseResult{
+		{
+			RootCauseType:   invariants.RootCauseTypePollersStatus.String(),
+			PollersMetadata: &invariants.PollersMetadata{TaskListBacklog: taskListBacklog},
 		},
 	}
 	s.workflowEnv.OnActivity(retrieveWfExecutionHistoryActivity, mock.Anything, mock.Anything).Return(nil, nil)
@@ -120,12 +133,12 @@ func (s *diagnosticsWorkflowTestSuite) TestWorkflow() {
 	s.True(s.workflowEnv.IsWorkflowCompleted())
 	var result DiagnosticsWorkflowResult
 	s.NoError(s.workflowEnv.GetWorkflowResult(&result))
-	s.ElementsMatch(issues, result.Issues)
-	s.ElementsMatch(rootCause, result.RootCause)
+	s.ElementsMatch(timeoutIssues, result.TimeoutIssues)
+	s.ElementsMatch(timeoutRootCause, result.TimeoutRootCause)
 
 	queriedResult := s.queryDiagnostics()
-	s.ElementsMatch(queriedResult.Issues, result.Issues)
-	s.ElementsMatch(queriedResult.RootCause, result.RootCause)
+	s.ElementsMatch(queriedResult.TimeoutIssues, result.TimeoutIssues)
+	s.ElementsMatch(queriedResult.TimeoutRootCause, result.TimeoutRootCause)
 }
 
 func (s *diagnosticsWorkflowTestSuite) TestWorkflow_Error() {
