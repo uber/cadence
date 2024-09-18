@@ -49,6 +49,16 @@ type DiagnosticsWorkflowInput struct {
 	RunID      string
 }
 
+type DiagnosticsWorkflowResult struct {
+	Timeouts *timeoutDiagnostics
+}
+
+type timeoutDiagnostics struct {
+	Issues    []*timeoutIssuesResult
+	RootCause []*timeoutRootCauseResult
+	Runbooks  []string
+}
+
 type timeoutIssuesResult struct {
 	InvariantType    string
 	Reason           string
@@ -64,16 +74,10 @@ type timeoutRootCauseResult struct {
 	HeartBeatingMetadata *invariants.HeartbeatingMetadata
 }
 
-type DiagnosticsWorkflowResult struct {
-	TimeoutIssues    []*timeoutIssuesResult
-	TimeoutRootCause []*timeoutRootCauseResult
-	Runbooks         []string
-}
-
 func (w *dw) DiagnosticsWorkflow(ctx workflow.Context, params DiagnosticsWorkflowInput) (*DiagnosticsWorkflowResult, error) {
-	var result DiagnosticsWorkflowResult
+	var timeoutsResult timeoutDiagnostics
 	err := workflow.SetQueryHandler(ctx, queryDiagnosticsReport, func() (DiagnosticsWorkflowResult, error) {
-		return result, nil
+		return DiagnosticsWorkflowResult{Timeouts: &timeoutsResult}, nil
 	})
 	if err != nil {
 		return nil, err
@@ -97,7 +101,7 @@ func (w *dw) DiagnosticsWorkflow(ctx workflow.Context, params DiagnosticsWorkflo
 		return nil, fmt.Errorf("RetrieveExecutionHistory: %w", err)
 	}
 
-	result.Runbooks = []string{linkToTimeoutsRunbook}
+	timeoutsResult.Runbooks = []string{linkToTimeoutsRunbook}
 
 	var checkResult []invariants.InvariantCheckResult
 	err = workflow.ExecuteActivity(activityCtx, w.identifyTimeouts, identifyTimeoutsInputParams{
@@ -112,7 +116,7 @@ func (w *dw) DiagnosticsWorkflow(ctx workflow.Context, params DiagnosticsWorkflo
 	if err != nil {
 		return nil, fmt.Errorf("RetrieveTimeoutIssues: %w", err)
 	}
-	result.TimeoutIssues = timeoutIssues
+	timeoutsResult.Issues = timeoutIssues
 
 	var rootCauseResult []invariants.InvariantRootCauseResult
 	err = workflow.ExecuteActivity(activityCtx, w.rootCauseTimeouts, rootCauseTimeoutsParams{
@@ -128,9 +132,9 @@ func (w *dw) DiagnosticsWorkflow(ctx workflow.Context, params DiagnosticsWorkflo
 	if err != nil {
 		return nil, fmt.Errorf("RetrieveTimeoutRootCause: %w", err)
 	}
-	result.TimeoutRootCause = timeoutRootCause
+	timeoutsResult.RootCause = timeoutRootCause
 
-	return &result, nil
+	return &DiagnosticsWorkflowResult{Timeouts: &timeoutsResult}, nil
 }
 
 func retrieveTimeoutIssues(issues []invariants.InvariantCheckResult) ([]*timeoutIssuesResult, error) {

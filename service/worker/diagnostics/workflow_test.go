@@ -133,12 +133,12 @@ func (s *diagnosticsWorkflowTestSuite) TestWorkflow() {
 	s.True(s.workflowEnv.IsWorkflowCompleted())
 	var result DiagnosticsWorkflowResult
 	s.NoError(s.workflowEnv.GetWorkflowResult(&result))
-	s.ElementsMatch(timeoutIssues, result.TimeoutIssues)
-	s.ElementsMatch(timeoutRootCause, result.TimeoutRootCause)
+	s.ElementsMatch(timeoutIssues, result.Timeouts.Issues)
+	s.ElementsMatch(timeoutRootCause, result.Timeouts.RootCause)
 
 	queriedResult := s.queryDiagnostics()
-	s.ElementsMatch(queriedResult.TimeoutIssues, result.TimeoutIssues)
-	s.ElementsMatch(queriedResult.TimeoutRootCause, result.TimeoutRootCause)
+	s.ElementsMatch(queriedResult.Timeouts.Issues, result.Timeouts.Issues)
+	s.ElementsMatch(queriedResult.Timeouts.RootCause, result.Timeouts.RootCause)
 }
 
 func (s *diagnosticsWorkflowTestSuite) TestWorkflow_Error() {
