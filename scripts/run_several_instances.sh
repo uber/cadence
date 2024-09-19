@@ -5,6 +5,13 @@
 
 set -eo pipefail
 
+ctrl_c() {
+  echo "Killing all the services"
+  pkill -9 -P $$
+}
+
+trap ctrl_c SIGINT
+
 # Start the services used in ringpop discovery on the default ports
 ./cadence-server start &
 
