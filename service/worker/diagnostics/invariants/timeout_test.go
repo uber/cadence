@@ -48,7 +48,8 @@ const (
 )
 
 func Test__Check(t *testing.T) {
-	taskTimeoutSecondInBytes, err := json.Marshal(taskTimeoutSecond)
+	decisionTimeoutMetadata := DecisionTimeoutMetadata{ConfiguredTimeout: 50 * time.Second}
+	decisionTimeoutMetadataInBytes, err := json.Marshal(decisionTimeoutMetadata)
 	require.NoError(t, err)
 	testCases := []struct {
 		name           string
@@ -104,12 +105,12 @@ func Test__Check(t *testing.T) {
 				{
 					InvariantType: TimeoutTypeDecision.String(),
 					Reason:        "START_TO_CLOSE",
-					Metadata:      taskTimeoutSecondInBytes,
+					Metadata:      decisionTimeoutMetadataInBytes,
 				},
 				{
 					InvariantType: TimeoutTypeDecision.String(),
-					Reason:        "workflow reset",
-					Metadata:      []byte("new run ID"),
+					Reason:        "workflow reset - New run ID: new run ID",
+					Metadata:      decisionTimeoutMetadataInBytes,
 				},
 			},
 			err: nil,
@@ -266,10 +267,17 @@ func decisionTimeoutHistory() *types.GetWorkflowExecutionHistoryResponse {
 					},
 				},
 				{
+					ID: 23,
+					DecisionTaskScheduledEventAttributes: &types.DecisionTaskScheduledEventAttributes{
+						StartToCloseTimeoutSeconds: common.Int32Ptr(taskTimeoutSecond),
+					},
+				},
+				{
 					DecisionTaskTimedOutEventAttributes: &types.DecisionTaskTimedOutEventAttributes{
-						Cause:    types.DecisionTaskTimedOutCauseReset.Ptr(),
-						Reason:   "workflow reset",
-						NewRunID: "new run ID",
+						ScheduledEventID: 23,
+						Cause:            types.DecisionTaskTimedOutCauseReset.Ptr(),
+						Reason:           "workflow reset",
+						NewRunID:         "new run ID",
 					},
 				},
 			},
@@ -369,6 +377,10 @@ func childWfTimeoutDataInBytes(t *testing.T) []byte {
 
 func Test__RootCause(t *testing.T) {
 	actStartToCloseTimeoutData := activityStartToCloseTimeoutData()
+	pollersMetadataInBytes, err := json.Marshal(PollersMetadata{TaskListBacklog: testTaskListBacklog})
+	require.NoError(t, err)
+	heartBeatingMetadataInBytes, err := json.Marshal(HeartbeatingMetadata{TimeElapsed: actStartToCloseTimeoutData.TimeElapsed})
+	require.NoError(t, err)
 	testCases := []struct {
 		name           string
 		input          []InvariantCheckResult
@@ -396,7 +408,7 @@ func Test__RootCause(t *testing.T) {
 			expectedResult: []InvariantRootCauseResult{
 				{
 					RootCause: RootCauseTypeMissingPollers,
-					Metadata:  taskListBacklogInBytes(testTaskListBacklog),
+					Metadata:  pollersMetadataInBytes,
 				},
 			},
 			err: nil,
@@ -425,7 +437,7 @@ func Test__RootCause(t *testing.T) {
 			expectedResult: []InvariantRootCauseResult{
 				{
 					RootCause: RootCauseTypePollersStatus,
-					Metadata:  taskListBacklogInBytes(testTaskListBacklog),
+					Metadata:  pollersMetadataInBytes,
 				},
 			},
 			err: nil,
@@ -454,11 +466,11 @@ func Test__RootCause(t *testing.T) {
 			expectedResult: []InvariantRootCauseResult{
 				{
 					RootCause: RootCauseTypePollersStatus,
-					Metadata:  taskListBacklogInBytes(testTaskListBacklog),
+					Metadata:  pollersMetadataInBytes,
 				},
 				{
 					RootCause: RootCauseTypeHeartBeatingNotEnabled,
-					Metadata:  []byte(actStartToCloseTimeoutData.TimeElapsed.String()),
+					Metadata:  heartBeatingMetadataInBytes,
 				},
 			},
 			err: nil,
@@ -487,7 +499,7 @@ func Test__RootCause(t *testing.T) {
 			expectedResult: []InvariantRootCauseResult{
 				{
 					RootCause: RootCauseTypePollersStatus,
-					Metadata:  taskListBacklogInBytes(testTaskListBacklog),
+					Metadata:  pollersMetadataInBytes,
 				},
 			},
 			err: nil,
@@ -516,11 +528,11 @@ func Test__RootCause(t *testing.T) {
 			expectedResult: []InvariantRootCauseResult{
 				{
 					RootCause: RootCauseTypePollersStatus,
-					Metadata:  taskListBacklogInBytes(testTaskListBacklog),
+					Metadata:  pollersMetadataInBytes,
 				},
 				{
 					RootCause: RootCauseTypeHeartBeatingEnabledMissingHeartbeat,
-					Metadata:  []byte(actStartToCloseTimeoutData.TimeElapsed.String()),
+					Metadata:  heartBeatingMetadataInBytes,
 				},
 			},
 			err: nil,

@@ -88,7 +88,7 @@ func (t *timeout) Check(context.Context) ([]InvariantCheckResult, error) {
 			result = append(result, InvariantCheckResult{
 				InvariantType: TimeoutTypeDecision.String(),
 				Reason:        reason,
-				Metadata:      metadata,
+				Metadata:      marshalData(metadata),
 			})
 		}
 		if event.ChildWorkflowExecutionTimedOutEventAttributes != nil {
@@ -165,15 +165,16 @@ func (t *timeout) checkTasklist(ctx context.Context, issue InvariantCheckResult)
 	}
 
 	tasklistBacklog := resp.GetTaskListStatus().GetBacklogCountHint()
+	polllersMetadataInBytes := marshalData(PollersMetadata{TaskListBacklog: tasklistBacklog})
 	if len(resp.GetPollers()) == 0 {
 		return InvariantRootCauseResult{
 			RootCause: RootCauseTypeMissingPollers,
-			Metadata:  taskListBacklogInBytes(tasklistBacklog),
+			Metadata:  polllersMetadataInBytes,
 		}, nil
 	}
 	return InvariantRootCauseResult{
 		RootCause: RootCauseTypePollersStatus,
-		Metadata:  taskListBacklogInBytes(tasklistBacklog),
+		Metadata:  polllersMetadataInBytes,
 	}, nil
 
 }
@@ -185,11 +186,13 @@ func checkHeartbeatStatus(issue InvariantCheckResult) ([]InvariantRootCauseResul
 		return nil, err
 	}
 
+	heartbeatingMetadataInBytes := marshalData(HeartbeatingMetadata{TimeElapsed: metadata.TimeElapsed})
+
 	if metadata.HeartBeatTimeout == 0 && activityStarted(metadata) {
 		return []InvariantRootCauseResult{
 			{
 				RootCause: RootCauseTypeHeartBeatingNotEnabled,
-				Metadata:  []byte(metadata.TimeElapsed.String()),
+				Metadata:  heartbeatingMetadataInBytes,
 			},
 		}, nil
 	}
@@ -198,7 +201,7 @@ func checkHeartbeatStatus(issue InvariantCheckResult) ([]InvariantRootCauseResul
 		return []InvariantRootCauseResult{
 			{
 				RootCause: RootCauseTypeHeartBeatingEnabledMissingHeartbeat,
-				Metadata:  []byte(metadata.TimeElapsed.String()),
+				Metadata:  heartbeatingMetadataInBytes,
 			},
 		}, nil
 	}
