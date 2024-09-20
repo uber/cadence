@@ -31,6 +31,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/goleak"
 	"go.uber.org/zap/zaptest/observer"
 
@@ -41,6 +42,8 @@ import (
 )
 
 var letters = []rune("abcdefghijklmnopqrstuvwxyz")
+
+const maxTestDuration = 5 * time.Second
 
 func randSeq(n int) string {
 	b := make([]rune, n)
@@ -58,46 +61,56 @@ func randomHostInfo(n int) []HostInfo {
 	return res
 }
 
-func testCompareMembers(t *testing.T, curr []HostInfo, new []HostInfo, hasDiff bool) {
-	hashring := &ring{}
-	currMembers := make(map[string]HostInfo, len(curr))
-	for _, m := range curr {
-		currMembers[m.GetAddress()] = m
-	}
-	hashring.members.keys = currMembers
-	newMembers, changed := hashring.compareMembers(new)
-	assert.Equal(t, hasDiff, changed)
-	assert.Equal(t, len(new), len(newMembers))
-	for _, m := range new {
-		_, ok := newMembers[m.GetAddress()]
-		assert.True(t, ok)
-	}
-}
-
-func Test_ring_compareMembers(t *testing.T) {
-
+func TestDiffMemberMakesCorrectDiff(t *testing.T) {
 	tests := []struct {
-		curr    []HostInfo
-		new     []HostInfo
-		hasDiff bool
+		name           string
+		curr           []HostInfo
+		new            []HostInfo
+		expectedChange ChangedEvent
 	}{
-		{curr: []HostInfo{}, new: []HostInfo{NewHostInfo("a")}, hasDiff: true},
-		{curr: []HostInfo{}, new: []HostInfo{NewHostInfo("a"), NewHostInfo("b")}, hasDiff: true},
-		{curr: []HostInfo{NewHostInfo("a")}, new: []HostInfo{NewHostInfo("a"), NewHostInfo("b")}, hasDiff: true},
-		{curr: []HostInfo{}, new: []HostInfo{}, hasDiff: false},
-		{curr: []HostInfo{NewHostInfo("a")}, new: []HostInfo{NewHostInfo("a")}, hasDiff: false},
-		// order doesn't matter.
-		{curr: []HostInfo{NewHostInfo("a"), NewHostInfo("b")}, new: []HostInfo{NewHostInfo("b"), NewHostInfo("a")}, hasDiff: false},
-		// member has left the ring
-		{curr: []HostInfo{NewHostInfo("a"), NewHostInfo("b"), NewHostInfo("c")}, new: []HostInfo{NewHostInfo("b"), NewHostInfo("a")}, hasDiff: true},
-		// ring becomes empty
-		{curr: []HostInfo{NewHostInfo("a"), NewHostInfo("b"), NewHostInfo("c")}, new: []HostInfo{}, hasDiff: true},
+		{
+			name:           "empty and one added",
+			curr:           []HostInfo{},
+			new:            []HostInfo{NewHostInfo("a")},
+			expectedChange: ChangedEvent{HostsAdded: []string{"a"}},
+		},
+		{
+			name:           "non-empty and added",
+			curr:           []HostInfo{NewHostInfo("a")},
+			new:            []HostInfo{NewHostInfo("a"), NewHostInfo("b")},
+			expectedChange: ChangedEvent{HostsAdded: []string{"b"}},
+		},
+		{
+			name:           "empty and nothing has changed",
+			curr:           []HostInfo{},
+			new:            []HostInfo{},
+			expectedChange: ChangedEvent{},
+		},
+		{
+			name:           "multiple hosts, but no change",
+			curr:           []HostInfo{NewHostInfo("a"), NewHostInfo("b"), NewHostInfo("c")},
+			new:            []HostInfo{NewHostInfo("c"), NewHostInfo("b"), NewHostInfo("a")},
+			expectedChange: ChangedEvent{},
+		},
+
+		{
+			name:           "multiple hosts, add/delete",
+			curr:           []HostInfo{NewHostInfo("a"), NewHostInfo("b"), NewHostInfo("c")},
+			new:            []HostInfo{NewHostInfo("b"), NewHostInfo("e"), NewHostInfo("f")},
+			expectedChange: ChangedEvent{HostsRemoved: []string{"a", "c"}, HostsAdded: []string{"e", "f"}},
+		},
 	}
 
 	for _, tt := range tests {
-		testCompareMembers(t, tt.curr, tt.new, tt.hasDiff)
-	}
+		t.Run(tt.name, func(t *testing.T) {
+			r := &ring{}
+			currMembers := r.makeMembersMap(tt.curr)
+			r.members.keys = currMembers
 
+			combinedChange := r.diffMembers(r.makeMembersMap(tt.new))
+			assert.Equal(t, tt.expectedChange, combinedChange)
+		})
+	}
 }
 
 type hashringTestData struct {
@@ -145,13 +158,21 @@ func (td *hashringTestData) startHashRing() {
 func TestFailedLookupWillAskProvider(t *testing.T) {
 	td := newHashringTestData(t)
 
+	var wg sync.WaitGroup
+	wg.Add(2)
 	td.mockPeerProvider.EXPECT().Subscribe(gomock.Any(), gomock.Any()).Times(1)
-	td.mockPeerProvider.EXPECT().GetMembers("test-service").Times(1)
+	td.mockPeerProvider.EXPECT().GetMembers("test-service").
+		Do(func(string) {
+			// we expect first call on hashring creation
+			// the second call should be initiated by failed Lookup
+			wg.Done()
+		}).Times(2)
 
 	td.startHashRing()
 	_, err := td.hashRing.Lookup("a")
-
 	assert.Error(t, err)
+
+	require.True(t, common.AwaitWaitGroup(&wg, maxTestDuration), "Failed Lookup should lead to refresh")
 }
 
 func TestRefreshUpdatesRingOnlyWhenRingHasChanged(t *testing.T) {
@@ -159,15 +180,13 @@ func TestRefreshUpdatesRingOnlyWhenRingHasChanged(t *testing.T) {
 
 	td.mockPeerProvider.EXPECT().Subscribe(gomock.Any(), gomock.Any()).Times(1)
 	td.mockPeerProvider.EXPECT().GetMembers("test-service").Times(1).Return(randomHostInfo(3), nil)
+	td.mockPeerProvider.EXPECT().WhoAmI().AnyTimes()
 
 	// Start will also call .refresh()
 	td.startHashRing()
 	updatedAt := td.hashRing.members.refreshed
-	td.hashRing.refresh()
-	refreshed, err := td.hashRing.refresh()
 
-	assert.NoError(t, err)
-	assert.False(t, refreshed)
+	assert.NoError(t, td.hashRing.refresh())
 	assert.Equal(t, updatedAt, td.hashRing.members.refreshed)
 }
 
@@ -176,16 +195,11 @@ func TestRefreshWillNotifySubscribers(t *testing.T) {
 
 	var hostsToReturn []HostInfo
 	td.mockPeerProvider.EXPECT().Subscribe(gomock.Any(), gomock.Any()).Times(1)
-	td.mockPeerProvider.EXPECT().GetMembers("test-service").Times(2).DoAndReturn(func(service string) ([]HostInfo, error) {
+	td.mockPeerProvider.EXPECT().GetMembers("test-service").DoAndReturn(func(service string) ([]HostInfo, error) {
 		hostsToReturn = randomHostInfo(5)
 		return hostsToReturn, nil
-	})
-
-	changed := &ChangedEvent{
-		HostsAdded:   []string{"a"},
-		HostsUpdated: []string{"b"},
-		HostsRemoved: []string{"c"},
-	}
+	}).Times(2)
+	td.mockPeerProvider.EXPECT().WhoAmI().AnyTimes()
 
 	td.startHashRing()
 
@@ -200,14 +214,17 @@ func TestRefreshWillNotifySubscribers(t *testing.T) {
 		defer wg.Done()
 		changedEvent := <-changeCh
 		changedEvent2 := <-changeCh
-		assert.Equal(t, changed, changedEvent)
-		assert.Equal(t, changed, changedEvent2)
+		assert.NotEmpty(t, changedEvent, "changed event should never be empty")
+		assert.NotEmpty(t, changedEvent2, "changed event should never be empty")
 	}()
 
 	// to bypass internal check
 	td.hashRing.members.refreshed = time.Now().AddDate(0, 0, -1)
-	td.hashRing.refreshChan <- changed
-	wg.Wait() // wait until both subscribers will get notification
+	td.hashRing.signalSelf()
+
+	// wait until both subscribers will get notification
+	require.True(t, common.AwaitWaitGroup(&wg, maxTestDuration))
+
 	// Test if internal members are updated
 	assert.ElementsMatch(t, td.hashRing.Members(), hostsToReturn, "members should contain just-added nodes")
 }
@@ -218,11 +235,11 @@ func TestSubscribersAreNotifiedPeriodically(t *testing.T) {
 	var hostsToReturn []HostInfo
 
 	td.mockPeerProvider.EXPECT().Subscribe(gomock.Any(), gomock.Any()).Times(1)
-	td.mockPeerProvider.EXPECT().GetMembers("test-service").Times(3).DoAndReturn(func(service string) ([]HostInfo, error) {
+	td.mockPeerProvider.EXPECT().GetMembers("test-service").DoAndReturn(func(service string) ([]HostInfo, error) {
 		// we have to change members since subscribers are only notified on change
 		hostsToReturn = randomHostInfo(5)
 		return hostsToReturn, nil
-	})
+	}).Times(2)
 	td.mockPeerProvider.EXPECT().WhoAmI().AnyTimes()
 
 	td.startHashRing()
@@ -235,13 +252,13 @@ func TestSubscribersAreNotifiedPeriodically(t *testing.T) {
 	go func() {
 		defer wg.Done()
 		event := <-changeCh
-		assert.Empty(t, event, "event should be empty when periodical update happens")
+		assert.NotEmpty(t, event, "changed event should never be empty")
 	}()
 
 	td.mockTimeSource.BlockUntil(1)                   // we should wait until ticker(defaultRefreshInterval) is created
 	td.mockTimeSource.Advance(defaultRefreshInterval) // and only then to advance time
 
-	wg.Wait() // wait until subscriber will get notification
+	require.True(t, common.AwaitWaitGroup(&wg, maxTestDuration)) // wait until subscriber will get notification
 
 	// Test if internal members are updated
 	assert.ElementsMatch(t, td.hashRing.Members(), hostsToReturn, "members should contain just-added nodes")
@@ -276,7 +293,6 @@ func TestUnsubcribeDeletes(t *testing.T) {
 	assert.Equal(t, 1, len(td.hashRing.subscribers.keys))
 	assert.NoError(t, td.hashRing.Unsubscribe("testservice1"))
 	assert.Equal(t, 0, len(td.hashRing.subscribers.keys))
-
 }
 
 func TestMemberCountReturnsNumber(t *testing.T) {
@@ -296,10 +312,9 @@ func TestMemberCountReturnsNumber(t *testing.T) {
 func TestErrorIsPropagatedWhenProviderFails(t *testing.T) {
 	td := newHashringTestData(t)
 
-	td.mockPeerProvider.EXPECT().GetMembers(gomock.Any()).Return(nil, errors.New("error"))
+	td.mockPeerProvider.EXPECT().GetMembers(gomock.Any()).Return(nil, errors.New("provider failure"))
 
-	_, err := td.hashRing.refresh()
-	assert.Error(t, err)
+	assert.ErrorContains(t, td.hashRing.refresh(), "provider failure")
 }
 
 func TestStopWillStopProvider(t *testing.T) {
@@ -319,6 +334,7 @@ func TestLookupAndRefreshRaceCondition(t *testing.T) {
 	td.mockPeerProvider.EXPECT().GetMembers("test-service").AnyTimes().DoAndReturn(func(service string) ([]HostInfo, error) {
 		return randomHostInfo(5), nil
 	})
+	td.mockPeerProvider.EXPECT().WhoAmI().AnyTimes()
 
 	td.startHashRing()
 	wg.Add(2)
@@ -332,8 +348,7 @@ func TestLookupAndRefreshRaceCondition(t *testing.T) {
 		for i := 0; i < 50; i++ {
 			// to bypass internal check
 			td.hashRing.members.refreshed = time.Now().AddDate(0, 0, -1)
-			_, err := td.hashRing.refresh()
-			assert.NoError(t, err)
+			assert.NoError(t, td.hashRing.refresh())
 		}
 		wg.Done()
 	}()
@@ -386,10 +401,11 @@ func TestEmitHashringView(t *testing.T) {
 			td.mockPeerProvider.EXPECT().GetMembers("test-service").DoAndReturn(func(service string) ([]HostInfo, error) {
 				return testInput.hosts, testInput.lookuperr
 			})
-
 			td.mockPeerProvider.EXPECT().WhoAmI().DoAndReturn(func() (HostInfo, error) {
 				return testInput.selfInfo, testInput.selfErr
-			})
+			}).AnyTimes()
+
+			require.NoError(t, td.hashRing.refresh())
 			assert.Equal(t, testInput.expectedResult, td.hashRing.emitHashIdentifier())
 		})
 	}
