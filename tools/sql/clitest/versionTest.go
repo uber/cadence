@@ -142,7 +142,7 @@ func (s *VersionTestSuite) TestCheckCompatibleVersion() {
 		{"2.0", "1.0", "version mismatch", false},
 		{"1.0", "1.0", "", false},
 		{"1.0", "2.0", "", false},
-		{"1.0", "abc", "schema_version' doesn't exist", false},
+		{"1.0", "abc", "schema_version' doesn't exist", true},
 	}
 	for _, flag := range flags {
 		s.runCheckCompatibleVersion(flag.expectedVersion, flag.actualVersion, flag.errStr, flag.expectedFail)
@@ -185,7 +185,7 @@ func (s *VersionTestSuite) runCheckCompatibleVersion(
 	s.NoError(err)
 	port := strconv.Itoa(mysqlPort)
 
-	s.NoError(sql.RunTool([]string{
+	err = sql.RunTool([]string{
 		"./tool",
 		"-ep", environment.GetMySQLAddress(),
 		"-p", port,
@@ -193,14 +193,15 @@ func (s *VersionTestSuite) runCheckCompatibleVersion(
 		"-pw", environment.GetMySQLPassword(),
 		"-db", database,
 		"-pl", s.pluginName,
-		"-q",
 		"setup-schema",
 		"-f", sqlFile,
 		"-version", actual,
 		"-o",
-	}))
+	})
 	if expectedFail {
-		os.RemoveAll(subdir + "/v" + actual)
+		s.Error(err)
+	} else {
+		s.NoError(err)
 	}
 
 	cfg := config.SQL{
