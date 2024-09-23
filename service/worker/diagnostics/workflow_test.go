@@ -60,8 +60,9 @@ func (s *diagnosticsWorkflowTestSuite) SetupTest() {
 	mockResource := resource.NewTest(s.T(), controller, metrics.Worker)
 
 	s.dw = &dw{
-		svcClient:  mockResource.GetSDKClient(),
-		clientBean: mockResource.ClientBean,
+		svcClient:     mockResource.GetSDKClient(),
+		clientBean:    mockResource.ClientBean,
+		metricsClient: mockResource.GetMetricsClient(),
 	}
 
 	s.T().Cleanup(func() {

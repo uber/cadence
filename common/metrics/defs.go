@@ -1369,6 +1369,8 @@ const (
 	ESAnalyzerScope
 	// AsyncWorkflowConsumerScope is scope used by async workflow consumer
 	AsyncWorkflowConsumerScope
+	// DiagnosticsWorkflowScope is scope used by diagnostics workflow
+	DiagnosticsWorkflowScope
 
 	NumWorkerScopes
 )
@@ -1997,6 +1999,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		ParentClosePolicyProcessorScope:        {operation: "ParentClosePolicyProcessor"},
 		ESAnalyzerScope:                        {operation: "ESAnalyzer"},
 		AsyncWorkflowConsumerScope:             {operation: "AsyncWorkflowConsumer"},
+		DiagnosticsWorkflowScope:               {operation: "DiagnosticsWorkflow"},
 	},
 }
 
@@ -2670,7 +2673,9 @@ const (
 	AsyncWorkflowFailureCorruptMsgCount
 	AsyncWorkflowFailureByFrontendCount
 	AsyncWorkflowSuccessCount
-
+	DiagnosticsWorkflowCount
+	DiagnosticsWorkflowSuccess
+	DiagnosticsWorkflowExecutionLatency
 	NumWorkerMetrics
 )
 
@@ -3346,6 +3351,9 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		AsyncWorkflowFailureCorruptMsgCount:           {metricName: "async_workflow_failure_corrupt_msg", metricType: Counter},
 		AsyncWorkflowFailureByFrontendCount:           {metricName: "async_workflow_failure_by_frontend", metricType: Counter},
 		AsyncWorkflowSuccessCount:                     {metricName: "async_workflow_success", metricType: Counter},
+		DiagnosticsWorkflowCount:                      {metricName: "diagnostics_workflow_count", metricType: Counter},
+		DiagnosticsWorkflowSuccess:                    {metricName: "diagnostics_workflow_success", metricType: Counter},
+		DiagnosticsWorkflowExecutionLatency:           {metricName: "diagnostics_workflow_execution_latency", metricType: Timer},
 	},
 }
 

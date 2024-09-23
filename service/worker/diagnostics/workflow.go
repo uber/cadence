@@ -25,6 +25,7 @@ package diagnostics
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/uber/cadence/common/metrics"
 	"time"
 
 	"go.uber.org/cadence/workflow"
@@ -75,6 +76,11 @@ type timeoutRootCauseResult struct {
 }
 
 func (w *dw) DiagnosticsWorkflow(ctx workflow.Context, params DiagnosticsWorkflowInput) (*DiagnosticsWorkflowResult, error) {
+	scope := w.metricsClient.Scope(metrics.DiagnosticsWorkflowScope, metrics.DomainTag(params.Domain))
+	scope.IncCounter(metrics.DiagnosticsWorkflowCount)
+	sw := scope.StartTimer(metrics.DiagnosticsWorkflowExecutionLatency)
+	defer sw.Stop()
+
 	var timeoutsResult timeoutDiagnostics
 	err := workflow.SetQueryHandler(ctx, queryDiagnosticsReport, func() (DiagnosticsWorkflowResult, error) {
 		return DiagnosticsWorkflowResult{Timeouts: &timeoutsResult}, nil
@@ -134,6 +140,7 @@ func (w *dw) DiagnosticsWorkflow(ctx workflow.Context, params DiagnosticsWorkflo
 	}
 	timeoutsResult.RootCause = timeoutRootCause
 
+	scope.IncCounter(metrics.DiagnosticsWorkflowSuccess)
 	return &DiagnosticsWorkflowResult{Timeouts: &timeoutsResult}, nil
 }
 
