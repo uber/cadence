@@ -355,8 +355,7 @@ func (s *server) setupOSClient(params *resource.Params, advancedVisStore config.
 	if advancedVisStore.ElasticSearch.Migration.Enabled {
 		s.setupESClient(params)
 	} else {
-		// this should not happen since when it is not in migration node
-		// we will use es-visibility and set the version to os2 instead of using os-visibility
+		// to avoid code duplication, we will use es-visibility and set the version to os2 instead of using os-visibility directly
 		params.ESConfig = advancedVisStore.ElasticSearch
 		params.ESConfig.SetUsernamePassword()
 		params.ESClient = osClient

@@ -287,13 +287,13 @@ func (f *factoryImpl) NewVisibilityManager(
 	case common.PinotVisibilityStoreName:
 		visibilityFromPinot, err = setupPinotVisibilityManager(params, resourceConfig, f.logger)
 		if err != nil {
-			f.logger.Fatal("Creating advanced visibility manager failed", tag.Error(err))
+			f.logger.Fatal("Creating Pinot advanced visibility manager failed", tag.Error(err))
 		}
 
 		if params.PinotConfig.Migration.Enabled {
 			visibilityFromES, err = setupESVisibilityManager(params, resourceConfig, f.logger)
 			if err != nil {
-				f.logger.Fatal("Creating advanced visibility manager failed", tag.Error(err))
+				f.logger.Fatal("Creating ES advanced visibility manager failed", tag.Error(err))
 			}
 
 			return p.NewVisibilityTripleManager(
@@ -319,20 +319,20 @@ func (f *factoryImpl) NewVisibilityManager(
 	case common.OSVisibilityStoreName:
 		visibilityFromOS, err = setupOSVisibilityManager(params, resourceConfig, f.logger)
 		if err != nil {
-			f.logger.Fatal("Creating advanced visibility manager failed", tag.Error(err))
+			f.logger.Fatal("Creating OS advanced visibility manager failed", tag.Error(err))
 		}
 		if params.OSConfig.Migration.Enabled {
 			// this should be always true when using os-visibility
 			visibilityFromES, err = setupESVisibilityManager(params, resourceConfig, f.logger)
 			if err != nil {
-				f.logger.Fatal("Creating advanced visibility manager failed", tag.Error(err))
+				f.logger.Fatal("Creating ES advanced visibility manager failed", tag.Error(err))
 			}
 			return p.NewVisibilityTripleManager(
 				visibilityFromDB,
 				visibilityFromOS,
 				visibilityFromES,
-				resourceConfig.EnableReadVisibilityFromES, //Didn't add new config for EnableReadVisibilityFromOS since we will use es-visibility and version: "os2" when migration is done
-				resourceConfig.EnableReadVisibilityFromES,
+				resourceConfig.EnableReadVisibilityFromES, // Didn't add new config for EnableReadVisibilityFromOS since we will use es-visibility and version: "os2" when migration is done
+				resourceConfig.EnableReadVisibilityFromES, // this controls read from source(ES), will be the primary read source
 				resourceConfig.AdvancedVisibilityMigrationWritingMode,
 				resourceConfig.EnableLogCustomerQueryParameter,
 				resourceConfig.EnableVisibilityDoubleRead,

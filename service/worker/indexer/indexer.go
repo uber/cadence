@@ -118,46 +118,6 @@ func NewIndexer(
 	}
 }
 
-// NewDualIndexer create a new Indexer that can index to both ES and OS
-func NewDualIndexer(
-	config *Config,
-	client messaging.Client,
-	primaryClient es.GenericClient,
-	secondaryClient es.GenericClient,
-	visibilityName string,
-	logger log.Logger,
-	metricsClient metrics.Client,
-) *Indexer {
-	logger = logger.WithTags(tag.ComponentIndexer)
-
-	primaryProcessor, err := newESProcessor(processorName, config, primaryClient, logger, metricsClient)
-	if err != nil {
-		logger.Fatal("Index ES processor state changed", tag.LifeCycleStartFailed, tag.Error(err))
-	}
-
-	secondaryProcessor, err := newESProcessor(processorName, config, secondaryClient, logger, metricsClient)
-	if err != nil {
-		logger.Fatal("Index OS processor state changed", tag.LifeCycleStartFailed, tag.Error(err))
-	}
-
-	consumer, err := client.NewConsumer(common.VisibilityAppName, getConsumerName(visibilityName))
-	if err != nil {
-		logger.Fatal("Index consumer state changed", tag.LifeCycleStartFailed, tag.Error(err))
-	}
-
-	return &Indexer{
-		config:             config,
-		esIndexName:        visibilityName,
-		consumer:           consumer,
-		logger:             logger.WithTags(tag.ComponentIndexerProcessor),
-		scope:              metricsClient.Scope(metrics.IndexProcessorScope),
-		shutdownCh:         make(chan struct{}),
-		primaryProcessor:   primaryProcessor,
-		secondaryProcessor: secondaryProcessor,
-		msgEncoder:         defaultEncoder,
-	}
-}
-
 func getConsumerName(topic string) string {
 	return fmt.Sprintf("%s-consumer", topic)
 }
