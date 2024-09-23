@@ -2939,12 +2939,6 @@ const (
 	// Value type: []rpc.HeaderRule or an []interface{} containing `map[string]interface{}{"Add":bool,"Match":string}` values.
 	// Default value: forward all headers.  (this is a problematic value, and it will be changing as we reduce to a list of known values)
 	HeaderForwardingRules
-	// AllIsolationGroups is the list of all possible isolation groups in a service
-	// KeyName: system.allIsolationGroups
-	// Value type: []string
-	// Default value: N/A
-	// Allowed filters: N/A
-	AllIsolationGroups
 
 	LastListKey
 )
@@ -5213,10 +5207,6 @@ var MapKeys = map[MapKey]DynamicMap{
 }
 
 var ListKeys = map[ListKey]DynamicList{
-	AllIsolationGroups: {
-		KeyName:     "system.allIsolationGroups",
-		Description: "A list of all the isolation groups in a system",
-	},
 	DefaultIsolationGroupConfigStoreManagerGlobalMapping: {
 		KeyName: "system.defaultIsolationGroupConfigStoreManagerGlobalMapping",
 		Description: "A configuration store for global isolation groups - used in isolation-group config only, not normal dynamic config." +

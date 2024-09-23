@@ -691,6 +691,7 @@ func ensureIsolationGroupStateHandlerOrDefault(
 		domainCache,
 		isolationGroupStore,
 		params.MetricsClient,
+		params.GetIsolationGroups,
 	)
 }
 

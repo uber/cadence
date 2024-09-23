@@ -49,11 +49,12 @@ import (
 type (
 	// Params holds the set of parameters needed to initialize common service resources
 	Params struct {
-		Name            string
-		InstanceID      string
-		Logger          log.Logger
-		ThrottledLogger log.Logger
-		HostName        string
+		Name               string
+		InstanceID         string
+		Logger             log.Logger
+		ThrottledLogger    log.Logger
+		HostName           string
+		GetIsolationGroups func() []string
 
 		MetricScope                tally.Scope
 		MembershipResolver         membership.Resolver
@@ -74,9 +75,8 @@ type (
 		ArchiverProvider           provider.ArchiverProvider
 		Authorizer                 authorization.Authorizer // NOTE: this can be nil. If nil, AccessControlledHandlerImpl will initiate one with config.Authorization
 		AuthorizationConfig        config.Authorization     // NOTE: empty(default) struct will get a authorization.NoopAuthorizer
-		AllIsolationGroups         []string
-		IsolationGroupStore        configstore.Client   // This can be nil, the default config store will be created if so
-		IsolationGroupState        isolationgroup.State // This can be nil, the default state store will be chosen if so
+		IsolationGroupStore        configstore.Client       // This can be nil, the default config store will be created if so
+		IsolationGroupState        isolationgroup.State     // This can be nil, the default state store will be chosen if so
 		Partitioner                partition.Partitioner
 		PinotConfig                *config.PinotVisibilityConfig
 		PinotClient                pinot.GenericClient

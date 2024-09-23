@@ -54,14 +54,11 @@ func NewDefaultIsolationGroupStateWatcherWithConfigStoreClient(
 	domainCache cache.DomainCache,
 	cfgStoreClient dynamicconfig.Client, // can be nil, which means global drain is unsupported
 	metricsClient metrics.Client,
+	getIsolationGroups func() []string,
 ) (isolationgroup.State, error) {
 	stopChan := make(chan struct{})
 
-	allIGs := dc.GetListProperty(dynamicconfig.AllIsolationGroups)()
-	allIsolationGroups, err := isolationgroupapi.MapAllIsolationGroupsResponse(allIGs)
-	if err != nil {
-		return nil, fmt.Errorf("could not get all isolation groups fron dynamic config: %w", err)
-	}
+	allIsolationGroups := getIsolationGroups()
 
 	config := defaultConfig{
 		IsolationGroupEnabled: dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableTasklistIsolation),

@@ -29,18 +29,6 @@ import (
 	"github.com/uber/cadence/common/types"
 )
 
-func MapAllIsolationGroupsResponse(in []interface{}) ([]string, error) {
-	var allIsolationGroups []string
-	for k := range in {
-		v, ok := in[k].(string)
-		if !ok {
-			return nil, fmt.Errorf("failed to get all-isolation-groups response from dynamic config: got %v (%T)", in[k], in[k])
-		}
-		allIsolationGroups = append(allIsolationGroups, v)
-	}
-	return allIsolationGroups, nil
-}
-
 func MapDynamicConfigResponse(in []interface{}) (out types.IsolationGroupConfiguration, err error) {
 	if in == nil {
 		return nil, nil
