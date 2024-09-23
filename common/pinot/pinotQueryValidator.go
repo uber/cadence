@@ -464,11 +464,10 @@ func processCustomString(operator string, colNameStr string, colValStr string) s
 func createCustomStringQuery(colNameStr string, colValStr string, notEqual string) string {
 	if colValStr == "" {
 		return fmt.Sprintf("JSON_MATCH(Attr, '\"$.%s\" is not null') "+
-			"AND %sREGEXP_LIKE(JSON_EXTRACT_SCALAR(Attr, '$.%s', 'string'), '^$')", colNameStr, notEqual, colNameStr)
+			"AND %sJSON_MATCH(Attr, 'REGEXP_LIKE(\"$.%s\", ''^$'')')", colNameStr, notEqual, colNameStr)
 	}
-
 	return fmt.Sprintf("JSON_MATCH(Attr, '\"$.%s\" is not null') "+
-		"AND %sREGEXP_LIKE(JSON_EXTRACT_SCALAR(Attr, '$.%s', 'string'), '%s*')", colNameStr, notEqual, colNameStr, colValStr)
+		"AND %sJSON_MATCH(Attr, 'REGEXP_LIKE(\"$.%s\", ''.*%s.*'')')", colNameStr, notEqual, colNameStr, colValStr)
 }
 
 func trimTimeFieldValueFromNanoToMilliSeconds(original *sqlparser.SQLVal) (*sqlparser.SQLVal, error) {
