@@ -1462,7 +1462,7 @@ func getWorkflowIDReusePolicy(value int) *types.WorkflowIDReusePolicy {
 		return types.WorkflowIDReusePolicy(value).Ptr()
 	}
 	// At this point, the policy should return if the value is valid
-	ErrorAndPrint(fmt.Sprintf("Option %v value is not in supported range.", FlagWorkflowIDReusePolicy), nil)
+	ErrorAndExit(fmt.Sprintf("Option %v value is not in supported range.", FlagWorkflowIDReusePolicy), nil)
 	return nil
 }
 

@@ -299,8 +299,9 @@ func getFlagsForShowID() []cli.Flag {
 func getFlagsForStart() []cli.Flag {
 	return []cli.Flag{
 		&cli.StringFlag{
-			Name:  FlagTaskList,
-			Usage: "TaskList",
+			Name:    FlagTaskList,
+			Aliases: []string{"tl"},
+			Usage:   "TaskList",
 		},
 		&cli.StringFlag{
 			Name:    FlagWorkflowID,

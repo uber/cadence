@@ -35,9 +35,8 @@ import (
 func newAdminWorkflowCommands() []*cli.Command {
 	return []*cli.Command{
 		{
-			Name:    "show",
-			Aliases: []string{"show"},
-			Usage:   "show workflow history from database",
+			Name:  "show",
+			Usage: "show workflow history from database",
 			Flags: append(getDBFlags(),
 				// v2 history events
 				&cli.StringFlag{

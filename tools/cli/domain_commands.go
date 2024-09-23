@@ -258,9 +258,7 @@ func (d *domainCLIImpl) UpdateDomain(c *cli.Context) error {
 	updateRequest.SecurityToken = securityToken
 	_, err := d.updateDomain(ctx, updateRequest)
 	if err != nil {
-		if _, ok := err.(*types.EntityNotExistsError); !ok {
-			return ErrorAndPrint("Operation UpdateDomain failed.", err)
-		}
+		return ErrorAndPrint("Operation UpdateDomain failed.", err)
 	}
 	fmt.Printf("Domain %s successfully updated.\n", domainName)
 	return nil
@@ -425,7 +423,7 @@ func (d *domainCLIImpl) DescribeDomain(c *cli.Context) error {
 		if _, ok := err.(*types.EntityNotExistsError); !ok {
 			return ErrorAndPrint("Operation DescribeDomain failed.", err)
 		}
-		ErrorAndPrint(fmt.Sprintf("Domain %s does not exist.", domainName), err)
+		return ErrorAndPrint(fmt.Sprintf("Domain %s does not exist.", domainName), err)
 	}
 
 	if printJSON {

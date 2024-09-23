@@ -50,7 +50,7 @@ func TestParseMultiStringMapFromEnv(t *testing.T) {
 	_ = os.Setenv("APP_SERVE", "x=y,w=v")
 	_ = (&cli.App{
 		Flags: []cli.Flag{
-			&cli.GenericFlag{Name: "serve, s", Value: &StringMap{}, EnvVars: []string{"APP_SERVE"}},
+			&cli.GenericFlag{Name: "serve", Aliases: []string{"s"}, Value: &StringMap{}, EnvVars: []string{"APP_SERVE"}},
 		},
 		Action: func(ctx *cli.Context) error {
 			if !reflect.DeepEqual(ctx.Generic("serve"), &StringMap{"x": "y", "w": "v"}) {
@@ -69,7 +69,7 @@ func TestParseMultiStringMapFromEnvCascade(t *testing.T) {
 	_ = os.Setenv("APP_FOO", "u=t,r=s")
 	_ = (&cli.App{
 		Flags: []cli.Flag{
-			&cli.GenericFlag{Name: "foos", Value: &StringMap{}, EnvVars: []string{"COMPAT_FOO,APP_FOO"}},
+			&cli.GenericFlag{Name: "foos", Value: &StringMap{}, EnvVars: []string{"COMPAT_FOO", "APP_FOO"}},
 		},
 		Action: func(ctx *cli.Context) error {
 			if !reflect.DeepEqual(ctx.Generic("foos"), &StringMap{"u": "t", "r": "s"}) {

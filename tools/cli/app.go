@@ -171,12 +171,11 @@ func NewCliApp() *cli.App {
 				},
 				{
 					Name:        "dlq",
-					Aliases:     []string{"dlq"},
 					Usage:       "Run admin operation on DLQ",
 					Subcommands: newAdminDLQCommands(),
 				},
 				{
-					Name:        "db",
+					Name:        "database",
 					Aliases:     []string{"db"},
 					Usage:       "Run admin operations on database",
 					Subcommands: newDBCommands(),
