@@ -33,6 +33,7 @@ import (
 	"github.com/uber/ringpop-go/membership"
 
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
@@ -43,6 +44,7 @@ import (
 
 // ErrInsufficientHosts is thrown when there are not enough hosts to serve the request
 var ErrInsufficientHosts = &types.InternalServiceError{Message: "Not enough hosts to serve the request"}
+var emptyEvent = &ChangedEvent{}
 
 const (
 	minRefreshInternal     = time.Second * 4
@@ -67,6 +69,7 @@ type ring struct {
 	refreshChan  chan *ChangedEvent
 	shutdownCh   chan struct{}
 	shutdownWG   sync.WaitGroup
+	timeSource   clock.TimeSource
 	scope        metrics.Scope
 	logger       log.Logger
 
@@ -87,6 +90,7 @@ type ring struct {
 func newHashring(
 	service string,
 	provider PeerProvider,
+	timeSource clock.TimeSource,
 	logger log.Logger,
 	scope metrics.Scope,
 ) *ring {
@@ -95,8 +99,9 @@ func newHashring(
 		service:      service,
 		peerProvider: provider,
 		shutdownCh:   make(chan struct{}),
-		logger:       logger,
 		refreshChan:  make(chan *ChangedEvent),
+		timeSource:   timeSource,
+		logger:       logger,
 		scope:        scope,
 	}
 
@@ -162,7 +167,7 @@ func (r *ring) Lookup(
 	addr, found := r.ring().Lookup(key)
 	if !found {
 		select {
-		case r.refreshChan <- &ChangedEvent{}:
+		case r.refreshChan <- emptyEvent:
 		default:
 		}
 		return HostInfo{}, ErrInsufficientHosts
@@ -236,7 +241,7 @@ func (r *ring) Members() []HostInfo {
 }
 
 func (r *ring) refresh() (refreshed bool, err error) {
-	if r.members.refreshed.After(time.Now().Add(-minRefreshInternal)) {
+	if r.members.refreshed.After(r.timeSource.Now().Add(-minRefreshInternal)) {
 		// refreshed too frequently
 		return false, nil
 	}
@@ -257,35 +262,37 @@ func (r *ring) refresh() (refreshed bool, err error) {
 	ring.AddMembers(castToMembers(members)...)
 
 	r.members.keys = newMembersMap
-	r.members.refreshed = time.Now()
+	r.members.refreshed = r.timeSource.Now()
 	r.value.Store(ring)
 	r.logger.Info("refreshed ring members", tag.Value(members))
 
 	return true, nil
 }
 
+func (r *ring) refreshAndNotifySubscribers(event *ChangedEvent) {
+	refreshed, err := r.refresh()
+	if err != nil {
+		r.logger.Error("refreshing ring", tag.Error(err))
+	}
+	if refreshed {
+		r.notifySubscribers(event)
+	}
+}
+
 func (r *ring) refreshRingWorker() {
 	defer r.shutdownWG.Done()
 
-	refreshTicker := time.NewTicker(defaultRefreshInterval)
+	refreshTicker := r.timeSource.NewTicker(defaultRefreshInterval)
 	defer refreshTicker.Stop()
 	for {
 		select {
 		case <-r.shutdownCh:
 			return
 		case event := <-r.refreshChan: // local signal or signal from provider
-			refreshed, err := r.refresh()
-			if err != nil {
-				r.logger.Error("refreshing ring", tag.Error(err))
-			}
-			if refreshed {
-				r.notifySubscribers(event)
-			}
-		case <-refreshTicker.C: // periodically refresh membership
+			r.refreshAndNotifySubscribers(event)
+		case <-refreshTicker.Chan(): // periodically refresh membership
 			r.emitHashIdentifier()
-			if _, err := r.refresh(); err != nil {
-				r.logger.Error("periodically refreshing ring", tag.Error(err))
-			}
+			r.refreshAndNotifySubscribers(emptyEvent)
 		}
 	}
 }
@@ -321,7 +328,14 @@ func (r *ring) emitHashIdentifier() float64 {
 	// in-case it overflowed something. The number itself is meaningless, so additional precision
 	// doesn't really give any advantage, besides reducing the risk of collision
 	trimmedForMetric := float64(hashedView % 1000)
-	r.logger.Debug("Hashring view", tag.Dynamic("hashring-view", sb.String()), tag.Dynamic("trimmed-hash-id", trimmedForMetric), tag.Service(r.service))
+	r.logger.Debug("Hashring view",
+		tag.Dynamic("hashring-view", sb.String()),
+		tag.Dynamic("trimmed-hash-id", trimmedForMetric),
+		tag.Service(r.service),
+		tag.Dynamic("self-addr", self.addr),
+		tag.Dynamic("self-identity", self.identity),
+		tag.Dynamic("self-ip", self.ip),
+	)
 	r.scope.Tagged(
 		metrics.ServiceTag(r.service),
 		metrics.HostTag(self.identity),

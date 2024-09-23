@@ -7,12 +7,13 @@ set -eo pipefail
 
 testCase="${1:-default}"
 testCfg="testdata/matching_simulation_$testCase.yaml"
-testName="test-$testCase-$(date '+%Y-%m-%d-%H-%M-%S')"
+now="$(date '+%Y-%m-%d-%H-%M-%S')"
+timestamp="${2:-$now}"
+testName="test-$testCase-$timestamp"
 resultFolder="matching-simulator-output"
 mkdir -p "$resultFolder"
 eventLogsFile="$resultFolder/events.json"
 testSummaryFile="$resultFolder/$testName-summary.txt"
-
 
 echo "Building test image"
 docker-compose -f docker/buildkite/docker-compose-local-matching-simulation.yml \
@@ -21,7 +22,7 @@ docker-compose -f docker/buildkite/docker-compose-local-matching-simulation.yml 
 echo "Running the test $testCase"
 docker-compose \
   -f docker/buildkite/docker-compose-local-matching-simulation.yml \
-  run -e MATCHING_SIMULATION_CONFIG=$testCfg --rm matching-simulator \
+  run -e MATCHING_SIMULATION_CONFIG=$testCfg --rm --remove-orphans matching-simulator \
   | grep -a --line-buffered "Matching New Event" \
   | sed "s/Matching New Event: //" \
   | jq . > "$eventLogsFile"
@@ -186,6 +187,8 @@ cat "$eventLogsFile" \
   | jq '.TaskListName' \
   | jq -c '.' | sort -n | uniq -c | sed -e 's/^/     /' | tee -a $testSummaryFile
 
+
+echo "End of summary" | tee -a $testSummaryFile
 
 printf "\nResults are saved in $testSummaryFile\n"
 printf "For further analysis, please check $eventLogsFile via jq queries\n"

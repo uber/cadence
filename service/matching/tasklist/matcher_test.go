@@ -34,6 +34,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	"go.uber.org/goleak"
 	"go.uber.org/yarpc"
 	"golang.org/x/time/rate"
 
@@ -96,11 +97,7 @@ func (t *MatcherTestSuite) TearDownTest() {
 }
 
 func (t *MatcherTestSuite) TestLocalSyncMatch() {
-	// force disable remote forwarding
-	for i := 0; i < len(t.isolationGroups)+1; i++ {
-		<-t.fwdr.AddReqTokenC()
-	}
-	<-t.fwdr.PollReqTokenC("")
+	t.disableRemoteForwarding("")
 
 	wait := ensureAsyncReady(time.Second, func(ctx context.Context) {
 		task, err := t.matcher.Poll(ctx, "")
@@ -119,13 +116,10 @@ func (t *MatcherTestSuite) TestLocalSyncMatch() {
 }
 
 func (t *MatcherTestSuite) TestIsolationLocalSyncMatch() {
-	// force disable remote forwarding
-	for i := 0; i < len(t.isolationGroups)+1; i++ {
-		<-t.fwdr.AddReqTokenC()
-	}
-	<-t.fwdr.PollReqTokenC("dca1")
+	const isolationGroup = "dca1"
 
-	isolationGroup := "dca1"
+	t.disableRemoteForwarding(isolationGroup)
+
 	wait := ensureAsyncReady(time.Second, func(ctx context.Context) {
 		task, err := t.matcher.Poll(ctx, isolationGroup)
 		if err == nil {
@@ -257,13 +251,12 @@ func (t *MatcherTestSuite) TestRateLimitHandling() {
 }
 
 func (t *MatcherTestSuite) TestIsolationSyncMatchFailure() {
-	// force disable remote forwarding
-	for i := 0; i < len(t.isolationGroups)+1; i++ {
-		<-t.fwdr.AddReqTokenC()
-	}
-	<-t.fwdr.PollReqTokenC("dca2")
+	const isolationGroup = "dca2"
+
+	t.disableRemoteForwarding(isolationGroup)
+
 	wait := ensureAsyncReady(time.Second, func(ctx context.Context) {
-		task, err := t.matcher.Poll(ctx, "dca2")
+		task, err := t.matcher.Poll(ctx, isolationGroup)
 		if err == nil {
 			task.Finish(nil)
 		}
@@ -278,11 +271,7 @@ func (t *MatcherTestSuite) TestIsolationSyncMatchFailure() {
 }
 
 func (t *MatcherTestSuite) TestQueryLocalSyncMatch() {
-	// force disable remote forwarding
-	for i := 0; i < len(t.isolationGroups)+1; i++ {
-		<-t.fwdr.AddReqTokenC()
-	}
-	<-t.fwdr.PollReqTokenC("")
+	t.disableRemoteForwarding("")
 
 	wait := ensureAsyncReady(time.Second, func(ctx context.Context) {
 		task, err := t.matcher.PollForQuery(ctx)
@@ -384,11 +373,7 @@ func (t *MatcherTestSuite) TestQueryRemoteSyncMatchError() {
 }
 
 func (t *MatcherTestSuite) TestMustOfferLocalMatch() {
-	// force disable remote forwarding
-	for i := 0; i < len(t.isolationGroups)+1; i++ {
-		<-t.fwdr.AddReqTokenC()
-	}
-	<-t.fwdr.PollReqTokenC("")
+	t.disableRemoteForwarding("")
 
 	wait := ensureAsyncReady(time.Second, func(ctx context.Context) {
 		task, err := t.matcher.Poll(ctx, "")
@@ -579,6 +564,19 @@ func (t *MatcherTestSuite) TestIsolationMustOfferRemoteMatch() {
 	t.Equal(t.taskList.Parent(20), req.GetTaskList().GetName())
 }
 
+func (t *MatcherTestSuite) TestPollersDisconnectedAfterDisconnectBlockedPollers() {
+	defer goleak.VerifyNone(t.T())
+	t.disableRemoteForwarding("")
+	t.matcher.DisconnectBlockedPollers()
+
+	longPollingCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	task, err := t.matcher.Poll(longPollingCtx, "")
+	t.ErrorIs(err, ErrNoTasks, "closed matcher should result in no tasks")
+	t.Nil(task)
+}
+
 func (t *MatcherTestSuite) TestRemotePoll() {
 	pollToken := <-t.fwdr.PollReqTokenC("")
 
@@ -637,6 +635,14 @@ func (t *MatcherTestSuite) TestIsolationPollFailure() {
 	cancel()
 	t.Error(err)
 	t.Nil(task)
+}
+
+func (t *MatcherTestSuite) disableRemoteForwarding(isolationGroup string) {
+	// force disable remote forwarding
+	for i := 0; i < len(t.isolationGroups)+1; i++ {
+		<-t.fwdr.AddReqTokenC()
+	}
+	<-t.fwdr.PollReqTokenC(isolationGroup)
 }
 
 func (t *MatcherTestSuite) newDomainCache() cache.DomainCache {

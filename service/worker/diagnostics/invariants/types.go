@@ -75,3 +75,15 @@ type ActivityTimeoutMetadata struct {
 	HeartBeatTimeout  time.Duration
 	Tasklist          *types.TaskList
 }
+
+type DecisionTimeoutMetadata struct {
+	ConfiguredTimeout time.Duration
+}
+
+type PollersMetadata struct {
+	TaskListBacklog int64
+}
+
+type HeartbeatingMetadata struct {
+	TimeElapsed time.Duration
+}
