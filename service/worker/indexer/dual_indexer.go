@@ -57,14 +57,13 @@ func NewDualIndexer(
 	}
 
 	return &Indexer{
-		config:             config,
-		esIndexName:        visibilityName,
-		consumer:           consumer,
-		logger:             logger.WithTags(tag.ComponentIndexerProcessor),
-		scope:              metricsClient.Scope(metrics.IndexProcessorScope),
-		shutdownCh:         make(chan struct{}),
-		primaryProcessor:   primaryProcessor,
-		secondaryProcessor: secondaryProcessor,
-		msgEncoder:         defaultEncoder,
+		config:      config,
+		esIndexName: visibilityName,
+		consumer:    consumer,
+		logger:      logger.WithTags(tag.ComponentIndexerProcessor),
+		scope:       metricsClient.Scope(metrics.IndexProcessorScope),
+		shutdownCh:  make(chan struct{}),
+		processors:  []ESProcessor{primaryProcessor, secondaryProcessor},
+		msgEncoder:  defaultEncoder,
 	}
 }
