@@ -382,9 +382,7 @@ func (s *cliAppSuite) TestRunWorkflow() {
 
 func (s *cliAppSuite) TestRunWorkflow_Failed() {
 	resp := &types.StartWorkflowExecutionResponse{RunID: uuid.New()}
-	history := getWorkflowExecutionHistoryResponse
 	s.serverFrontendClient.EXPECT().StartWorkflowExecution(gomock.Any(), gomock.Any()).Return(resp, &types.BadRequestError{"faked error"})
-	s.serverFrontendClient.EXPECT().GetWorkflowExecutionHistory(gomock.Any(), gomock.Any()).Return(history, nil).Times(0)
 	// start with wid
 	s.Error(s.app.Run([]string{"", "--do", domainName, "workflow", "run", "-tl", "testTaskList", "-wt", "testWorkflowType", "-et", "60", "-w", "wid"}))
 }

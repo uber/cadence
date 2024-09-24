@@ -232,7 +232,7 @@ func AdminGetDLQMessages(c *cli.Context) error {
 		}
 		tablesInShard, err := readShard(shardID)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to read DLQ messages in shard %v: %w", shardID, err)
 		}
 		table = append(table, tablesInShard...)
 	}
