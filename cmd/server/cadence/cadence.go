@@ -175,25 +175,29 @@ func BuildCLI(releaseVersion string, gitRevision string) *cli.App {
 
 	app.Flags = []cli.Flag{
 		&cli.StringFlag{
-			Name:    "root, r",
+			Name:    "root",
+			Aliases: []string{"r"},
 			Value:   ".",
 			Usage:   "root directory of execution environment",
 			EnvVars: []string{config.EnvKeyRoot},
 		},
 		&cli.StringFlag{
-			Name:    "config, c",
+			Name:    "config",
+			Aliases: []string{"c"},
 			Value:   "config",
 			Usage:   "config dir is a path relative to root, or an absolute path",
 			EnvVars: []string{config.EnvKeyConfigDir},
 		},
 		&cli.StringFlag{
-			Name:    "env, e",
+			Name:    "env",
+			Aliases: []string{"e"},
 			Value:   "development",
 			Usage:   "runtime environment",
 			EnvVars: []string{config.EnvKeyEnvironment},
 		},
 		&cli.StringFlag{
-			Name:    "zone, az",
+			Name:    "zone",
+			Aliases: []string{"az"},
 			Value:   "",
 			Usage:   "availability zone",
 			EnvVars: []string{config.EnvKeyAvailabilityZone},
@@ -207,7 +211,8 @@ func BuildCLI(releaseVersion string, gitRevision string) *cli.App {
 			Usage:   "start cadence server",
 			Flags: []cli.Flag{
 				&cli.StringFlag{
-					Name:  "services, s",
+					Name:  "services",
+					Aliases: []string{"s"},
 					Value: strings.Join(validServices, ","),
 					Usage: "list of services to start",
 				},

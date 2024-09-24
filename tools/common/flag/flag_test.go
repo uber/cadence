@@ -31,7 +31,7 @@ import (
 func TestParseMultiStringMap(t *testing.T) {
 	_ = (&cli.App{
 		Flags: []cli.Flag{
-			&cli.GenericFlag{Name: "serve, s", Value: &StringMap{}},
+			&cli.GenericFlag{Name: "serve", Aliases: []string{"s"}, Value: &StringMap{}},
 		},
 		Action: func(ctx *cli.Context) error {
 			if !reflect.DeepEqual(ctx.Generic("serve"), &StringMap{"a": "b", "c": "d"}) {

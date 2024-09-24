@@ -94,25 +94,29 @@ func buildCLI() *cli.App {
 
 	app.Flags = []cli.Flag{
 		&cli.StringFlag{
-			Name:    "root, r",
+			Name:    "root",
+			Aliases: []string{"r"},
 			Value:   ".",
 			Usage:   "root directory of execution environment",
 			EnvVars: []string{canary.EnvKeyRoot},
 		},
 		&cli.StringFlag{
-			Name:    "config, c",
+			Name:    "config",
+			Aliases: []string{"c"},
 			Value:   "config/canary",
 			Usage:   "config dir path relative to root",
 			EnvVars: []string{canary.EnvKeyConfigDir},
 		},
 		&cli.StringFlag{
-			Name:    "env, e",
+			Name:    "env",
+			Aliases: []string{"e"},
 			Value:   "development",
 			Usage:   "runtime environment",
 			EnvVars: []string{canary.EnvKeyEnvironment},
 		},
 		&cli.StringFlag{
-			Name:    "zone, az",
+			Name:    "zone",
+			Aliases: []string{"az"},
 			Value:   "",
 			Usage:   "availability zone",
 			EnvVars: []string{canary.EnvKeyAvailabilityZone},
@@ -125,7 +129,8 @@ func buildCLI() *cli.App {
 			Usage: "start cadence canary worker or cron, or both",
 			Flags: []cli.Flag{
 				&cli.StringFlag{
-					Name:    "mode, m",
+					Name:    "mode",
+					Aliases: []string{"m"},
 					Value:   canary.ModeAll,
 					Usage:   fmt.Sprintf("%v, %v or %v", canary.ModeWorker, canary.ModeCronCanary, canary.ModeAll),
 					EnvVars: []string{canary.EnvKeyMode},
