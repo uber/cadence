@@ -2673,7 +2673,7 @@ const (
 	AsyncWorkflowFailureCorruptMsgCount
 	AsyncWorkflowFailureByFrontendCount
 	AsyncWorkflowSuccessCount
-	DiagnosticsWorkflowCount
+	DiagnosticsWorkflowStartedCount
 	DiagnosticsWorkflowSuccess
 	DiagnosticsWorkflowExecutionLatency
 	NumWorkerMetrics
@@ -3351,7 +3351,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		AsyncWorkflowFailureCorruptMsgCount:           {metricName: "async_workflow_failure_corrupt_msg", metricType: Counter},
 		AsyncWorkflowFailureByFrontendCount:           {metricName: "async_workflow_failure_by_frontend", metricType: Counter},
 		AsyncWorkflowSuccessCount:                     {metricName: "async_workflow_success", metricType: Counter},
-		DiagnosticsWorkflowCount:                      {metricName: "diagnostics_workflow_count", metricType: Counter},
+		DiagnosticsWorkflowStartedCount:               {metricName: "diagnostics_workflow_count", metricType: Counter},
 		DiagnosticsWorkflowSuccess:                    {metricName: "diagnostics_workflow_success", metricType: Counter},
 		DiagnosticsWorkflowExecutionLatency:           {metricName: "diagnostics_workflow_execution_latency", metricType: Timer},
 	},
