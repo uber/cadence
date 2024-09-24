@@ -238,7 +238,9 @@ func (b *clientFactory) newClientDispatcher(c *cli.Context, hostPortOverride str
 	})
 
 	if err := dispatcher.Start(); err != nil {
-		dispatcher.Stop()
+		if err := dispatcher.Stop(); err != nil {
+			ErrorAndExit("Failed to stop outbound transport channel", err)
+		}
 		b.logger.Fatal("Failed to create outbound transport channel: %v", zap.Error(err))
 	}
 	return dispatcher

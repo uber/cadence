@@ -69,8 +69,7 @@ func DescribeTaskList(c *cli.Context) error {
 		return ErrorAndPrint(colorMagenta("No poller for tasklist: "+taskList), nil)
 	}
 
-	printTaskListPollers(pollers, taskListType)
-	return nil
+	return printTaskListPollers(pollers, taskListType)
 }
 
 // ListTaskListPartitions gets all the tasklist partition and host information.
@@ -91,15 +90,15 @@ func ListTaskListPartitions(c *cli.Context) error {
 		return ErrorAndPrint("Operation ListTaskListPartitions failed.", err)
 	}
 	if len(response.DecisionTaskListPartitions) > 0 {
-		printTaskListPartitions("Decision", response.DecisionTaskListPartitions)
+		return printTaskListPartitions("Decision", response.DecisionTaskListPartitions)
 	}
 	if len(response.ActivityTaskListPartitions) > 0 {
-		printTaskListPartitions("Activity", response.ActivityTaskListPartitions)
+		return printTaskListPartitions("Activity", response.ActivityTaskListPartitions)
 	}
 	return nil
 }
 
-func printTaskListPollers(pollers []*types.PollerInfo, taskListType types.TaskListType) {
+func printTaskListPollers(pollers []*types.PollerInfo, taskListType types.TaskListType) error {
 	table := []TaskListPollerRow{}
 	for _, poller := range pollers {
 		table = append(table, TaskListPollerRow{
@@ -107,13 +106,13 @@ func printTaskListPollers(pollers []*types.PollerInfo, taskListType types.TaskLi
 			DecisionIdentity: poller.GetIdentity(),
 			LastAccessTime:   time.Unix(0, poller.GetLastAccessTime())})
 	}
-	RenderTable(os.Stdout, table, RenderOptions{Color: true, PrintDateTime: true, OptionalColumns: map[string]bool{
+	return RenderTable(os.Stdout, table, RenderOptions{Color: true, PrintDateTime: true, OptionalColumns: map[string]bool{
 		"Activity Poller Identity": taskListType == types.TaskListTypeActivity,
 		"Decision Poller Identity": taskListType == types.TaskListTypeDecision,
 	}})
 }
 
-func printTaskListPartitions(taskListType string, partitions []*types.TaskListPartitionMetadata) {
+func printTaskListPartitions(taskListType string, partitions []*types.TaskListPartitionMetadata) error {
 	table := []TaskListPartitionRow{}
 	for _, partition := range partitions {
 		table = append(table, TaskListPartitionRow{
@@ -122,7 +121,7 @@ func printTaskListPartitions(taskListType string, partitions []*types.TaskListPa
 			Host:              partition.GetOwnerHostName(),
 		})
 	}
-	RenderTable(os.Stdout, table, RenderOptions{Color: true, OptionalColumns: map[string]bool{
+	return RenderTable(os.Stdout, table, RenderOptions{Color: true, OptionalColumns: map[string]bool{
 		"Activity Task List Partition": taskListType == "Activity",
 		"Decision Task List Partition": taskListType == "Decision",
 	}})

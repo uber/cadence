@@ -132,7 +132,10 @@ func (s *cliAppSuite) TestDomainRegister_DomainExist() {
 
 func (s *cliAppSuite) TestDomainRegister_Failed() {
 	s.serverFrontendClient.EXPECT().RegisterDomain(gomock.Any(), gomock.Any()).Return(&types.BadRequestError{"fake error"})
-	s.Error(s.app.Run(([]string{"", "--do", domainName, "domain", "register", "--global_domain", "true"})))
+	// TODO check error message for all s.Error use cases
+	s.ErrorContains(
+		s.app.Run(([]string{"", "--do", domainName, "domain", "register", "--global_domain", "true"})),
+		"fake error")
 }
 
 var describeDomainResponseServer = &types.DescribeDomainResponse{
@@ -613,7 +616,7 @@ func (s *cliAppSuite) TestAdminAddSearchAttribute() {
 	s.serverAdminClient.EXPECT().AddSearchAttribute(gomock.Any(), request).Return(nil)
 
 	err := s.app.Run([]string{"", "--do", domainName, "admin", "cl", "asa", "--search_attr_key", "testKey", "--search_attr_type", "1"})
-	s.Equal("Are you trying to add key [testKey] with Type [Keyword]? Y/N", promptMsg)
+	s.Equal("Are you trying to add key [testKey] with Type [Keyword]? y/N", promptMsg)
 	s.Nil(err)
 }
 

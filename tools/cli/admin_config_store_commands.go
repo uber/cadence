@@ -239,13 +239,12 @@ func AdminListConfigKeys(c *cli.Context) error {
 		return rows[i].Name < rows[j].Name
 	})
 
-	Render(c, rows, RenderOptions{
+	return Render(c, rows, RenderOptions{
 		DefaultTemplate: templateTable,
 		Color:           true,
 		Border:          true,
 		ColumnAlignment: []int{tablewriter.ALIGN_LEFT, tablewriter.ALIGN_LEFT, tablewriter.ALIGN_RIGHT}},
 	)
-	return nil
 }
 
 func convertToInputEntry(dcEntry *types.DynamicConfigEntry) (*cliEntry, error) {

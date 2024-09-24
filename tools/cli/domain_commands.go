@@ -87,7 +87,7 @@ func (d *domainCLIImpl) RegisterDomain(c *cli.Context) error {
 	if c.IsSet(FlagIsGlobalDomain) {
 		isGlobalDomain, err = strconv.ParseBool(c.String(FlagIsGlobalDomain))
 		if err != nil {
-			ErrorAndPrint(fmt.Sprintf("Option %s format is invalid.", FlagIsGlobalDomain), err)
+			return ErrorAndPrint(fmt.Sprintf("Option %s format is invalid.", FlagIsGlobalDomain), err)
 		}
 	}
 
@@ -120,6 +120,15 @@ func (d *domainCLIImpl) RegisterDomain(c *cli.Context) error {
 		}
 	}
 
+	has, err := archivalStatus(c, FlagHistoryArchivalStatus)
+	if err != nil {
+		return fmt.Errorf("failed to parse %s flag: %w", FlagHistoryArchivalStatus, err)
+	}
+	vas, err := archivalStatus(c, FlagVisibilityArchivalStatus)
+	if err != nil {
+		return fmt.Errorf("failed to parse %s flag: %w", FlagVisibilityArchivalStatus, err)
+	}
+
 	request := &types.RegisterDomainRequest{
 		Name:                                   domainName,
 		Description:                            description,
@@ -129,9 +138,9 @@ func (d *domainCLIImpl) RegisterDomain(c *cli.Context) error {
 		Clusters:                               clusters,
 		ActiveClusterName:                      activeClusterName,
 		SecurityToken:                          securityToken,
-		HistoryArchivalStatus:                  archivalStatus(c, FlagHistoryArchivalStatus),
+		HistoryArchivalStatus:                  has,
 		HistoryArchivalURI:                     c.String(FlagHistoryArchivalURI),
-		VisibilityArchivalStatus:               archivalStatus(c, FlagVisibilityArchivalStatus),
+		VisibilityArchivalStatus:               vas,
 		VisibilityArchivalURI:                  c.String(FlagVisibilityArchivalURI),
 		IsGlobalDomain:                         isGlobalDomain,
 	}
@@ -237,6 +246,15 @@ func (d *domainCLIImpl) UpdateDomain(c *cli.Context) error {
 			badBinaryToDelete = common.StringPtr(c.String(FlagRemoveBadBinary))
 		}
 
+		has, err := archivalStatus(c, FlagHistoryArchivalStatus)
+		if err != nil {
+			return fmt.Errorf("failed to parse %s flag: %w", FlagHistoryArchivalStatus, err)
+		}
+		vas, err := archivalStatus(c, FlagVisibilityArchivalStatus)
+		if err != nil {
+			return fmt.Errorf("failed to parse %s flag: %w", FlagVisibilityArchivalStatus, err)
+		}
+
 		updateRequest = &types.UpdateDomainRequest{
 			Name:                                   domainName,
 			Description:                            common.StringPtr(description),
@@ -244,9 +262,9 @@ func (d *domainCLIImpl) UpdateDomain(c *cli.Context) error {
 			Data:                                   domainData.Value(),
 			WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(retentionDays),
 			EmitMetric:                             common.BoolPtr(emitMetric),
-			HistoryArchivalStatus:                  archivalStatus(c, FlagHistoryArchivalStatus),
+			HistoryArchivalStatus:                  has,
 			HistoryArchivalURI:                     common.StringPtr(c.String(FlagHistoryArchivalURI)),
-			VisibilityArchivalStatus:               archivalStatus(c, FlagVisibilityArchivalStatus),
+			VisibilityArchivalStatus:               vas,
 			VisibilityArchivalURI:                  common.StringPtr(c.String(FlagVisibilityArchivalURI)),
 			BadBinaries:                            binBinaries,
 			Clusters:                               clusters,
@@ -258,6 +276,9 @@ func (d *domainCLIImpl) UpdateDomain(c *cli.Context) error {
 	updateRequest.SecurityToken = securityToken
 	_, err := d.updateDomain(ctx, updateRequest)
 	if err != nil {
+		if _, ok := err.(*types.EntityNotExistsError); ok {
+			return ErrorAndPrint(fmt.Sprintf("Domain %s does not exist.", domainName), err)
+		}
 		return ErrorAndPrint("Operation UpdateDomain failed.", err)
 	}
 	fmt.Printf("Domain %s successfully updated.\n", domainName)
@@ -306,7 +327,7 @@ func (d *domainCLIImpl) DeprecateDomain(c *cli.Context) error {
 // FailoverDomains is used for managed failover all domains with domain data IsManagedByCadence=true
 func (d *domainCLIImpl) FailoverDomains(c *cli.Context) error {
 	// ask user for confirmation
-	prompt("You are trying to failover all managed domains, continue? Y/N")
+	prompt("You are trying to failover all managed domains, continue? y/N")
 	_, _, err := d.failoverDomains(c)
 	return err
 }
@@ -435,13 +456,12 @@ func (d *domainCLIImpl) DescribeDomain(c *cli.Context) error {
 		return nil
 	}
 
-	Render(c, newDomainRow(resp), RenderOptions{
+	return Render(c, newDomainRow(resp), RenderOptions{
 		DefaultTemplate: templateDomain,
 		Color:           true,
 		Border:          true,
 		PrintDateTime:   true,
 	})
-	return nil
 }
 
 type BadBinaryRow struct {
@@ -580,7 +600,7 @@ func (d *domainCLIImpl) ListDomains(c *cli.Context) error {
 	printJSON := c.Bool(FlagPrintJSON)
 
 	if printAll && printDeprecated {
-		ErrorAndPrint(fmt.Sprintf("Cannot specify %s and %s flags at the same time.", FlagAll, FlagDeprecated), nil)
+		return ErrorAndPrint(fmt.Sprintf("Cannot specify %s and %s flags at the same time.", FlagAll, FlagDeprecated), nil)
 	}
 
 	domains, err := d.getAllDomains(c)
@@ -634,7 +654,9 @@ func (d *domainCLIImpl) ListDomains(c *cli.Context) error {
 		}
 
 		// page is full
-		Render(c, table, domainTableOptions(c))
+		if err := Render(c, table, domainTableOptions(c)); err != nil {
+			return fmt.Errorf("failed to render domain list: %w", err)
+		}
 		if i == len(domains)-1 || !showNextPage() {
 			return nil
 		}
@@ -642,8 +664,7 @@ func (d *domainCLIImpl) ListDomains(c *cli.Context) error {
 		currentPageSize = 0
 	}
 
-	Render(c, table, domainTableOptions(c))
-	return nil
+	return Render(c, table, domainTableOptions(c))
 }
 
 func (d *domainCLIImpl) listDomains(
@@ -706,18 +727,18 @@ func (d *domainCLIImpl) describeDomain(
 	return d.domainHandler.DescribeDomain(ctx, request)
 }
 
-func archivalStatus(c *cli.Context, statusFlagName string) *types.ArchivalStatus {
+func archivalStatus(c *cli.Context, statusFlagName string) (*types.ArchivalStatus, error) {
 	if c.IsSet(statusFlagName) {
 		switch c.String(statusFlagName) {
 		case "disabled":
-			return types.ArchivalStatusDisabled.Ptr()
+			return types.ArchivalStatusDisabled.Ptr(), nil
 		case "enabled":
-			return types.ArchivalStatusEnabled.Ptr()
+			return types.ArchivalStatusEnabled.Ptr(), nil
 		default:
-			ErrorAndPrint(fmt.Sprintf("Option %s format is invalid.", statusFlagName), errors.New("invalid status, valid values are \"disabled\" and \"enabled\""))
+			return nil, ErrorAndPrint(fmt.Sprintf("Option %s format is invalid.", statusFlagName), errors.New("invalid status, valid values are \"disabled\" and \"enabled\""))
 		}
 	}
-	return nil
+	return nil, nil
 }
 
 func clustersToStrings(clusters []*types.ClusterReplicationConfiguration) []string {

@@ -211,10 +211,10 @@ func BuildCLI(releaseVersion string, gitRevision string) *cli.App {
 			Usage:   "start cadence server",
 			Flags: []cli.Flag{
 				&cli.StringFlag{
-					Name:  "services",
+					Name:    "services",
 					Aliases: []string{"s"},
-					Value: strings.Join(validServices, ","),
-					Usage: "list of services to start",
+					Value:   strings.Join(validServices, ","),
+					Usage:   "list of services to start",
 				},
 			},
 			Action: func(c *cli.Context) error {

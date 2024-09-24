@@ -106,8 +106,7 @@ func AdminCatIndices(c *cli.Context) error {
 			PrimaryStorageSize: row.PriStoreSize,
 		})
 	}
-	Render(c, table, RenderOptions{DefaultTemplate: templateTable, Color: true, Border: true})
-	return nil
+	return Render(c, table, RenderOptions{DefaultTemplate: templateTable, Color: true, Border: true})
 }
 
 // AdminIndex used to bulk insert message from kafka parse
@@ -129,7 +128,7 @@ func AdminIndex(c *cli.Context) error {
 			return ErrorAndPrint("Bulk failed", err)
 		}
 		if bulkRequest.NumberOfActions() != 0 {
-			ErrorAndPrint(fmt.Sprintf("Bulk request not done, %d", bulkRequest.NumberOfActions()), err)
+			return ErrorAndPrint(fmt.Sprintf("Bulk request not done, %d", bulkRequest.NumberOfActions()), err)
 		}
 		return nil
 	}
@@ -166,11 +165,15 @@ func AdminIndex(c *cli.Context) error {
 		bulkRequest.Add(req)
 
 		if i%batchSize == batchSize-1 {
-			bulkConductFn()
+			if err := bulkConductFn(); err != nil {
+				return err
+			}
 		}
 	}
 	if bulkRequest.NumberOfActions() != 0 {
-		bulkConductFn()
+		if err := bulkConductFn(); err != nil {
+			return err
+		}
 	}
 	return nil
 }

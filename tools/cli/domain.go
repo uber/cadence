@@ -89,6 +89,8 @@ func newDomainCommands() []*cli.Command {
 			Usage:   "Migrate existing domain to new domain. This command only validates the settings. It does not perform actual data migration",
 			Flags:   migrateDomainFlags,
 			Action: func(c *cli.Context) error {
+				// exit on error already handled in the command
+				// TODO best practice is to return error if validation fails
 				NewDomainMigrationCommand(c).Validation(c)
 				return nil
 			},

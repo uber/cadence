@@ -600,7 +600,7 @@ func parseTime(timeStr string, defaultValue int64) int64 {
 	// treat as time range format
 	parsedTime, err = parseTimeRange(timeStr)
 	if err != nil {
-		ErrorAndPrint(fmt.Sprintf("Cannot parse time '%s', use UTC format '2006-01-02T15:04:05Z', "+
+		ErrorAndExit(fmt.Sprintf("Cannot parse time '%s', use UTC format '2006-01-02T15:04:05Z', "+
 			"time range or raw UnixNano directly. See help for more details.", timeStr), err)
 	}
 	return parsedTime.UnixNano()

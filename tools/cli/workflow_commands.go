@@ -146,7 +146,7 @@ func showHistoryHelper(c *cli.Context, wid, rid string) error {
 	defer cancel()
 	history, err := GetHistory(ctx, wfClient, domain, wid, rid)
 	if err != nil {
-		ErrorAndPrint(fmt.Sprintf("Failed to get history on workflow id: %s, run id: %s.", wid, rid), err)
+		return ErrorAndPrint(fmt.Sprintf("Failed to get history on workflow id: %s, run id: %s.", wid, rid), err)
 	}
 
 	prevEvent := types.HistoryEvent{}
@@ -313,7 +313,7 @@ func constructStartWorkflowRequest(c *cli.Context) (*types.StartWorkflowExecutio
 	workflowType := getRequiredOption(c, FlagWorkflowType)
 	et := c.Int(FlagExecutionTimeout)
 	if et == 0 {
-		ErrorAndPrint(fmt.Sprintf("Option %s format is invalid.", FlagExecutionTimeout), nil)
+		return nil, ErrorAndPrint(fmt.Sprintf("Option %s format is invalid.", FlagExecutionTimeout), nil)
 	}
 	dt := c.Int(FlagDecisionTimeout)
 	wid := c.String(FlagWorkflowID)
@@ -379,7 +379,10 @@ func constructStartWorkflowRequest(c *cli.Context) (*types.StartWorkflowExecutio
 		startRequest.FirstRunAtTimeStamp = common.Int64Ptr(t.UnixNano())
 	}
 
-	headerFields := processHeader(c)
+	headerFields, err := processHeader(c)
+	if err != nil {
+		return nil, fmt.Errorf("error when process header: %w", err)
+	}
 	if len(headerFields) != 0 {
 		startRequest.Header = &types.Header{Fields: headerFields}
 	}
@@ -430,15 +433,15 @@ func processSearchAttr(c *cli.Context) map[string][]byte {
 	return fields
 }
 
-func processHeader(c *cli.Context) map[string][]byte {
+func processHeader(c *cli.Context) (map[string][]byte, error) {
 	headerKeys := processMultipleKeys(c.String(FlagHeaderKey), " ")
 	headerValues := processMultipleJSONValues(processJSONInputHelper(c, jsonTypeHeader))
 
 	if len(headerKeys) != len(headerValues) {
-		ErrorAndPrint("Number of header keys and values are not equal.", nil)
+		return nil, ErrorAndPrint("Number of header keys and values are not equal.", nil)
 	}
 
-	return mapFromKeysValues(headerKeys, headerValues)
+	return mapFromKeysValues(headerKeys, headerValues), nil
 }
 
 func processMemo(c *cli.Context) map[string][]byte {
@@ -858,8 +861,7 @@ func describeWorkflowHelper(c *cli.Context, wid, rid string) error {
 	}
 
 	if printResetPointsOnly {
-		printAutoResetPoints(resp)
-		return nil
+		return printAutoResetPoints(resp)
 	}
 
 	var o interface{}
@@ -880,11 +882,11 @@ type AutoResetPointRow struct {
 	EventID        int64     `header:"EventID"`
 }
 
-func printAutoResetPoints(resp *types.DescribeWorkflowExecutionResponse) {
+func printAutoResetPoints(resp *types.DescribeWorkflowExecutionResponse) error {
 	fmt.Println("Auto Reset Points:")
 	table := []AutoResetPointRow{}
 	if resp.WorkflowExecutionInfo.AutoResetPoints == nil || len(resp.WorkflowExecutionInfo.AutoResetPoints.Points) == 0 {
-		return
+		return nil
 	}
 	for _, pt := range resp.WorkflowExecutionInfo.AutoResetPoints.Points {
 		table = append(table, AutoResetPointRow{
@@ -894,7 +896,7 @@ func printAutoResetPoints(resp *types.DescribeWorkflowExecutionResponse) {
 			EventID:        pt.GetFirstDecisionCompletedID(),
 		})
 	}
-	RenderTable(os.Stdout, table, RenderOptions{Color: true, Border: true, PrintDateTime: true})
+	return RenderTable(os.Stdout, table, RenderOptions{Color: true, Border: true, PrintDateTime: true})
 }
 
 // describeWorkflowExecutionResponse is used to print datetime instead of print raw time
@@ -1209,7 +1211,9 @@ func displayPagedWorkflows(c *cli.Context, getWorkflowPage getWorkflowPageFn, fi
 			return err
 		}
 
-		displayWorkflows(c, page)
+		if err := displayWorkflows(c, page); err != nil {
+			return fmt.Errorf("error displaying workflows: %w", err)
+		}
 
 		if firstPageOnly {
 			break
@@ -1229,25 +1233,24 @@ func displayAllWorkflows(c *cli.Context, getWorkflowsPage getWorkflowPageFn) err
 	if err != nil {
 		return err
 	}
-	displayWorkflows(c, wfs)
-	return nil
+	return displayWorkflows(c, wfs)
 }
 
-func displayWorkflows(c *cli.Context, workflows []*types.WorkflowExecutionInfo) {
+func displayWorkflows(c *cli.Context, workflows []*types.WorkflowExecutionInfo) error {
 	printJSON := c.Bool(FlagPrintJSON)
 	printDecodedRaw := c.Bool(FlagPrintFullyDetail)
 	if printJSON || printDecodedRaw {
 		fmt.Println("[")
 		printListResults(workflows, printJSON, false)
 		fmt.Println("]")
-	} else {
-		tableOptions := workflowTableOptions(c)
-		var table []WorkflowRow
-		for _, workflow := range workflows {
-			table = append(table, newWorkflowRow(workflow))
-		}
-		Render(c, table, tableOptions)
+		return nil
 	}
+	tableOptions := workflowTableOptions(c)
+	var table []WorkflowRow
+	for _, workflow := range workflows {
+		table = append(table, newWorkflowRow(workflow))
+	}
+	return Render(c, table, tableOptions)
 }
 
 func listWorkflowExecutions(client frontend.Client, pageSize int, domain, query string, c *cli.Context) getWorkflowPageFn {
@@ -1343,11 +1346,15 @@ func listWorkflows(c *cli.Context) (getWorkflowPageFn, error) {
 	}
 
 	var workflowStatus types.WorkflowExecutionCloseStatus
+	var err error
 	if c.IsSet(FlagWorkflowStatus) {
 		if queryOpen {
 			return nil, ErrorAndPrint(optionErr, errors.New("you can only filter on status for closed workflow, not open workflow"))
 		}
-		workflowStatus = getWorkflowStatus(c.String(FlagWorkflowStatus))
+		workflowStatus, err = getWorkflowStatus(c.String(FlagWorkflowStatus))
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse workflow status: %w", err)
+		}
 	} else {
 		workflowStatus = workflowStatusNotSet
 	}
@@ -1448,13 +1455,12 @@ func scanWorkflowExecutions(client frontend.Client, pageSize int, nextPageToken 
 	return response.Executions, response.NextPageToken, nil
 }
 
-func getWorkflowStatus(statusStr string) types.WorkflowExecutionCloseStatus {
+func getWorkflowStatus(statusStr string) (types.WorkflowExecutionCloseStatus, error) {
 	if status, ok := workflowClosedStatusMap[strings.ToLower(statusStr)]; ok {
-		return status
+		return status, nil
 	}
-	ErrorAndPrint(optionErr, errors.New("option status is not one of allowed values "+
+	return -1, ErrorAndPrint(optionErr, errors.New("option status is not one of allowed values "+
 		"[completed, failed, canceled, terminated, continued_as_new, timed_out]"))
-	return 0
 }
 
 func getWorkflowIDReusePolicy(value int) *types.WorkflowIDReusePolicy {

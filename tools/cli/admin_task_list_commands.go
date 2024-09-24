@@ -74,15 +74,16 @@ func AdminDescribeTaskList(c *cli.Context) error {
 	if taskListStatus == nil {
 		return ErrorAndPrint(colorMagenta("No tasklist status information."), nil)
 	}
-	printTaskListStatus(taskListStatus)
+	if err := printTaskListStatus(taskListStatus); err != nil {
+		return fmt.Errorf("failed to print task list status: %w", err)
+	}
 	fmt.Printf("\n")
 
 	pollers := response.Pollers
 	if len(pollers) == 0 {
 		return ErrorAndPrint(colorMagenta("No poller for tasklist: "+taskList), nil)
 	}
-	printTaskListPollers(pollers, taskListType)
-	return nil
+	return printTaskListPollers(pollers, taskListType)
 }
 
 // AdminListTaskList displays all task lists under a domain.
@@ -109,11 +110,10 @@ func AdminListTaskList(c *cli.Context) error {
 	for name, taskList := range response.GetActivityTaskListMap() {
 		table = append(table, TaskListRow{name, "Activity", len(taskList.GetPollers())})
 	}
-	RenderTable(os.Stdout, table, RenderOptions{Color: true, Border: true})
-	return nil
+	return RenderTable(os.Stdout, table, RenderOptions{Color: true, Border: true})
 }
 
-func printTaskListStatus(taskListStatus *types.TaskListStatus) {
+func printTaskListStatus(taskListStatus *types.TaskListStatus) error {
 	table := []TaskListStatusRow{{
 		ReadLevel: taskListStatus.GetReadLevel(),
 		AckLevel:  taskListStatus.GetAckLevel(),
@@ -122,5 +122,5 @@ func printTaskListStatus(taskListStatus *types.TaskListStatus) {
 		StartID:   taskListStatus.GetTaskIDBlock().GetStartID(),
 		EndID:     taskListStatus.GetTaskIDBlock().GetEndID(),
 	}}
-	RenderTable(os.Stdout, table, RenderOptions{Color: true})
+	return RenderTable(os.Stdout, table, RenderOptions{Color: true})
 }

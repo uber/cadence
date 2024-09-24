@@ -253,12 +253,12 @@ func (d *domainMigrationCLIImpl) SearchAttributesChecker(c *cli.Context) DomainM
 	for _, attr := range searchAttributes {
 		parts := strings.SplitN(attr, ":", 2)
 		if len(parts) != 2 {
-			ErrorAndPrint(fmt.Sprintf("Invalid search attribute format: %s", attr), nil)
+			ErrorAndExit(fmt.Sprintf("Invalid search attribute format: %s", attr), nil)
 		}
 		key, valueType := parts[0], parts[1]
 		ivt, err := parseIndexedValueType(valueType)
 		if err != nil {
-			ErrorAndPrint(fmt.Sprintf("Invalid search attribute type for %s: %s", key, valueType), err)
+			ErrorAndExit(fmt.Sprintf("Invalid search attribute type for %s: %s", key, valueType), err)
 		}
 		requiredAttributes[key] = ivt
 	}

@@ -203,8 +203,12 @@ func AdminFailoverRollback(c *cli.Context) error {
 
 // AdminFailoverList list failover runs
 func AdminFailoverList(c *cli.Context) error {
-	c.Set(FlagWorkflowID, getFailoverWorkflowID(c))
-	c.Set(FlagDomain, common.SystemLocalDomainName)
+	if err := c.Set(FlagWorkflowID, getFailoverWorkflowID(c)); err != nil {
+		return err
+	}
+	if err := c.Set(FlagDomain, common.SystemLocalDomainName); err != nil {
+		return err
+	}
 	return ListWorkflow(c)
 }
 

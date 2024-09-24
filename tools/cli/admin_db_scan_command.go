@@ -210,7 +210,7 @@ func listExecutionsByShardID(
 	for executionIterator.HasNext() {
 		result, err := executionIterator.Next()
 		if err != nil {
-			ErrorAndPrint(fmt.Sprintf("Failed to scan shard ID: %v for unsupported workflow. Please retry.", shardID), err)
+			return ErrorAndPrint(fmt.Sprintf("Failed to scan shard ID: %v for unsupported workflow. Please retry.", shardID), err)
 		}
 		execution := result.(*persistence.ListConcreteExecutionsEntity)
 		executionInfo := execution.ExecutionInfo

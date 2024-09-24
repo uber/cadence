@@ -334,7 +334,7 @@ Loop:
 func splitBuffer(buffer []byte) ([]byte, []byte) {
 	matches := r.FindAllIndex(buffer, -1)
 	if len(matches) == 0 {
-		ErrorAndPrint(malformedMessage, errors.New("header not found, did you generate dump with -v"))
+		ErrorAndExit(malformedMessage, errors.New("header not found, did you generate dump with -v"))
 	}
 	splitIndex := matches[len(matches)-1][0]
 	return buffer[:splitIndex], buffer[splitIndex:]
@@ -422,7 +422,7 @@ func deserializeVisibilityMessages(messages [][]byte, skipErrors bool) ([]*index
 		err := decodeVisibility(m, &msg)
 		if err != nil {
 			if !skipErrors {
-				ErrorAndPrint(malformedMessage, err)
+				ErrorAndExit(malformedMessage, err)
 			} else {
 				skipped++
 				continue

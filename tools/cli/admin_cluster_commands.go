@@ -50,7 +50,7 @@ func AdminAddSearchAttribute(c *cli.Context) error {
 	}
 
 	// ask user for confirmation
-	promptMsg := fmt.Sprintf("Are you trying to add key [%s] with Type [%s]? Y/N",
+	promptMsg := fmt.Sprintf("Are you trying to add key [%s] with Type [%s]? y/N",
 		color.YellowString(key), color.YellowString(intValTypeToString(valType)))
 	promptFn(promptMsg)
 
@@ -136,8 +136,12 @@ func AdminRebalanceStart(c *cli.Context) error {
 }
 
 func AdminRebalanceList(c *cli.Context) error {
-	c.Set(FlagWorkflowID, failovermanager.RebalanceWorkflowID)
-	c.Set(FlagDomain, common.SystemLocalDomainName)
+	if err := c.Set(FlagWorkflowID, failovermanager.RebalanceWorkflowID); err != nil {
+		return err
+	}
+	if err := c.Set(FlagDomain, common.SystemLocalDomainName); err != nil {
+		return err
+	}
 	return ListWorkflow(c)
 }
 

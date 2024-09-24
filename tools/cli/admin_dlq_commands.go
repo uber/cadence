@@ -117,8 +117,7 @@ func AdminCountDLQMessages(c *cli.Context) error {
 		return table[i].ShardID < table[j].ShardID
 	})
 
-	Render(c, table, RenderOptions{Color: true, DefaultTemplate: templateTable})
-	return nil
+	return Render(c, table, RenderOptions{Color: true, DefaultTemplate: templateTable})
 }
 
 // AdminGetDLQMessages gets DLQ metadata
@@ -170,7 +169,7 @@ func AdminGetDLQMessages(c *cli.Context) error {
 				NextPageToken:         pageToken,
 			})
 			if err != nil {
-				ErrorAndPrint(fmt.Sprintf("fail to read dlq message for shard: %d", shardID), err)
+				return nil, ErrorAndPrint(fmt.Sprintf("fail to read dlq message for shard: %d", shardID), err)
 			}
 
 			replicationTasks := map[int64]*types.ReplicationTask{}
@@ -238,8 +237,7 @@ func AdminGetDLQMessages(c *cli.Context) error {
 		table = append(table, tablesInShard...)
 	}
 
-	Render(c, table, RenderOptions{DefaultTemplate: templateTable, Color: true})
-	return nil
+	return Render(c, table, RenderOptions{DefaultTemplate: templateTable, Color: true})
 }
 
 // AdminPurgeDLQMessages deletes messages from DLQ

@@ -510,7 +510,9 @@ func AdminDescribeShardDistribution(c *cli.Context) error {
 	outputPageSize := tableRenderSize
 	for shardID, identity := range resp.Shards {
 		if outputPageSize == 0 {
-			Render(c, table, opts)
+			if err := Render(c, table, opts); err != nil {
+				return fmt.Errorf("error rendering: %w", err)
+			}
 			table = []ShardRow{}
 			if !showNextPage() {
 				break
@@ -521,8 +523,7 @@ func AdminDescribeShardDistribution(c *cli.Context) error {
 		outputPageSize--
 	}
 	// output the remaining rows
-	Render(c, table, opts)
-	return nil
+	return Render(c, table, opts)
 }
 
 // AdminDescribeHistoryHost describes history host

@@ -71,7 +71,7 @@ func AdminDBClean(c *cli.Context) error {
 
 	invariants := scanType.ToInvariants(collections, logger)
 	if len(invariants) < 1 {
-		ErrorAndPrint(
+		return ErrorAndPrint(
 			fmt.Sprintf("no invariants for scantype %q and collections %q",
 				scanType.String(),
 				collectionSlice),
