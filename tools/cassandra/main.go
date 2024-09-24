@@ -51,9 +51,10 @@ func SetupSchema(config *SetupSchemaConfig) error {
 func cliHandler(c *cli.Context, handler func(c *cli.Context) error) error {
 	quiet := c.Bool(schema.CLIOptQuiet)
 	err := handler(c)
-	if err != nil {
-		if quiet {
-			return fmt.Errorf("cli error")
+	if err != nil  {
+		if quiet { // if quiet, don't return error
+			fmt.Println("fail to run tool: ", err)
+			return nil
 		}
 		return err
 	}

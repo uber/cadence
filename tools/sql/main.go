@@ -41,8 +41,9 @@ func RunTool(args []string) error {
 func cliHandler(c *cli.Context, handler func(c *cli.Context) error) error {
 	err := handler(c)
 	if err != nil {
-		if quiet := c.Bool(schema.CLIOptQuiet); quiet {
-			return fmt.Errorf("error executing command")
+		if quiet := c.Bool(schema.CLIOptQuiet); quiet { // return error only if not quiet
+			fmt.Println("error executing command: ", err)
+			return nil
 		}
 		return fmt.Errorf("error executing command: %w", err)
 	}
