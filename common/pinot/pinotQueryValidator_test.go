@@ -359,11 +359,11 @@ func TestValidateQuery(t *testing.T) {
 			query:     "CustomStringField = 'abc' OR CustomStringField = 'def'",
 			validated: "(JSON_MATCH(Attr, '\"$.CustomStringField\" is not null') AND JSON_MATCH(Attr, 'REGEXP_LIKE(\"$.CustomStringField\", ''.*abc.*'')') or JSON_MATCH(Attr, '\"$.CustomStringField\" is not null') AND JSON_MATCH(Attr, 'REGEXP_LIKE(\"$.CustomStringField\", ''.*def.*'')'))",
 		},
-		"case23-1: test keyword field is empty case": {
+		"case23-1: custom keyword field is empty case": {
 			query:     "CustomKeywordField = ''",
 			validated: "JSON_MATCH(Attr, '\"$.CustomKeywordField\" is not null') AND JSON_MATCH(Attr, 'REGEXP_LIKE(\"$.CustomKeywordField\", ''^$'')')",
 		},
-		"case23-2: test keyword field is not empty case": {
+		"case23-2: custom keyword field is not empty case": {
 			query:     "CustomKeywordField != ''",
 			validated: "JSON_MATCH(Attr, '\"$.CustomKeywordField\" is not null') AND NOT JSON_MATCH(Attr, 'REGEXP_LIKE(\"$.CustomKeywordField\", ''^$'')')",
 		},
