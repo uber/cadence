@@ -445,12 +445,20 @@ func processEqual(colNameStr string, colValStr string) string {
 func processCustomKeyword(operator string, colNameStr string, colValStr string) string {
 	// edge case
 	if operator == "!=" {
-		return fmt.Sprintf("JSON_MATCH(Attr, '\"$.%s\"%s''%s''') and JSON_MATCH(Attr, '\"$.%s[*]\"%s''%s''')",
-			colNameStr, operator, colValStr, colNameStr, operator, colValStr)
+		return createKeywordQuery(operator, colNameStr, colValStr, "and", "NOT ")
 	}
 
-	return fmt.Sprintf("(JSON_MATCH(Attr, '\"$.%s\"%s''%s''') or JSON_MATCH(Attr, '\"$.%s[*]\"%s''%s'''))",
-		colNameStr, operator, colValStr, colNameStr, operator, colValStr)
+	return createKeywordQuery(operator, colNameStr, colValStr, "or", "")
+}
+
+func createKeywordQuery(operator string, colNameStr string, colValStr string, connector string, notEqual string) string {
+	if colValStr == "" {
+		// partial match for an empty string (still it will only match empty string)
+		// so it equals to exact match for an empty string
+		return createCustomStringQuery(colNameStr, colValStr, notEqual)
+	}
+	return fmt.Sprintf("(JSON_MATCH(Attr, '\"$.%s\"%s''%s''') %s JSON_MATCH(Attr, '\"$.%s[*]\"%s''%s'''))",
+		colNameStr, operator, colValStr, connector, colNameStr, operator, colValStr)
 }
 
 func processCustomString(operator string, colNameStr string, colValStr string) string {
