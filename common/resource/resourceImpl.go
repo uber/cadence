@@ -58,8 +58,8 @@ import (
 	"github.com/uber/cadence/common/partition"
 	"github.com/uber/cadence/common/persistence"
 	persistenceClient "github.com/uber/cadence/common/persistence/client"
-	"github.com/uber/cadence/common/quotas"
 	"github.com/uber/cadence/common/quotas/global/rpc"
+	"github.com/uber/cadence/common/quotas/permember"
 	"github.com/uber/cadence/common/service"
 )
 
@@ -182,7 +182,7 @@ func New(
 	persistenceBean, err := persistenceClient.NewBeanFromFactory(persistenceClient.NewFactory(
 		&params.PersistenceConfig,
 		func() float64 {
-			return quotas.PerMember(
+			return permember.PerMember(
 				serviceName,
 				float64(serviceConfig.PersistenceGlobalMaxQPS()),
 				float64(serviceConfig.PersistenceMaxQPS()),
