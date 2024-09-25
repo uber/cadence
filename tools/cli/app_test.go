@@ -135,7 +135,7 @@ func (s *cliAppSuite) TestDomainRegister_Failed() {
 	// TODO check error message for all s.Error use cases
 	s.ErrorContains(
 		s.app.Run(([]string{"", "--do", domainName, "domain", "register", "--global_domain", "true"})),
-		"fake error")
+		"Register Domain operation failed.")
 }
 
 var describeDomainResponseServer = &types.DescribeDomainResponse{
