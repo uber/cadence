@@ -52,9 +52,10 @@ type RateLimiter struct {
 	goRateLimiter        atomic.Value
 	// TTL is used to determine whether to update the limit. Until TTL, pick
 	// lower(existing TTL, input TTL). After TTL, pick input TTL if different from existing TTL
-	ttlTimer *time.Timer
-	ttl      time.Duration
-	minBurst int
+	ttlTimer    *time.Timer
+	ttl         time.Duration
+	minBurst    int
+	burstWindow time.Duration
 }
 
 // NewSimpleRateLimiter returns a new rate limiter backed by the golang rate
@@ -73,6 +74,22 @@ func NewRateLimiter(maxDispatchPerSecond *float64, ttl time.Duration, minBurst i
 		ttl:                  ttl,
 		ttlTimer:             time.NewTimer(ttl),
 		minBurst:             minBurst,
+		burstWindow:          time.Second,
+	}
+	rl.storeLimiter(maxDispatchPerSecond)
+	return rl
+}
+
+// NewRateLimiterWithBurstWindow returns a ratelimiter that updates itself periodically, and allows bursts to consume up to burstWindow worth of tokens.
+// This is primarily intended to be used by user-facing limits, to average across a larger window of time, and allow lower RPS limits to send small bursts
+// in large clusters without unfairly limiting them to only a few requests per frontend host.
+func NewRateLimiterWithBurstWindow(maxDispatchPerSecond *float64, ttl time.Duration, burstWindow time.Duration) *RateLimiter {
+	rl := &RateLimiter{
+		maxDispatchPerSecond: maxDispatchPerSecond,
+		ttl:                  ttl,
+		ttlTimer:             time.NewTimer(ttl),
+		minBurst:             1,
+		burstWindow:          burstWindow,
 	}
 	rl.storeLimiter(maxDispatchPerSecond)
 	return rl
@@ -119,6 +136,7 @@ func (rl *RateLimiter) Limit() rate.Limit {
 
 func (rl *RateLimiter) storeLimiter(maxDispatchPerSecond *float64) {
 	burst := int(*maxDispatchPerSecond)
+	burst = int(float64(burst) * (float64(rl.burstWindow) / float64(time.Second))) // scale by burst window
 	// If throttling is zero, burst also has to be 0
 	if *maxDispatchPerSecond != 0 && burst <= rl.minBurst {
 		burst = rl.minBurst

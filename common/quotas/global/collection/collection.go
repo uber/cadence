@@ -453,6 +453,13 @@ func (c *Collection) doUpdate(since time.Duration, usage map[shared.GlobalKey]rp
 		// should not happen outside pretty major errors, but may recover next time.
 		c.logger.Error("aggregator update error", tag.Error(res.Err))
 	}
+
+	// currently hardcoded, but may be useful to make configurable?
+	// 10s could be larger than desired.
+	const (
+		burstWindow = 10 * time.Second
+	)
+
 	// either way, process all weights we did successfully retrieve.
 	for gkey, info := range res.Weights {
 		delete(usage, gkey) // clean up the list so we know what was missed
@@ -474,8 +481,9 @@ func (c *Collection) doUpdate(since time.Duration, usage map[shared.GlobalKey]rp
 			target := rate.Limit(c.targetRPS(lkey))
 			limiter := c.global.Load(lkey)
 			fallbackTarget := limiter.FallbackLimit()
-			boosted := boostRPS(target, fallbackTarget, info.Weight, info.UsedRPS)
-			limiter.Update(boosted)
+			boostedRPS := boostRPS(target, fallbackTarget, info.Weight, info.UsedRPS)
+			boostedBurst := boostBurst(target, boostedRPS, burstWindow)
+			limiter.Update(boostedRPS, boostedBurst)
 		}
 	}
 
@@ -496,6 +504,45 @@ func (c *Collection) doUpdate(since time.Duration, usage map[shared.GlobalKey]rp
 		// requested but not returned, bump the fallback fuse
 		c.global.Load(localKey).FailedUpdate()
 	}
+}
+
+func boostBurst(target, boosted rate.Limit, window time.Duration) int {
+	// the default behavior of "rps == burst" is quite bad with low-volume bursty use,
+	// especially when RPS or weight is low.  100RPS or lower configured can easily lead
+	// to ~1 request allowed, rejecting most of a 10-request burst that occurs every minute or so.
+	//
+	// obviously there are tradeoffs here, but low-RPS behaves so badly that we feel the risk
+	// of allowing large multi-host bursts beyond our capacity is worth it.
+	// they're rare enough in practice, and the burst size will decrease as utilization increases.
+	//
+	// basic logic is that the burst value should:
+	// - never exceed the full target RPS as a safety limit
+	// - allow at least a few seconds in most cases
+	// - be based on update-frequency, to allow buffering traffic shifts while weights rebalance
+	//
+	// this way:
+	// - heavily-weighted hosts trend towards burst==RPS, forcing imbalanced load to be smooth-ish
+	// - low-weighted hosts allow large bursts, and will re-balance "soon" if load has just shifted
+	// - well-distributed requests allow large bursts, but not exceeding RPS per window
+	// - low-weight but high-cluster-usage may be substantially below target, which seems fair,
+	//   and probably won't be noticed in the high-usage flood.
+	//
+	// currently the target is ~10s, as this matches our metrics aggregation, and that metrics
+	// difference vs limiting behavior is frequently confusing to our users.
+
+	burst := float64(boosted) * (float64(window) / float64(time.Second)) // rps * num seconds in window, without flooring
+	if burst > float64(target) {
+		return int(target) // do not exceed cluster RPS, that seems overly dangerous
+	}
+
+	return int(burst)
+}
+
+func max[T ~int64](a, b T) T {
+	if a > b {
+		return a
+	}
+	return b
 }
 
 func boostRPS(target, fallback rate.Limit, weight float64, usedRPS float64) rate.Limit {

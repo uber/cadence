@@ -22,6 +22,7 @@ package quotas
 
 import (
 	"math"
+	"time"
 
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/membership"
@@ -52,12 +53,14 @@ func NewPerMemberDynamicRateLimiterFactory(
 	globalRPS dynamicconfig.IntPropertyFnWithDomainFilter,
 	instanceRPS dynamicconfig.IntPropertyFnWithDomainFilter,
 	resolver membership.Resolver,
+	burstWindow time.Duration,
 ) LimiterFactory {
 	return perMemberFactory{
 		service:     service,
 		globalRPS:   globalRPS,
 		instanceRPS: instanceRPS,
 		resolver:    resolver,
+		burstWindow: burstWindow,
 	}
 }
 
@@ -66,15 +69,21 @@ type perMemberFactory struct {
 	globalRPS   dynamicconfig.IntPropertyFnWithDomainFilter
 	instanceRPS dynamicconfig.IntPropertyFnWithDomainFilter
 	resolver    membership.Resolver
+
+	// burstWindow is the maximum token-rps burst size.
+	//
+	// By default this should be 1 second, which is what most non-user-facing
+	// limiters use, and the only value we have used historically.
+	burstWindow time.Duration
 }
 
 func (f perMemberFactory) GetLimiter(domain string) Limiter {
-	return NewDynamicRateLimiter(func() float64 {
+	return NewWindowedDynamicRateLimiter(func() float64 {
 		return PerMember(
 			f.service,
 			float64(f.globalRPS(domain)),
 			float64(f.instanceRPS(domain)),
 			f.resolver,
 		)
-	})
+	}, f.burstWindow)
 }

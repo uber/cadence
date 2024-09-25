@@ -22,6 +22,7 @@ package quotas
 
 import (
 	"testing"
+	"time"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
@@ -62,6 +63,7 @@ func Test_PerMemberFactory(t *testing.T) {
 		func(string) int { return 20 },
 		func(string) int { return 3 },
 		resolver,
+		time.Second,
 	)
 
 	limiter := factory.GetLimiter("TestDomainName")
