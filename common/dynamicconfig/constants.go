@@ -1197,6 +1197,7 @@ const (
 	// Default value: 10
 	// Allowed filters: DomainName
 	ParentClosePolicyThreshold
+	ParentClosePolicyBatchSize
 	// NumParentClosePolicySystemWorkflows is key for number of parentClosePolicy system workflows running in total
 	// KeyName: history.numParentClosePolicySystemWorkflows
 	// Value type: Int
@@ -3693,6 +3694,12 @@ var IntKeys = map[IntKey]DynamicInt{
 		Filters:      []Filter{DomainName},
 		Description:  "ParentClosePolicyThreshold is decides that parent close policy will be processed by sys workers(if enabled) ifthe number of children greater than or equal to this threshold",
 		DefaultValue: 10,
+	},
+	ParentClosePolicyBatchSize: {
+		KeyName:      "history.parentClosePolicyBatchSize",
+		Filters:      []Filter{DomainName},
+		Description:  "ParentClosePolicyBatchSize is the batch size of parent close policy processed by sys workers",
+		DefaultValue: 200,
 	},
 	NumParentClosePolicySystemWorkflows: {
 		KeyName:      "history.numParentClosePolicySystemWorkflows",
