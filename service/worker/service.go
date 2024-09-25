@@ -217,8 +217,8 @@ func (s *Service) Start() {
 	s.startScanner()
 	s.startFixerWorkflowWorker()
 	if s.config.IndexerCfg != nil {
-		if shouldStartDualIndexer(s.params) {
-			s.startDualIndexer()
+		if shouldStartMigrationIndexer(s.params) {
+			s.startMigrationIndexer()
 		} else {
 			s.startIndexer()
 		}
@@ -389,8 +389,8 @@ func (s *Service) startIndexer() {
 	}
 }
 
-func (s *Service) startDualIndexer() {
-	visibilityIndexer := indexer.NewDualIndexer(
+func (s *Service) startMigrationIndexer() {
+	visibilityIndexer := indexer.NewMigrationIndexer(
 		s.config.IndexerCfg,
 		s.GetMessagingClient(),
 		s.params.ESClient,
@@ -520,7 +520,7 @@ func shouldStartIndexer(params *resource.Params, advancedWritingMode dynamicconf
 	return true
 }
 
-func shouldStartDualIndexer(params *resource.Params) bool {
+func shouldStartMigrationIndexer(params *resource.Params) bool {
 	// not need to check IsAdvancedVisibilityWritingEnabled here since it was already checked or the s.config.IndexerCfg will be nil
 	// when it is using OS and in migration mode, we should start dual indexer to write to both ES and OS
 	if params.PersistenceConfig.AdvancedVisibilityStore == common.OSVisibilityStoreName &&

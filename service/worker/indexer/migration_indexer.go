@@ -29,8 +29,8 @@ import (
 	"github.com/uber/cadence/common/metrics"
 )
 
-// NewDualIndexer create a new Indexer that can index to both ES and OS
-func NewDualIndexer(
+// NewMigrationIndexer create a new Indexer that can index to both ES and OS
+func NewMigrationIndexer(
 	config *Config,
 	client messaging.Client,
 	primaryClient es.GenericClient,
@@ -41,14 +41,9 @@ func NewDualIndexer(
 ) *Indexer {
 	logger = logger.WithTags(tag.ComponentIndexer)
 
-	primaryProcessor, err := newESProcessor(processorName, config, primaryClient, logger, metricsClient)
+	visibilityProcessor, err := newESDualProcessor(processorName, config, primaryClient, secondaryClient, logger, metricsClient)
 	if err != nil {
 		logger.Fatal("Index ES processor state changed", tag.LifeCycleStartFailed, tag.Error(err))
-	}
-
-	secondaryProcessor, err := newESProcessor(processorName, config, secondaryClient, logger, metricsClient)
-	if err != nil {
-		logger.Fatal("Index OS processor state changed", tag.LifeCycleStartFailed, tag.Error(err))
 	}
 
 	consumer, err := client.NewConsumer(common.VisibilityAppName, getConsumerName(visibilityName))
@@ -57,13 +52,13 @@ func NewDualIndexer(
 	}
 
 	return &Indexer{
-		config:      config,
-		esIndexName: visibilityName,
-		consumer:    consumer,
-		logger:      logger.WithTags(tag.ComponentIndexerProcessor),
-		scope:       metricsClient.Scope(metrics.IndexProcessorScope),
-		shutdownCh:  make(chan struct{}),
-		processors:  []ESProcessor{primaryProcessor, secondaryProcessor},
-		msgEncoder:  defaultEncoder,
+		config:              config,
+		esIndexName:         visibilityName,
+		consumer:            consumer,
+		logger:              logger.WithTags(tag.ComponentIndexerProcessor),
+		scope:               metricsClient.Scope(metrics.IndexProcessorScope),
+		shutdownCh:          make(chan struct{}),
+		visibilityProcessor: visibilityProcessor,
+		msgEncoder:          defaultEncoder,
 	}
 }

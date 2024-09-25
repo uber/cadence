@@ -58,13 +58,13 @@ type (
 	}
 	// Indexer used to consumer data from kafka then send to ElasticSearch
 	Indexer struct {
-		esIndexName string
-		consumer    messaging.Consumer
-		processors  []ESProcessor
-		config      *Config
-		logger      log.Logger
-		scope       metrics.Scope
-		msgEncoder  codec.BinaryEncoder
+		esIndexName         string
+		consumer            messaging.Consumer
+		visibilityProcessor ESProcessor
+		config              *Config
+		logger              log.Logger
+		scope               metrics.Scope
+		msgEncoder          codec.BinaryEncoder
 
 		isStarted  int32
 		isStopped  int32
@@ -95,7 +95,7 @@ func NewIndexer(
 ) *Indexer {
 	logger = logger.WithTags(tag.ComponentIndexer)
 
-	processor, err := newESProcessor(processorName, config, visibilityClient, logger, metricsClient)
+	visibilityProcessor, err := newESProcessor(processorName, config, visibilityClient, logger, metricsClient)
 	if err != nil {
 		logger.Fatal("Index ES processor state changed", tag.LifeCycleStartFailed, tag.Error(err))
 	}
@@ -106,14 +106,14 @@ func NewIndexer(
 	}
 
 	return &Indexer{
-		config:      config,
-		esIndexName: visibilityName,
-		consumer:    consumer,
-		logger:      logger.WithTags(tag.ComponentIndexerProcessor),
-		scope:       metricsClient.Scope(metrics.IndexProcessorScope),
-		shutdownCh:  make(chan struct{}),
-		processors:  []ESProcessor{processor},
-		msgEncoder:  defaultEncoder,
+		config:              config,
+		esIndexName:         visibilityName,
+		consumer:            consumer,
+		logger:              logger.WithTags(tag.ComponentIndexerProcessor),
+		scope:               metricsClient.Scope(metrics.IndexProcessorScope),
+		shutdownCh:          make(chan struct{}),
+		visibilityProcessor: visibilityProcessor,
+		msgEncoder:          defaultEncoder,
 	}
 }
 
@@ -131,9 +131,7 @@ func (i *Indexer) Start() error {
 		return err
 	}
 
-	for _, processor := range i.processors {
-		processor.Start()
-	}
+	i.visibilityProcessor.Start()
 
 	i.shutdownWG.Add(1)
 	go i.processorPump()
@@ -171,9 +169,7 @@ func (i *Indexer) processorPump() {
 	<-i.shutdownCh
 	// Processor is shutting down, close the underlying consumer and esProcessor
 	i.consumer.Stop()
-	for _, processor := range i.processors {
-		processor.Stop()
-	}
+	i.visibilityProcessor.Stop()
 
 	i.logger.Info("Index bulkProcessor pump shutting down.")
 	if success := common.AwaitWaitGroup(&workerWG, 10*time.Second); !success {
@@ -253,9 +249,8 @@ func (i *Indexer) addMessageToES(indexMsg *indexer.Message, kafkaMsg messaging.M
 		return errUnknownMessageType
 	}
 
-	for _, processor := range i.processors {
-		processor.Add(req, keyToKafkaMsg, kafkaMsg)
-	}
+	i.visibilityProcessor.Add(req, keyToKafkaMsg, kafkaMsg)
+
 	return nil
 }
 

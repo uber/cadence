@@ -56,7 +56,7 @@ func TestNewDualIndexer(t *testing.T) {
 	mockMessagingClient := messaging.NewMockClient(ctrl)
 	mockMessagingClient.EXPECT().NewConsumer("visibility", "test-bulkProcessor-consumer").Return(nil, nil).Times(1)
 
-	indexer := NewDualIndexer(config, mockMessagingClient, mockESClient, mockESClient, processorName, testlogger.New(t), metrics.NewNoopMetricsClient())
+	indexer := NewMigrationIndexer(config, mockMessagingClient, mockESClient, mockESClient, processorName, testlogger.New(t), metrics.NewNoopMetricsClient())
 	assert.NotNil(t, indexer)
 }
 
