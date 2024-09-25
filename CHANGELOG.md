@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 You can find a list of previous releases on the [github releases](https://github.com/uber/cadence/releases) page.
 
 ## [Unreleased]
+Global ratelimiter, see [detailed doc](https://github.com/uber/cadence/blob/master/common/quotas/global/doc.go)
+
+## [1.2.13] - 2024-09-25
+See [Release Note](https://github.com/uber/cadence/releases/tag/v1.2.13) for details
+
+## [1.2.12] - 2024-08-19
+See [Release Note](https://github.com/uber/cadence/releases/tag/v1.2.12) for details
+
+## [1.2.11] - 2024-07-10
+See [Release Note](https://github.com/uber/cadence/releases/tag/v1.2.11) for details
+
+## [1.2.10] - 2024-06-04
+See [Release Note](https://github.com/uber/cadence/releases/tag/v1.2.10) for details
 
 ## [1.2.9] - 2024-05-01
 See [Release Note](https://github.com/uber/cadence/releases/tag/v1.2.9) for details
