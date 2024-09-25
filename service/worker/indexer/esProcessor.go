@@ -24,7 +24,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"sync"
 	"time"
 
 	"github.com/uber/cadence/.gen/go/indexer"
@@ -60,7 +59,6 @@ type (
 	kafkaMessageWithMetrics struct { // value of ESProcessorImpl.mapToKafkaMsg
 		message        messaging.Message
 		swFromAddToAck *metrics.Stopwatch // metric from message add to process, to message ack/nack
-		ackOnce        *sync.Once         // Ensures Ack/Nack happens only once during migration
 	}
 )
 
@@ -130,6 +128,7 @@ func newESDualProcessor(
 		return nil, err
 	}
 
+	params.AfterFunc = p.shadowBulkAfterAction
 	osprocessor, err := osclient.RunBulkProcessor(context.Background(), params)
 	if err != nil {
 		return nil, err
@@ -249,6 +248,15 @@ func (p *ESProcessorImpl) bulkAfterAction(id int64, requests []bulk.GenericBulka
 				p.scope.IncCounter(metrics.ESProcessorRetries)
 			}
 		}
+	}
+}
+
+// bulkAfterAction is triggered after bulk bulkProcessor commit
+func (p *ESProcessorImpl) shadowBulkAfterAction(id int64, requests []bulk.GenericBulkableRequest, response *bulk.GenericBulkResponse, err *bulk.GenericError) {
+	if err != nil {
+		// This happens after configured retry, which means something bad happens on cluster or index
+		// When cluster back to live, bulkProcessor will re-commit those failure requests
+		p.logger.Error("Error commit bulk request in secondary processor.", tag.Error(err.Details))
 	}
 }
 
@@ -404,24 +412,18 @@ func newKafkaMessageWithMetrics(kafkaMsg messaging.Message, stopwatch *metrics.S
 	return &kafkaMessageWithMetrics{
 		message:        kafkaMsg,
 		swFromAddToAck: stopwatch,
-		ackOnce:        new(sync.Once),
 	}
 }
 
 func (km *kafkaMessageWithMetrics) Ack() {
-	km.ackOnce.Do(func() {
-		km.message.Ack() // nolint:errcheck
-	})
-
+	km.message.Ack() // nolint:errcheck
 	if km.swFromAddToAck != nil {
 		km.swFromAddToAck.Stop()
 	}
 }
 
 func (km *kafkaMessageWithMetrics) Nack() {
-	km.ackOnce.Do(func() {
-		km.message.Nack() //nolint:errcheck
-	})
+	km.message.Nack() //nolint:errcheck
 	if km.swFromAddToAck != nil {
 		km.swFromAddToAck.Stop()
 	}
