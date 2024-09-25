@@ -128,8 +128,11 @@ func newESDualProcessor(
 		return nil, err
 	}
 
-	params.AfterFunc = p.shadowBulkAfterAction
-	osprocessor, err := osclient.RunBulkProcessor(context.Background(), params)
+	// for the sceondary processor, we use shadow bulk after func which only logs errors and not ack/nack messages
+	// the primary processor will be the source of truth
+	shadowParams := *params
+	shadowParams.AfterFunc = p.shadowBulkAfterAction
+	osprocessor, err := osclient.RunBulkProcessor(context.Background(), &shadowParams)
 	if err != nil {
 		return nil, err
 	}
@@ -251,7 +254,7 @@ func (p *ESProcessorImpl) bulkAfterAction(id int64, requests []bulk.GenericBulka
 	}
 }
 
-// bulkAfterAction is triggered after bulk bulkProcessor commit
+// shadowBulkAfterAction is triggered after bulk bulkProcessor commit
 func (p *ESProcessorImpl) shadowBulkAfterAction(id int64, requests []bulk.GenericBulkableRequest, response *bulk.GenericBulkResponse, err *bulk.GenericError) {
 	if err != nil {
 		// This happens after configured retry, which means something bad happens on cluster or index
