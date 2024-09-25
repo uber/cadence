@@ -52,7 +52,7 @@ func AdminDBScan(c *cli.Context) error {
 	scanType, err := executions.ScanTypeString(c.String(FlagScanType))
 
 	if err != nil {
-		return ErrorAndPrint("unknown scan type", err)
+		return PrintableError("unknown scan type", err)
 	}
 
 	numberOfShards := getRequiredIntOption(c, FlagNumberOfShards)
@@ -62,7 +62,7 @@ func AdminDBScan(c *cli.Context) error {
 	for _, v := range collectionSlice {
 		collection, err := invariant.CollectionString(v)
 		if err != nil {
-			return ErrorAndPrint("unknown invariant collection", err)
+			return PrintableError("unknown invariant collection", err)
 		}
 		collections = append(collections, collection)
 	}
@@ -72,13 +72,13 @@ func AdminDBScan(c *cli.Context) error {
 		logger, err = zap.NewDevelopment()
 		if err != nil {
 			// probably impossible with default config
-			return ErrorAndPrint("could not construct logger", err)
+			return PrintableError("could not construct logger", err)
 		}
 	}
 
 	invariants := scanType.ToInvariants(collections, logger)
 	if len(invariants) < 1 {
-		return ErrorAndPrint(
+		return PrintableError(
 			fmt.Sprintf("no invariants for scan type %q and collections %q",
 				scanType.String(),
 				collectionSlice),
@@ -91,7 +91,7 @@ func AdminDBScan(c *cli.Context) error {
 
 	dec := json.NewDecoder(input)
 	if err != nil {
-		return ErrorAndPrint("", err)
+		return PrintableError("", err)
 	}
 	var data []fetcher.ExecutionRequest
 
@@ -210,7 +210,7 @@ func listExecutionsByShardID(
 	for executionIterator.HasNext() {
 		result, err := executionIterator.Next()
 		if err != nil {
-			return ErrorAndPrint(fmt.Sprintf("Failed to scan shard ID: %v for unsupported workflow. Please retry.", shardID), err)
+			return PrintableError(fmt.Sprintf("Failed to scan shard ID: %v for unsupported workflow. Please retry.", shardID), err)
 		}
 		execution := result.(*persistence.ListConcreteExecutionsEntity)
 		executionInfo := execution.ExecutionInfo
@@ -222,10 +222,10 @@ func listExecutionsByShardID(
 				executionInfo.RunID,
 			)
 			if _, err = outputFile.WriteString(outStr); err != nil {
-				return ErrorAndPrint("Failed to write data to file", err)
+				return PrintableError("Failed to write data to file", err)
 			}
 			if err = outputFile.Sync(); err != nil {
-				return ErrorAndPrint("Failed to sync data to file", err)
+				return PrintableError("Failed to sync data to file", err)
 			}
 		}
 	}

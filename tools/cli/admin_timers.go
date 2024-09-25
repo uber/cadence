@@ -183,7 +183,7 @@ func AdminTimers(c *cli.Context) error {
 			case "second":
 				timerFormat = "2006-01-02T15:04:05"
 			default:
-				return ErrorAndPrint("unknown bucket size: "+c.String(FlagBucketSize), nil)
+				return PrintableError("unknown bucket size: "+c.String(FlagBucketSize), nil)
 			}
 		}
 		printer = NewHistogramPrinter(c, timerFormat)
@@ -193,7 +193,7 @@ func AdminTimers(c *cli.Context) error {
 
 	reporter := NewReporter(c.String(FlagDomainID), timerTypes, loader, printer)
 	if err := reporter.Report(); err != nil {
-		return ErrorAndPrint("Reporter failed", err)
+		return PrintableError("Reporter failed", err)
 	}
 	return nil
 }
@@ -206,7 +206,7 @@ func (jp *jsonPrinter) Print(timers []*persistence.TimerTaskInfo) error {
 		data, err := json.Marshal(t)
 		if err != nil {
 			if !jp.ctx.Bool(FlagSkipErrorMode) {
-				return ErrorAndPrint("cannot marshal timer to json", err)
+				return PrintableError("cannot marshal timer to json", err)
 			}
 			fmt.Println(err.Error())
 		} else {

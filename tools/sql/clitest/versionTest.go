@@ -167,10 +167,7 @@ func (s *VersionTestSuite) runCheckCompatibleVersion(
 	database := fmt.Sprintf("version_test_%v", r.Int63())
 	defer s.createDatabase(database)()
 
-	dir := "check_version"
-	tmpDir, err := ioutil.TempDir("", dir)
-	s.NoError(err)
-	defer os.RemoveAll(tmpDir)
+	tmpDir := s.T().TempDir()
 
 	subdir := tmpDir + "/" + database
 	s.NoError(os.Mkdir(subdir, os.FileMode(0744)))
@@ -237,10 +234,7 @@ func (s *VersionTestSuite) TestMultipleDatabaseVersionInCompatible() {
 	defer s.createDatabase(database1)()
 	defer s.createDatabase(database2)()
 
-	dir := "check_version"
-	tmpDir, err := ioutil.TempDir("", dir)
-	s.NoError(err)
-	defer os.RemoveAll(tmpDir)
+	tmpDir := s.T().TempDir()
 
 	subdir := tmpDir + "/" + "db"
 	s.NoError(os.Mkdir(subdir, os.FileMode(0744)))
@@ -313,10 +307,7 @@ func (s *VersionTestSuite) TestMultipleDatabaseVersionAllLowerCompatible() {
 	defer s.createDatabase(database1)()
 	defer s.createDatabase(database2)()
 
-	dir := "check_version"
-	tmpDir, err := ioutil.TempDir("", dir)
-	s.NoError(err)
-	defer os.RemoveAll(tmpDir)
+	tmpDir := s.T().TempDir()
 
 	subdir := tmpDir + "/" + "db"
 	s.NoError(os.Mkdir(subdir, os.FileMode(0744)))
@@ -388,10 +379,7 @@ func (s *VersionTestSuite) TestMultipleDatabaseVersionPartialLowerCompatible() {
 	defer s.createDatabase(database1)()
 	defer s.createDatabase(database2)()
 
-	dir := "check_version"
-	tmpDir, err := ioutil.TempDir("", dir)
-	s.NoError(err)
-	defer os.RemoveAll(tmpDir)
+	tmpDir := s.T().TempDir()
 
 	subdir := tmpDir + "/" + "db"
 	s.NoError(os.Mkdir(subdir, os.FileMode(0744)))
@@ -463,10 +451,7 @@ func (s *VersionTestSuite) TestMultipleDatabaseVersionExactlyMatchCompatible() {
 	defer s.createDatabase(database1)()
 	defer s.createDatabase(database2)()
 
-	dir := "check_version"
-	tmpDir, err := ioutil.TempDir("", dir)
-	s.NoError(err)
-	defer os.RemoveAll(tmpDir)
+	tmpDir := s.T().TempDir()
 
 	subdir := tmpDir + "/" + "db"
 	s.NoError(os.Mkdir(subdir, os.FileMode(0744)))

@@ -524,6 +524,7 @@ func newBatchCommands() []*cli.Command {
 					Value: batcher.DefaultAttemptsOnRetryableError,
 					Usage: "Retry attempts for retriable errors",
 				},
+				// TODO duration should use DurationFlag instead of IntFlag
 				&cli.IntFlag{
 					Name:    FlagActivityHeartBeatTimeout,
 					Aliases: []string{"hbt"},

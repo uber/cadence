@@ -75,7 +75,7 @@ func AdminFailoverStart(c *cli.Context) error {
 func AdminFailoverPause(c *cli.Context) error {
 	err := executePauseOrResume(c, getFailoverWorkflowID(c), true)
 	if err != nil {
-		return ErrorAndPrint("Failed to pause failover workflow", err)
+		return PrintableError("Failed to pause failover workflow", err)
 	}
 	fmt.Println("Failover paused on " + getFailoverWorkflowID(c))
 	return nil
@@ -85,7 +85,7 @@ func AdminFailoverPause(c *cli.Context) error {
 func AdminFailoverResume(c *cli.Context) error {
 	err := executePauseOrResume(c, getFailoverWorkflowID(c), false)
 	if err != nil {
-		return ErrorAndPrint("Failed to resume failover workflow", err)
+		return PrintableError("Failed to resume failover workflow", err)
 	}
 	fmt.Println("Failover resumed on " + getFailoverWorkflowID(c))
 	return nil
@@ -112,7 +112,7 @@ func AdminFailoverQuery(c *cli.Context) error {
 
 	descResp, err := client.DescribeWorkflowExecution(tcCtx, request)
 	if err != nil {
-		return ErrorAndPrint("Failed to describe workflow", err)
+		return PrintableError("Failed to describe workflow", err)
 	}
 	if isWorkflowTerminated(descResp) {
 		result.State = failovermanager.WorkflowAborted
@@ -144,7 +144,7 @@ func AdminFailoverAbort(c *cli.Context) error {
 
 	err := client.TerminateWorkflowExecution(tcCtx, request)
 	if err != nil {
-		return ErrorAndPrint("Failed to abort failover workflow", err)
+		return PrintableError("Failed to abort failover workflow", err)
 	}
 
 	fmt.Println("Failover aborted")
@@ -176,7 +176,7 @@ func AdminFailoverRollback(c *cli.Context) error {
 
 		err := client.TerminateWorkflowExecution(tcCtx, request)
 		if err != nil {
-			return ErrorAndPrint("Failed to terminate failover workflow", err)
+			return PrintableError("Failed to terminate failover workflow", err)
 		}
 	}
 	// query again
@@ -230,16 +230,16 @@ func query(
 	}
 	queryResp, err := client.QueryWorkflow(tcCtx, request)
 	if err != nil {
-		return nil, ErrorAndPrint("Failed to query failover workflow", err)
+		return nil, PrintableError("Failed to query failover workflow", err)
 	}
 
 	if queryResp.GetQueryResult() == nil {
-		return nil, ErrorAndPrint("QueryResult has no value", nil)
+		return nil, PrintableError("QueryResult has no value", nil)
 	}
 	var queryResult failovermanager.QueryResult
 	err = json.Unmarshal(queryResp.GetQueryResult(), &queryResult)
 	if err != nil {
-		return nil, ErrorAndPrint("Unable to deserialize QueryResult", nil)
+		return nil, PrintableError("Unable to deserialize QueryResult", nil)
 	}
 	return &queryResult, nil
 }
@@ -284,7 +284,7 @@ func failoverStart(c *cli.Context, params *startParams) error {
 		common.MemoKeyForOperator: getOperator(),
 	})
 	if err != nil {
-		return ErrorAndPrint("Failed to serialize memo", err)
+		return PrintableError("Failed to serialize memo", err)
 	}
 	request := &types.StartWorkflowExecutionRequest{
 		Domain:                              common.SystemLocalDomainName,
@@ -302,7 +302,7 @@ func failoverStart(c *cli.Context, params *startParams) error {
 		request.CronSchedule = params.cron
 	} else {
 		if len(params.cron) > 0 {
-			return ErrorAndPrint("The drill wait time is required when cron is specified.", nil)
+			return PrintableError("The drill wait time is required when cron is specified.", nil)
 		}
 
 		// block if there is an on-going failover drill
@@ -313,7 +313,7 @@ func failoverStart(c *cli.Context, params *startParams) error {
 			case *types.WorkflowExecutionAlreadyCompletedError:
 				break
 			default:
-				return ErrorAndPrint("Failed to send pase signal to drill workflow", err)
+				return PrintableError("Failed to send pase signal to drill workflow", err)
 			}
 		}
 		fmt.Println("The failover drill workflow is paused. Please run 'cadence admin cluster failover resume --fd'" +
@@ -331,12 +331,12 @@ func failoverStart(c *cli.Context, params *startParams) error {
 	}
 	input, err := json.Marshal(foParams)
 	if err != nil {
-		return ErrorAndPrint("Failed to serialize Failover Params", err)
+		return PrintableError("Failed to serialize Failover Params", err)
 	}
 	request.Input = input
 	wf, err := client.StartWorkflowExecution(tcCtx, request)
 	if err != nil {
-		return ErrorAndPrint("Failed to start failover workflow", err)
+		return PrintableError("Failed to start failover workflow", err)
 	}
 	fmt.Println("Failover workflow started")
 	fmt.Println("wid: " + workflowID)

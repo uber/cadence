@@ -80,11 +80,11 @@ func AdminDBDataDecodeThrift(c *cli.Context) error {
 	encoding := c.String(FlagInputEncoding)
 	data, err := decodeUserInput(input, encoding)
 	if err != nil {
-		return ErrorAndPrint("failed to decode input", err)
+		return PrintableError("failed to decode input", err)
 	}
 
 	if _, err := decodeThriftPayload(data); err != nil {
-		return ErrorAndPrint("failed to decode thrift payload", err.err)
+		return PrintableError("failed to decode thrift payload", err.err)
 	}
 	return nil
 }

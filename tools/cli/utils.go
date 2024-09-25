@@ -51,6 +51,15 @@ import (
 	"github.com/uber/cadence/common/types"
 )
 
+type printableError struct {
+	msg string
+	err error
+}
+
+func (e printableError) Error() string {
+	return e.msg
+}
+
 // JSONHistorySerializer is used to encode history event in JSON
 type JSONHistorySerializer struct{}
 
@@ -524,10 +533,25 @@ func printError(msg string, err error) {
 	}
 }
 
-// ErrorAndPrint print easy to understand error msg first then error detail in a new line
-func ErrorAndPrint(msg string, err error) error {
-	printError(msg, err)
-	return err
+// PrintableError returns a printable error
+func PrintableError(msg string, err error) error {
+	var printable *printableError
+	if errors.As(err, &printable) { // already printable error type
+		printable.msg = msg + ": " + printable.msg
+	} else {
+		printable = &printableError{msg: msg, err: err}
+	}
+	return printable
+}
+
+// ExitErrHandler print easy to understand error msg first then error detail in a new line
+func ExitErrHandler(cCtx *cli.Context, err error) {
+	var printable *printableError
+	if errors.As(err, &printable) {
+		printError(printable.msg, printable.err)
+	} else { // fall back to default error message
+		printError("CLI execution failed", err)
+	}
 }
 
 // ErrorAndExit print easy to understand error msg first then error detail in a new line

@@ -87,7 +87,7 @@ func (d *domainCLIImpl) RegisterDomain(c *cli.Context) error {
 	if c.IsSet(FlagIsGlobalDomain) {
 		isGlobalDomain, err = strconv.ParseBool(c.String(FlagIsGlobalDomain))
 		if err != nil {
-			return ErrorAndPrint(fmt.Sprintf("Option %s format is invalid.", FlagIsGlobalDomain), err)
+			return PrintableError(fmt.Sprintf("Option %s format is invalid.", FlagIsGlobalDomain), err)
 		}
 	}
 
@@ -98,7 +98,7 @@ func (d *domainCLIImpl) RegisterDomain(c *cli.Context) error {
 	if len(requiredDomainDataKeys) > 0 {
 		err = checkRequiredDomainDataKVs(domainData.Value())
 		if err != nil {
-			return ErrorAndPrint("Domain data missed required data.", err)
+			return PrintableError("Domain data missed required data.", err)
 		}
 	}
 
@@ -150,9 +150,9 @@ func (d *domainCLIImpl) RegisterDomain(c *cli.Context) error {
 	err = d.registerDomain(ctx, request)
 	if err != nil {
 		if _, ok := err.(*types.DomainAlreadyExistsError); !ok {
-			return ErrorAndPrint("Register Domain operation failed.", err)
+			return PrintableError("Register Domain operation failed.", err)
 		}
-		return ErrorAndPrint(fmt.Sprintf("Domain %s already registered.", domainName), err)
+		return PrintableError(fmt.Sprintf("Domain %s already registered.", domainName), err)
 	}
 	fmt.Printf("Domain %s successfully registered.\n", domainName)
 	return nil
@@ -187,9 +187,9 @@ func (d *domainCLIImpl) UpdateDomain(c *cli.Context) error {
 		})
 		if err != nil {
 			if _, ok := err.(*types.EntityNotExistsError); !ok {
-				return ErrorAndPrint("Operation UpdateDomain failed.", err)
+				return PrintableError("Operation UpdateDomain failed.", err)
 			}
-			return ErrorAndPrint(fmt.Sprintf("Domain %s does not exist.", domainName), err)
+			return PrintableError(fmt.Sprintf("Domain %s does not exist.", domainName), err)
 		}
 
 		description := resp.DomainInfo.GetDescription()
@@ -226,7 +226,7 @@ func (d *domainCLIImpl) UpdateDomain(c *cli.Context) error {
 		var binBinaries *types.BadBinaries
 		if c.IsSet(FlagAddBadBinary) {
 			if !c.IsSet(FlagReason) {
-				return ErrorAndPrint("Must provide a reason.", nil)
+				return PrintableError("Must provide a reason.", nil)
 			}
 			binChecksum := c.String(FlagAddBadBinary)
 			reason := c.String(FlagReason)
@@ -277,9 +277,9 @@ func (d *domainCLIImpl) UpdateDomain(c *cli.Context) error {
 	_, err := d.updateDomain(ctx, updateRequest)
 	if err != nil {
 		if _, ok := err.(*types.EntityNotExistsError); ok {
-			return ErrorAndPrint(fmt.Sprintf("Domain %s does not exist.", domainName), err)
+			return PrintableError(fmt.Sprintf("Domain %s does not exist.", domainName), err)
 		}
-		return ErrorAndPrint("Operation UpdateDomain failed.", err)
+		return PrintableError("Operation UpdateDomain failed.", err)
 	}
 	fmt.Printf("Domain %s successfully updated.\n", domainName)
 	return nil
@@ -297,17 +297,17 @@ func (d *domainCLIImpl) DeprecateDomain(c *cli.Context) error {
 		// check if there is any workflow in this domain, if exists, do not deprecate
 		wfs, _, err := listClosedWorkflow(getWorkflowClient(c), 1, 0, time.Now().UnixNano(), domainName, "", "", workflowStatusNotSet, c)(nil)
 		if err != nil {
-			return ErrorAndPrint("Operation DeprecateDomain failed: fail to list closed workflows: ", err)
+			return PrintableError("Operation DeprecateDomain failed: fail to list closed workflows: ", err)
 		}
 		if len(wfs) > 0 {
-			return ErrorAndPrint("Operation DeprecateDomain failed.", errors.New("workflow history not cleared in this domain"))
+			return PrintableError("Operation DeprecateDomain failed.", errors.New("workflow history not cleared in this domain"))
 		}
 		wfs, _, err = listOpenWorkflow(getWorkflowClient(c), 1, 0, time.Now().UnixNano(), domainName, "", "", c)(nil)
 		if err != nil {
-			return ErrorAndPrint("Operation DeprecateDomain failed: fail to list open workflows: ", err)
+			return PrintableError("Operation DeprecateDomain failed: fail to list open workflows: ", err)
 		}
 		if len(wfs) > 0 {
-			return ErrorAndPrint("Operation DeprecateDomain failed.", errors.New("workflow still running in this domain"))
+			return PrintableError("Operation DeprecateDomain failed.", errors.New("workflow still running in this domain"))
 		}
 	}
 	err := d.deprecateDomain(ctx, &types.DeprecateDomainRequest{
@@ -316,9 +316,9 @@ func (d *domainCLIImpl) DeprecateDomain(c *cli.Context) error {
 	})
 	if err != nil {
 		if _, ok := err.(*types.EntityNotExistsError); !ok {
-			return ErrorAndPrint("Operation DeprecateDomain failed.", err)
+			return PrintableError("Operation DeprecateDomain failed.", err)
 		}
-		return ErrorAndPrint(fmt.Sprintf("Domain %s does not exist.", domainName), err)
+		return PrintableError(fmt.Sprintf("Domain %s does not exist.", domainName), err)
 	}
 	fmt.Printf("Domain %s successfully deprecated.\n", domainName)
 	return nil
@@ -376,7 +376,7 @@ func (d *domainCLIImpl) getAllDomains(c *cli.Context) ([]*types.DescribeDomainRe
 		}
 		listResp, err := d.listDomains(ctx, listRequest)
 		if err != nil {
-			return nil, ErrorAndPrint("Error when list domains info", err)
+			return nil, PrintableError("Error when list domains info", err)
 		}
 		token = listResp.GetNextPageToken()
 		res = append(res, listResp.GetDomains()...)
@@ -434,7 +434,7 @@ func (d *domainCLIImpl) DescribeDomain(c *cli.Context) error {
 		request.Name = &domainName
 	}
 	if domainID == "" && domainName == "" {
-		return ErrorAndPrint("At least domainID or domainName must be provided.", nil)
+		return PrintableError("At least domainID or domainName must be provided.", nil)
 	}
 
 	ctx, cancel := newContext(c)
@@ -442,15 +442,15 @@ func (d *domainCLIImpl) DescribeDomain(c *cli.Context) error {
 	resp, err := d.describeDomain(ctx, &request)
 	if err != nil {
 		if _, ok := err.(*types.EntityNotExistsError); !ok {
-			return ErrorAndPrint("Operation DescribeDomain failed.", err)
+			return PrintableError("Operation DescribeDomain failed.", err)
 		}
-		return ErrorAndPrint(fmt.Sprintf("Domain %s does not exist.", domainName), err)
+		return PrintableError(fmt.Sprintf("Domain %s does not exist.", domainName), err)
 	}
 
 	if printJSON {
 		output, err := json.Marshal(resp)
 		if err != nil {
-			return ErrorAndPrint("Failed to encode domain response into JSON.", err)
+			return PrintableError("Failed to encode domain response into JSON.", err)
 		}
 		fmt.Println(string(output))
 		return nil
@@ -600,7 +600,7 @@ func (d *domainCLIImpl) ListDomains(c *cli.Context) error {
 	printJSON := c.Bool(FlagPrintJSON)
 
 	if printAll && printDeprecated {
-		return ErrorAndPrint(fmt.Sprintf("Cannot specify %s and %s flags at the same time.", FlagAll, FlagDeprecated), nil)
+		return PrintableError(fmt.Sprintf("Cannot specify %s and %s flags at the same time.", FlagAll, FlagDeprecated), nil)
 	}
 
 	domains, err := d.getAllDomains(c)
@@ -636,7 +636,7 @@ func (d *domainCLIImpl) ListDomains(c *cli.Context) error {
 	if printJSON {
 		output, err := json.Marshal(filteredDomains)
 		if err != nil {
-			return ErrorAndPrint("Failed to encode domain results into JSON.", err)
+			return PrintableError("Failed to encode domain results into JSON.", err)
 		}
 		fmt.Println(string(output))
 		return nil
@@ -735,7 +735,7 @@ func archivalStatus(c *cli.Context, statusFlagName string) (*types.ArchivalStatu
 		case "enabled":
 			return types.ArchivalStatusEnabled.Ptr(), nil
 		default:
-			return nil, ErrorAndPrint(fmt.Sprintf("Option %s format is invalid.", statusFlagName), errors.New("invalid status, valid values are \"disabled\" and \"enabled\""))
+			return nil, PrintableError(fmt.Sprintf("Option %s format is invalid.", statusFlagName), errors.New("invalid status, valid values are \"disabled\" and \"enabled\""))
 		}
 	}
 	return nil, nil

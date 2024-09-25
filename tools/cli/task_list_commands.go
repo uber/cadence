@@ -61,12 +61,12 @@ func DescribeTaskList(c *cli.Context) error {
 	}
 	response, err := wfClient.DescribeTaskList(ctx, request)
 	if err != nil {
-		return ErrorAndPrint("Operation DescribeTaskList failed.", err)
+		return PrintableError("Operation DescribeTaskList failed.", err)
 	}
 
 	pollers := response.Pollers
 	if len(pollers) == 0 {
-		return ErrorAndPrint(colorMagenta("No poller for tasklist: "+taskList), nil)
+		return PrintableError(colorMagenta("No poller for tasklist: "+taskList), nil)
 	}
 
 	return printTaskListPollers(pollers, taskListType)
@@ -87,7 +87,7 @@ func ListTaskListPartitions(c *cli.Context) error {
 
 	response, err := frontendClient.ListTaskListPartitions(ctx, request)
 	if err != nil {
-		return ErrorAndPrint("Operation ListTaskListPartitions failed.", err)
+		return PrintableError("Operation ListTaskListPartitions failed.", err)
 	}
 	if len(response.DecisionTaskListPartitions) > 0 {
 		return printTaskListPartitions("Decision", response.DecisionTaskListPartitions)

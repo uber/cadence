@@ -53,7 +53,7 @@ func GetSearchAttributes(c *cli.Context) error {
 
 	resp, err := wfClient.GetSearchAttributes(ctx)
 	if err != nil {
-		return ErrorAndPrint("Failed to get search attributes.", err)
+		return PrintableError("Failed to get search attributes.", err)
 	}
 
 	table := SearchAttributesTable{}

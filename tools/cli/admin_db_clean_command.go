@@ -46,7 +46,7 @@ func AdminDBClean(c *cli.Context) error {
 	scanType, err := executions.ScanTypeString(getRequiredOption(c, FlagScanType))
 
 	if err != nil {
-		return ErrorAndPrint("unknown scan type", err)
+		return PrintableError("unknown scan type", err)
 	}
 	collectionSlice := c.StringSlice(FlagInvariantCollection)
 	blob := scanType.ToBlobstoreEntity()
@@ -55,7 +55,7 @@ func AdminDBClean(c *cli.Context) error {
 	for _, v := range collectionSlice {
 		collection, err := invariant.CollectionString(v)
 		if err != nil {
-			return ErrorAndPrint("unknown invariant collection", err)
+			return PrintableError("unknown invariant collection", err)
 		}
 		collections = append(collections, collection)
 	}
@@ -65,13 +65,13 @@ func AdminDBClean(c *cli.Context) error {
 		logger, err = zap.NewDevelopment()
 		if err != nil {
 			// probably impossible with default config
-			return ErrorAndPrint("could not construct logger", err)
+			return PrintableError("could not construct logger", err)
 		}
 	}
 
 	invariants := scanType.ToInvariants(collections, logger)
 	if len(invariants) < 1 {
-		return ErrorAndPrint(
+		return PrintableError(
 			fmt.Sprintf("no invariants for scantype %q and collections %q",
 				scanType.String(),
 				collectionSlice),
@@ -83,7 +83,7 @@ func AdminDBClean(c *cli.Context) error {
 
 	dec := json.NewDecoder(input)
 	if err != nil {
-		return ErrorAndPrint("", err)
+		return PrintableError("", err)
 	}
 	var data []*store.ScanOutputEntity
 

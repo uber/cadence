@@ -470,7 +470,7 @@ func doRereplicate(
 			EndVersion:    endEventVersion,
 		},
 	); err != nil {
-		return ErrorAndPrint("Failed to resend ndc workflow", err)
+		return PrintableError("Failed to resend ndc workflow", err)
 	}
 	fmt.Printf("Done rereplication for wid: %v, rid:%v \n", wid, rid)
 	return nil

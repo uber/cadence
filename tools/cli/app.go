@@ -46,6 +46,7 @@ func NewCliApp() *cli.App {
 	app.Name = "cadence"
 	app.Usage = "A command-line tool for cadence users"
 	app.Version = version
+	app.ExitErrHandler = ExitErrHandler
 	app.Flags = []cli.Flag{
 		&cli.StringFlag{
 			Name:    FlagAddress,
