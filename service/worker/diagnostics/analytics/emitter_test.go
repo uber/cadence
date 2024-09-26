@@ -81,7 +81,7 @@ func Test__EmitUsageData(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			mockProducer := &mocks.KafkaProducer{}
-			emitter := NewEmitter(NewEmitterParams{
+			emitter := NewEmitter(EmitterParams{
 				Producer: mockProducer,
 			})
 			test.producerMockAffordance(mockProducer)

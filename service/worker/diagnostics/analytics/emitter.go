@@ -37,11 +37,11 @@ type emitter struct {
 	producer messaging.Producer
 }
 
-type NewEmitterParams struct {
+type EmitterParams struct {
 	Producer messaging.Producer
 }
 
-func NewEmitter(p NewEmitterParams) DataEmitter {
+func NewEmitter(p EmitterParams) DataEmitter {
 	return &emitter{
 		producer: p.Producer,
 	}
