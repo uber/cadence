@@ -85,6 +85,7 @@ type Cadence interface {
 	FrontendHost() membership.HostInfo
 	GetHistoryClient() historyClient.Client
 	GetMatchingClient() matchingClient.Client
+	GetMatchingClients() []matchingClient.Client
 	GetExecutionManagerFactory() persistence.ExecutionManagerFactory
 }
 
@@ -97,7 +98,7 @@ type (
 		adminClient                   adminClient.Client
 		frontendClient                frontendClient.Client
 		historyClient                 historyClient.Client
-		matchingClient                matchingClient.Client
+		matchingClients               []matchingClient.Client
 		logger                        log.Logger
 		clusterMetadata               cluster.Metadata
 		persistenceConfig             config.Persistence
@@ -179,6 +180,9 @@ type (
 
 		// RecordDecisionTaskStartedTime. The amount of time spent by History to complete RecordDecisionTaskStarted
 		RecordDecisionTaskStartedTime time.Duration
+
+		// TasklistLoadBalancerStrategy the strategy of load balancer. defaults to "random".
+		TasklistLoadBalancerStrategy string
 
 		// The pollers that will be created to process
 		Pollers []SimulationPollerConfiguration
@@ -543,7 +547,11 @@ func (c *cadenceImpl) GetHistoryClient() historyClient.Client {
 }
 
 func (c *cadenceImpl) GetMatchingClient() matchingClient.Client {
-	return c.matchingClient
+	return c.matchingClients[0]
+}
+
+func (c *cadenceImpl) GetMatchingClients() []matchingClient.Client {
+	return c.matchingClients
 }
 
 func (c *cadenceImpl) startFrontend(hosts map[string][]membership.HostInfo, startWG *sync.WaitGroup) {
@@ -750,10 +758,11 @@ func (c *cadenceImpl) startMatching(hosts map[string][]membership.HostInfo, star
 
 		// When there are multiple matching hosts the last client will overwrite previous ones.
 		// It should be fine because the underlying client bean logic should still pick the right destination.
-		c.matchingClient, err = clientBean.GetMatchingClient(matchingService.GetDomainCache().GetDomainName)
+		matchingClient, err := clientBean.GetMatchingClient(matchingService.GetDomainCache().GetDomainName)
 		if err != nil {
 			params.Logger.Fatal("unable to get matching client", tag.Error(err))
 		}
+		c.matchingClients = append(c.matchingClients, matchingClient)
 		c.matchingServices = append(c.matchingServices, matchingService)
 		go matchingService.Start()
 	}
