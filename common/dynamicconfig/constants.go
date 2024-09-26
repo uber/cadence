@@ -2393,6 +2393,8 @@ const (
 	// Allowed filters: RatelimitKey (on global key, e.g. prefixed by collection name)
 	FrontendGlobalRatelimiterMode
 
+	TasklistLoadBalancerStrategy
+
 	// LastStringKey must be the last one in this const group
 	LastStringKey
 )
@@ -4739,6 +4741,12 @@ var StringKeys = map[StringKey]DynamicString{
 		Description:  "FrontendGlobalRatelimiterMode defines which mode a global key should be in, per key, to make gradual changes to ratelimiter algorithms",
 		DefaultValue: "disabled",
 		Filters:      []Filter{RatelimitKey},
+	},
+	TasklistLoadBalancerStrategy: {
+		KeyName:      "system.tasklistLoadBalancerStrategy",
+		Description:  "TasklistLoadBalancerStrategy is the key for tasklist load balancer strategy",
+		DefaultValue: "random", // other options: "round-robin"
+		Filters:      []Filter{DomainName, TaskListName, TaskType},
 	},
 }
 

@@ -125,6 +125,9 @@ type MapPropertyFn func(opts ...FilterOption) map[string]interface{}
 // StringPropertyFnWithDomainFilter is a wrapper to get string property from dynamic config
 type StringPropertyFnWithDomainFilter func(domain string) string
 
+// StringPropertyFnWithTaskListInfoFilters is a wrapper to get string property from dynamic config with domainID as filter
+type StringPropertyFnWithTaskListInfoFilters func(domain string, taskList string, taskType int) string
+
 // BoolPropertyFnWithDomainFilter is a wrapper to get bool property from dynamic config with domain as filter
 type BoolPropertyFnWithDomainFilter func(domain string) bool
 
@@ -435,6 +438,25 @@ func (c *Collection) GetMapProperty(key MapKey) MapPropertyFn {
 func (c *Collection) GetStringPropertyFilteredByDomain(key StringKey) StringPropertyFnWithDomainFilter {
 	return func(domain string) string {
 		filters := c.toFilterMap(DomainFilter(domain))
+		val, err := c.client.GetStringValue(
+			key,
+			filters,
+		)
+		if err != nil {
+			c.logError(key, filters, err)
+			return key.DefaultString()
+		}
+		return val
+	}
+}
+
+func (c *Collection) GetStringPropertyFilteredByTaskListInfo(key StringKey) StringPropertyFnWithTaskListInfoFilters {
+	return func(domain string, taskList string, taskType int) string {
+		filters := c.toFilterMap(
+			DomainFilter(domain),
+			TaskListFilter(taskList),
+			TaskTypeFilter(taskType),
+		)
 		val, err := c.client.GetStringValue(
 			key,
 			filters,
