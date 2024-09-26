@@ -60,6 +60,10 @@ func (e printableError) Error() string {
 	return e.msg
 }
 
+func (e printableError) Unwrap() error {
+	return e.err
+}
+
 // JSONHistorySerializer is used to encode history event in JSON
 type JSONHistorySerializer struct{}
 
@@ -533,15 +537,9 @@ func printError(msg string, err error) {
 	}
 }
 
-// PrintableError returns a printable error
+// PrintableError returns a printable error (always wrapping)
 func PrintableError(msg string, err error) error {
-	var printable *printableError
-	if errors.As(err, &printable) { // already printable error type
-		printable.msg = msg + ": " + printable.msg
-	} else {
-		printable = &printableError{msg: msg, err: err}
-	}
-	return printable
+	return &printableError{msg: msg, err: err}
 }
 
 // ExitErrHandler print easy to understand error msg first then error detail in a new line
