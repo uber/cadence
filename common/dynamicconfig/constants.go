@@ -2326,6 +2326,12 @@ const (
 	// Default value: "on"
 	// Allowed filters: N/A
 	AdvancedVisibilityWritingMode
+	// AdvancedVisibilityMigrationWritingMode is key for how to write to advanced visibility during migration.
+	// KeyName: system.AdvancedVisibilityMigrationWritingMode
+	// Value type: String enum: "dual"(means writing to both source and destination advanced visibility, "source" (means writing to source visibility only), "destination" (means writing to destination visibility only) or "off" (means writing to db visibility only)
+	// Default value: "dual"
+	// Allowed filters: N/A
+	AdvancedVisibilityMigrationWritingMode
 	// HistoryArchivalStatus is key for the status of history archival to override the value from static config.
 	// KeyName: system.historyArchivalStatus
 	// Value type: string enum: "enabled" or "disabled"
@@ -4689,6 +4695,11 @@ var StringKeys = map[StringKey]DynamicString{
 		KeyName:      "system.advancedVisibilityWritingMode",
 		Description:  "AdvancedVisibilityWritingMode is key for how to write to advanced visibility. The most useful option is dual, which can be used for seamless migration from db visibility to advanced visibility, usually using with EnableReadVisibilityFromES",
 		DefaultValue: "on",
+	},
+	AdvancedVisibilityMigrationWritingMode: {
+		KeyName:      "system.advancedVisibilityMigrationWritingMode",
+		Description:  "AdvancedVisibilityMigrationWritingMode is key for how to write to advanced visibility. The most useful option is dual, which can be used for seamless migration from advanced visibility to another",
+		DefaultValue: "dual",
 	},
 	HistoryArchivalStatus: {
 		KeyName:      "system.historyArchivalStatus",

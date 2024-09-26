@@ -86,7 +86,7 @@ func (s *esProcessorSuite) SetupTest() {
 		msgEncoder: defaultEncoder,
 	}
 	p.mapToKafkaMsg = collection.NewShardedConcurrentTxMap(1024, p.hashFn)
-	p.bulkProcessor = s.mockBulkProcessor
+	p.bulkProcessor = []bulk.GenericBulkProcessor{s.mockBulkProcessor}
 
 	s.esProcessor = p
 
