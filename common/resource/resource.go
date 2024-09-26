@@ -23,7 +23,6 @@
 package resource
 
 import (
-	"github.com/uber/cadence/common/service"
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	"go.uber.org/yarpc"
 
@@ -51,6 +50,7 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	persistenceClient "github.com/uber/cadence/common/persistence/client"
 	"github.com/uber/cadence/common/quotas/global/rpc"
+	"github.com/uber/cadence/common/service"
 )
 
 type ResourceFactory interface {
