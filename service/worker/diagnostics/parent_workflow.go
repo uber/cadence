@@ -24,6 +24,7 @@ package diagnostics
 
 import (
 	"fmt"
+
 	"go.uber.org/cadence/workflow"
 )
 
