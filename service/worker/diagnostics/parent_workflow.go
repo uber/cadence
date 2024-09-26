@@ -7,6 +7,7 @@ import (
 
 const (
 	diagnosticsStarterWorkflow = "diagnostics-starter-workflow"
+	queryDiagnosticsReport     = "query-diagnostics-report"
 )
 
 type DiagnosticsStarterWorkflowInput struct {
@@ -21,8 +22,14 @@ type DiagnosticsStarterWorkflowResult struct {
 
 func (w *dw) DiagnosticsStarterWorkflow(ctx workflow.Context, params DiagnosticsWorkflowInput) (*DiagnosticsStarterWorkflowResult, error) {
 	var result DiagnosticsWorkflowResult
+	err := workflow.SetQueryHandler(ctx, queryDiagnosticsReport, func() (DiagnosticsStarterWorkflowResult, error) {
+		return DiagnosticsStarterWorkflowResult{DiagnosticsResult: &result}, nil
+	})
+	if err != nil {
+		return nil, err
+	}
 
-	err := workflow.ExecuteChildWorkflow(ctx, w.DiagnosticsWorkflow, DiagnosticsWorkflowInput{
+	err = workflow.ExecuteChildWorkflow(ctx, w.DiagnosticsWorkflow, DiagnosticsWorkflowInput{
 		Domain:     params.Domain,
 		WorkflowID: params.WorkflowID,
 		RunID:      params.RunID,

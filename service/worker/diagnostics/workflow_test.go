@@ -69,6 +69,7 @@ func (s *diagnosticsWorkflowTestSuite) SetupTest() {
 		mockResource.Finish(s.T())
 	})
 
+	s.workflowEnv.RegisterWorkflowWithOptions(s.dw.DiagnosticsStarterWorkflow, workflow.RegisterOptions{Name: diagnosticsStarterWorkflow})
 	s.workflowEnv.RegisterWorkflowWithOptions(s.dw.DiagnosticsWorkflow, workflow.RegisterOptions{Name: diagnosticsWorkflow})
 	s.workflowEnv.RegisterActivityWithOptions(s.dw.retrieveExecutionHistory, activity.RegisterOptions{Name: retrieveWfExecutionHistoryActivity})
 	s.workflowEnv.RegisterActivityWithOptions(s.dw.identifyTimeouts, activity.RegisterOptions{Name: identifyTimeoutsActivity})
@@ -80,7 +81,7 @@ func (s *diagnosticsWorkflowTestSuite) TearDownTest() {
 }
 
 func (s *diagnosticsWorkflowTestSuite) TestWorkflow() {
-	params := &DiagnosticsWorkflowInput{
+	params := &DiagnosticsStarterWorkflowInput{
 		Domain:     "test",
 		WorkflowID: "123",
 		RunID:      "abc",
@@ -130,16 +131,16 @@ func (s *diagnosticsWorkflowTestSuite) TestWorkflow() {
 	s.workflowEnv.OnActivity(retrieveWfExecutionHistoryActivity, mock.Anything, mock.Anything).Return(nil, nil)
 	s.workflowEnv.OnActivity(identifyTimeoutsActivity, mock.Anything, mock.Anything).Return(issues, nil)
 	s.workflowEnv.OnActivity(rootCauseTimeoutsActivity, mock.Anything, mock.Anything).Return(rootCause, nil)
-	s.workflowEnv.ExecuteWorkflow(diagnosticsWorkflow, params)
+	s.workflowEnv.ExecuteWorkflow(diagnosticsStarterWorkflow, params)
 	s.True(s.workflowEnv.IsWorkflowCompleted())
-	var result DiagnosticsWorkflowResult
+	var result DiagnosticsStarterWorkflowResult
 	s.NoError(s.workflowEnv.GetWorkflowResult(&result))
-	s.ElementsMatch(timeoutIssues, result.Timeouts.Issues)
-	s.ElementsMatch(timeoutRootCause, result.Timeouts.RootCause)
+	s.ElementsMatch(timeoutIssues, result.DiagnosticsResult.Timeouts.Issues)
+	s.ElementsMatch(timeoutRootCause, result.DiagnosticsResult.Timeouts.RootCause)
 
 	queriedResult := s.queryDiagnostics()
-	s.ElementsMatch(queriedResult.Timeouts.Issues, result.Timeouts.Issues)
-	s.ElementsMatch(queriedResult.Timeouts.RootCause, result.Timeouts.RootCause)
+	s.ElementsMatch(queriedResult.DiagnosticsResult.Timeouts.Issues, result.DiagnosticsResult.Timeouts.Issues)
+	s.ElementsMatch(queriedResult.DiagnosticsResult.Timeouts.RootCause, result.DiagnosticsResult.Timeouts.RootCause)
 }
 
 func (s *diagnosticsWorkflowTestSuite) TestWorkflow_Error() {
@@ -158,11 +159,11 @@ func (s *diagnosticsWorkflowTestSuite) TestWorkflow_Error() {
 	s.EqualError(s.workflowEnv.GetWorkflowError(), errExpected.Error())
 }
 
-func (s *diagnosticsWorkflowTestSuite) queryDiagnostics() DiagnosticsWorkflowResult {
+func (s *diagnosticsWorkflowTestSuite) queryDiagnostics() DiagnosticsStarterWorkflowResult {
 	queryFuture, err := s.workflowEnv.QueryWorkflow(queryDiagnosticsReport)
 	s.NoError(err)
 
-	var result DiagnosticsWorkflowResult
+	var result DiagnosticsStarterWorkflowResult
 	err = queryFuture.Get(&result)
 	s.NoError(err)
 	return result

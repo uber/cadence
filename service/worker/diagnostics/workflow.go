@@ -35,9 +35,8 @@ import (
 )
 
 const (
-	diagnosticsWorkflow    = "diagnostics-workflow"
-	tasklist               = "diagnostics-wf-tasklist"
-	queryDiagnosticsReport = "query-diagnostics-report"
+	diagnosticsWorkflow = "diagnostics-workflow"
+	tasklist            = "diagnostics-wf-tasklist"
 
 	retrieveWfExecutionHistoryActivity = "retrieveWfExecutionHistory"
 	identifyTimeoutsActivity           = "identifyTimeouts"
@@ -82,13 +81,6 @@ func (w *dw) DiagnosticsWorkflow(ctx workflow.Context, params DiagnosticsWorkflo
 	defer sw.Stop()
 
 	var timeoutsResult timeoutDiagnostics
-	err := workflow.SetQueryHandler(ctx, queryDiagnosticsReport, func() (DiagnosticsWorkflowResult, error) {
-		return DiagnosticsWorkflowResult{Timeouts: &timeoutsResult}, nil
-	})
-	if err != nil {
-		return nil, err
-	}
-
 	activityOptions := workflow.ActivityOptions{
 		ScheduleToCloseTimeout: time.Second * 10,
 		ScheduleToStartTimeout: time.Second * 5,
@@ -97,7 +89,7 @@ func (w *dw) DiagnosticsWorkflow(ctx workflow.Context, params DiagnosticsWorkflo
 	activityCtx := workflow.WithActivityOptions(ctx, activityOptions)
 
 	var wfExecutionHistory *types.GetWorkflowExecutionHistoryResponse
-	err = workflow.ExecuteActivity(activityCtx, w.retrieveExecutionHistory, retrieveExecutionHistoryInputParams{
+	err := workflow.ExecuteActivity(activityCtx, w.retrieveExecutionHistory, retrieveExecutionHistoryInputParams{
 		Domain: params.Domain,
 		Execution: &types.WorkflowExecution{
 			WorkflowID: params.WorkflowID,
