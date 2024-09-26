@@ -32,10 +32,11 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/goleak"
+	"go.uber.org/zap/zaptest/observer"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/clock"
-	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/testlogger"
 	"github.com/uber/cadence/common/metrics"
 )
 
@@ -104,6 +105,7 @@ type hashringTestData struct {
 	mockPeerProvider *MockPeerProvider
 	mockTimeSource   clock.MockedTimeSource
 	hashRing         *ring
+	observedLogs     *observer.ObservedLogs
 }
 
 func newHashringTestData(t *testing.T) *hashringTestData {
@@ -114,11 +116,14 @@ func newHashringTestData(t *testing.T) *hashringTestData {
 	td.mockPeerProvider = NewMockPeerProvider(ctrl)
 	td.mockTimeSource = clock.NewMockedTimeSourceAt(time.Now())
 
+	logger, observedLogs := testlogger.NewObserved(t)
+	td.observedLogs = observedLogs
+
 	td.hashRing = newHashring(
 		"test-service",
 		td.mockPeerProvider,
 		td.mockTimeSource,
-		log.NewNoop(),
+		logger,
 		metrics.NoopScope(0),
 	)
 
