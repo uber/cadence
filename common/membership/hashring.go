@@ -151,8 +151,8 @@ func (r *ring) Stop() {
 	r.value.Store(emptyHashring())
 
 	r.subscribers.Lock()
-	defer r.subscribers.Unlock()
 	r.subscribers.keys = make(map[string]chan<- *ChangedEvent)
+	r.subscribers.Unlock()
 	close(r.shutdownCh)
 
 	if success := common.AwaitWaitGroup(&r.shutdownWG, time.Minute); !success {
@@ -302,7 +302,7 @@ func (r *ring) refreshRingWorker() {
 			return
 		case <-r.refreshChan: // local signal or signal from provider
 			if err := r.refresh(); err != nil {
-				r.logger.Error("refreshing ring", tag.Error(err))
+				r.logger.Error("failed to refresh ring", tag.Error(err))
 			}
 		case <-refreshTicker.Chan(): // periodically force refreshing membership
 			r.signalSelf()

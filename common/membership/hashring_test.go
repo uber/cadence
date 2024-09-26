@@ -24,19 +24,23 @@ package membership
 
 import (
 	"errors"
+	"fmt"
 	"math/rand"
+	"runtime"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/goleak"
 	"go.uber.org/zap/zaptest/observer"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/clock"
+	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/testlogger"
 	"github.com/uber/cadence/common/metrics"
 )
@@ -155,6 +159,10 @@ func (td *hashringTestData) startHashRing() {
 	td.hashRing.Start()
 }
 
+func (td *hashringTestData) bypassRefreshRatelimiter() {
+	td.hashRing.members.refreshed = time.Now().AddDate(0, 0, -1)
+}
+
 func TestFailedLookupWillAskProvider(t *testing.T) {
 	td := newHashringTestData(t)
 
@@ -173,6 +181,104 @@ func TestFailedLookupWillAskProvider(t *testing.T) {
 	assert.Error(t, err)
 
 	require.True(t, common.AwaitWaitGroup(&wg, maxTestDuration), "Failed Lookup should lead to refresh")
+}
+
+func TestFailingToSubscribeIsFatal(t *testing.T) {
+	defer goleak.VerifyNone(t)
+	td := newHashringTestData(t)
+
+	// we need to intercept logger calls, use mock
+	mockLogger := &log.MockLogger{}
+	td.hashRing.logger = mockLogger
+
+	mockLogger.On("Fatal", mock.Anything, mock.Anything).Run(
+		func(arguments mock.Arguments) {
+			// we need to stop goroutine like log.Fatal() does with an entire program
+			runtime.Goexit()
+		},
+	).Times(1)
+
+	td.mockPeerProvider.EXPECT().
+		Subscribe(gomock.Any(), gomock.Any()).
+		Return(errors.New("can't subscribe"))
+
+	// because we use runtime.Goexit() we need to call .Start in a separate goroutine
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		td.hashRing.Start()
+	}()
+
+	require.True(t, common.AwaitWaitGroup(&wg, maxTestDuration), "must be finished - failed to subscribe")
+	require.True(t, mockLogger.AssertExpectations(t), "log.Fatal must be called")
+}
+
+func TestHandleUpdatesNeverBlocks(t *testing.T) {
+	td := newHashringTestData(t)
+
+	var wg sync.WaitGroup
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+		go func() {
+			td.hashRing.handleUpdates(ChangedEvent{})
+			wg.Done()
+		}()
+	}
+
+	require.True(t, common.AwaitWaitGroup(&wg, maxTestDuration), "handleUpdates should never block")
+}
+
+func TestHandlerSchedulesUpdates(t *testing.T) {
+	td := newHashringTestData(t)
+
+	var wg sync.WaitGroup
+	td.mockPeerProvider.EXPECT().Subscribe(gomock.Any(), gomock.Any()).Times(1)
+	td.mockPeerProvider.EXPECT().GetMembers("test-service").DoAndReturn(func(service string) ([]HostInfo, error) {
+		wg.Done()
+		fmt.Println("GetMembers called")
+		return randomHostInfo(5), nil
+	}).Times(2)
+	td.mockPeerProvider.EXPECT().WhoAmI().AnyTimes()
+
+	wg.Add(1) // we expect 1st GetMembers to be called during hashring start
+	td.startHashRing()
+	require.True(t, common.AwaitWaitGroup(&wg, maxTestDuration), "GetMembers must be called")
+
+	wg.Add(1) // another call to GetMembers should happen because of handleUpdate
+	td.bypassRefreshRatelimiter()
+	td.hashRing.handleUpdates(ChangedEvent{})
+
+	require.True(t, common.AwaitWaitGroup(&wg, maxTestDuration), "GetMembers must be called again")
+}
+
+func TestFailedRefreshLogsError(t *testing.T) {
+	td := newHashringTestData(t)
+
+	var wg sync.WaitGroup
+	td.mockPeerProvider.EXPECT().Subscribe(gomock.Any(), gomock.Any()).Times(1)
+	td.mockPeerProvider.EXPECT().GetMembers("test-service").DoAndReturn(func(service string) ([]HostInfo, error) {
+		wg.Done()
+		return randomHostInfo(5), nil
+	}).Times(1)
+	td.mockPeerProvider.EXPECT().WhoAmI().AnyTimes()
+
+	wg.Add(1) // we expect 1st GetMembers to be called during hashring start
+	td.startHashRing()
+	require.True(t, common.AwaitWaitGroup(&wg, maxTestDuration), "GetMembers must be called")
+
+	td.mockPeerProvider.EXPECT().GetMembers("test-service").DoAndReturn(func(service string) ([]HostInfo, error) {
+		wg.Done()
+		return nil, errors.New("GetMembers failed")
+	}).Times(1)
+
+	wg.Add(1) // another call to GetMembers should happen because of handleUpdate
+	td.bypassRefreshRatelimiter()
+	td.hashRing.handleUpdates(ChangedEvent{})
+
+	require.True(t, common.AwaitWaitGroup(&wg, maxTestDuration), "GetMembers must be called again (and fail)")
+	td.hashRing.Stop()
+	assert.Equal(t, 1, td.observedLogs.FilterMessageSnippet("failed to refresh ring").Len())
 }
 
 func TestRefreshUpdatesRingOnlyWhenRingHasChanged(t *testing.T) {
@@ -218,8 +324,7 @@ func TestRefreshWillNotifySubscribers(t *testing.T) {
 		assert.NotEmpty(t, changedEvent2, "changed event should never be empty")
 	}()
 
-	// to bypass internal check
-	td.hashRing.members.refreshed = time.Now().AddDate(0, 0, -1)
+	td.bypassRefreshRatelimiter()
 	td.hashRing.signalSelf()
 
 	// wait until both subscribers will get notification
@@ -346,8 +451,7 @@ func TestLookupAndRefreshRaceCondition(t *testing.T) {
 	}()
 	go func() {
 		for i := 0; i < 50; i++ {
-			// to bypass internal check
-			td.hashRing.members.refreshed = time.Now().AddDate(0, 0, -1)
+			td.bypassRefreshRatelimiter()
 			assert.NoError(t, td.hashRing.refresh())
 		}
 		wg.Done()
