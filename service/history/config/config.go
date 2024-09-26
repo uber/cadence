@@ -222,6 +222,8 @@ type Config struct {
 	// parent close policy will be processed by sys workers(if enabled) if
 	// the number of children greater than or equal to this threshold
 	ParentClosePolicyThreshold dynamicconfig.IntPropertyFnWithDomainFilter
+	// the batch size of parent close policy processed by sys workers
+	ParentClosePolicyBatchSize dynamicconfig.IntPropertyFnWithDomainFilter
 	// total number of parentClosePolicy system workflows
 	NumParentClosePolicySystemWorkflows dynamicconfig.IntPropertyFn
 
@@ -515,6 +517,7 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, maxMessageSize int, s
 		NumParentClosePolicySystemWorkflows: dc.GetIntProperty(dynamicconfig.NumParentClosePolicySystemWorkflows),
 		EnableParentClosePolicyWorker:       dc.GetBoolProperty(dynamicconfig.EnableParentClosePolicyWorker),
 		ParentClosePolicyThreshold:          dc.GetIntPropertyFilteredByDomain(dynamicconfig.ParentClosePolicyThreshold),
+		ParentClosePolicyBatchSize:          dc.GetIntPropertyFilteredByDomain(dynamicconfig.ParentClosePolicyBatchSize),
 
 		NumArchiveSystemWorkflows:        dc.GetIntProperty(dynamicconfig.NumArchiveSystemWorkflows),
 		ArchiveRequestRPS:                dc.GetIntProperty(dynamicconfig.ArchiveRequestRPS),
