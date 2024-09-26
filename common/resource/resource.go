@@ -18,9 +18,12 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+//go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination resource_mock.go -self_package github.com/uber/cadence/common/resource
+
 package resource
 
 import (
+	"github.com/uber/cadence/common/service"
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	"go.uber.org/yarpc"
 
@@ -49,6 +52,13 @@ import (
 	persistenceClient "github.com/uber/cadence/common/persistence/client"
 	"github.com/uber/cadence/common/quotas/global/rpc"
 )
+
+type ResourceFactory interface {
+	NewResource(params *Params,
+		serviceName string,
+		serviceConfig *service.Config,
+	) (resource Resource, err error)
+}
 
 type (
 	// Resource is the interface which expose common resources

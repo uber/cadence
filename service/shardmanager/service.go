@@ -43,6 +43,7 @@ type Service struct {
 // NewService builds a new task manager service
 func NewService(
 	params *resource.Params,
+	factory resource.ResourceFactory,
 ) (resource.Resource, error) {
 
 	serviceConfig := config.NewConfig(
@@ -54,7 +55,7 @@ func NewService(
 		params.HostName,
 	)
 
-	serviceResource, err := resource.New(
+	serviceResource, err := factory.NewResource(
 		params,
 		service.ShardManager,
 		&service.Config{
@@ -62,7 +63,7 @@ func NewService(
 			PersistenceGlobalMaxQPS:  serviceConfig.PersistenceGlobalMaxQPS,
 			ThrottledLoggerMaxRPS:    serviceConfig.ThrottledLogRPS,
 			IsErrorRetryableFunction: common.IsServiceTransientError,
-			// matching doesn't need visibility config as it never read or write visibility
+			// shard manager doesn't need visibility config as it never read or write visibility
 		},
 	)
 	if err != nil {
