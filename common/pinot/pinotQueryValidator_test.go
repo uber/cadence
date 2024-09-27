@@ -389,15 +389,15 @@ func TestProcessInClause_FailedInputExprCases(t *testing.T) {
 		inputExpr     sqlparser.Expr
 		expectedError string
 	}{
-		"case1: in clause in Attr with invalid expr": {
+		"case1: 'In' clause in Attr with invalid expr": {
 			inputExpr:     &sqlparser.SQLVal{Type: sqlparser.StrVal, Val: []byte("invalid")},
 			expectedError: "invalid IN expression",
 		},
-		"case2: in clause in Attr with invalid expr, left": {
+		"case2: 'In' clause in Attr with invalid expr, left": {
 			inputExpr:     &sqlparser.ComparisonExpr{Operator: sqlparser.InStr},
 			expectedError: "invalid IN expression, left",
 		},
-		"case3: in clause in Attr with invalid expr, right": {
+		"case3: 'In' clause in Attr with invalid expr, right": {
 			inputExpr:     &sqlparser.ComparisonExpr{Operator: sqlparser.InStr, Left: &sqlparser.ColName{Name: sqlparser.NewColIdent("CustomKeywordField")}},
 			expectedError: "invalid IN expression, right",
 		},
