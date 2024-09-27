@@ -221,7 +221,7 @@ func (wh *WorkflowHandler) DiagnoseWorkflowExecution(ctx context.Context, reques
 	diagnosticWorkflowID := fmt.Sprintf("%s-%s-%s", request.GetDomain(), wfExecution.GetWorkflowID(), wfExecution.GetRunID())
 	diagnosticWorkflowDomain := "cadence-system"
 
-	diagnosticWorkflowInput := diagnostics.DiagnosticsWorkflowInput{
+	diagnosticWorkflowInput := diagnostics.DiagnosticsStarterWorkflowInput{
 		Domain:     request.GetDomain(),
 		WorkflowID: request.GetWorkflowExecution().GetWorkflowID(),
 		RunID:      request.GetWorkflowExecution().GetRunID(),
@@ -235,7 +235,7 @@ func (wh *WorkflowHandler) DiagnoseWorkflowExecution(ctx context.Context, reques
 		Domain:     diagnosticWorkflowDomain,
 		WorkflowID: diagnosticWorkflowID,
 		WorkflowType: &types.WorkflowType{
-			Name: "diagnostics-workflow",
+			Name: "diagnostics-starter-workflow",
 		},
 		TaskList: &types.TaskList{
 			Name: "wf-diagnostics",
