@@ -41,9 +41,9 @@ type (
 // NewConfig returns new service config with default values
 func NewConfig(dc *dynamicconfig.Collection, hostName string) *Config {
 	return &Config{
-		PersistenceMaxQPS:       dc.GetIntProperty(dynamicconfig.MatchingPersistenceMaxQPS),
-		PersistenceGlobalMaxQPS: dc.GetIntProperty(dynamicconfig.MatchingPersistenceGlobalMaxQPS),
-		ThrottledLogRPS:         dc.GetIntProperty(dynamicconfig.MatchingThrottledLogRPS),
+		PersistenceMaxQPS:       dc.GetIntProperty(dynamicconfig.ShardManagerPersistenceMaxQPS),
+		PersistenceGlobalMaxQPS: dc.GetIntProperty(dynamicconfig.ShardManagerPersistenceGlobalMaxQPS),
+		ThrottledLogRPS:         dc.GetIntProperty(dynamicconfig.ShardManagerThrottledLogRPS),
 		HostName:                hostName,
 	}
 }
