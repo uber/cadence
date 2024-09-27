@@ -78,11 +78,11 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(
 			StartTime:        common.Int64Ptr(executionInfo.StartTimestamp.UnixNano()),
 			HistoryLength:    mutableState.GetNextEventID() - common.FirstEventID,
 			AutoResetPoints:  executionInfo.AutoResetPoints,
-			Memo:             &types.Memo{Fields: executionInfo.Memo},
+			Memo:             &types.Memo{Fields: executionInfo.CopyMemo()},
 			IsCron:           len(executionInfo.CronSchedule) > 0,
 			UpdateTime:       common.Int64Ptr(executionInfo.LastUpdatedTimestamp.UnixNano()),
-			SearchAttributes: &types.SearchAttributes{IndexedFields: executionInfo.SearchAttributes},
-			PartitionConfig:  executionInfo.PartitionConfig,
+			SearchAttributes: &types.SearchAttributes{IndexedFields: executionInfo.CopySearchAttributes()},
+			PartitionConfig:  executionInfo.CopyPartitionConfig(),
 		},
 	}
 

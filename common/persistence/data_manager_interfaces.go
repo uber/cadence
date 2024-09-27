@@ -1997,3 +1997,40 @@ func HasMoreRowsToDelete(rowsDeleted, batchSize int) bool {
 	}
 	return true
 }
+
+func (e *WorkflowExecutionInfo) CopyMemo() map[string][]byte {
+	if e.Memo == nil {
+		return nil
+	}
+	memo := make(map[string][]byte)
+	for k, v := range e.Memo {
+		val := make([]byte, len(v))
+		copy(val, v)
+		memo[k] = val
+	}
+	return memo
+}
+
+func (e *WorkflowExecutionInfo) CopySearchAttributes() map[string][]byte {
+	if e.SearchAttributes == nil {
+		return nil
+	}
+	searchAttr := make(map[string][]byte)
+	for k, v := range e.SearchAttributes {
+		val := make([]byte, len(v))
+		copy(val, v)
+		searchAttr[k] = val
+	}
+	return searchAttr
+}
+
+func (e *WorkflowExecutionInfo) CopyPartitionConfig() map[string]string {
+	if e.PartitionConfig == nil {
+		return nil
+	}
+	partitionConfig := make(map[string]string)
+	for k, v := range e.PartitionConfig {
+		partitionConfig[k] = v
+	}
+	return partitionConfig
+}
