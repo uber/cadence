@@ -324,7 +324,7 @@ func (s *server) startService() common.Daemon {
 	case service.Worker:
 		daemon, err = worker.NewService(&params)
 	case service.ShardManager:
-		daemon, err = shardmanager.NewService(&params)
+		daemon, err = shardmanager.NewService(&params, resource.NewResourceFactory())
 	}
 	if err != nil {
 		params.Logger.Fatal("Fail to start "+s.name+" service ", tag.Error(err))

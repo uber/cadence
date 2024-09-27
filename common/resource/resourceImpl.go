@@ -63,6 +63,10 @@ import (
 	"github.com/uber/cadence/common/service"
 )
 
+func NewResourceFactory() ResourceFactory {
+	return &resourceImplFactory{}
+}
+
 type resourceImplFactory struct{}
 
 func (*resourceImplFactory) NewResource(params *Params,
