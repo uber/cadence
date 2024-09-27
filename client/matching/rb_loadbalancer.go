@@ -23,7 +23,6 @@
 package matching
 
 import (
-	"fmt"
 	"strings"
 	"sync/atomic"
 
@@ -35,7 +34,7 @@ import (
 
 type (
 	key struct {
-		domainName   string
+		domainID     string
 		taskListName string
 		taskListType int
 	}
@@ -47,7 +46,7 @@ type (
 		readCache        cache.Cache
 		writeCache       cache.Cache
 
-		pickPartitionFn func(domainName string, taskList types.TaskList, taskListType int, forwardedFrom string, nPartitions int, partitionCache cache.Cache) string
+		pickPartitionFn func(domainName string, taskList types.TaskList, taskListType int, forwardedFrom string, nPartitions int, partitionCache cache.Cache) int
 	}
 )
 
@@ -82,10 +81,10 @@ func (lb *roundRobinLoadBalancer) PickWritePartition(
 	taskList types.TaskList,
 	taskListType int,
 	forwardedFrom string,
-) string {
+) int {
 	domainName, err := lb.domainIDToName(domainID)
 	if err != nil {
-		return taskList.GetName()
+		return 0
 	}
 	nPartitions := lb.nWritePartitions(domainName, taskList.GetName(), taskListType)
 
@@ -93,7 +92,7 @@ func (lb *roundRobinLoadBalancer) PickWritePartition(
 	if nRead := lb.nReadPartitions(domainName, taskList.GetName(), taskListType); nPartitions > nRead {
 		nPartitions = nRead
 	}
-	return lb.pickPartitionFn(domainName, taskList, taskListType, forwardedFrom, nPartitions, lb.writeCache)
+	return lb.pickPartitionFn(domainID, taskList, taskListType, forwardedFrom, nPartitions, lb.writeCache)
 }
 
 func (lb *roundRobinLoadBalancer) PickReadPartition(
@@ -101,37 +100,37 @@ func (lb *roundRobinLoadBalancer) PickReadPartition(
 	taskList types.TaskList,
 	taskListType int,
 	forwardedFrom string,
-) string {
+) int {
 	domainName, err := lb.domainIDToName(domainID)
 	if err != nil {
-		return taskList.GetName()
+		return 0
 	}
 	n := lb.nReadPartitions(domainName, taskList.GetName(), taskListType)
-	return lb.pickPartitionFn(domainName, taskList, taskListType, forwardedFrom, n, lb.readCache)
+	return lb.pickPartitionFn(domainID, taskList, taskListType, forwardedFrom, n, lb.readCache)
 }
 
 func pickPartition(
-	domainName string,
+	domainID string,
 	taskList types.TaskList,
 	taskListType int,
 	forwardedFrom string,
 	nPartitions int,
 	partitionCache cache.Cache,
-) string {
+) int {
 	taskListName := taskList.GetName()
 	if forwardedFrom != "" || taskList.GetKind() == types.TaskListKindSticky {
-		return taskListName
+		return 0
 	}
 	if strings.HasPrefix(taskListName, common.ReservedTaskListPrefix) {
 		// this should never happen when forwardedFrom is empty
-		return taskListName
+		return 0
 	}
 	if nPartitions <= 1 {
-		return taskListName
+		return 0
 	}
 
 	taskListKey := key{
-		domainName:   domainName,
+		domainID:     domainID,
 		taskListName: taskListName,
 		taskListType: taskListType,
 	}
@@ -142,17 +141,22 @@ func pickPartition(
 		var err error
 		valI, err = partitionCache.PutIfNotExist(taskListKey, &val)
 		if err != nil {
-			return taskListName
+			return 0
 		}
 	}
 	valAddr, ok := valI.(*int64)
 	if !ok {
-		return taskListName
+		return 0
 	}
 
-	p := atomic.AddInt64(valAddr, 1) % int64(nPartitions)
-	if p == 0 {
-		return taskListName
-	}
-	return fmt.Sprintf("%v%v/%v", common.ReservedTaskListPrefix, taskListName, p)
+	return int(atomic.AddInt64(valAddr, 1) % int64(nPartitions))
+}
+
+func (lb *roundRobinLoadBalancer) UpdateWeight(
+	domainID string,
+	taskList types.TaskList,
+	taskListType int,
+	partition int,
+	weight int64,
+) {
 }

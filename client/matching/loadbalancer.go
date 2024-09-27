@@ -21,7 +21,6 @@
 package matching
 
 import (
-	"fmt"
 	"math/rand"
 	"strings"
 
@@ -46,7 +45,7 @@ type (
 			taskList types.TaskList,
 			taskListType int,
 			forwardedFrom string,
-		) string
+		) int
 
 		// PickReadPartition returns the task list partition to send a poller to.
 		// Input is name of the original task list as specified by caller. When
@@ -56,7 +55,15 @@ type (
 			taskList types.TaskList,
 			taskListType int,
 			forwardedFrom string,
-		) string
+		) int
+
+		UpdateWeight(
+			domainID string,
+			taskList types.TaskList,
+			taskListType int,
+			partition int,
+			weight int64,
+		)
 	}
 
 	defaultLoadBalancer struct {
@@ -84,10 +91,10 @@ func (lb *defaultLoadBalancer) PickWritePartition(
 	taskList types.TaskList,
 	taskListType int,
 	forwardedFrom string,
-) string {
+) int {
 	domainName, err := lb.domainIDToName(domainID)
 	if err != nil {
-		return taskList.GetName()
+		return 0
 	}
 	nPartitions := lb.nWritePartitions(domainName, taskList.GetName(), taskListType)
 
@@ -104,10 +111,10 @@ func (lb *defaultLoadBalancer) PickReadPartition(
 	taskList types.TaskList,
 	taskListType int,
 	forwardedFrom string,
-) string {
+) int {
 	domainName, err := lb.domainIDToName(domainID)
 	if err != nil {
-		return taskList.GetName()
+		return 0
 	}
 	n := lb.nReadPartitions(domainName, taskList.GetName(), taskListType)
 	return lb.pickPartition(taskList, forwardedFrom, n)
@@ -118,25 +125,29 @@ func (lb *defaultLoadBalancer) pickPartition(
 	taskList types.TaskList,
 	forwardedFrom string,
 	nPartitions int,
-) string {
+) int {
 
 	if forwardedFrom != "" || taskList.GetKind() == types.TaskListKindSticky {
-		return taskList.GetName()
+		return 0
 	}
 
 	if strings.HasPrefix(taskList.GetName(), common.ReservedTaskListPrefix) {
 		// this should never happen when forwardedFrom is empty
-		return taskList.GetName()
+		return 0
 	}
 
 	if nPartitions <= 0 {
-		return taskList.GetName()
+		return 0
 	}
 
-	p := rand.Intn(nPartitions)
-	if p == 0 {
-		return taskList.GetName()
-	}
+	return rand.Intn(nPartitions)
+}
 
-	return fmt.Sprintf("%v%v/%v", common.ReservedTaskListPrefix, taskList.GetName(), p)
+func (lb *defaultLoadBalancer) UpdateWeight(
+	domainID string,
+	taskList types.TaskList,
+	taskListType int,
+	partition int,
+	weight int64,
+) {
 }
