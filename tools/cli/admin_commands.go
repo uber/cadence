@@ -28,7 +28,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
@@ -43,7 +43,7 @@ const (
 )
 
 // AdminShowWorkflow shows history
-func AdminShowWorkflow(c *cli.Context) {
+func AdminShowWorkflow(c *cli.Context) error {
 	tid := c.String(FlagTreeID)
 	bid := c.String(FlagBranchID)
 	sid := c.Int(FlagShardID)
@@ -63,7 +63,7 @@ func AdminShowWorkflow(c *cli.Context) {
 			BranchID: &bid,
 		})
 		if err != nil {
-			ErrorAndExit("encoding branch token err", err)
+			return PrintableError("encoding branch token err", err)
 		}
 		resp, err := histV2.ReadRawHistoryBranch(ctx, &persistence.ReadHistoryBranchRequest{
 			BranchToken: branchToken,
@@ -74,16 +74,16 @@ func AdminShowWorkflow(c *cli.Context) {
 			DomainName:  domainName,
 		})
 		if err != nil {
-			ErrorAndExit("ReadHistoryBranch err", err)
+			return PrintableError("ReadHistoryBranch err", err)
 		}
 
 		history = resp.HistoryEventBlobs
 	} else {
-		ErrorAndExit("need to specify TreeID/BranchID/ShardID", nil)
+		return PrintableError("need to specify TreeID/BranchID/ShardID", nil)
 	}
 
 	if len(history) == 0 {
-		ErrorAndExit("no events", nil)
+		return PrintableError("no events", nil)
 	}
 	allEvents := &shared.History{}
 	totalSize := 0
@@ -92,14 +92,14 @@ func AdminShowWorkflow(c *cli.Context) {
 		fmt.Printf("======== batch %v, blob len: %v ======\n", idx+1, len(b.Data))
 		internalHistoryBatch, err := serializer.DeserializeBatchEvents(b)
 		if err != nil {
-			ErrorAndExit("DeserializeBatchEvents err", err)
+			return PrintableError("DeserializeBatchEvents err", err)
 		}
 		historyBatch := thrift.FromHistoryEventArray(internalHistoryBatch)
 		allEvents.Events = append(allEvents.Events, historyBatch...)
 		for _, e := range historyBatch {
 			jsonstr, err := json.Marshal(e)
 			if err != nil {
-				ErrorAndExit("json.Marshal err", err)
+				return PrintableError("json.Marshal err", err)
 			}
 			fmt.Println(string(jsonstr))
 		}
@@ -109,18 +109,22 @@ func AdminShowWorkflow(c *cli.Context) {
 	if outputFileName != "" {
 		data, err := json.Marshal(allEvents.Events)
 		if err != nil {
-			ErrorAndExit("Failed to serialize history data.", err)
+			return PrintableError("Failed to serialize history data.", err)
 		}
 		if err := ioutil.WriteFile(outputFileName, data, 0666); err != nil {
-			ErrorAndExit("Failed to export history data file.", err)
+			return PrintableError("Failed to export history data file.", err)
 		}
 	}
+	return nil
 }
 
 // AdminDescribeWorkflow describe a new workflow execution for admin
-func AdminDescribeWorkflow(c *cli.Context) {
+func AdminDescribeWorkflow(c *cli.Context) error {
 
-	resp := describeMutableState(c)
+	resp, err := describeMutableState(c)
+	if err != nil {
+		return err
+	}
 	prettyPrintJSONObject(resp)
 
 	if resp != nil {
@@ -128,14 +132,14 @@ func AdminDescribeWorkflow(c *cli.Context) {
 		ms := persistence.WorkflowMutableState{}
 		err := json.Unmarshal([]byte(msStr), &ms)
 		if err != nil {
-			ErrorAndExit("json.Unmarshal err", err)
+			return PrintableError("json.Unmarshal err", err)
 		}
 		currentBranchToken := ms.ExecutionInfo.BranchToken
 		if ms.VersionHistories != nil {
 			// if VersionHistories is set, then all branch infos are stored in VersionHistories
 			currentVersionHistory, err := ms.VersionHistories.GetCurrentVersionHistory()
 			if err != nil {
-				ErrorAndExit("ms.VersionHistories.GetCurrentVersionHistory err", err)
+				return PrintableError("ms.VersionHistories.GetCurrentVersionHistory err", err)
 			}
 			currentBranchToken = currentVersionHistory.GetBranchToken()
 		}
@@ -144,7 +148,7 @@ func AdminDescribeWorkflow(c *cli.Context) {
 		thriftrwEncoder := codec.NewThriftRWEncoder()
 		err = thriftrwEncoder.Decode(currentBranchToken, &branchInfo)
 		if err != nil {
-			ErrorAndExit("thriftrwEncoder.Decode err", err)
+			return PrintableError("thriftrwEncoder.Decode err", err)
 		}
 		prettyPrintJSONObject(branchInfo)
 		if ms.ExecutionInfo.AutoResetPoints != nil {
@@ -156,12 +160,13 @@ func AdminDescribeWorkflow(c *cli.Context) {
 			}
 		}
 	}
+	return nil
 }
 
-func describeMutableState(c *cli.Context) *types.AdminDescribeWorkflowExecutionResponse {
+func describeMutableState(c *cli.Context) (*types.AdminDescribeWorkflowExecutionResponse, error) {
 	adminClient := cFactory.ServerAdminClient(c)
 
-	domain := getRequiredGlobalOption(c, FlagDomain)
+	domain := getRequiredOption(c, FlagDomain)
 	wid := getRequiredOption(c, FlagWorkflowID)
 	rid := c.String(FlagRunID)
 
@@ -179,14 +184,14 @@ func describeMutableState(c *cli.Context) *types.AdminDescribeWorkflowExecutionR
 		},
 	)
 	if err != nil {
-		ErrorAndExit("Get workflow mutableState failed", err)
+		return nil, PrintableError("Get workflow mutableState failed", err)
 	}
-	return resp
+	return resp, nil
 }
 
 // AdminMaintainCorruptWorkflow deletes workflow from DB if it's corrupt
 func AdminMaintainCorruptWorkflow(c *cli.Context) error {
-	domainName := getRequiredGlobalOption(c, FlagDomain)
+	domainName := getRequiredOption(c, FlagDomain)
 	workflowID := c.String(FlagWorkflowID)
 	runID := c.String(FlagRunID)
 	skipErrors := c.Bool(FlagSkipErrorMode)
@@ -205,15 +210,15 @@ func AdminMaintainCorruptWorkflow(c *cli.Context) error {
 	defer cancel()
 	_, err := adminClient.MaintainCorruptWorkflow(ctx, request)
 	if err != nil {
-		ErrorAndExit("Operation AdminMaintainCorruptWorkflow failed.", err)
+		return PrintableError("Operation AdminMaintainCorruptWorkflow failed.", err)
 	}
 
 	return err
 }
 
 // AdminDeleteWorkflow delete a workflow execution for admin
-func AdminDeleteWorkflow(c *cli.Context) {
-	domain := getRequiredGlobalOption(c, FlagDomain)
+func AdminDeleteWorkflow(c *cli.Context) error {
+	domain := getRequiredOption(c, FlagDomain)
 	wid := getRequiredOption(c, FlagWorkflowID)
 	rid := c.String(FlagRunID)
 	remote := c.Bool(FlagRemote)
@@ -238,24 +243,27 @@ func AdminDeleteWorkflow(c *cli.Context) {
 		}
 		_, err := adminClient.DeleteWorkflow(ctx, request)
 		if err != nil {
-			ErrorAndExit("Operation AdminMaintainCorruptWorkflow failed.", err)
+			return PrintableError("Operation AdminMaintainCorruptWorkflow failed.", err)
 		}
-		return
+		return nil
 	}
 
-	resp := describeMutableState(c)
+	resp, err := describeMutableState(c)
+	if err != nil {
+		return err
+	}
 	msStr := resp.GetMutableStateInDatabase()
 	ms := persistence.WorkflowMutableState{}
-	err := json.Unmarshal([]byte(msStr), &ms)
+	err = json.Unmarshal([]byte(msStr), &ms)
 	if err != nil {
-		ErrorAndExit("json.Unmarshal err", err)
+		return PrintableError("json.Unmarshal err", err)
 	}
 	domainID := ms.ExecutionInfo.DomainID
 
 	shardID := resp.GetShardID()
 	shardIDInt, err := strconv.Atoi(shardID)
 	if err != nil {
-		ErrorAndExit("strconv.Atoi(shardID) err", err)
+		return PrintableError("strconv.Atoi(shardID) err", err)
 	}
 	histV2 := initializeHistoryManager(c)
 	defer histV2.Close()
@@ -275,7 +283,7 @@ func AdminDeleteWorkflow(c *cli.Context) {
 	for _, branchToken := range branchTokens {
 		err = thriftrwEncoder.Decode(branchToken, &branchInfo)
 		if err != nil {
-			ErrorAndExit("thriftrwEncoder.Decode err", err)
+			return PrintableError("thriftrwEncoder.Decode err", err)
 		}
 		fmt.Println("deleting history events for ...")
 		prettyPrintJSONObject(branchInfo)
@@ -288,7 +296,7 @@ func AdminDeleteWorkflow(c *cli.Context) {
 			if skipError {
 				fmt.Println("failed to delete history, ", err)
 			} else {
-				ErrorAndExit("DeleteHistoryBranch err", err)
+				return PrintableError("DeleteHistoryBranch err", err)
 			}
 		}
 	}
@@ -305,7 +313,7 @@ func AdminDeleteWorkflow(c *cli.Context) {
 		if skipError {
 			fmt.Println("delete mutableState row failed, ", err)
 		} else {
-			ErrorAndExit("delete mutableState row failed", err)
+			return PrintableError("delete mutableState row failed", err)
 		}
 	}
 	fmt.Println("delete mutableState row successfully")
@@ -321,18 +329,19 @@ func AdminDeleteWorkflow(c *cli.Context) {
 		if skipError {
 			fmt.Println("delete current row failed, ", err)
 		} else {
-			ErrorAndExit("delete current row failed", err)
+			return PrintableError("delete current row failed", err)
 		}
 	}
 	fmt.Println("delete current row successfully")
+	return nil
 }
 
 // AdminGetDomainIDOrName map domain
-func AdminGetDomainIDOrName(c *cli.Context) {
+func AdminGetDomainIDOrName(c *cli.Context) error {
 	domainID := c.String(FlagDomainID)
 	domainName := c.String(FlagDomain)
 	if len(domainID) == 0 && len(domainName) == 0 {
-		ErrorAndExit("Need either domainName or domainID", nil)
+		return PrintableError("Need either domainName or domainID", nil)
 	}
 
 	domainManager := initializeDomainManager(c)
@@ -342,33 +351,34 @@ func AdminGetDomainIDOrName(c *cli.Context) {
 	if len(domainID) > 0 {
 		domain, err := domainManager.GetDomain(ctx, &persistence.GetDomainRequest{ID: domainID})
 		if err != nil {
-			ErrorAndExit("SelectDomain error", err)
+			return PrintableError("SelectDomain error", err)
 		}
 		fmt.Printf("domainName for domainID %v is %v \n", domainID, domain.Info.Name)
 	} else {
 		domain, err := domainManager.GetDomain(ctx, &persistence.GetDomainRequest{Name: domainName})
 		if err != nil {
-			ErrorAndExit("SelectDomain error", err)
+			return PrintableError("SelectDomain error", err)
 		}
 		fmt.Printf("domainID for domainName %v is %v \n", domain.Info.ID, domainID)
 	}
+	return nil
 }
 
 // AdminGetShardID get shardID
-func AdminGetShardID(c *cli.Context) {
+func AdminGetShardID(c *cli.Context) error {
 	wid := getRequiredOption(c, FlagWorkflowID)
 	numberOfShards := c.Int(FlagNumberOfShards)
 
 	if numberOfShards <= 0 {
-		ErrorAndExit("numberOfShards is required", nil)
-		return
+		return PrintableError("numberOfShards is required", nil)
 	}
 	shardID := common.WorkflowIDToHistoryShard(wid, numberOfShards)
 	fmt.Printf("ShardID for workflowID: %v is %v \n", wid, shardID)
+	return nil
 }
 
 // AdminRemoveTask describes history host
-func AdminRemoveTask(c *cli.Context) {
+func AdminRemoveTask(c *cli.Context) error {
 	adminClient := cFactory.ServerAdminClient(c)
 
 	shardID := getRequiredIntOption(c, FlagShardID)
@@ -393,12 +403,13 @@ func AdminRemoveTask(c *cli.Context) {
 
 	err := adminClient.RemoveTask(ctx, req)
 	if err != nil {
-		ErrorAndExit("Remove task has failed", err)
+		return PrintableError("Remove task has failed", err)
 	}
+	return nil
 }
 
 // AdminDescribeShard describes shard by shard id
-func AdminDescribeShard(c *cli.Context) {
+func AdminDescribeShard(c *cli.Context) error {
 	sid := getRequiredIntOption(c, FlagShardID)
 
 	ctx, cancel := newContext(c)
@@ -408,14 +419,15 @@ func AdminDescribeShard(c *cli.Context) {
 	getShardReq := &persistence.GetShardRequest{ShardID: sid}
 	shard, err := shardManager.GetShard(ctx, getShardReq)
 	if err != nil {
-		ErrorAndExit("Failed to describe shard.", err)
+		return PrintableError("Failed to describe shard.", err)
 	}
 
 	prettyPrintJSONObject(shard)
+	return nil
 }
 
 // AdminSetShardRangeID set shard rangeID by shard id
-func AdminSetShardRangeID(c *cli.Context) {
+func AdminSetShardRangeID(c *cli.Context) error {
 	sid := getRequiredIntOption(c, FlagShardID)
 	rid := getRequiredInt64Option(c, FlagRangeID)
 
@@ -425,7 +437,7 @@ func AdminSetShardRangeID(c *cli.Context) {
 
 	getShardResp, err := shardManager.GetShard(ctx, &persistence.GetShardRequest{ShardID: sid})
 	if err != nil {
-		ErrorAndExit("Failed to get shardInfo.", err)
+		return PrintableError("Failed to get shardInfo.", err)
 	}
 
 	previousRangeID := getShardResp.ShardInfo.RangeID
@@ -439,14 +451,15 @@ func AdminSetShardRangeID(c *cli.Context) {
 		PreviousRangeID: previousRangeID,
 		ShardInfo:       updatedShardInfo,
 	}); err != nil {
-		ErrorAndExit("Failed to reset shard rangeID.", err)
+		return PrintableError("Failed to reset shard rangeID.", err)
 	}
 
 	fmt.Printf("Successfully updated rangeID from %v to %v for shard %v.\n", previousRangeID, rid, sid)
+	return nil
 }
 
 // AdminCloseShard closes shard by shard id
-func AdminCloseShard(c *cli.Context) {
+func AdminCloseShard(c *cli.Context) error {
 	adminClient := cFactory.ServerAdminClient(c)
 	sid := getRequiredIntOption(c, FlagShardID)
 
@@ -458,8 +471,9 @@ func AdminCloseShard(c *cli.Context) {
 
 	err := adminClient.CloseShard(ctx, req)
 	if err != nil {
-		ErrorAndExit("Close shard task has failed", err)
+		return PrintableError("Close shard task has failed", err)
 	}
+	return nil
 }
 
 type ShardRow struct {
@@ -468,7 +482,7 @@ type ShardRow struct {
 }
 
 // AdminDescribeShardDistribution describes shard distribution
-func AdminDescribeShardDistribution(c *cli.Context) {
+func AdminDescribeShardDistribution(c *cli.Context) error {
 	adminClient := cFactory.ServerAdminClient(c)
 
 	ctx, cancel := newContext(c)
@@ -481,14 +495,14 @@ func AdminDescribeShardDistribution(c *cli.Context) {
 
 	resp, err := adminClient.DescribeShardDistribution(ctx, req)
 	if err != nil {
-		ErrorAndExit("Shard list failed", err)
+		return PrintableError("Shard list failed", err)
 	}
 
 	fmt.Printf("Total Number of Shards: %d \n", resp.NumberOfShards)
 	fmt.Printf("Number of Shards Returned: %d \n", len(resp.Shards))
 
 	if len(resp.Shards) == 0 {
-		return
+		return nil
 	}
 
 	table := []ShardRow{}
@@ -496,7 +510,9 @@ func AdminDescribeShardDistribution(c *cli.Context) {
 	outputPageSize := tableRenderSize
 	for shardID, identity := range resp.Shards {
 		if outputPageSize == 0 {
-			Render(c, table, opts)
+			if err := Render(c, table, opts); err != nil {
+				return fmt.Errorf("error rendering: %w", err)
+			}
 			table = []ShardRow{}
 			if !showNextPage() {
 				break
@@ -507,11 +523,11 @@ func AdminDescribeShardDistribution(c *cli.Context) {
 		outputPageSize--
 	}
 	// output the remaining rows
-	Render(c, table, opts)
+	return Render(c, table, opts)
 }
 
 // AdminDescribeHistoryHost describes history host
-func AdminDescribeHistoryHost(c *cli.Context) {
+func AdminDescribeHistoryHost(c *cli.Context) error {
 	adminClient := cFactory.ServerAdminClient(c)
 
 	wid := c.String(FlagWorkflowID)
@@ -520,8 +536,7 @@ func AdminDescribeHistoryHost(c *cli.Context) {
 	printFully := c.Bool(FlagPrintFullyDetail)
 
 	if len(wid) == 0 && !c.IsSet(FlagShardID) && len(addr) == 0 {
-		ErrorAndExit("at least one of them is required to provide to lookup host: workflowID, shardID and host address", nil)
-		return
+		return PrintableError("at least one of them is required to provide to lookup host: workflowID, shardID and host address", nil)
 	}
 
 	ctx, cancel := newContext(c)
@@ -540,20 +555,21 @@ func AdminDescribeHistoryHost(c *cli.Context) {
 
 	resp, err := adminClient.DescribeHistoryHost(ctx, req)
 	if err != nil {
-		ErrorAndExit("Describe history host failed", err)
+		return PrintableError("Describe history host failed", err)
 	}
 
 	if !printFully {
 		resp.ShardIDs = nil
 	}
 	prettyPrintJSONObject(resp)
+	return nil
 }
 
 // AdminRefreshWorkflowTasks refreshes all the tasks of a workflow
-func AdminRefreshWorkflowTasks(c *cli.Context) {
+func AdminRefreshWorkflowTasks(c *cli.Context) error {
 	adminClient := cFactory.ServerAdminClient(c)
 
-	domain := getRequiredGlobalOption(c, FlagDomain)
+	domain := getRequiredOption(c, FlagDomain)
 	wid := getRequiredOption(c, FlagWorkflowID)
 	rid := c.String(FlagRunID)
 
@@ -568,14 +584,14 @@ func AdminRefreshWorkflowTasks(c *cli.Context) {
 		},
 	})
 	if err != nil {
-		ErrorAndExit("Refresh workflow task failed", err)
-	} else {
-		fmt.Println("Refresh workflow task succeeded.")
+		return PrintableError("Refresh workflow task failed", err)
 	}
+	fmt.Println("Refresh workflow task succeeded.")
+	return nil
 }
 
 // AdminResetQueue resets task processing queue states
-func AdminResetQueue(c *cli.Context) {
+func AdminResetQueue(c *cli.Context) error {
 	adminClient := cFactory.ServerAdminClient(c)
 
 	shardID := getRequiredIntOption(c, FlagShardID)
@@ -593,13 +609,14 @@ func AdminResetQueue(c *cli.Context) {
 
 	err := adminClient.ResetQueue(ctx, req)
 	if err != nil {
-		ErrorAndExit("Failed to reset queue", err)
+		return PrintableError("Failed to reset queue", err)
 	}
 	fmt.Println("Reset queue state succeeded")
+	return nil
 }
 
 // AdminDescribeQueue describes task processing queue states
-func AdminDescribeQueue(c *cli.Context) {
+func AdminDescribeQueue(c *cli.Context) error {
 	adminClient := cFactory.ServerAdminClient(c)
 
 	shardID := getRequiredIntOption(c, FlagShardID)
@@ -617,10 +634,11 @@ func AdminDescribeQueue(c *cli.Context) {
 
 	resp, err := adminClient.DescribeQueue(ctx, req)
 	if err != nil {
-		ErrorAndExit("Failed to describe queue", err)
+		return PrintableError("Failed to describe queue", err)
 	}
 
 	for _, state := range resp.ProcessingQueueStates {
 		fmt.Println(state)
 	}
+	return nil
 }

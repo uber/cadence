@@ -33,7 +33,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 	"go.uber.org/thriftrw/protocol/binary"
 	"go.uber.org/thriftrw/wire"
 
@@ -107,7 +107,7 @@ func (ch *writerChannel) Close() {
 }
 
 // AdminKafkaParse parses the output of k8read and outputs replication tasks
-func AdminKafkaParse(c *cli.Context) {
+func AdminKafkaParse(c *cli.Context) error {
 	inputFile := getInputFile(c.String(FlagInputFile))
 	outputFile := getOutputFile(c.String(FlagOutputFilename))
 
@@ -131,6 +131,7 @@ func AdminKafkaParse(c *cli.Context) {
 	if skipErrMode {
 		fmt.Printf("%v messages were skipped due to errors in parsing", atomic.LoadInt32(&skippedCount))
 	}
+	return nil
 }
 
 func buildFilterFn(workflowID, runID string) filterFn {
@@ -456,7 +457,7 @@ func doRereplicate(
 	endEventVersion *int64,
 	sourceCluster string,
 	adminClient admin.Client,
-) {
+) error {
 	fmt.Printf("Start rereplication for wid: %v, rid:%v \n", wid, rid)
 	if err := adminClient.ResendReplicationTasks(
 		ctx,
@@ -469,13 +470,14 @@ func doRereplicate(
 			EndVersion:    endEventVersion,
 		},
 	); err != nil {
-		ErrorAndExit("Failed to resend ndc workflow", err)
+		return PrintableError("Failed to resend ndc workflow", err)
 	}
 	fmt.Printf("Done rereplication for wid: %v, rid:%v \n", wid, rid)
+	return nil
 }
 
 // AdminRereplicate parses will re-publish replication tasks to topic
-func AdminRereplicate(c *cli.Context) {
+func AdminRereplicate(c *cli.Context) error {
 	sourceCluster := getRequiredOption(c, FlagSourceCluster)
 
 	adminClient := cFactory.ServerAdminClient(c)
@@ -491,13 +493,13 @@ func AdminRereplicate(c *cli.Context) {
 	rid := getRequiredOption(c, FlagRunID)
 	contextTimeout := defaultResendContextTimeout
 
-	if c.GlobalIsSet(FlagContextTimeout) {
-		contextTimeout = time.Duration(c.GlobalInt(FlagContextTimeout)) * time.Second
+	if c.IsSet(FlagContextTimeout) {
+		contextTimeout = time.Duration(c.Int(FlagContextTimeout)) * time.Second
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), contextTimeout)
 	defer cancel()
 
-	doRereplicate(
+	return doRereplicate(
 		ctx,
 		domainID,
 		wid,

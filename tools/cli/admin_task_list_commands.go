@@ -25,7 +25,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 
 	"github.com/uber/cadence/common/types"
 )
@@ -47,9 +47,9 @@ type (
 )
 
 // AdminDescribeTaskList displays poller and status information of task list.
-func AdminDescribeTaskList(c *cli.Context) {
+func AdminDescribeTaskList(c *cli.Context) error {
 	frontendClient := cFactory.ServerFrontendClient(c)
-	domain := getRequiredGlobalOption(c, FlagDomain)
+	domain := getRequiredOption(c, FlagDomain)
 	taskList := getRequiredOption(c, FlagTaskList)
 	taskListType := types.TaskListTypeDecision
 	if strings.ToLower(c.String(FlagTaskListType)) == "activity" {
@@ -67,27 +67,29 @@ func AdminDescribeTaskList(c *cli.Context) {
 
 	response, err := frontendClient.DescribeTaskList(ctx, request)
 	if err != nil {
-		ErrorAndExit("Operation DescribeTaskList failed.", err)
+		return PrintableError("Operation DescribeTaskList failed.", err)
 	}
 
 	taskListStatus := response.GetTaskListStatus()
 	if taskListStatus == nil {
-		ErrorAndExit(colorMagenta("No tasklist status information."), nil)
+		return PrintableError(colorMagenta("No tasklist status information."), nil)
 	}
-	printTaskListStatus(taskListStatus)
+	if err := printTaskListStatus(taskListStatus); err != nil {
+		return fmt.Errorf("failed to print task list status: %w", err)
+	}
 	fmt.Printf("\n")
 
 	pollers := response.Pollers
 	if len(pollers) == 0 {
-		ErrorAndExit(colorMagenta("No poller for tasklist: "+taskList), nil)
+		return PrintableError(colorMagenta("No poller for tasklist: "+taskList), nil)
 	}
-	printTaskListPollers(pollers, taskListType)
+	return printTaskListPollers(pollers, taskListType)
 }
 
 // AdminListTaskList displays all task lists under a domain.
-func AdminListTaskList(c *cli.Context) {
+func AdminListTaskList(c *cli.Context) error {
 	frontendClient := cFactory.ServerFrontendClient(c)
-	domain := getRequiredGlobalOption(c, FlagDomain)
+	domain := getRequiredOption(c, FlagDomain)
 
 	ctx, cancel := newContext(c)
 	defer cancel()
@@ -97,7 +99,7 @@ func AdminListTaskList(c *cli.Context) {
 
 	response, err := frontendClient.GetTaskListsByDomain(ctx, request)
 	if err != nil {
-		ErrorAndExit("Operation GetTaskListByDomain failed.", err)
+		return PrintableError("Operation GetTaskListByDomain failed.", err)
 	}
 
 	fmt.Println("Task Lists for domain " + domain + ":")
@@ -108,10 +110,10 @@ func AdminListTaskList(c *cli.Context) {
 	for name, taskList := range response.GetActivityTaskListMap() {
 		table = append(table, TaskListRow{name, "Activity", len(taskList.GetPollers())})
 	}
-	RenderTable(os.Stdout, table, RenderOptions{Color: true, Border: true})
+	return RenderTable(os.Stdout, table, RenderOptions{Color: true, Border: true})
 }
 
-func printTaskListStatus(taskListStatus *types.TaskListStatus) {
+func printTaskListStatus(taskListStatus *types.TaskListStatus) error {
 	table := []TaskListStatusRow{{
 		ReadLevel: taskListStatus.GetReadLevel(),
 		AckLevel:  taskListStatus.GetAckLevel(),
@@ -120,5 +122,5 @@ func printTaskListStatus(taskListStatus *types.TaskListStatus) {
 		StartID:   taskListStatus.GetTaskIDBlock().GetStartID(),
 		EndID:     taskListStatus.GetTaskIDBlock().GetEndID(),
 	}}
-	RenderTable(os.Stdout, table, RenderOptions{Color: true})
+	return RenderTable(os.Stdout, table, RenderOptions{Color: true})
 }

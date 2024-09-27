@@ -26,12 +26,12 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 
 	"github.com/uber/cadence/common/types"
 )
 
-func AdminGetAsyncWFConfig(c *cli.Context) {
+func AdminGetAsyncWFConfig(c *cli.Context) error {
 	adminClient := cFactory.ServerAdminClient(c)
 
 	domainName := getRequiredOption(c, FlagDomain)
@@ -45,19 +45,20 @@ func AdminGetAsyncWFConfig(c *cli.Context) {
 
 	resp, err := adminClient.GetDomainAsyncWorkflowConfiguraton(ctx, req)
 	if err != nil {
-		ErrorAndExit("Failed to get async wf queue config", err)
+		return PrintableError("Failed to get async wf queue config", err)
 	}
 
 	if resp == nil || resp.Configuration == nil {
 		fmt.Printf("Async workflow queue config not found for domain %s\n", domainName)
-		return
+		return nil
 	}
 
 	fmt.Printf("Async workflow queue config for domain %s:\n", domainName)
 	prettyPrintJSONObject(resp.Configuration)
+	return nil
 }
 
-func AdminUpdateAsyncWFConfig(c *cli.Context) {
+func AdminUpdateAsyncWFConfig(c *cli.Context) error {
 	adminClient := cFactory.ServerAdminClient(c)
 
 	domainName := getRequiredOption(c, FlagDomain)
@@ -66,7 +67,7 @@ func AdminUpdateAsyncWFConfig(c *cli.Context) {
 	var cfg types.AsyncWorkflowConfiguration
 	err := json.Unmarshal([]byte(asyncWFCfgJSON), &cfg)
 	if err != nil {
-		ErrorAndExit("Failed to parse async workflow config", err)
+		return PrintableError("Failed to parse async workflow config", err)
 	}
 
 	ctx, cancel := newContext(c)
@@ -79,8 +80,9 @@ func AdminUpdateAsyncWFConfig(c *cli.Context) {
 
 	_, err = adminClient.UpdateDomainAsyncWorkflowConfiguraton(ctx, req)
 	if err != nil {
-		ErrorAndExit("Failed to update async workflow queue config", err)
+		return PrintableError("Failed to update async workflow queue config", err)
 	}
 
 	fmt.Printf("Successfully updated async workflow queue config for domain %s\n", domainName)
+	return nil
 }

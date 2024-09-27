@@ -26,7 +26,7 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/pborman/uuid"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/types"
@@ -38,19 +38,19 @@ import (
 var promptFn = prompt
 
 // AdminAddSearchAttribute to whitelist search attribute
-func AdminAddSearchAttribute(c *cli.Context) {
+func AdminAddSearchAttribute(c *cli.Context) error {
 	key := getRequiredOption(c, FlagSearchAttributesKey)
 	if err := visibility.ValidateSearchAttributeKey(key); err != nil {
-		ErrorAndExit("Invalid search-attribute key.", err)
+		return PrintableError("Invalid search-attribute key.", err)
 	}
 
 	valType := getRequiredIntOption(c, FlagSearchAttributesType)
 	if !isValueTypeValid(valType) {
-		ErrorAndExit("Unknown Search Attributes value type.", nil)
+		return PrintableError("Unknown Search Attributes value type.", nil)
 	}
 
 	// ask user for confirmation
-	promptMsg := fmt.Sprintf("Are you trying to add key [%s] with Type [%s]? Y/N",
+	promptMsg := fmt.Sprintf("Are you trying to add key [%s] with Type [%s]? y/N",
 		color.YellowString(key), color.YellowString(intValTypeToString(valType)))
 	promptFn(promptMsg)
 
@@ -66,26 +66,28 @@ func AdminAddSearchAttribute(c *cli.Context) {
 
 	err := adminClient.AddSearchAttribute(ctx, request)
 	if err != nil {
-		ErrorAndExit("Add search attribute failed.", err)
+		return PrintableError("Add search attribute failed.", err)
 	}
 	fmt.Println("Success. Note that for a multil-node Cadence cluster, DynamicConfig MUST be updated separately to whitelist the new attributes.")
+	return nil
 }
 
 // AdminDescribeCluster is used to dump information about the cluster
-func AdminDescribeCluster(c *cli.Context) {
+func AdminDescribeCluster(c *cli.Context) error {
 	adminClient := cFactory.ServerAdminClient(c)
 
 	ctx, cancel := newContext(c)
 	defer cancel()
 	response, err := adminClient.DescribeCluster(ctx)
 	if err != nil {
-		ErrorAndExit("Operation DescribeCluster failed.", err)
+		return PrintableError("Operation DescribeCluster failed.", err)
 	}
 
 	prettyPrintJSONObject(response)
+	return nil
 }
 
-func AdminRebalanceStart(c *cli.Context) {
+func AdminRebalanceStart(c *cli.Context) error {
 	client := getCadenceClient(c)
 	tcCtx, cancel := newContext(c)
 	defer cancel()
@@ -97,13 +99,13 @@ func AdminRebalanceStart(c *cli.Context) {
 	}
 	input, err := json.Marshal(rbParams)
 	if err != nil {
-		ErrorAndExit("Failed to serialize params for failover workflow", err)
+		return PrintableError("Failed to serialize params for failover workflow", err)
 	}
 	memo, err := getWorkflowMemo(map[string]interface{}{
 		common.MemoKeyForOperator: getOperator(),
 	})
 	if err != nil {
-		ErrorAndExit("Failed to serialize memo", err)
+		return PrintableError("Failed to serialize memo", err)
 	}
 	request := &types.StartWorkflowExecutionRequest{
 		Domain:                              common.SystemLocalDomainName,
@@ -125,17 +127,22 @@ func AdminRebalanceStart(c *cli.Context) {
 
 	resp, err := client.StartWorkflowExecution(tcCtx, request)
 	if err != nil {
-		ErrorAndExit("Failed to start failover workflow", err)
+		return PrintableError("Failed to start failover workflow", err)
 	}
 	fmt.Println("Rebalance workflow started")
 	fmt.Println("wid: " + workflowID)
 	fmt.Println("rid: " + resp.GetRunID())
+	return nil
 }
 
-func AdminRebalanceList(c *cli.Context) {
-	c.Set(FlagWorkflowID, failovermanager.RebalanceWorkflowID)
-	c.GlobalSet(FlagDomain, common.SystemLocalDomainName)
-	ListWorkflow(c)
+func AdminRebalanceList(c *cli.Context) error {
+	if err := c.Set(FlagWorkflowID, failovermanager.RebalanceWorkflowID); err != nil {
+		return err
+	}
+	if err := c.Set(FlagDomain, common.SystemLocalDomainName); err != nil {
+		return err
+	}
+	return ListWorkflow(c)
 }
 
 func intValTypeToString(valType int) string {

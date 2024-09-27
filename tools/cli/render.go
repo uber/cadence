@@ -33,7 +33,7 @@ import (
 	"time"
 
 	"github.com/olekukonko/tablewriter"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 )
 
 const (

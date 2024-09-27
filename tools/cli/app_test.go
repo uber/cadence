@@ -30,7 +30,7 @@ import (
 	"github.com/olivere/elastic"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/suite"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 
 	"github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/client/frontend"
@@ -108,17 +108,6 @@ func (s *cliAppSuite) TearDownTest() {
 	s.mockCtrl.Finish() // assert mock’s expectations
 }
 
-func (s *cliAppSuite) RunErrorExitCode(arguments []string) int {
-	oldOsExit := osExit
-	defer func() { osExit = oldOsExit }()
-	var errorCode int
-	osExit = func(code int) {
-		errorCode = code
-	}
-	s.NoError(s.app.Run(arguments))
-	return errorCode
-}
-
 func (s *cliAppSuite) TestAppCommands() {
 	for _, test := range commands {
 		cmd := s.app.Command(test)
@@ -128,26 +117,25 @@ func (s *cliAppSuite) TestAppCommands() {
 
 func (s *cliAppSuite) TestDomainRegister_LocalDomain() {
 	s.serverFrontendClient.EXPECT().RegisterDomain(gomock.Any(), gomock.Any()).Return(nil)
-	errorCode := s.RunErrorExitCode([]string{"", "--do", domainName, "domain", "register", "--global_domain", "false"})
-	s.Equal(0, errorCode)
+	s.NoError(s.app.Run([]string{"", "--do", domainName, "domain", "register", "--global_domain", "false"}))
 }
 
 func (s *cliAppSuite) TestDomainRegister_GlobalDomain() {
 	s.serverFrontendClient.EXPECT().RegisterDomain(gomock.Any(), gomock.Any()).Return(nil)
-	errorCode := s.RunErrorExitCode([]string{"", "--do", domainName, "domain", "register", "--global_domain", "true"})
-	s.Equal(0, errorCode)
+	s.NoError(s.app.Run([]string{"", "--do", domainName, "domain", "register", "--global_domain", "true"}))
 }
 
 func (s *cliAppSuite) TestDomainRegister_DomainExist() {
 	s.serverFrontendClient.EXPECT().RegisterDomain(gomock.Any(), gomock.Any()).Return(&types.DomainAlreadyExistsError{})
-	errorCode := s.RunErrorExitCode([]string{"", "--do", domainName, "domain", "register", "--global_domain", "true"})
-	s.Equal(1, errorCode)
+	s.Error(s.app.Run([]string{"", "--do", domainName, "domain", "register", "--global_domain", "true"}))
 }
 
 func (s *cliAppSuite) TestDomainRegister_Failed() {
 	s.serverFrontendClient.EXPECT().RegisterDomain(gomock.Any(), gomock.Any()).Return(&types.BadRequestError{"fake error"})
-	errorCode := s.RunErrorExitCode([]string{"", "--do", domainName, "domain", "register", "--global_domain", "true"})
-	s.Equal(1, errorCode)
+	// TODO check error message for all s.Error use cases
+	s.ErrorContains(
+		s.app.Run(([]string{"", "--do", domainName, "domain", "register", "--global_domain", "true"})),
+		"Register Domain operation failed.")
 }
 
 var describeDomainResponseServer = &types.DescribeDomainResponse{
@@ -187,22 +175,19 @@ func (s *cliAppSuite) TestDomainUpdate_DomainNotExist() {
 	resp := describeDomainResponseServer
 	s.serverFrontendClient.EXPECT().DescribeDomain(gomock.Any(), gomock.Any()).Return(resp, nil)
 	s.serverFrontendClient.EXPECT().UpdateDomain(gomock.Any(), gomock.Any()).Return(nil, &types.EntityNotExistsError{})
-	errorCode := s.RunErrorExitCode([]string{"", "--do", domainName, "domain", "update"})
-	s.Equal(1, errorCode)
+	s.Error(s.app.Run([]string{"", "--do", domainName, "domain", "update"}))
 }
 
 func (s *cliAppSuite) TestDomainUpdate_ActiveClusterFlagNotSet_DomainNotExist() {
 	s.serverFrontendClient.EXPECT().DescribeDomain(gomock.Any(), gomock.Any()).Return(nil, &types.EntityNotExistsError{})
-	errorCode := s.RunErrorExitCode([]string{"", "--do", domainName, "domain", "update"})
-	s.Equal(1, errorCode)
+	s.Error(s.app.Run([]string{"", "--do", domainName, "domain", "update"}))
 }
 
 func (s *cliAppSuite) TestDomainUpdate_Failed() {
 	resp := describeDomainResponseServer
 	s.serverFrontendClient.EXPECT().DescribeDomain(gomock.Any(), gomock.Any()).Return(resp, nil)
 	s.serverFrontendClient.EXPECT().UpdateDomain(gomock.Any(), gomock.Any()).Return(nil, &types.BadRequestError{"faked error"})
-	errorCode := s.RunErrorExitCode([]string{"", "--do", domainName, "domain", "update"})
-	s.Equal(1, errorCode)
+	s.Error(s.app.Run([]string{"", "--do", domainName, "domain", "update"}))
 }
 
 func (s *cliAppSuite) TestDomainDeprecate() {
@@ -217,29 +202,25 @@ func (s *cliAppSuite) TestDomainDeprecate_DomainNotExist() {
 	s.serverFrontendClient.EXPECT().ListClosedWorkflowExecutions(gomock.Any(), gomock.Any()).Return(&types.ListClosedWorkflowExecutionsResponse{}, nil)
 	s.serverFrontendClient.EXPECT().ListOpenWorkflowExecutions(gomock.Any(), gomock.Any()).Return(&types.ListOpenWorkflowExecutionsResponse{}, nil)
 	s.serverFrontendClient.EXPECT().DeprecateDomain(gomock.Any(), gomock.Any()).Return(&types.EntityNotExistsError{})
-	errorCode := s.RunErrorExitCode([]string{"", "--do", domainName, "domain", "deprecate"})
-	s.Equal(1, errorCode)
+	s.Error(s.app.Run([]string{"", "--do", domainName, "domain", "deprecate"}))
 }
 
 func (s *cliAppSuite) TestDomainDeprecate_Failed() {
 	s.serverFrontendClient.EXPECT().ListClosedWorkflowExecutions(gomock.Any(), gomock.Any()).Return(&types.ListClosedWorkflowExecutionsResponse{}, nil)
 	s.serverFrontendClient.EXPECT().ListOpenWorkflowExecutions(gomock.Any(), gomock.Any()).Return(&types.ListOpenWorkflowExecutionsResponse{}, nil)
 	s.serverFrontendClient.EXPECT().DeprecateDomain(gomock.Any(), gomock.Any()).Return(&types.BadRequestError{"faked error"})
-	errorCode := s.RunErrorExitCode([]string{"", "--do", domainName, "domain", "deprecate"})
-	s.Equal(1, errorCode)
+	s.Error(s.app.Run([]string{"", "--do", domainName, "domain", "deprecate"}))
 }
 
 func (s *cliAppSuite) TestDomainDeprecate_ClosedWorkflowsExist() {
 	s.serverFrontendClient.EXPECT().ListClosedWorkflowExecutions(gomock.Any(), gomock.Any()).Return(listClosedWorkflowExecutionsResponse, nil)
-	errorCode := s.RunErrorExitCode([]string{"", "--do", domainName, "domain", "deprecate"})
-	s.Equal(1, errorCode)
+	s.Error(s.app.Run([]string{"", "--do", domainName, "domain", "deprecate"}))
 }
 
 func (s *cliAppSuite) TestDomainDeprecate_OpenWorkflowsExist() {
 	s.serverFrontendClient.EXPECT().ListClosedWorkflowExecutions(gomock.Any(), gomock.Any()).Return(&types.ListClosedWorkflowExecutionsResponse{}, nil)
 	s.serverFrontendClient.EXPECT().ListOpenWorkflowExecutions(gomock.Any(), gomock.Any()).Return(listOpenWorkflowExecutionsResponse, nil)
-	errorCode := s.RunErrorExitCode([]string{"", "--do", domainName, "domain", "deprecate"})
-	s.Equal(1, errorCode)
+	s.Error(s.app.Run([]string{"", "--do", domainName, "domain", "deprecate"}))
 }
 
 func (s *cliAppSuite) TestDomainDeprecate_Force() {
@@ -250,14 +231,12 @@ func (s *cliAppSuite) TestDomainDeprecate_Force() {
 
 func (s *cliAppSuite) TestDomainDeprecate_DomainNotExist_Force() {
 	s.serverFrontendClient.EXPECT().DeprecateDomain(gomock.Any(), gomock.Any()).Return(&types.EntityNotExistsError{})
-	errorCode := s.RunErrorExitCode([]string{"", "--do", domainName, "domain", "deprecate", "--force"})
-	s.Equal(1, errorCode)
+	s.Error(s.app.Run([]string{"", "--do", domainName, "domain", "deprecate", "--force"}))
 }
 
 func (s *cliAppSuite) TestDomainDeprecate_Failed_Force() {
 	s.serverFrontendClient.EXPECT().DeprecateDomain(gomock.Any(), gomock.Any()).Return(&types.BadRequestError{"faked error"})
-	errorCode := s.RunErrorExitCode([]string{"", "--do", domainName, "domain", "deprecate", "--force"})
-	s.Equal(1, errorCode)
+	s.Error(s.app.Run([]string{"", "--do", domainName, "domain", "deprecate", "--force"}))
 }
 
 func (s *cliAppSuite) TestDomainDescribe() {
@@ -270,15 +249,13 @@ func (s *cliAppSuite) TestDomainDescribe() {
 func (s *cliAppSuite) TestDomainDescribe_DomainNotExist() {
 	resp := describeDomainResponseServer
 	s.serverFrontendClient.EXPECT().DescribeDomain(gomock.Any(), gomock.Any()).Return(resp, &types.EntityNotExistsError{})
-	errorCode := s.RunErrorExitCode([]string{"", "--do", domainName, "domain", "describe"})
-	s.Equal(1, errorCode)
+	s.Error(s.app.Run([]string{"", "--do", domainName, "domain", "describe"}))
 }
 
 func (s *cliAppSuite) TestDomainDescribe_Failed() {
 	resp := describeDomainResponseServer
 	s.serverFrontendClient.EXPECT().DescribeDomain(gomock.Any(), gomock.Any()).Return(resp, &types.BadRequestError{"faked error"})
-	errorCode := s.RunErrorExitCode([]string{"", "--do", domainName, "domain", "describe"})
-	s.Equal(1, errorCode)
+	s.Error(s.app.Run([]string{"", "--do", domainName, "domain", "describe"}))
 }
 
 var (
@@ -357,8 +334,7 @@ func (s *cliAppSuite) TestRestartWorkflow() {
 func (s *cliAppSuite) TestRestartWorkflow_Failed() {
 	resp := &types.RestartWorkflowExecutionResponse{RunID: uuid.New()}
 	s.serverFrontendClient.EXPECT().RestartWorkflowExecution(gomock.Any(), gomock.Any()).Return(resp, &types.BadRequestError{"faked error"})
-	errorCode := s.RunErrorExitCode([]string{"", "--do", domainName, "workflow", "restart", "-w", "wid"})
-	s.Equal(1, errorCode)
+	s.Error(s.app.Run([]string{"", "--do", domainName, "workflow", "restart", "-w", "wid"}))
 }
 
 func (s *cliAppSuite) TestDiagnoseWorkflow() {
@@ -370,8 +346,7 @@ func (s *cliAppSuite) TestDiagnoseWorkflow() {
 
 func (s *cliAppSuite) TestDiagnoseWorkflow_Failed() {
 	s.serverFrontendClient.EXPECT().DiagnoseWorkflowExecution(gomock.Any(), gomock.Any()).Return(nil, &types.BadRequestError{"faked error"})
-	errorCode := s.RunErrorExitCode([]string{"", "--do", domainName, "workflow", "diagnose", "-w", "wid", "-r", "rid"})
-	s.Equal(1, errorCode)
+	s.Error(s.app.Run([]string{"", "--do", domainName, "workflow", "diagnose", "-w", "wid", "-r", "rid"}))
 }
 
 func (s *cliAppSuite) TestStartWorkflow() {
@@ -389,8 +364,7 @@ func (s *cliAppSuite) TestStartWorkflow_Failed() {
 	resp := &types.StartWorkflowExecutionResponse{RunID: uuid.New()}
 	s.serverFrontendClient.EXPECT().StartWorkflowExecution(gomock.Any(), gomock.Any()).Return(resp, &types.BadRequestError{"faked error"})
 	// start with wid
-	errorCode := s.RunErrorExitCode([]string{"", "--do", domainName, "workflow", "start", "-tl", "testTaskList", "-wt", "testWorkflowType", "-et", "60", "-w", "wid"})
-	s.Equal(1, errorCode)
+	s.Error(s.app.Run([]string{"", "--do", domainName, "workflow", "start", "-tl", "testTaskList", "-wt", "testWorkflowType", "-et", "60", "-w", "wid"}))
 }
 
 func (s *cliAppSuite) TestRunWorkflow() {
@@ -408,12 +382,9 @@ func (s *cliAppSuite) TestRunWorkflow() {
 
 func (s *cliAppSuite) TestRunWorkflow_Failed() {
 	resp := &types.StartWorkflowExecutionResponse{RunID: uuid.New()}
-	history := getWorkflowExecutionHistoryResponse
 	s.serverFrontendClient.EXPECT().StartWorkflowExecution(gomock.Any(), gomock.Any()).Return(resp, &types.BadRequestError{"faked error"})
-	s.serverFrontendClient.EXPECT().GetWorkflowExecutionHistory(gomock.Any(), gomock.Any()).Return(history, nil)
 	// start with wid
-	errorCode := s.RunErrorExitCode([]string{"", "--do", domainName, "workflow", "run", "-tl", "testTaskList", "-wt", "testWorkflowType", "-et", "60", "-w", "wid"})
-	s.Equal(1, errorCode)
+	s.Error(s.app.Run([]string{"", "--do", domainName, "workflow", "run", "-tl", "testTaskList", "-wt", "testWorkflowType", "-et", "60", "-w", "wid"}))
 }
 
 func (s *cliAppSuite) TestTerminateWorkflow() {
@@ -424,8 +395,7 @@ func (s *cliAppSuite) TestTerminateWorkflow() {
 
 func (s *cliAppSuite) TestTerminateWorkflow_Failed() {
 	s.serverFrontendClient.EXPECT().TerminateWorkflowExecution(gomock.Any(), gomock.Any()).Return(&types.BadRequestError{"faked error"})
-	errorCode := s.RunErrorExitCode([]string{"", "--do", domainName, "workflow", "terminate", "-w", "wid"})
-	s.Equal(1, errorCode)
+	s.Error(s.app.Run([]string{"", "--do", domainName, "workflow", "terminate", "-w", "wid"}))
 }
 
 func (s *cliAppSuite) TestCancelWorkflow() {
@@ -436,8 +406,7 @@ func (s *cliAppSuite) TestCancelWorkflow() {
 
 func (s *cliAppSuite) TestCancelWorkflow_Failed() {
 	s.serverFrontendClient.EXPECT().RequestCancelWorkflowExecution(gomock.Any(), gomock.Any()).Return(&types.BadRequestError{"faked error"})
-	errorCode := s.RunErrorExitCode([]string{"", "--do", domainName, "workflow", "cancel", "-w", "wid"})
-	s.Equal(1, errorCode)
+	s.Error(s.app.Run([]string{"", "--do", domainName, "workflow", "cancel", "-w", "wid"}))
 }
 
 func (s *cliAppSuite) TestSignalWorkflow() {
@@ -448,8 +417,7 @@ func (s *cliAppSuite) TestSignalWorkflow() {
 
 func (s *cliAppSuite) TestSignalWorkflow_Failed() {
 	s.serverFrontendClient.EXPECT().SignalWorkflowExecution(gomock.Any(), gomock.Any()).Return(&types.BadRequestError{"faked error"})
-	errorCode := s.RunErrorExitCode([]string{"", "--do", domainName, "workflow", "signal", "-w", "wid", "-n", "signal-name"})
-	s.Equal(1, errorCode)
+	s.Error(s.app.Run([]string{"", "--do", domainName, "workflow", "signal", "-w", "wid", "-n", "signal-name"}))
 }
 
 func (s *cliAppSuite) TestQueryWorkflow() {
@@ -475,8 +443,7 @@ func (s *cliAppSuite) TestQueryWorkflow_Failed() {
 		QueryResult: []byte("query-result"),
 	}
 	s.serverFrontendClient.EXPECT().QueryWorkflow(gomock.Any(), gomock.Any()).Return(resp, &types.BadRequestError{"faked error"})
-	errorCode := s.RunErrorExitCode([]string{"", "--do", domainName, "workflow", "query", "-w", "wid", "-qt", "query-type-test"})
-	s.Equal(1, errorCode)
+	s.Error(s.app.Run([]string{"", "--do", domainName, "workflow", "query", "-w", "wid", "-qt", "query-type-test"}))
 }
 
 var (
@@ -631,8 +598,7 @@ func (s *cliAppSuite) TestAdminDescribeWorkflow() {
 
 func (s *cliAppSuite) TestAdminDescribeWorkflow_Failed() {
 	s.serverAdminClient.EXPECT().DescribeWorkflowExecution(gomock.Any(), gomock.Any()).Return(nil, &types.BadRequestError{"faked error"})
-	errorCode := s.RunErrorExitCode([]string{"", "--do", domainName, "admin", "wf", "describe", "-w", "test-wf-id"})
-	s.Equal(1, errorCode)
+	s.Error(s.app.Run(([]string{"", "--do", domainName, "admin", "wf", "describe", "-w", "test-wf-id"})))
 }
 
 func (s *cliAppSuite) TestAdminAddSearchAttribute() {
@@ -648,7 +614,7 @@ func (s *cliAppSuite) TestAdminAddSearchAttribute() {
 	s.serverAdminClient.EXPECT().AddSearchAttribute(gomock.Any(), request).Return(nil)
 
 	err := s.app.Run([]string{"", "--do", domainName, "admin", "cl", "asa", "--search_attr_key", "testKey", "--search_attr_type", "1"})
-	s.Equal("Are you trying to add key [testKey] with Type [Keyword]? Y/N", promptMsg)
+	s.Equal("Are you trying to add key [testKey] with Type [Keyword]? y/N", promptMsg)
 	s.Nil(err)
 }
 

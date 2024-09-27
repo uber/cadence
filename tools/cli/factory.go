@@ -30,7 +30,7 @@ import (
 	"github.com/olivere/elastic"
 	adminv1 "github.com/uber/cadence-idl/go/proto/admin/v1"
 	apiv1 "github.com/uber/cadence-idl/go/proto/api/v1"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/peer"
@@ -113,7 +113,7 @@ func (b *clientFactory) ServerConfig(c *cli.Context) (*config.Config, error) {
 func (b *clientFactory) ServerFrontendClient(c *cli.Context) frontend.Client {
 	b.ensureDispatcher(c)
 	clientConfig := b.dispatcher.ClientConfig(cadenceFrontendService)
-	if c.GlobalString(FlagTransport) == grpcTransport {
+	if c.String(FlagTransport) == grpcTransport {
 		return grpcClient.NewFrontendClient(
 			apiv1.NewDomainAPIYARPCClient(clientConfig),
 			apiv1.NewWorkflowAPIYARPCClient(clientConfig),
@@ -128,7 +128,7 @@ func (b *clientFactory) ServerFrontendClient(c *cli.Context) frontend.Client {
 func (b *clientFactory) ServerAdminClient(c *cli.Context) admin.Client {
 	b.ensureDispatcher(c)
 	clientConfig := b.dispatcher.ClientConfig(cadenceFrontendService)
-	if c.GlobalString(FlagTransport) == grpcTransport {
+	if c.String(FlagTransport) == grpcTransport {
 		return grpcClient.NewAdminClient(adminv1.NewAdminAPIYARPCClient(clientConfig))
 	}
 	return thrift.NewAdminClient(serverAdmin.New(clientConfig))
@@ -138,7 +138,7 @@ func (b *clientFactory) ServerAdminClient(c *cli.Context) admin.Client {
 func (b *clientFactory) ServerFrontendClientForMigration(c *cli.Context) frontend.Client {
 	b.ensureDispatcherForMigration(c)
 	clientConfig := b.dispatcherMigration.ClientConfig(cadenceFrontendService)
-	if c.GlobalString(FlagTransport) == grpcTransport {
+	if c.String(FlagTransport) == grpcTransport {
 		return grpcClient.NewFrontendClient(
 			apiv1.NewDomainAPIYARPCClient(clientConfig),
 			apiv1.NewWorkflowAPIYARPCClient(clientConfig),
@@ -153,7 +153,7 @@ func (b *clientFactory) ServerFrontendClientForMigration(c *cli.Context) fronten
 func (b *clientFactory) ServerAdminClientForMigration(c *cli.Context) admin.Client {
 	b.ensureDispatcherForMigration(c)
 	clientConfig := b.dispatcherMigration.ClientConfig(cadenceFrontendService)
-	if c.GlobalString(FlagTransport) == grpcTransport {
+	if c.String(FlagTransport) == grpcTransport {
 		return grpcClient.NewAdminClient(adminv1.NewAdminAPIYARPCClient(clientConfig))
 	}
 	return thrift.NewAdminClient(serverAdmin.New(clientConfig))
@@ -179,7 +179,7 @@ func (b *clientFactory) ensureDispatcher(c *cli.Context) {
 	if b.dispatcher != nil {
 		return
 	}
-	b.dispatcher = b.newClientDispatcher(c, c.GlobalString(FlagAddress))
+	b.dispatcher = b.newClientDispatcher(c, c.String(FlagAddress))
 }
 
 func (b *clientFactory) ensureDispatcherForMigration(c *cli.Context) {
@@ -190,7 +190,7 @@ func (b *clientFactory) ensureDispatcherForMigration(c *cli.Context) {
 }
 
 func (b *clientFactory) newClientDispatcher(c *cli.Context, hostPortOverride string) *yarpc.Dispatcher {
-	shouldUseGrpc := c.GlobalString(FlagTransport) == grpcTransport
+	shouldUseGrpc := c.String(FlagTransport) == grpcTransport
 
 	hostPort := tchannelPort
 	if shouldUseGrpc {
@@ -204,7 +204,7 @@ func (b *clientFactory) newClientDispatcher(c *cli.Context, hostPortOverride str
 		grpcTransport := grpc.NewTransport()
 		outbounds = transport.Outbounds{Unary: grpc.NewTransport().NewSingleOutbound(hostPort)}
 
-		tlsCertificatePath := c.GlobalString(FlagTLSCertPath)
+		tlsCertificatePath := c.String(FlagTLSCertPath)
 		if tlsCertificatePath != "" {
 			caCert, err := ioutil.ReadFile(tlsCertificatePath)
 			if err != nil {
@@ -238,7 +238,9 @@ func (b *clientFactory) newClientDispatcher(c *cli.Context, hostPortOverride str
 	})
 
 	if err := dispatcher.Start(); err != nil {
-		dispatcher.Stop()
+		if err := dispatcher.Stop(); err != nil {
+			b.logger.Fatal("Failed to stop outbound transport channel", zap.Error(err))
+		}
 		b.logger.Fatal("Failed to create outbound transport channel: %v", zap.Error(err))
 	}
 	return dispatcher
@@ -259,9 +261,9 @@ func (vm *versionMiddleware) Call(ctx context.Context, request *transport.Reques
 }
 
 func getJWT(c *cli.Context) string {
-	return c.GlobalString(FlagJWT)
+	return c.String(FlagJWT)
 }
 
 func getJWTPrivateKey(c *cli.Context) string {
-	return c.GlobalString(FlagJWTPrivateKey)
+	return c.String(FlagJWTPrivateKey)
 }
