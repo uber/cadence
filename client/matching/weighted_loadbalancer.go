@@ -194,5 +194,6 @@ func (lb *weightedLoadBalancer) UpdateWeight(
 	if !ok {
 		return
 	}
+	lb.logger.Info("update weight", tag.Dynamic("weights", w.weights), tag.Dynamic("partition", partition), tag.Dynamic("weight", weight))
 	w.updateWeightAndPartition(n, partition, weight)
 }
