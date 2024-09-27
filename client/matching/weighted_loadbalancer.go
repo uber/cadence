@@ -29,6 +29,8 @@ import (
 
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/dynamicconfig"
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -44,6 +46,7 @@ type (
 		nReadPartitions      dynamicconfig.IntPropertyFnWithTaskListInfoFilters
 		domainIDToName       func(string) (string, error)
 		weightCache          cache.Cache
+		logger               log.Logger
 	}
 )
 
@@ -102,6 +105,7 @@ func NewWeightedLoadBalancer(
 	lb LoadBalancer,
 	domainIDToName func(string) (string, error),
 	dc *dynamicconfig.Collection,
+	logger log.Logger,
 ) LoadBalancer {
 	return &weightedLoadBalancer{
 		fallbackLoadBalancer: lb,
@@ -114,6 +118,7 @@ func NewWeightedLoadBalancer(
 			MaxCount:        3000,
 			ActivelyEvict:   false,
 		}),
+		logger: logger,
 	}
 }
 
@@ -146,6 +151,7 @@ func (lb *weightedLoadBalancer) PickReadPartition(
 		return lb.fallbackLoadBalancer.PickReadPartition(domainID, taskList, taskListType, forwardedFrom)
 	}
 	p := w.pick()
+	lb.logger.Info("pick partition", tag.Dynamic("result", p), tag.Dynamic("weights", w.weights))
 	if p < 0 {
 		return lb.fallbackLoadBalancer.PickReadPartition(domainID, taskList, taskListType, forwardedFrom)
 	}
