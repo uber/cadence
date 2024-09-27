@@ -27,12 +27,17 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"github.com/uber/ringpop-go/events"
 	"github.com/uber/tchannel-go"
 	"go.uber.org/goleak"
 
 	"github.com/uber/cadence/common/log/testlogger"
 	"github.com/uber/cadence/common/membership"
 )
+
+const testServiceName = "test-service"
 
 type srvAndCh struct {
 	service  string
@@ -134,6 +139,50 @@ func TestRingpopProvider(t *testing.T) {
 	if len(members) != 2 {
 		t.Fatalf("Expected 2 members, got %v", len(members))
 	}
+}
+
+func TestSubscribeAndNotify(t *testing.T) {
+	provider := NewRingpopProvider(testServiceName, nil, nil, nil, testlogger.New(t))
+
+	ringpopEvent := events.RingChangedEvent{
+		ServersAdded:   []string{"aa", "bb", "cc"},
+		ServersUpdated: []string{"dd"},
+		ServersRemoved: []string{"ee", "ff"},
+	}
+	expectedEvent := membership.ChangedEvent{
+		HostsAdded:   ringpopEvent.ServersAdded,
+		HostsUpdated: ringpopEvent.ServersUpdated,
+		HostsRemoved: ringpopEvent.ServersRemoved,
+	}
+
+	var calls1, calls2 int
+	require.NoError(t,
+		provider.Subscribe("subscriber1",
+			func(ev membership.ChangedEvent) {
+				calls1++
+				assert.Equal(t, ev, expectedEvent)
+			},
+		))
+
+	require.NoError(t,
+		provider.Subscribe("subscriber2",
+			func(ev membership.ChangedEvent) {
+				calls2++
+				assert.Equal(t, ev, expectedEvent)
+			},
+		))
+
+	require.Error(t,
+		provider.Subscribe(
+			"subscriber2",
+			func(membership.ChangedEvent) { t.Error("Should never be called") },
+		),
+		"Subscribe doesn't allow duplicate names",
+	)
+
+	provider.HandleEvent(ringpopEvent)
+	assert.Equal(t, 1, calls1, "every subscriber must have been called once")
+	assert.Equal(t, 1, calls2, "every subscriber must have been called once")
 }
 
 func createAndListenChannels(serviceName string, n int) ([]*srvAndCh, func(), error) {
