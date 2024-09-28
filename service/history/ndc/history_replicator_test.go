@@ -1178,6 +1178,7 @@ func Test_applyStartEvents(t *testing.T) {
 				mockDomainCache, mockNewMutableStateFn, mockNewStateBuilderFn, mockTransactionManager, logger, mockShard, cluster.Metadata{})
 
 			// Assertions
+			// can't change it to ErrorIs since ErrorIs need error chains
 			assert.Equal(t, test.expectError, err)
 		})
 	}
