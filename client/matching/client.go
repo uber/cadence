@@ -135,7 +135,7 @@ func (c *clientImpl) PollForDecisionTask(
 		*request.PollRequest.GetTaskList(),
 		persistence.TaskListTypeDecision,
 		partition,
-		resp.BacklogCountHint + 1,
+		resp.BacklogCountHint,
 	)
 	return resp, nil
 }
