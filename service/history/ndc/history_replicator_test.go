@@ -2205,7 +2205,7 @@ func Test_notify(t *testing.T) {
 
 			// Create Metadata instance
 			clusterMetadata := cluster.NewMetadata(
-				1, // failoverVersionIncrement
+				1,
 				test.primaryClusterName,
 				test.currentClusterName,
 				clusterGroup,
