@@ -18,9 +18,12 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+//go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination loadbalancer_mock.go -package matching github.com/uber/cadence/client/matching LoadBalancer
+
 package matching
 
 import (
+	"fmt"
 	"math/rand"
 	"strings"
 
@@ -45,7 +48,7 @@ type (
 			taskList types.TaskList,
 			taskListType int,
 			forwardedFrom string,
-		) int
+		) string
 
 		// PickReadPartition returns the task list partition to send a poller to.
 		// Input is name of the original task list as specified by caller. When
@@ -55,13 +58,16 @@ type (
 			taskList types.TaskList,
 			taskListType int,
 			forwardedFrom string,
-		) int
+		) string
 
+		// UpdateWeight updates the weight of a task list partition.
+		// Input is name of the original task list as specified by caller. When
+		// the original task list is a partition, no update should be done.
 		UpdateWeight(
 			domainID string,
 			taskList types.TaskList,
 			taskListType int,
-			partition int,
+			partition string,
 			weight int64,
 		)
 	}
@@ -91,10 +97,10 @@ func (lb *defaultLoadBalancer) PickWritePartition(
 	taskList types.TaskList,
 	taskListType int,
 	forwardedFrom string,
-) int {
+) string {
 	domainName, err := lb.domainIDToName(domainID)
 	if err != nil {
-		return 0
+		return taskList.GetName()
 	}
 	nPartitions := lb.nWritePartitions(domainName, taskList.GetName(), taskListType)
 
@@ -111,10 +117,10 @@ func (lb *defaultLoadBalancer) PickReadPartition(
 	taskList types.TaskList,
 	taskListType int,
 	forwardedFrom string,
-) int {
+) string {
 	domainName, err := lb.domainIDToName(domainID)
 	if err != nil {
-		return 0
+		return taskList.GetName()
 	}
 	n := lb.nReadPartitions(domainName, taskList.GetName(), taskListType)
 	return lb.pickPartition(taskList, forwardedFrom, n)
@@ -125,29 +131,37 @@ func (lb *defaultLoadBalancer) pickPartition(
 	taskList types.TaskList,
 	forwardedFrom string,
 	nPartitions int,
-) int {
+) string {
 
 	if forwardedFrom != "" || taskList.GetKind() == types.TaskListKindSticky {
-		return 0
+		return taskList.GetName()
 	}
 
 	if strings.HasPrefix(taskList.GetName(), common.ReservedTaskListPrefix) {
 		// this should never happen when forwardedFrom is empty
-		return 0
+		return taskList.GetName()
 	}
 
 	if nPartitions <= 0 {
-		return 0
+		return taskList.GetName()
 	}
 
-	return rand.Intn(nPartitions)
+	p := rand.Intn(nPartitions)
+	return getPartitionTaskListName(taskList.GetName(), p)
 }
 
 func (lb *defaultLoadBalancer) UpdateWeight(
 	domainID string,
 	taskList types.TaskList,
 	taskListType int,
-	partition int,
+	partition string,
 	weight int64,
 ) {
+}
+
+func getPartitionTaskListName(root string, partition int) string {
+	if partition <= 0 {
+		return root
+	}
+	return fmt.Sprintf("%v%v/%v", common.ReservedTaskListPrefix, root, partition)
 }

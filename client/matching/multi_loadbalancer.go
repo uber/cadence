@@ -55,7 +55,7 @@ func (lb *multiLoadBalancer) PickWritePartition(
 	taskList types.TaskList,
 	taskListType int,
 	forwardedFrom string,
-) int {
+) string {
 	domainName, err := lb.domainIDToName(domainID)
 	if err != nil {
 		return lb.defaultLoadBalancer.PickWritePartition(domainID, taskList, taskListType, forwardedFrom)
@@ -73,7 +73,7 @@ func (lb *multiLoadBalancer) PickReadPartition(
 	taskList types.TaskList,
 	taskListType int,
 	forwardedFrom string,
-) int {
+) string {
 	domainName, err := lb.domainIDToName(domainID)
 	if err != nil {
 		return lb.defaultLoadBalancer.PickReadPartition(domainID, taskList, taskListType, forwardedFrom)
@@ -90,7 +90,7 @@ func (lb *multiLoadBalancer) UpdateWeight(
 	domainID string,
 	taskList types.TaskList,
 	taskListType int,
-	partition int,
+	partition string,
 	weight int64,
 ) {
 	domainName, err := lb.domainIDToName(domainID)

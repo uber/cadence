@@ -24,9 +24,13 @@ package matching
 
 import (
 	"math/rand"
+	"path"
 	"sort"
+	"strconv"
+	"strings"
 	"sync"
 
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
@@ -35,7 +39,7 @@ import (
 )
 
 type (
-	pollerWeight struct {
+	weightSelector struct {
 		sync.RWMutex
 		weights     []int64
 		initialized bool
@@ -50,15 +54,15 @@ type (
 	}
 )
 
-func newPollerWeight(n int) *pollerWeight {
-	pw := &pollerWeight{weights: make([]int64, n)}
+func newWeightSelector(n int) *weightSelector {
+	pw := &weightSelector{weights: make([]int64, n)}
 	for i := range pw.weights {
 		pw.weights[i] = -1
 	}
 	return pw
 }
 
-func (pw *pollerWeight) pick() int {
+func (pw *weightSelector) pick() int {
 	cumulativeWeights := make([]int64, len(pw.weights))
 	totalWeight := int64(0)
 	pw.RLock()
@@ -80,7 +84,7 @@ func (pw *pollerWeight) pick() int {
 	return index
 }
 
-func (pw *pollerWeight) updateWeightAndPartition(n, p int, weight int64) {
+func (pw *weightSelector) update(n, p int, weight int64) {
 	pw.Lock()
 	defer pw.Unlock()
 	if n > len(pw.weights) {
@@ -91,6 +95,8 @@ func (pw *pollerWeight) updateWeightAndPartition(n, p int, weight int64) {
 		}
 		pw.weights = newWeights
 		pw.initialized = false
+	} else if n < len(pw.weights) {
+		pw.weights = pw.weights[:n]
 	}
 	pw.weights[p] = weight
 	for _, w := range pw.weights {
@@ -127,7 +133,7 @@ func (lb *weightedLoadBalancer) PickWritePartition(
 	taskList types.TaskList,
 	taskListType int,
 	forwardedFrom string,
-) int {
+) string {
 	return lb.fallbackLoadBalancer.PickWritePartition(domainID, taskList, taskListType, forwardedFrom)
 }
 
@@ -136,7 +142,7 @@ func (lb *weightedLoadBalancer) PickReadPartition(
 	taskList types.TaskList,
 	taskListType int,
 	forwardedFrom string,
-) int {
+) string {
 	taskListKey := key{
 		domainID:     domainID,
 		taskListName: taskList.GetName(),
@@ -146,27 +152,38 @@ func (lb *weightedLoadBalancer) PickReadPartition(
 	if wI == nil {
 		return lb.fallbackLoadBalancer.PickReadPartition(domainID, taskList, taskListType, forwardedFrom)
 	}
-	w, ok := wI.(*pollerWeight)
-	if !ok || !w.initialized {
+	w, ok := wI.(*weightSelector)
+	if !ok {
 		return lb.fallbackLoadBalancer.PickReadPartition(domainID, taskList, taskListType, forwardedFrom)
 	}
 	p := w.pick()
-	lb.logger.Info("pick partition", tag.Dynamic("result", p), tag.Dynamic("weights", w.weights))
+	lb.logger.Debug("pick partition", tag.Dynamic("result", p), tag.Dynamic("weights", w.weights))
 	if p < 0 {
 		return lb.fallbackLoadBalancer.PickReadPartition(domainID, taskList, taskListType, forwardedFrom)
 	}
-	return p
+	return getPartitionTaskListName(taskList.GetName(), p)
 }
 
 func (lb *weightedLoadBalancer) UpdateWeight(
 	domainID string,
 	taskList types.TaskList,
 	taskListType int,
-	partition int,
+	partition string,
 	weight int64,
 ) {
 	if taskList.GetKind() == types.TaskListKindSticky {
 		return
+	}
+	if strings.HasPrefix(taskList.GetName(), common.ReservedTaskListPrefix) {
+		return
+	}
+	p := 0
+	if partition != taskList.GetName() {
+		var err error
+		p, err = strconv.Atoi(path.Base(partition))
+		if err != nil {
+			return
+		}
 	}
 	domainName, err := lb.domainIDToName(domainID)
 	if err != nil {
@@ -184,16 +201,16 @@ func (lb *weightedLoadBalancer) UpdateWeight(
 	}
 	wI := lb.weightCache.Get(taskListKey)
 	if wI == nil {
-		w := newPollerWeight(n)
+		w := newWeightSelector(n)
 		wI, err = lb.weightCache.PutIfNotExist(taskListKey, w)
 		if err != nil {
 			return
 		}
 	}
-	w, ok := wI.(*pollerWeight)
+	w, ok := wI.(*weightSelector)
 	if !ok {
 		return
 	}
 	lb.logger.Info("update weight", tag.Dynamic("weights", w.weights), tag.Dynamic("partition-num", partition), tag.Dynamic("weight", weight))
-	w.updateWeightAndPartition(n, partition, weight)
+	w.update(n, p, weight)
 }

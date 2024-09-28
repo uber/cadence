@@ -38,17 +38,21 @@ func TestNewMultiLoadBalancer(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	randomMock := NewMockLoadBalancer(ctrl)
 	roundRobinMock := NewMockLoadBalancer(ctrl)
+	lbs := map[string]LoadBalancer{
+		"random":      randomMock,
+		"round-robin": roundRobinMock,
+	}
 	domainIDToName := func(domainID string) (string, error) {
 		return "testDomainName", nil
 	}
 	dc := dynamicconfig.NewCollection(dynamicconfig.NewNopClient(), testlogger.New(t))
-	lb := NewMultiLoadBalancer(randomMock, roundRobinMock, domainIDToName, dc)
+	lb := NewMultiLoadBalancer(randomMock, lbs, domainIDToName, dc)
 	assert.NotNil(t, lb)
 	multiLB, ok := lb.(*multiLoadBalancer)
 	assert.NotNil(t, multiLB)
 	assert.True(t, ok)
-	assert.NotNil(t, multiLB.random)
-	assert.NotNil(t, multiLB.roundRobin)
+	assert.NotNil(t, multiLB.defaultLoadBalancer)
+	assert.NotNil(t, multiLB.loadBalancers)
 	assert.NotNil(t, multiLB.domainIDToName)
 	assert.NotNil(t, multiLB.loadbalancerStrategy)
 }
@@ -119,8 +123,10 @@ func TestMultiLoadBalancer_PickWritePartition(t *testing.T) {
 
 			// Create multiLoadBalancer
 			lb := &multiLoadBalancer{
-				random:               randomMock,
-				roundRobin:           roundRobinMock,
+				defaultLoadBalancer: randomMock,
+				loadBalancers: map[string]LoadBalancer{
+					"round-robin": roundRobinMock,
+				},
 				domainIDToName:       domainIDToName,
 				loadbalancerStrategy: loadbalancerStrategyFn,
 			}
@@ -199,8 +205,10 @@ func TestMultiLoadBalancer_PickReadPartition(t *testing.T) {
 
 			// Create multiLoadBalancer
 			lb := &multiLoadBalancer{
-				random:               randomMock,
-				roundRobin:           roundRobinMock,
+				defaultLoadBalancer: randomMock,
+				loadBalancers: map[string]LoadBalancer{
+					"round-robin": roundRobinMock,
+				},
 				domainIDToName:       domainIDToName,
 				loadbalancerStrategy: loadbalancerStrategyFn,
 			}
