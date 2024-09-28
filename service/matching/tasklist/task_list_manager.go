@@ -370,7 +370,11 @@ func (c *taskListManagerImpl) GetTask(
 		return nil, fmt.Errorf("couldn't get task: %w", err)
 	}
 	task.domainName = c.domainName
-	task.BacklogCountHint = c.taskAckManager.GetBacklogCount()
+	smoothFactor := int64(1)
+	if c.qpsTracker.QPS() == 0 {
+		smoothFactor = 0
+	}
+	task.BacklogCountHint = c.taskAckManager.GetBacklogCount() + smoothFactor
 	return task, nil
 }
 
