@@ -90,6 +90,7 @@ func (lb *multiLoadBalancer) UpdateWeight(
 	domainID string,
 	taskList types.TaskList,
 	taskListType int,
+	forwardedFrom string,
 	partition string,
 	weight int64,
 ) {
@@ -102,5 +103,5 @@ func (lb *multiLoadBalancer) UpdateWeight(
 	if !ok {
 		return
 	}
-	loadBalancer.UpdateWeight(domainID, taskList, taskListType, partition, weight)
+	loadBalancer.UpdateWeight(domainID, taskList, taskListType, forwardedFrom, partition, weight)
 }

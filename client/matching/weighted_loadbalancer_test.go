@@ -260,6 +260,7 @@ func TestWeightedLoadBalancer_UpdateWeight(t *testing.T) {
 		domainID     string
 		taskList     types.TaskList
 		taskListType int
+		forwardedFrom string
 		partition    string
 		weight       int64
 		nPartitions  int
@@ -269,6 +270,12 @@ func TestWeightedLoadBalancer_UpdateWeight(t *testing.T) {
 			name:     "Sticky task list",
 			domainID: "domainA",
 			taskList: types.TaskList{Name: "a", Kind: types.TaskListKindSticky.Ptr()},
+		},
+		{
+			name:     "forwarded request",
+			domainID: "domainA",
+			taskList: types.TaskList{Name: "a"},
+			forwardedFrom: "tasklist",
 		},
 		{
 			name:     "partitioned task list",
@@ -352,7 +359,7 @@ func TestWeightedLoadBalancer_UpdateWeight(t *testing.T) {
 				tc.setupCache(mockWeightCache)
 			}
 
-			lb.UpdateWeight(tc.domainID, tc.taskList, tc.taskListType, tc.partition, tc.weight)
+			lb.UpdateWeight(tc.domainID, tc.taskList, tc.taskListType, tc.forwardedFrom, tc.partition, tc.weight)
 		})
 	}
 }

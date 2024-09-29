@@ -62,6 +62,27 @@ func newWeightSelector(n int) *weightSelector {
 	return pw
 }
 
+func (pw *weightSelector) pickZero() int {
+	pw.RLock()
+	defer pw.RUnlock()
+	if !pw.initialized {
+		return -1
+	}
+	if rand.Int63n(1000) != 0 {
+		return -1
+	}
+	zeroWeightsIndices := make([]int, 0, len(pw.weights))
+	for i, w := range pw.weights {
+		if w == 0 {
+			zeroWeightsIndices = append(zeroWeightsIndices, i)
+		}
+	}
+	if len(zeroWeightsIndices) == 0 {
+		return -1
+	}
+	return zeroWeightsIndices[rand.Intn(len(zeroWeightsIndices))]
+}
+
 func (pw *weightSelector) pick() int {
 	cumulativeWeights := make([]int64, len(pw.weights))
 	totalWeight := int64(0)
@@ -156,8 +177,13 @@ func (lb *weightedLoadBalancer) PickReadPartition(
 	if !ok {
 		return lb.fallbackLoadBalancer.PickReadPartition(domainID, taskList, taskListType, forwardedFrom)
 	}
-	p := w.pick()
-	lb.logger.Debug("pick partition", tag.Dynamic("result", p), tag.Dynamic("weights", w.weights))
+	p := w.pickZero()
+	if p >= 0 {
+		lb.logger.Debug("pick read partition with zero weight", tag.WorkflowDomainID(domainID), tag.WorkflowTaskListName(taskList.GetName()), tag.WorkflowTaskListType(taskListType), tag.Dynamic("weights", w.weights), tag.Dynamic("tasklist-partition", p))
+		return getPartitionTaskListName(taskList.GetName(), p)
+	}
+	p = w.pick()
+	lb.logger.Debug("pick read partition", tag.WorkflowDomainID(domainID), tag.WorkflowTaskListName(taskList.GetName()), tag.WorkflowTaskListType(taskListType), tag.Dynamic("weights", w.weights), tag.Dynamic("tasklist-partition", p))
 	if p < 0 {
 		return lb.fallbackLoadBalancer.PickReadPartition(domainID, taskList, taskListType, forwardedFrom)
 	}
@@ -168,10 +194,11 @@ func (lb *weightedLoadBalancer) UpdateWeight(
 	domainID string,
 	taskList types.TaskList,
 	taskListType int,
+	forwardedFrom string,
 	partition string,
 	weight int64,
 ) {
-	if taskList.GetKind() == types.TaskListKindSticky {
+	if forwardedFrom != "" || taskList.GetKind() == types.TaskListKindSticky {
 		return
 	}
 	if strings.HasPrefix(taskList.GetName(), common.ReservedTaskListPrefix) {
@@ -211,6 +238,6 @@ func (lb *weightedLoadBalancer) UpdateWeight(
 	if !ok {
 		return
 	}
-	lb.logger.Info("update weight", tag.Dynamic("weights", w.weights), tag.Dynamic("partition-num", partition), tag.Dynamic("weight", weight))
+	lb.logger.Debug("update tasklist partition weight", tag.WorkflowDomainID(domainID), tag.WorkflowTaskListName(taskList.GetName()), tag.WorkflowTaskListType(taskListType), tag.Dynamic("weights", w.weights), tag.Dynamic("tasklist-partition", p), tag.Dynamic("weight", weight))
 	w.update(n, p, weight)
 }

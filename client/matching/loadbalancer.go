@@ -67,6 +67,7 @@ type (
 			domainID string,
 			taskList types.TaskList,
 			taskListType int,
+			forwardedFrom string,
 			partition string,
 			weight int64,
 		)
@@ -154,6 +155,7 @@ func (lb *defaultLoadBalancer) UpdateWeight(
 	domainID string,
 	taskList types.TaskList,
 	taskListType int,
+	forwardedFrom string,
 	partition string,
 	weight int64,
 ) {

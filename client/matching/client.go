@@ -134,6 +134,7 @@ func (c *clientImpl) PollForDecisionTask(
 		request.GetDomainUUID(),
 		*request.PollRequest.GetTaskList(),
 		persistence.TaskListTypeDecision,
+		request.GetForwardedFrom(),
 		partition,
 		resp.BacklogCountHint,
 	)
