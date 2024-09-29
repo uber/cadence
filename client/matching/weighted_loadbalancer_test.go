@@ -256,15 +256,15 @@ func TestWeightedLoadBalancer_PickReadPartition(t *testing.T) {
 
 func TestWeightedLoadBalancer_UpdateWeight(t *testing.T) {
 	testCases := []struct {
-		name         string
-		domainID     string
-		taskList     types.TaskList
-		taskListType int
+		name          string
+		domainID      string
+		taskList      types.TaskList
+		taskListType  int
 		forwardedFrom string
-		partition    string
-		weight       int64
-		nPartitions  int
-		setupCache   func(mockCache *cache.MockCache)
+		partition     string
+		weight        int64
+		nPartitions   int
+		setupCache    func(mockCache *cache.MockCache)
 	}{
 		{
 			name:     "Sticky task list",
@@ -272,9 +272,9 @@ func TestWeightedLoadBalancer_UpdateWeight(t *testing.T) {
 			taskList: types.TaskList{Name: "a", Kind: types.TaskListKindSticky.Ptr()},
 		},
 		{
-			name:     "forwarded request",
-			domainID: "domainA",
-			taskList: types.TaskList{Name: "a"},
+			name:          "forwarded request",
+			domainID:      "domainA",
+			taskList:      types.TaskList{Name: "a"},
 			forwardedFrom: "tasklist",
 		},
 		{

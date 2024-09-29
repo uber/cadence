@@ -105,6 +105,7 @@ func (c *clientImpl) PollForActivityTask(
 	if err != nil {
 		return nil, err
 	}
+	// TODO: update activity response to include backlog count hint and update the weight for partitions
 	return c.client.PollForActivityTask(ctx, request, append(opts, yarpc.WithShardKey(peer))...)
 }
 

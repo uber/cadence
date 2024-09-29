@@ -548,7 +548,10 @@ pollLoop:
 				EventName:    "PollForDecisionTask returning already started task",
 				Host:         e.config.HostName,
 			})
-			return task.PollForDecisionResponse(), nil
+			resp := task.PollForDecisionResponse()
+			// set the backlog count to the current partition's backlog count
+			resp.BacklogCountHint = task.BacklogCountHint
+			return resp, nil
 			// TODO: Maybe add history expose here?
 		}
 
