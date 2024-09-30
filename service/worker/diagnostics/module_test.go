@@ -23,18 +23,18 @@
 package diagnostics
 
 import (
-	"github.com/Shopify/sarama/mocks"
-	"github.com/uber/cadence/common/log/testlogger"
-	"github.com/uber/cadence/common/messaging"
-	"github.com/uber/cadence/common/messaging/kafka"
 	"testing"
 
+	"github.com/Shopify/sarama/mocks"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 	"github.com/uber-go/tally"
 	"go.uber.org/cadence/.gen/go/shared"
 
 	"github.com/uber/cadence/client"
+	"github.com/uber/cadence/common/log/testlogger"
+	"github.com/uber/cadence/common/messaging"
+	"github.com/uber/cadence/common/messaging/kafka"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/resource"
 )

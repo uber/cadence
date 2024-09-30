@@ -24,10 +24,11 @@ package diagnostics
 
 import (
 	"fmt"
-	"github.com/uber/cadence/service/worker/diagnostics/analytics"
 	"time"
 
 	"go.uber.org/cadence/workflow"
+
+	"github.com/uber/cadence/service/worker/diagnostics/analytics"
 )
 
 const (

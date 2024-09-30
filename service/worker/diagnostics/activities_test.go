@@ -25,8 +25,6 @@ package diagnostics
 import (
 	"context"
 	"encoding/json"
-	"github.com/uber/cadence/common/messaging"
-	"github.com/uber/cadence/service/worker/diagnostics/analytics"
 	"testing"
 	"time"
 
@@ -36,7 +34,9 @@ import (
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/service/worker/diagnostics/analytics"
 	"github.com/uber/cadence/service/worker/diagnostics/invariants"
 )
 
