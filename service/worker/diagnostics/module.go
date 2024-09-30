@@ -85,11 +85,6 @@ func (w *dw) Start() error {
 		MaxConcurrentActivityTaskPollers: 10,
 		MaxConcurrentDecisionTaskPollers: 10,
 	}
-	producer, err := w.messagingClient.NewProducer(WfDiagnosticsAppName)
-	if err != nil {
-		return err
-	}
-	w.producer = producer
 	newWorker := worker.New(w.svcClient, common.SystemLocalDomainName, tasklist, workerOpts)
 	newWorker.RegisterWorkflowWithOptions(w.DiagnosticsWorkflow, workflow.RegisterOptions{Name: diagnosticsWorkflow})
 	newWorker.RegisterWorkflowWithOptions(w.DiagnosticsStarterWorkflow, workflow.RegisterOptions{Name: diagnosticsStarterWorkflow})
@@ -98,6 +93,12 @@ func (w *dw) Start() error {
 	newWorker.RegisterActivityWithOptions(w.rootCauseTimeouts, activity.RegisterOptions{Name: rootCauseTimeoutsActivity})
 	newWorker.RegisterActivityWithOptions(w.emitUsageLogs, activity.RegisterOptions{Name: emitUsageLogsActivity})
 	w.worker = newWorker
+
+	producer, err := w.messagingClient.NewProducer(WfDiagnosticsAppName)
+	if err != nil {
+		return err
+	}
+	w.producer = producer
 	return newWorker.Start()
 }
 
