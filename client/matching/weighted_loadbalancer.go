@@ -164,6 +164,12 @@ func (lb *weightedLoadBalancer) PickReadPartition(
 	taskListType int,
 	forwardedFrom string,
 ) string {
+	if forwardedFrom != "" || taskList.GetKind() == types.TaskListKindSticky {
+		return taskList.GetName()
+	}
+	if strings.HasPrefix(taskList.GetName(), common.ReservedTaskListPrefix) {
+		return taskList.GetName()
+	}
 	taskListKey := key{
 		domainID:     domainID,
 		taskListName: taskList.GetName(),
