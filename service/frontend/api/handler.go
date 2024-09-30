@@ -225,6 +225,7 @@ func (wh *WorkflowHandler) DiagnoseWorkflowExecution(ctx context.Context, reques
 		Domain:     request.GetDomain(),
 		WorkflowID: request.GetWorkflowExecution().GetWorkflowID(),
 		RunID:      request.GetWorkflowExecution().GetRunID(),
+		Identity:   request.Identity,
 	}
 	inputInBytes, err := json.Marshal(diagnosticWorkflowInput)
 	if err != nil {

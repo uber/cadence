@@ -24,6 +24,7 @@ package diagnostics
 
 import (
 	"context"
+	"github.com/uber/cadence/service/worker/diagnostics/analytics"
 
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/worker/diagnostics/invariants"
@@ -71,4 +72,11 @@ func (w *dw) rootCauseTimeouts(ctx context.Context, info rootCauseTimeoutsParams
 		Domain:                   info.Domain,
 	})
 	return timeoutInvariant.RootCause(ctx, info.Issues)
+}
+
+func (w *dw) emitUsageLogs(ctx context.Context, info analytics.WfDiagnosticsUsageData) error {
+	emitter := analytics.NewEmitter(analytics.EmitterParams{
+		Producer: w.producer,
+	})
+	return emitter.EmitUsageData(ctx, info)
 }

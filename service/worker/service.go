@@ -340,10 +340,11 @@ func (s *Service) startFixerWorkflowWorker() {
 
 func (s *Service) startDiagnostics() {
 	params := diagnostics.Params{
-		ServiceClient: s.params.PublicClient,
-		MetricsClient: s.GetMetricsClient(),
-		TallyScope:    s.params.MetricScope,
-		ClientBean:    s.GetClientBean(),
+		ServiceClient:   s.params.PublicClient,
+		MetricsClient:   s.GetMetricsClient(),
+		TallyScope:      s.params.MetricScope,
+		ClientBean:      s.GetClientBean(),
+		MessagingClient: s.GetMessagingClient(),
 	}
 	if err := diagnostics.New(params).Start(); err != nil {
 		s.Stop()

@@ -25,6 +25,8 @@ package diagnostics
 import (
 	"context"
 	"encoding/json"
+	"github.com/uber/cadence/common/messaging"
+	"github.com/uber/cadence/service/worker/diagnostics/analytics"
 	"testing"
 	"time"
 
@@ -124,8 +126,16 @@ func Test__rootCauseTimeouts(t *testing.T) {
 	require.Equal(t, expectedRootCause, result)
 }
 
+func Test__emitUsageLogs(t *testing.T) {
+	dwtest := testDiagnosticWorkflow(t)
+	err := dwtest.emitUsageLogs(context.Background(), analytics.WfDiagnosticsUsageData{})
+	require.NoError(t, err)
+}
+
 func testDiagnosticWorkflow(t *testing.T) *dw {
 	ctrl := gomock.NewController(t)
+	mockProducer := messaging.NewMockProducer(ctrl)
+	mockProducer.EXPECT().Publish(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 	mockClientBean := client.NewMockBean(ctrl)
 	mockFrontendClient := frontend.NewMockClient(ctrl)
 	mockClientBean.EXPECT().GetFrontendClient().Return(mockFrontendClient).AnyTimes()
@@ -142,6 +152,7 @@ func testDiagnosticWorkflow(t *testing.T) *dw {
 	}, nil).AnyTimes()
 	return &dw{
 		clientBean: mockClientBean,
+		producer:   mockProducer,
 	}
 }
 
