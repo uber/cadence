@@ -29,6 +29,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/goleak"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
@@ -47,6 +48,8 @@ func TestNewService(t *testing.T) {
 }
 
 func TestServiceStartStop(t *testing.T) {
+	defer goleak.VerifyNone(t)
+
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -70,7 +73,7 @@ func TestServiceStartStop(t *testing.T) {
 	assert.Equal(t, int32(common.DaemonStatusStopped), atomic.LoadInt32(&service.status))
 }
 
-func TestStartAndStopReturnsImmediatelyWhenAlreadyStopped(t *testing.T) {
+func TestStartAndStopDoesNotChangeStatusWhenAlreadyStopped(t *testing.T) {
 
 	service := &Service{
 		status: common.DaemonStatusStopped,
