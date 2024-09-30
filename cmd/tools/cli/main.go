@@ -37,7 +37,7 @@ import (
 func main() {
 	app := cli.NewCliApp()
 	if err := app.Run(os.Args); err != nil {
-		fmt.Fprintln(os.Stderr, err.Error())
+		_, _ = fmt.Fprintln(app.ErrWriter, err)
 		os.Exit(1)
 	}
 }
