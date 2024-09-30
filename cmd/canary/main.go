@@ -147,5 +147,8 @@ func buildCLI() *cli.App {
 
 func main() {
 	app := buildCLI()
-	app.Run(os.Args)
+	if err := app.Run(os.Args); err != nil {
+		_, _ = fmt.Fprintln(app.ErrWriter, err)
+		os.Exit(1)
+	}
 }
