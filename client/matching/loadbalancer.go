@@ -60,9 +60,10 @@ type (
 	}
 
 	defaultLoadBalancer struct {
-		nReadPartitions  dynamicconfig.IntPropertyFnWithTaskListInfoFilters
-		nWritePartitions dynamicconfig.IntPropertyFnWithTaskListInfoFilters
-		domainIDToName   func(string) (string, error)
+		nReadPartitions    dynamicconfig.IntPropertyFnWithTaskListInfoFilters
+		nWritePartitions   dynamicconfig.IntPropertyFnWithTaskListInfoFilters
+		domainIDToName     func(string) (string, error)
+		maxChildrenPerNode dynamicconfig.IntPropertyFnWithTaskListInfoFilters
 	}
 )
 
@@ -73,9 +74,10 @@ func NewLoadBalancer(
 	dc *dynamicconfig.Collection,
 ) LoadBalancer {
 	return &defaultLoadBalancer{
-		domainIDToName:   domainIDToName,
-		nReadPartitions:  dc.GetIntPropertyFilteredByTaskListInfo(dynamicconfig.MatchingNumTasklistReadPartitions),
-		nWritePartitions: dc.GetIntPropertyFilteredByTaskListInfo(dynamicconfig.MatchingNumTasklistWritePartitions),
+		domainIDToName:     domainIDToName,
+		nReadPartitions:    dc.GetIntPropertyFilteredByTaskListInfo(dynamicconfig.MatchingNumTasklistReadPartitions),
+		nWritePartitions:   dc.GetIntPropertyFilteredByTaskListInfo(dynamicconfig.MatchingNumTasklistWritePartitions),
+		maxChildrenPerNode: dc.GetIntPropertyFilteredByTaskListInfo(dynamicconfig.MatchingForwarderMaxChildrenPerNode),
 	}
 }
 
@@ -90,13 +92,13 @@ func (lb *defaultLoadBalancer) PickWritePartition(
 		return taskList.GetName()
 	}
 	nPartitions := lb.nWritePartitions(domainName, taskList.GetName(), taskListType)
+	maxChildrenPerNode := lb.maxChildrenPerNode(domainName, taskList.GetName(), taskListType)
 
 	// checks to make sure number of writes never exceeds number of reads
 	if nRead := lb.nReadPartitions(domainName, taskList.GetName(), taskListType); nPartitions > nRead {
 		nPartitions = nRead
 	}
-	return lb.pickPartition(taskList, forwardedFrom, nPartitions)
-
+	return lb.pickPartition(taskList, forwardedFrom, nPartitions, maxChildrenPerNode)
 }
 
 func (lb *defaultLoadBalancer) PickReadPartition(
@@ -110,14 +112,16 @@ func (lb *defaultLoadBalancer) PickReadPartition(
 		return taskList.GetName()
 	}
 	n := lb.nReadPartitions(domainName, taskList.GetName(), taskListType)
-	return lb.pickPartition(taskList, forwardedFrom, n)
+	maxChildrenPerNode := lb.maxChildrenPerNode(domainName, taskList.GetName(), taskListType)
 
+	return lb.pickPartition(taskList, forwardedFrom, n, maxChildrenPerNode)
 }
 
 func (lb *defaultLoadBalancer) pickPartition(
 	taskList types.TaskList,
 	forwardedFrom string,
 	nPartitions int,
+	maxChildrenPerNode int,
 ) string {
 
 	if forwardedFrom != "" || taskList.GetKind() == types.TaskListKindSticky {
@@ -129,14 +133,22 @@ func (lb *defaultLoadBalancer) pickPartition(
 		return taskList.GetName()
 	}
 
-	if nPartitions <= 0 {
-		return taskList.GetName()
-	}
-
-	p := rand.Intn(nPartitions)
+	p := lb.generateRandomPartitionID(nPartitions, maxChildrenPerNode)
 	if p == 0 {
 		return taskList.GetName()
 	}
 
 	return fmt.Sprintf("%v%v/%v", common.ReservedTaskListPrefix, taskList.GetName(), p)
+}
+
+func (lb *defaultLoadBalancer) generateRandomPartitionID(nPartitions int, maxChildrenPerNode int) int {
+	if nPartitions <= 0 {
+		return 0
+	}
+	if nPartitions == 1 {
+		return 1
+	}
+	largestParent := int(nPartitions / maxChildrenPerNode)
+	p := rand.Intn(nPartitions - largestParent - 1)
+	return p + largestParent + 1
 }

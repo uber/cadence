@@ -15,6 +15,25 @@ history.enableStrongIdempotency:
   constraints: {}
 frontend.globalRatelimiterMode:
 - value: local
+
+matching.numTasklistWritePartitions:
+- value: 10
+matching.numTasklistReadPartitions:
+- value: 10
+
+system.allIsolationGroups:
+- value:
+  - "zone1"
+  - "zone2"
+  - "zone3"
+  - "zone4"
+  - "zone5"
+  - "zone6"
+  - "zone7"
+
+system.enableTasklistIsolation:
+- value: true
+
 frontend.validSearchAttributes:
 - value:
     BinaryChecksums: 1

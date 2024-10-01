@@ -32,6 +32,13 @@ import (
 	"github.com/uber/cadence/common/types"
 )
 
+func TestConstructor(t *testing.T) {
+	assert.NotPanics(t, func() {
+		lb := NewLoadBalancer(func(string) (string, error) { return "", nil }, dynamicconfig.NewNopCollection())
+		assert.NotNil(t, lb)
+	})
+}
+
 func Test_defaultLoadBalancer_PickReadPartition(t *testing.T) {
 	type fields struct {
 		nReadPartitions  dynamicconfig.IntPropertyFnWithTaskListInfoFilters
@@ -72,9 +79,10 @@ func Test_defaultLoadBalancer_PickReadPartition(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			lb := &defaultLoadBalancer{
-				nReadPartitions:  tt.fields.nReadPartitions,
-				nWritePartitions: tt.fields.nWritePartitions,
-				domainIDToName:   tt.fields.domainIDToName,
+				nReadPartitions:    tt.fields.nReadPartitions,
+				nWritePartitions:   tt.fields.nWritePartitions,
+				domainIDToName:     tt.fields.domainIDToName,
+				maxChildrenPerNode: func(domain string, taskList string, taskType int) int { return 20 },
 			}
 			for i := 0; i < 100; i++ {
 				got := lb.PickReadPartition(tt.args.domainID, tt.args.taskList, tt.args.taskListType, tt.args.forwardedFrom)
@@ -154,9 +162,10 @@ func Test_defaultLoadBalancer_PickWritePartition(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			lb := &defaultLoadBalancer{
-				nReadPartitions:  tt.fields.nReadPartitions,
-				nWritePartitions: tt.fields.nWritePartitions,
-				domainIDToName:   tt.fields.domainIDToName,
+				nReadPartitions:    tt.fields.nReadPartitions,
+				nWritePartitions:   tt.fields.nWritePartitions,
+				domainIDToName:     tt.fields.domainIDToName,
+				maxChildrenPerNode: func(domain string, taskList string, taskType int) int { return 20 },
 			}
 			for i := 0; i < 100; i++ {
 				got := lb.PickWritePartition(tt.args.domainID, tt.args.taskList, tt.args.taskListType, tt.args.forwardedFrom)
@@ -224,6 +233,18 @@ func Test_defaultLoadBalancer_pickPartition(t *testing.T) {
 			},
 			want: common.ReservedTaskListPrefix + "taskList3",
 		},
+		// This behaviour will be preserved, but this is being removed as an expected value
+		// for the partitioning. The function to generate a partition count *should never
+		// send traffic to the root partition directly* so therefore this is an invalid value.
+		// All traffic should be directed to root partitions and then only if there's a problem
+		// finding an immediate match, to therefore forward to the root partition.
+		//
+		// The reason for this is that it adds needless complexity to the partitioned tasklists -
+		// it's hard to follow what's going on when 1/n of traffic is being forwarded directly and the
+		// rest is being forwarded, so spotting misconfigurations due to overpartitioning is harder
+		// and it introduces additional load on the root partition which risks being a heavy contention
+		// point if the number of partitions is too great for the number of pollers (a very
+		// frequent problem with zonal isolation).
 		{
 			name:   "Test: nPartitions <= 0",
 			fields: fields{},
@@ -246,8 +267,62 @@ func Test_defaultLoadBalancer_pickPartition(t *testing.T) {
 				nWritePartitions: tt.fields.nWritePartitions,
 				domainIDToName:   tt.fields.domainIDToName,
 			}
-			got := lb.pickPartition(tt.args.taskList, tt.args.forwardedFrom, tt.args.nPartitions)
+			got := lb.pickPartition(tt.args.taskList, tt.args.forwardedFrom, tt.args.nPartitions, 20)
 			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestGeneratingAPartitionCount(t *testing.T) {
+
+	tests := map[string]struct {
+		numberOfPartitions       int
+		expectedResultLowerBound int
+		expectedResultUpperBound int
+	}{
+		"valid partition count = 5, expected values are between 1 to 4": {
+			numberOfPartitions:       5,
+			expectedResultLowerBound: 1,
+			expectedResultUpperBound: 4,
+		},
+		"min sane partition count = 2 expected values are between 1 to 2": {
+			numberOfPartitions:       2,
+			expectedResultLowerBound: 1,
+			expectedResultUpperBound: 2,
+		},
+		"large partition count": {
+			numberOfPartitions:       30,
+			expectedResultLowerBound: 1,
+			expectedResultUpperBound: 29,
+		},
+		"weird, probably a mistake, partition count 1, just ensure that everything is sent to root": {
+			numberOfPartitions:       1,
+			expectedResultLowerBound: 0,
+			expectedResultUpperBound: 1,
+		},
+		"weird, probably a mistake, partition count 0, just ensure that everything is sent to root": {
+			numberOfPartitions:       0,
+			expectedResultLowerBound: 0,
+			expectedResultUpperBound: 0,
+		},
+		"invalid partition count, just ensure that everything is sent to root": {
+			numberOfPartitions:       -1,
+			expectedResultLowerBound: 0,
+			expectedResultUpperBound: 0,
+		},
+	}
+
+	for name, td := range tests {
+		t.Run(name, func(t *testing.T) {
+			for i := 0; i < 100; i++ {
+				lb := defaultLoadBalancer{}
+
+				p := lb.generateRandomPartitionID(td.numberOfPartitions, 20)
+
+				assert.LessOrEqual(t, p, td.expectedResultUpperBound)
+
+				assert.GreaterOrEqual(t, p, td.expectedResultLowerBound)
+			}
 		})
 	}
 }
