@@ -111,7 +111,7 @@ func (s *handlerSuite) getHandler(config *config.Config) Handler {
 }
 
 func (s *handlerSuite) TestNewHandler() {
-	cfg := config.NewConfig(dynamicconfig.NewCollection(dynamicconfig.NewInMemoryClient(), s.mockResource.Logger), "matching-test")
+	cfg := config.NewConfig(dynamicconfig.NewCollection(dynamicconfig.NewInMemoryClient(), s.mockResource.Logger), "matching-test", getIsolationGroupsHelper)
 	handler := s.getHandler(cfg)
 	s.NotNil(handler)
 }
@@ -119,7 +119,7 @@ func (s *handlerSuite) TestNewHandler() {
 func (s *handlerSuite) TestStart() {
 	defer goleak.VerifyNone(s.T())
 
-	cfg := config.NewConfig(dynamicconfig.NewCollection(dynamicconfig.NewInMemoryClient(), s.mockResource.Logger), "matching-test")
+	cfg := config.NewConfig(dynamicconfig.NewCollection(dynamicconfig.NewInMemoryClient(), s.mockResource.Logger), "matching-test", getIsolationGroupsHelper)
 	handler := s.getHandler(cfg)
 
 	handler.Start()
@@ -131,7 +131,7 @@ func (s *handlerSuite) TestStart() {
 func (s *handlerSuite) TestStop() {
 	defer goleak.VerifyNone(s.T())
 
-	cfg := config.NewConfig(dynamicconfig.NewCollection(dynamicconfig.NewInMemoryClient(), s.mockResource.Logger), "matching-test")
+	cfg := config.NewConfig(dynamicconfig.NewCollection(dynamicconfig.NewInMemoryClient(), s.mockResource.Logger), "matching-test", getIsolationGroupsHelper)
 	handler := s.getHandler(cfg)
 
 	s.mockEngine.EXPECT().Stop().Times(1)

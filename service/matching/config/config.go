@@ -167,5 +167,6 @@ func NewConfig(dc *dynamicconfig.Collection, hostName string, getIsolationGroups
 		TaskDispatchRPS:                 100000.0,
 		TaskDispatchRPSTTL:              time.Minute,
 		MaxTimeBetweenTaskDeletes:       time.Second,
+		AllIsolationGroups:              getIsolationGroups,
 	}
 }
