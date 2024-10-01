@@ -2939,6 +2939,13 @@ const (
 	UnknownListKey ListKey = iota
 	TestGetListPropertyKey
 
+	// AllIsolationGroups is the list of all possible isolation groups in a service
+	// KeyName: system.allIsolationGroups
+	// Value type: []string
+	// Default value: N/A
+	// Allowed filters: N/A
+	AllIsolationGroups
+
 	// HeaderForwardingRules defines which headers are forwarded from inbound calls to outbound.
 	// This value is only loaded at startup.
 	//
@@ -5233,6 +5240,10 @@ var MapKeys = map[MapKey]DynamicMap{
 }
 
 var ListKeys = map[ListKey]DynamicList{
+	AllIsolationGroups: {
+		KeyName:     "system.allIsolationGroups",
+		Description: "A list of all the isolation groups in a system",
+	},
 	DefaultIsolationGroupConfigStoreManagerGlobalMapping: {
 		KeyName: "system.defaultIsolationGroupConfigStoreManagerGlobalMapping",
 		Description: "A configuration store for global isolation groups - used in isolation-group config only, not normal dynamic config." +

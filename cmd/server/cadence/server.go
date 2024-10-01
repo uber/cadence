@@ -21,6 +21,7 @@
 package cadence
 
 import (
+	"github.com/uber/cadence/common/isolationgroup/isolationgroupapi"
 	"log"
 	"time"
 
@@ -194,6 +195,8 @@ func (s *server) startService() common.Daemon {
 
 	params.ClusterRedirectionPolicy = s.cfg.ClusterGroupMetadata.ClusterRedirectionPolicy
 
+	params.GetIsolationGroups = getFromDynamicConfig(params, dc)
+
 	params.ClusterMetadata = cluster.NewMetadata(
 		clusterGroupMetadata.FailoverVersionIncrement,
 		clusterGroupMetadata.PrimaryClusterName,
@@ -366,5 +369,16 @@ func validateIndex(config *config.ElasticSearchConfig) {
 	indexName, ok := config.Indices[common.VisibilityAppName]
 	if !ok || len(indexName) == 0 {
 		log.Fatalf("Visibility index is missing in config")
+	}
+}
+
+func getFromDynamicConfig(params resource.Params, dc *dynamicconfig.Collection) func() []string {
+	return func() []string {
+		res, err := isolationgroupapi.MapAllIsolationGroupsResponse(dc.GetListProperty(dynamicconfig.AllIsolationGroups)())
+		if err != nil {
+			params.Logger.Error("failed to get isolation groups from config", tag.Error(err))
+			return nil
+		}
+		return res
 	}
 }

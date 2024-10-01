@@ -24,6 +24,11 @@
 package cadence
 
 import (
+	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/assert"
+	"github.com/uber/cadence/common/dynamicconfig"
+	"github.com/uber/cadence/common/log/loggerimpl"
+	"github.com/uber/cadence/common/resource"
 	"log"
 	"os"
 	"testing"
@@ -113,4 +118,36 @@ func (s *ServerSuite) TestServerStartup() {
 	for _, daemon := range daemons {
 		daemon.Stop()
 	}
+}
+
+func TestSettingGettingZonalIsolationGroupsFromIG(t *testing.T) {
+
+	ctrl := gomock.NewController(t)
+	client := dynamicconfig.NewMockClient(ctrl)
+	client.EXPECT().GetListValue(dynamicconfig.AllIsolationGroups, gomock.Any()).Return([]interface{}{
+		"zone-1", "zone-2",
+	}, nil)
+
+	dc := dynamicconfig.NewCollection(client, loggerimpl.NewNopLogger())
+
+	assert.NotPanics(t, func() {
+		fn := getFromDynamicConfig(resource.Params{
+			Logger: loggerimpl.NewNopLogger(),
+		}, dc)
+		out := fn()
+		assert.Equal(t, []string{"zone-1", "zone-2"}, out)
+	})
+}
+
+func TestSettingGettingZonalIsolationGroupsFromIGError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	client := dynamicconfig.NewMockClient(ctrl)
+	client.EXPECT().GetListValue(dynamicconfig.AllIsolationGroups, gomock.Any()).Return(nil, assert.AnError)
+	dc := dynamicconfig.NewCollection(client, loggerimpl.NewNopLogger())
+
+	assert.NotPanics(t, func() {
+		getFromDynamicConfig(resource.Params{
+			Logger: loggerimpl.NewNopLogger(),
+		}, dc)()
+	})
 }
