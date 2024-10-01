@@ -67,6 +67,7 @@ const (
 	History
 	Matching
 	Worker
+	ShardManager
 	NumServices
 )
 

@@ -63,6 +63,19 @@ import (
 	"github.com/uber/cadence/common/service"
 )
 
+func NewResourceFactory() ResourceFactory {
+	return &resourceImplFactory{}
+}
+
+type resourceImplFactory struct{}
+
+func (*resourceImplFactory) NewResource(params *Params,
+	serviceName string,
+	serviceConfig *service.Config,
+) (resource Resource, err error) {
+	return New(params, serviceName, serviceConfig)
+}
+
 type (
 
 	// VisibilityManagerInitializer is the function each service should implement
