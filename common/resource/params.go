@@ -80,6 +80,8 @@ type (
 		Partitioner                partition.Partitioner
 		PinotConfig                *config.PinotVisibilityConfig
 		PinotClient                pinot.GenericClient
+		OSClient                   es.GenericClient
+		OSConfig                   *config.ElasticSearchConfig
 		AsyncWorkflowQueueProvider queue.Provider
 		TimeSource                 clock.TimeSource
 		// HistoryClientFn is used by integration tests to mock a history client

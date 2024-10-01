@@ -18,13 +18,14 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package quotas
+package permember
 
 import (
 	"math"
 
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/membership"
+	"github.com/uber/cadence/common/quotas"
 )
 
 // PerMember allows creating per instance RPS based on globalRPS averaged by member count for a given service.
@@ -52,7 +53,7 @@ func NewPerMemberDynamicRateLimiterFactory(
 	globalRPS dynamicconfig.IntPropertyFnWithDomainFilter,
 	instanceRPS dynamicconfig.IntPropertyFnWithDomainFilter,
 	resolver membership.Resolver,
-) LimiterFactory {
+) quotas.LimiterFactory {
 	return perMemberFactory{
 		service:     service,
 		globalRPS:   globalRPS,
@@ -68,8 +69,8 @@ type perMemberFactory struct {
 	resolver    membership.Resolver
 }
 
-func (f perMemberFactory) GetLimiter(domain string) Limiter {
-	return NewDynamicRateLimiter(func() float64 {
+func (f perMemberFactory) GetLimiter(domain string) quotas.Limiter {
+	return quotas.NewDynamicRateLimiter(func() float64 {
 		return PerMember(
 			f.service,
 			float64(f.globalRPS(domain)),

@@ -833,7 +833,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessCloseExecution_NoParent_Has
 	workflowExecution, mutableState, decisionCompletionID, err := test.SetupWorkflowWithCompletedDecision(s.mockShard, s.domainID)
 	s.NoError(err)
 
-	numChildWorkflows := 10
+	numChildWorkflows := 500
 	for i := 0; i < numChildWorkflows; i++ {
 		_, _, err = mutableState.AddStartChildWorkflowExecutionInitiatedEvent(decisionCompletionID, uuid.New(), &types.StartChildWorkflowExecutionDecisionAttributes{
 			Domain:     s.domainName,
@@ -870,7 +870,20 @@ func (s *transferActiveTaskExecutorSuite) TestProcessCloseExecution_NoParent_Has
 	s.mockArchivalMetadata.On("GetVisibilityConfig").Return(archiver.NewDisabledArchvialConfig())
 	s.mockParentClosePolicyClient.On("SendParentClosePolicyRequest", mock.Anything, mock.MatchedBy(
 		func(request parentclosepolicy.Request) bool {
-			if len(request.Executions) != numChildWorkflows {
+			if len(request.Executions) != s.mockShard.GetConfig().ParentClosePolicyBatchSize(constants.TestDomainName) {
+				return false
+			}
+			for _, executions := range request.Executions {
+				if executions.DomainName != constants.TestDomainName {
+					return false
+				}
+			}
+			return true
+		},
+	)).Return(nil).Times(numChildWorkflows / s.mockShard.GetConfig().ParentClosePolicyBatchSize(constants.TestDomainName))
+	s.mockParentClosePolicyClient.On("SendParentClosePolicyRequest", mock.Anything, mock.MatchedBy(
+		func(request parentclosepolicy.Request) bool {
+			if len(request.Executions) != numChildWorkflows%s.mockShard.GetConfig().ParentClosePolicyBatchSize(constants.TestDomainName) {
 				return false
 			}
 			for _, executions := range request.Executions {

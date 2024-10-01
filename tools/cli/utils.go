@@ -41,7 +41,7 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 	"github.com/valyala/fastjson"
 
 	"github.com/uber/cadence/client/frontend"
@@ -50,6 +50,19 @@ import (
 	"github.com/uber/cadence/common/pagination"
 	"github.com/uber/cadence/common/types"
 )
+
+type printableError struct {
+	msg string
+	err error
+}
+
+func (e printableError) Error() string {
+	return e.msg
+}
+
+func (e printableError) Unwrap() error {
+	return e.err
+}
 
 // JSONHistorySerializer is used to encode history event in JSON
 type JSONHistorySerializer struct{}
@@ -524,6 +537,21 @@ func printError(msg string, err error) {
 	}
 }
 
+// PrintableError returns a printable error (always wrapping)
+func PrintableError(msg string, err error) error {
+	return &printableError{msg: msg, err: err}
+}
+
+// ExitErrHandler print easy to understand error msg first then error detail in a new line
+func ExitErrHandler(cCtx *cli.Context, err error) {
+	var printable *printableError
+	if errors.As(err, &printable) {
+		printError(printable.msg, printable.err)
+	} else { // fall back to default error message
+		printError("CLI execution failed", err)
+	}
+}
+
 // ErrorAndExit print easy to understand error msg first then error detail in a new line
 func ErrorAndExit(msg string, err error) {
 	printError(msg, err)
@@ -554,14 +582,6 @@ func getRequiredIntOption(c *cli.Context, optionName string) int {
 		ErrorAndExit(fmt.Sprintf("Option %s is required", optionName), nil)
 	}
 	return c.Int(optionName)
-}
-
-func getRequiredGlobalOption(c *cli.Context, optionName string) string {
-	value := c.GlobalString(optionName)
-	if len(value) == 0 {
-		ErrorAndExit(fmt.Sprintf("Global option %s is required", optionName), nil)
-	}
-	return value
 }
 
 func timestampPtrToStringPtr(unixNanoPtr *int64, onlyTime bool) *string {
@@ -759,15 +779,15 @@ func newContextForLongPoll(c *cli.Context) (context.Context, context.CancelFunc)
 }
 
 func newIndefiniteContext(c *cli.Context) (context.Context, context.CancelFunc) {
-	if c.GlobalIsSet(FlagContextTimeout) {
-		return newTimedContext(c, time.Duration(c.GlobalInt(FlagContextTimeout))*time.Second)
+	if c.IsSet(FlagContextTimeout) {
+		return newTimedContext(c, time.Duration(c.Int(FlagContextTimeout))*time.Second)
 	}
 
 	return context.WithCancel(populateContextFromCLIContext(context.Background(), c))
 }
 
 func newTimedContext(c *cli.Context, timeout time.Duration) (context.Context, context.CancelFunc) {
-	if overrideTimeout := c.GlobalInt(FlagContextTimeout); overrideTimeout > 0 {
+	if overrideTimeout := c.Int(FlagContextTimeout); overrideTimeout > 0 {
 		timeout = time.Duration(overrideTimeout) * time.Second
 	}
 	ctx := populateContextFromCLIContext(context.Background(), c)

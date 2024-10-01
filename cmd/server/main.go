@@ -21,6 +21,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/uber/cadence/cmd/server/cadence"
@@ -37,5 +38,8 @@ import (
 // main entry point for the cadence server
 func main() {
 	app := cadence.BuildCLI(metrics.ReleaseVersion, metrics.Revision)
-	app.Run(os.Args)
+	if err := app.Run(os.Args); err != nil {
+		_, _ = fmt.Fprintln(app.ErrWriter, err)
+		os.Exit(1)
+	}
 }

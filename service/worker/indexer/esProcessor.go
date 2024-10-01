@@ -48,7 +48,7 @@ const (
 type (
 	// ESProcessorImpl implements ESProcessor, it's an agent of GenericBulkProcessor
 	ESProcessorImpl struct {
-		bulkProcessor bulk.GenericBulkProcessor
+		bulkProcessor []bulk.GenericBulkProcessor
 		mapToKafkaMsg collection.ConcurrentTxMap // used to map ES request to kafka message
 		config        *Config
 		logger        log.Logger
@@ -92,17 +92,67 @@ func newESProcessor(
 		return nil, err
 	}
 
-	p.bulkProcessor = processor
+	p.bulkProcessor = []bulk.GenericBulkProcessor{processor}
+	p.mapToKafkaMsg = collection.NewShardedConcurrentTxMap(1024, p.hashFn)
+	return p, nil
+}
+
+// newESDualProcessor creates new ESDualProcessor which handles double writes to dual visibility clients
+func newESDualProcessor(
+	name string,
+	config *Config,
+	esclient es.GenericClient,
+	osclient es.GenericClient,
+	logger log.Logger,
+	metricsClient metrics.Client,
+) (*ESProcessorImpl, error) {
+	p := &ESProcessorImpl{
+		config:     config,
+		logger:     logger.WithTags(tag.ComponentIndexerESProcessor),
+		scope:      metricsClient.Scope(metrics.ESProcessorScope),
+		msgEncoder: defaultEncoder,
+	}
+
+	params := &bulk.BulkProcessorParameters{
+		Name:          name,
+		NumOfWorkers:  config.ESProcessorNumOfWorkers(),
+		BulkActions:   config.ESProcessorBulkActions(),
+		BulkSize:      config.ESProcessorBulkSize(),
+		FlushInterval: config.ESProcessorFlushInterval(),
+		Backoff:       bulk.NewExponentialBackoff(esProcessorInitialRetryInterval, esProcessorMaxRetryInterval),
+		BeforeFunc:    p.bulkBeforeAction,
+		AfterFunc:     p.bulkAfterAction,
+	}
+	esprocessor, err := esclient.RunBulkProcessor(context.Background(), params)
+	if err != nil {
+		return nil, err
+	}
+
+	// for the sceondary processor, we use shadow bulk after func which only logs errors and not ack/nack messages
+	// the primary processor will be the source of truth
+	shadowParams := *params
+	shadowParams.AfterFunc = p.shadowBulkAfterAction
+	osprocessor, err := osclient.RunBulkProcessor(context.Background(), &shadowParams)
+	if err != nil {
+		return nil, err
+	}
+
+	p.bulkProcessor = []bulk.GenericBulkProcessor{esprocessor, osprocessor}
 	p.mapToKafkaMsg = collection.NewShardedConcurrentTxMap(1024, p.hashFn)
 	return p, nil
 }
 
 func (p *ESProcessorImpl) Start() {
 	// current implementation (v6 and v7) allows to invoke Start() multiple times
-	p.bulkProcessor.Start(context.Background())
+	for _, processor := range p.bulkProcessor {
+		processor.Start(context.Background())
+	}
+
 }
 func (p *ESProcessorImpl) Stop() {
-	p.bulkProcessor.Stop() //nolint:errcheck
+	for _, processor := range p.bulkProcessor {
+		processor.Stop() //nolint:errcheck
+	}
 	p.mapToKafkaMsg = nil
 }
 
@@ -117,7 +167,9 @@ func (p *ESProcessorImpl) Add(request *bulk.GenericBulkableAddRequest, key strin
 	if isDup {
 		return
 	}
-	p.bulkProcessor.Add(request)
+	for _, processor := range p.bulkProcessor {
+		processor.Add(request)
+	}
 }
 
 // bulkBeforeAction is triggered before bulk bulkProcessor commit
@@ -199,6 +251,15 @@ func (p *ESProcessorImpl) bulkAfterAction(id int64, requests []bulk.GenericBulka
 				p.scope.IncCounter(metrics.ESProcessorRetries)
 			}
 		}
+	}
+}
+
+// shadowBulkAfterAction is triggered after bulk bulkProcessor commit
+func (p *ESProcessorImpl) shadowBulkAfterAction(id int64, requests []bulk.GenericBulkableRequest, response *bulk.GenericBulkResponse, err *bulk.GenericError) {
+	if err != nil {
+		// This happens after configured retry, which means something bad happens on cluster or index
+		// When cluster back to live, bulkProcessor will re-commit those failure requests
+		p.logger.Error("Error commit bulk request in secondary processor.", tag.Error(err.Details))
 	}
 }
 
@@ -358,7 +419,7 @@ func newKafkaMessageWithMetrics(kafkaMsg messaging.Message, stopwatch *metrics.S
 }
 
 func (km *kafkaMessageWithMetrics) Ack() {
-	km.message.Ack() //nolint:errcheck
+	km.message.Ack() // nolint:errcheck
 	if km.swFromAddToAck != nil {
 		km.swFromAddToAck.Stop()
 	}

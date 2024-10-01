@@ -115,6 +115,7 @@ func TestMatchingSimulationSuite(t *testing.T) {
 		dynamicconfig.LocalTaskWaitTime:                    clusterConfig.MatchingConfig.SimulationConfig.LocalTaskWaitTime,
 		dynamicconfig.EnableTasklistIsolation:              len(isolationGroups) > 0,
 		dynamicconfig.AllIsolationGroups:                   isolationGroups,
+		dynamicconfig.TasklistLoadBalancerStrategy:         getTasklistLoadBalancerStrategy(clusterConfig.MatchingConfig.SimulationConfig.TasklistLoadBalancerStrategy),
 	}
 
 	ctrl := gomock.NewController(t)
@@ -179,7 +180,7 @@ func (s *MatchingSimulationSuite) TearDownSuite() {
 }
 
 func (s *MatchingSimulationSuite) TestMatchingSimulation() {
-	matchingClient := s.testCluster.GetMatchingClient()
+	matchingClients := s.testCluster.GetMatchingClients()
 
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -206,7 +207,7 @@ func (s *MatchingSimulationSuite) TestMatchingSimulation() {
 			pollerWG.Add(1)
 			pollerID := fmt.Sprintf("[%d]-%s-%d", idx, pollerConfig.getIsolationGroup(), i)
 			config := pollerConfig
-			go s.poll(ctx, matchingClient, domainID, tasklist, pollerID, &pollerWG, statsCh, &tasksToReceive, &config)
+			go s.poll(ctx, matchingClients[i%len(matchingClients)], domainID, tasklist, pollerID, &pollerWG, statsCh, &tasksToReceive, &config)
 		}
 	}
 
@@ -225,7 +226,7 @@ func (s *MatchingSimulationSuite) TestMatchingSimulation() {
 			numGenerators++
 			generatorWG.Add(1)
 			config := taskConfig
-			go s.generate(ctx, matchingClient, domainID, tasklist, rateLimiter, &tasksGenerated, &lastTaskScheduleID, &generatorWG, statsCh, &config)
+			go s.generate(ctx, matchingClients[i%len(matchingClients)], domainID, tasklist, rateLimiter, &tasksGenerated, &lastTaskScheduleID, &generatorWG, statsCh, &config)
 		}
 	}
 
@@ -258,6 +259,7 @@ func (s *MatchingSimulationSuite) TestMatchingSimulation() {
 	testSummary = append(testSummary, fmt.Sprintf("Record Decision Task Started Time: %v", s.testClusterConfig.MatchingConfig.SimulationConfig.RecordDecisionTaskStartedTime))
 	testSummary = append(testSummary, fmt.Sprintf("Num of Write Partitions: %d", s.testClusterConfig.MatchingDynamicConfigOverrides[dynamicconfig.MatchingNumTasklistWritePartitions]))
 	testSummary = append(testSummary, fmt.Sprintf("Num of Read Partitions: %d", s.testClusterConfig.MatchingDynamicConfigOverrides[dynamicconfig.MatchingNumTasklistReadPartitions]))
+	testSummary = append(testSummary, fmt.Sprintf("Tasklist load balancer strategy: %v", s.testClusterConfig.MatchingDynamicConfigOverrides[dynamicconfig.TasklistLoadBalancerStrategy]))
 	testSummary = append(testSummary, fmt.Sprintf("Forwarder Max Outstanding Polls: %d", s.testClusterConfig.MatchingDynamicConfigOverrides[dynamicconfig.MatchingForwarderMaxOutstandingPolls]))
 	testSummary = append(testSummary, fmt.Sprintf("Forwarder Max Outstanding Tasks: %d", s.testClusterConfig.MatchingDynamicConfigOverrides[dynamicconfig.MatchingForwarderMaxOutstandingTasks]))
 	testSummary = append(testSummary, fmt.Sprintf("Forwarder Max RPS: %d", s.testClusterConfig.MatchingDynamicConfigOverrides[dynamicconfig.MatchingForwarderMaxRatePerSecond]))
@@ -590,4 +592,11 @@ func getRecordDecisionTaskStartedTime(duration time.Duration) time.Duration {
 	}
 
 	return duration
+}
+
+func getTasklistLoadBalancerStrategy(strategy string) string {
+	if strategy == "" {
+		return "random"
+	}
+	return strategy
 }

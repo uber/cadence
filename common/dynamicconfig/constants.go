@@ -1197,6 +1197,7 @@ const (
 	// Default value: 10
 	// Allowed filters: DomainName
 	ParentClosePolicyThreshold
+	ParentClosePolicyBatchSize
 	// NumParentClosePolicySystemWorkflows is key for number of parentClosePolicy system workflows running in total
 	// KeyName: history.numParentClosePolicySystemWorkflows
 	// Value type: Int
@@ -2325,6 +2326,12 @@ const (
 	// Default value: "on"
 	// Allowed filters: N/A
 	AdvancedVisibilityWritingMode
+	// AdvancedVisibilityMigrationWritingMode is key for how to write to advanced visibility during migration.
+	// KeyName: system.AdvancedVisibilityMigrationWritingMode
+	// Value type: String enum: "dual"(means writing to both source and destination advanced visibility, "source" (means writing to source visibility only), "destination" (means writing to destination visibility only) or "off" (means writing to db visibility only)
+	// Default value: "dual"
+	// Allowed filters: N/A
+	AdvancedVisibilityMigrationWritingMode
 	// HistoryArchivalStatus is key for the status of history archival to override the value from static config.
 	// KeyName: system.historyArchivalStatus
 	// Value type: string enum: "enabled" or "disabled"
@@ -2391,6 +2398,8 @@ const (
 	// Default value: "disabled"
 	// Allowed filters: RatelimitKey (on global key, e.g. prefixed by collection name)
 	FrontendGlobalRatelimiterMode
+
+	TasklistLoadBalancerStrategy
 
 	// LastStringKey must be the last one in this const group
 	LastStringKey
@@ -3688,6 +3697,12 @@ var IntKeys = map[IntKey]DynamicInt{
 		Description:  "ParentClosePolicyThreshold is decides that parent close policy will be processed by sys workers(if enabled) ifthe number of children greater than or equal to this threshold",
 		DefaultValue: 10,
 	},
+	ParentClosePolicyBatchSize: {
+		KeyName:      "history.parentClosePolicyBatchSize",
+		Filters:      []Filter{DomainName},
+		Description:  "ParentClosePolicyBatchSize is the batch size of parent close policy processed by sys workers",
+		DefaultValue: 200,
+	},
 	NumParentClosePolicySystemWorkflows: {
 		KeyName:      "history.numParentClosePolicySystemWorkflows",
 		Description:  "NumParentClosePolicySystemWorkflows is key for number of parentClosePolicy system workflows running in total",
@@ -4675,6 +4690,11 @@ var StringKeys = map[StringKey]DynamicString{
 		Description:  "AdvancedVisibilityWritingMode is key for how to write to advanced visibility. The most useful option is dual, which can be used for seamless migration from db visibility to advanced visibility, usually using with EnableReadVisibilityFromES",
 		DefaultValue: "on",
 	},
+	AdvancedVisibilityMigrationWritingMode: {
+		KeyName:      "system.advancedVisibilityMigrationWritingMode",
+		Description:  "AdvancedVisibilityMigrationWritingMode is key for how to write to advanced visibility. The most useful option is dual, which can be used for seamless migration from advanced visibility to another",
+		DefaultValue: "dual",
+	},
 	HistoryArchivalStatus: {
 		KeyName:      "system.historyArchivalStatus",
 		Description:  "HistoryArchivalStatus is key for the status of history archival to override the value from static config.",
@@ -4726,6 +4746,12 @@ var StringKeys = map[StringKey]DynamicString{
 		Description:  "FrontendGlobalRatelimiterMode defines which mode a global key should be in, per key, to make gradual changes to ratelimiter algorithms",
 		DefaultValue: "disabled",
 		Filters:      []Filter{RatelimitKey},
+	},
+	TasklistLoadBalancerStrategy: {
+		KeyName:      "system.tasklistLoadBalancerStrategy",
+		Description:  "TasklistLoadBalancerStrategy is the key for tasklist load balancer strategy",
+		DefaultValue: "random", // other options: "round-robin"
+		Filters:      []Filter{DomainName, TaskListName, TaskType},
 	},
 }
 

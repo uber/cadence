@@ -21,6 +21,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/uber/cadence/tools/sql"
@@ -32,6 +33,7 @@ import (
 func main() {
 	err := sql.RunTool(os.Args)
 	if err != nil {
-		panic(err)
+		_, _ = fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
 	}
 }

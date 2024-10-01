@@ -29,7 +29,7 @@ import (
 	"time"
 
 	"github.com/pborman/uuid"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/types"
@@ -37,7 +37,7 @@ import (
 )
 
 // TerminateBatchJob stops abatch job
-func TerminateBatchJob(c *cli.Context) {
+func TerminateBatchJob(c *cli.Context) error {
 	jobID := getRequiredOption(c, FlagJobID)
 	reason := getRequiredOption(c, FlagReason)
 	svcClient := cFactory.ServerFrontendClient(c)
@@ -57,16 +57,17 @@ func TerminateBatchJob(c *cli.Context) {
 		},
 	)
 	if err != nil {
-		ErrorAndExit("Failed to terminate batch job", err)
+		return PrintableError("Failed to terminate batch job", err)
 	}
 	output := map[string]interface{}{
 		"msg": "batch job is terminated",
 	}
 	prettyPrintJSONObject(output)
+	return nil
 }
 
 // DescribeBatchJob describe the status of the batch job
-func DescribeBatchJob(c *cli.Context) {
+func DescribeBatchJob(c *cli.Context) error {
 	jobID := getRequiredOption(c, FlagJobID)
 
 	svcClient := cFactory.ServerFrontendClient(c)
@@ -84,7 +85,7 @@ func DescribeBatchJob(c *cli.Context) {
 		},
 	)
 	if err != nil {
-		ErrorAndExit("Failed to describe batch job", err)
+		return PrintableError("Failed to describe batch job", err)
 	}
 
 	output := map[string]interface{}{}
@@ -101,17 +102,18 @@ func DescribeBatchJob(c *cli.Context) {
 			hbd := batcher.HeartBeatDetails{}
 			err := json.Unmarshal(hbdBinary, &hbd)
 			if err != nil {
-				ErrorAndExit("Failed to describe batch job", err)
+				return PrintableError("Failed to describe batch job", err)
 			}
 			output["progress"] = hbd
 		}
 	}
 	prettyPrintJSONObject(output)
+	return nil
 }
 
 // ListBatchJobs list the started batch jobs
-func ListBatchJobs(c *cli.Context) {
-	domain := getRequiredGlobalOption(c, FlagDomain)
+func ListBatchJobs(c *cli.Context) error {
+	domain := getRequiredOption(c, FlagDomain)
 	pageSize := c.Int(FlagPageSize)
 	svcClient := cFactory.ServerFrontendClient(c)
 
@@ -127,7 +129,7 @@ func ListBatchJobs(c *cli.Context) {
 		},
 	)
 	if err != nil {
-		ErrorAndExit("Failed to list batch jobs", err)
+		return PrintableError("Failed to list batch jobs", err)
 	}
 	output := make([]interface{}, 0, len(resp.Executions))
 	for _, wf := range resp.Executions {
@@ -148,17 +150,18 @@ func ListBatchJobs(c *cli.Context) {
 		output = append(output, job)
 	}
 	prettyPrintJSONObject(output)
+	return nil
 }
 
 // StartBatchJob starts a batch job
-func StartBatchJob(c *cli.Context) {
-	domain := getRequiredGlobalOption(c, FlagDomain)
+func StartBatchJob(c *cli.Context) error {
+	domain := getRequiredOption(c, FlagDomain)
 	query := getRequiredOption(c, FlagListQuery)
 	reason := getRequiredOption(c, FlagReason)
 	batchType := getRequiredOption(c, FlagBatchType)
 
 	if !validateBatchType(batchType) {
-		ErrorAndExit("batchType is not valid, supported:"+strings.Join(batcher.AllBatchTypes, ","), nil)
+		return PrintableError("batchType is not valid, supported:"+strings.Join(batcher.AllBatchTypes, ","), nil)
 	}
 	operator := getCurrentUserFromEnv()
 	var sigName, sigVal string
@@ -189,7 +192,7 @@ func StartBatchJob(c *cli.Context) {
 		},
 	)
 	if err != nil {
-		ErrorAndExit("Failed to count impacting workflows for starting a batch job", err)
+		return PrintableError("Failed to count impacting workflows for starting a batch job", err)
 	}
 	fmt.Printf("This batch job will be operating on %v workflows.\n", resp.GetCount())
 	if !c.Bool(FlagYes) {
@@ -198,13 +201,13 @@ func StartBatchJob(c *cli.Context) {
 			fmt.Print("Please confirm[Yes/No]:")
 			text, err := reader.ReadString('\n')
 			if err != nil {
-				ErrorAndExit("Failed to  get confirmation for starting a batch job", err)
+				return PrintableError("Failed to  get confirmation for starting a batch job", err)
 			}
 			if strings.EqualFold(strings.TrimSpace(text), "yes") {
 				break
 			} else {
 				fmt.Println("Batch job is not started")
-				return
+				return nil
 			}
 		}
 
@@ -233,20 +236,20 @@ func StartBatchJob(c *cli.Context) {
 	}
 	input, err := json.Marshal(params)
 	if err != nil {
-		ErrorAndExit("Failed to encode batch job parameters", err)
+		return PrintableError("Failed to encode batch job parameters", err)
 	}
 	memo, err := getWorkflowMemo(map[string]interface{}{
 		"Reason": reason,
 	})
 	if err != nil {
-		ErrorAndExit("Failed to encode batch job memo", err)
+		return PrintableError("Failed to encode batch job memo", err)
 	}
 	searchAttributes, err := serializeSearchAttributes(map[string]interface{}{
 		"CustomDomain": domain,
 		"Operator":     operator,
 	})
 	if err != nil {
-		ErrorAndExit("Failed to encode batch job search attributes", err)
+		return PrintableError("Failed to encode batch job search attributes", err)
 	}
 	workflowID := uuid.NewRandom().String()
 	request := &types.StartWorkflowExecutionRequest{
@@ -263,13 +266,14 @@ func StartBatchJob(c *cli.Context) {
 	}
 	_, err = svcClient.StartWorkflowExecution(tcCtx, request)
 	if err != nil {
-		ErrorAndExit("Failed to start batch job", err)
+		return PrintableError("Failed to start batch job", err)
 	}
 	output := map[string]interface{}{
 		"msg":   "batch job is started",
 		"jobID": workflowID,
 	}
 	prettyPrintJSONObject(output)
+	return nil
 }
 
 func validateBatchType(bt string) bool {

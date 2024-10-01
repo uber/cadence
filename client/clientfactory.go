@@ -152,10 +152,12 @@ func (cf *rpcClientFactory) NewMatchingClientWithTimeout(
 
 	peerResolver := matching.NewPeerResolver(cf.resolver, namedPort)
 
+	defaultLoadBalancer := matching.NewLoadBalancer(domainIDToName, cf.dynConfig)
+	roundRobinLoadBalancer := matching.NewRoundRobinLoadBalancer(domainIDToName, cf.dynConfig)
 	client := matching.NewClient(
 		rawClient,
 		peerResolver,
-		matching.NewLoadBalancer(domainIDToName, cf.dynConfig),
+		matching.NewMultiLoadBalancer(defaultLoadBalancer, roundRobinLoadBalancer, domainIDToName, cf.dynConfig),
 	)
 	client = timeoutwrapper.NewMatchingClient(client, longPollTimeout, timeout)
 	if errorRate := cf.dynConfig.GetFloat64Property(dynamicconfig.MatchingErrorInjectionRate)(); errorRate != 0 {

@@ -29,14 +29,14 @@ import (
 
 	"go.uber.org/cadence/workflow"
 
+	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/worker/diagnostics/invariants"
 )
 
 const (
-	diagnosticsWorkflow    = "diagnostics-workflow"
-	tasklist               = "diagnostics-wf-tasklist"
-	queryDiagnosticsReport = "query-diagnostics-report"
+	diagnosticsWorkflow = "diagnostics-workflow"
+	tasklist            = "diagnostics-wf-tasklist"
 
 	retrieveWfExecutionHistoryActivity = "retrieveWfExecutionHistory"
 	identifyTimeoutsActivity           = "identifyTimeouts"
@@ -75,14 +75,12 @@ type timeoutRootCauseResult struct {
 }
 
 func (w *dw) DiagnosticsWorkflow(ctx workflow.Context, params DiagnosticsWorkflowInput) (*DiagnosticsWorkflowResult, error) {
-	var timeoutsResult timeoutDiagnostics
-	err := workflow.SetQueryHandler(ctx, queryDiagnosticsReport, func() (DiagnosticsWorkflowResult, error) {
-		return DiagnosticsWorkflowResult{Timeouts: &timeoutsResult}, nil
-	})
-	if err != nil {
-		return nil, err
-	}
+	scope := w.metricsClient.Scope(metrics.DiagnosticsWorkflowScope, metrics.DomainTag(params.Domain))
+	scope.IncCounter(metrics.DiagnosticsWorkflowStartedCount)
+	sw := scope.StartTimer(metrics.DiagnosticsWorkflowExecutionLatency)
+	defer sw.Stop()
 
+	var timeoutsResult timeoutDiagnostics
 	activityOptions := workflow.ActivityOptions{
 		ScheduleToCloseTimeout: time.Second * 10,
 		ScheduleToStartTimeout: time.Second * 5,
@@ -91,7 +89,7 @@ func (w *dw) DiagnosticsWorkflow(ctx workflow.Context, params DiagnosticsWorkflo
 	activityCtx := workflow.WithActivityOptions(ctx, activityOptions)
 
 	var wfExecutionHistory *types.GetWorkflowExecutionHistoryResponse
-	err = workflow.ExecuteActivity(activityCtx, w.retrieveExecutionHistory, retrieveExecutionHistoryInputParams{
+	err := workflow.ExecuteActivity(activityCtx, w.retrieveExecutionHistory, retrieveExecutionHistoryInputParams{
 		Domain: params.Domain,
 		Execution: &types.WorkflowExecution{
 			WorkflowID: params.WorkflowID,
@@ -134,6 +132,7 @@ func (w *dw) DiagnosticsWorkflow(ctx workflow.Context, params DiagnosticsWorkflo
 	}
 	timeoutsResult.RootCause = timeoutRootCause
 
+	scope.IncCounter(metrics.DiagnosticsWorkflowSuccess)
 	return &DiagnosticsWorkflowResult{Timeouts: &timeoutsResult}, nil
 }
 

@@ -35,6 +35,7 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/quotas"
 	"github.com/uber/cadence/common/quotas/global/collection"
+	"github.com/uber/cadence/common/quotas/permember"
 	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/service/frontend/admin"
@@ -263,7 +264,7 @@ func (s *Service) createGlobalQuotaCollections() (globalRatelimiterCollections, 
 }
 func (s *Service) createBaseLimiters() ratelimiterCollections {
 	create := func(shared, perInstance dynamicconfig.IntPropertyFnWithDomainFilter) *quotas.Collection {
-		return quotas.NewCollection(quotas.NewPerMemberDynamicRateLimiterFactory(
+		return quotas.NewCollection(permember.NewPerMemberDynamicRateLimiterFactory(
 			service.Frontend,
 			shared,
 			perInstance,

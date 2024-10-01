@@ -30,7 +30,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 	"go.uber.org/zap"
 
 	"github.com/uber/cadence/common"
@@ -48,11 +48,11 @@ const (
 )
 
 // AdminDBScan is used to scan over executions in database and detect corruptions.
-func AdminDBScan(c *cli.Context) {
+func AdminDBScan(c *cli.Context) error {
 	scanType, err := executions.ScanTypeString(c.String(FlagScanType))
 
 	if err != nil {
-		ErrorAndExit("unknown scan type", err)
+		return PrintableError("unknown scan type", err)
 	}
 
 	numberOfShards := getRequiredIntOption(c, FlagNumberOfShards)
@@ -62,7 +62,7 @@ func AdminDBScan(c *cli.Context) {
 	for _, v := range collectionSlice {
 		collection, err := invariant.CollectionString(v)
 		if err != nil {
-			ErrorAndExit("unknown invariant collection", err)
+			return PrintableError("unknown invariant collection", err)
 		}
 		collections = append(collections, collection)
 	}
@@ -72,13 +72,13 @@ func AdminDBScan(c *cli.Context) {
 		logger, err = zap.NewDevelopment()
 		if err != nil {
 			// probably impossible with default config
-			ErrorAndExit("could not construct logger", err)
+			return PrintableError("could not construct logger", err)
 		}
 	}
 
 	invariants := scanType.ToInvariants(collections, logger)
 	if len(invariants) < 1 {
-		ErrorAndExit(
+		return PrintableError(
 			fmt.Sprintf("no invariants for scan type %q and collections %q",
 				scanType.String(),
 				collectionSlice),
@@ -91,7 +91,7 @@ func AdminDBScan(c *cli.Context) {
 
 	dec := json.NewDecoder(input)
 	if err != nil {
-		ErrorAndExit("", err)
+		return PrintableError("", err)
 	}
 	var data []fetcher.ExecutionRequest
 
@@ -120,6 +120,7 @@ func AdminDBScan(c *cli.Context) {
 
 		fmt.Println(string(data))
 	}
+	return nil
 }
 
 func checkExecution(
@@ -160,23 +161,26 @@ func checkExecution(
 }
 
 // AdminDBScanUnsupportedWorkflow is to scan DB for unsupported workflow for a new release
-func AdminDBScanUnsupportedWorkflow(c *cli.Context) {
+func AdminDBScanUnsupportedWorkflow(c *cli.Context) error {
 	outputFile := getOutputFile(c.String(FlagOutputFilename))
 	startShardID := c.Int(FlagLowerShardBound)
 	endShardID := c.Int(FlagUpperShardBound)
 
 	defer outputFile.Close()
 	for i := startShardID; i <= endShardID; i++ {
-		listExecutionsByShardID(c, i, outputFile)
+		if err := listExecutionsByShardID(c, i, outputFile); err != nil {
+			return err
+		}
 		fmt.Printf("Shard %v scan operation is completed.\n", i)
 	}
+	return nil
 }
 
 func listExecutionsByShardID(
 	c *cli.Context,
 	shardID int,
 	outputFile *os.File,
-) {
+) error {
 
 	client := initializeExecutionStore(c, shardID)
 	defer client.Close()
@@ -206,7 +210,7 @@ func listExecutionsByShardID(
 	for executionIterator.HasNext() {
 		result, err := executionIterator.Next()
 		if err != nil {
-			ErrorAndExit(fmt.Sprintf("Failed to scan shard ID: %v for unsupported workflow. Please retry.", shardID), err)
+			return PrintableError(fmt.Sprintf("Failed to scan shard ID: %v for unsupported workflow. Please retry.", shardID), err)
 		}
 		execution := result.(*persistence.ListConcreteExecutionsEntity)
 		executionInfo := execution.ExecutionInfo
@@ -218,11 +222,12 @@ func listExecutionsByShardID(
 				executionInfo.RunID,
 			)
 			if _, err = outputFile.WriteString(outStr); err != nil {
-				ErrorAndExit("Failed to write data to file", err)
+				return PrintableError("Failed to write data to file", err)
 			}
 			if err = outputFile.Sync(); err != nil {
-				ErrorAndExit("Failed to sync data to file", err)
+				return PrintableError("Failed to sync data to file", err)
 			}
 		}
 	}
+	return nil
 }

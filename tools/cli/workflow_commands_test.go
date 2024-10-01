@@ -28,7 +28,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 )
 
 func TestConstructStartWorkflowRequest(t *testing.T) {
@@ -53,26 +53,26 @@ func TestConstructStartWorkflowRequest(t *testing.T) {
 
 	c := cli.NewContext(nil, set, nil)
 
-	c.Set(FlagDomain, "test-domain")
-	c.Set(FlagTaskList, "test-task-list")
-	c.Set(FlagWorkflowType, "test-workflow-type")
-	c.Set("execution_timeout", "100")
-	c.Set("decision_timeout", "50")
-	c.Set("workflow_id", "test-workflow-id")
-	c.Set("workflow_id_reuse_policy", "1")
-	c.Set("input", "{}")
-	c.Set("cron_schedule", "* * * * *")
-	c.Set("retry_attempts", "5")
-	c.Set("retry_expiration", "600")
-	c.Set("retry_interval", "10")
-	c.Set("retry_backoff", "2.0")
-	c.Set("retry_max_interval", "100")
-	c.Set(DelayStartSeconds, "5")
-	c.Set(JitterStartSeconds, "2")
-	c.Set("first_run_at_time", "2024-07-24T12:00:00Z")
+	assert.NoError(t, c.Set(FlagDomain, "test-domain"))
+	assert.NoError(t, c.Set(FlagTaskList, "test-task-list"))
+	assert.NoError(t, c.Set(FlagWorkflowType, "test-workflow-type"))
+	assert.NoError(t, c.Set("execution_timeout", "100"))
+	assert.NoError(t, c.Set("decision_timeout", "50"))
+	assert.NoError(t, c.Set("workflow_id", "test-workflow-id"))
+	assert.NoError(t, c.Set("workflow_id_reuse_policy", "1"))
+	assert.NoError(t, c.Set("input", "{}"))
+	assert.NoError(t, c.Set("cron_schedule", "* * * * *"))
+	assert.NoError(t, c.Set("retry_attempts", "5"))
+	assert.NoError(t, c.Set("retry_expiration", "600"))
+	assert.NoError(t, c.Set("retry_interval", "10"))
+	assert.NoError(t, c.Set("retry_backoff", "2.0"))
+	assert.NoError(t, c.Set("retry_max_interval", "100"))
+	assert.NoError(t, c.Set(DelayStartSeconds, "5"))
+	assert.NoError(t, c.Set(JitterStartSeconds, "2"))
+	assert.NoError(t, c.Set("first_run_at_time", "2024-07-24T12:00:00Z"))
 
-	request := constructStartWorkflowRequest(c)
-
+	request, err := constructStartWorkflowRequest(c)
+	assert.NoError(t, err)
 	assert.NotNil(t, request)
 	assert.Equal(t, "test-domain", request.Domain)
 	assert.Equal(t, "test-task-list", request.TaskList.Name)

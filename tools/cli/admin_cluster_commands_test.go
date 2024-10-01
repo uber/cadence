@@ -28,7 +28,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 
 	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/common"
@@ -108,18 +108,20 @@ func TestAdminFailover(t *testing.T) {
 	set.String(FlagActiveClusterName, "standby", "test flag")
 
 	cliContext := cli.NewContext(nil, set, nil)
-	succeed, failed := domainCLI.failoverDomains(cliContext)
+	succeed, failed, err := domainCLI.failoverDomains(cliContext)
 	assert.Equal(t, []string{"test-domain"}, succeed)
 	assert.Equal(t, 0, len(failed))
+	assert.NoError(t, err)
 
 	serverFrontendClient.EXPECT().ListDomains(gomock.Any(), gomock.Any()).Return(listDomainsResponse, nil).Times(1)
 	set = flag.NewFlagSet("test", 0)
 	set.String(FlagActiveClusterName, "active", "test flag")
 
 	cliContext = cli.NewContext(nil, set, nil)
-	succeed, failed = domainCLI.failoverDomains(cliContext)
+	succeed, failed, err = domainCLI.failoverDomains(cliContext)
 	assert.Equal(t, 0, len(succeed))
 	assert.Equal(t, 0, len(failed))
+	assert.NoError(t, err)
 }
 
 func TestValidSearchAttributeKey(t *testing.T) {

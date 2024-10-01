@@ -23,11 +23,14 @@
 package stats
 
 import (
+	"math"
 	"testing"
 	"time"
 
 	"github.com/uber/cadence/common/clock"
 )
+
+const floatResolution = 1e-6
 
 func TestEmaFixedWindowQPSTracker(t *testing.T) {
 	timeSource := clock.NewMockedTimeSourceAt(time.Now())
@@ -36,6 +39,7 @@ func TestEmaFixedWindowQPSTracker(t *testing.T) {
 
 	r := NewEmaFixedWindowQPSTracker(timeSource, exp, bucketInterval)
 	r.Start()
+	defer r.Stop()
 
 	// Test ReportCounter
 	r.ReportCounter(10)
@@ -43,7 +47,7 @@ func TestEmaFixedWindowQPSTracker(t *testing.T) {
 
 	qps := r.QPS()
 	if qps != 0 {
-		t.Errorf("QPS mismatch, expected: 0, got: %f", qps)
+		t.Errorf("QPS mismatch, expected: 0, got: %v", qps)
 	}
 
 	timeSource.BlockUntil(1)
@@ -52,8 +56,8 @@ func TestEmaFixedWindowQPSTracker(t *testing.T) {
 	// Test QPS
 	qps = r.QPS()
 	expectedQPS := float64(30) / (float64(bucketInterval) / float64(time.Second))
-	if qps != expectedQPS {
-		t.Errorf("QPS mismatch, expected: %f, got: %f", expectedQPS, qps)
+	if math.Abs(qps-expectedQPS) > floatResolution {
+		t.Errorf("QPS mismatch, expected: %v, got: %v", expectedQPS, qps)
 	}
 
 	r.ReportCounter(10)
@@ -63,9 +67,68 @@ func TestEmaFixedWindowQPSTracker(t *testing.T) {
 	// Test QPS
 	qps = r.QPS()
 	expectedQPS = float64(22) / (float64(bucketInterval) / float64(time.Second))
-	if qps != expectedQPS {
-		t.Errorf("QPS mismatch, expected: %f, got: %f", expectedQPS, qps)
+	if math.Abs(qps-expectedQPS) > floatResolution {
+		t.Errorf("QPS mismatch, expected: %v, got: %v", expectedQPS, qps)
+	}
+}
+
+func TestRollingWindowQPSTracker(t *testing.T) {
+	timeSource := clock.NewMockedTimeSourceAt(time.Now())
+	bucketInterval := time.Second
+
+	r := NewRollingWindowQPSTracker(timeSource, bucketInterval, 10)
+	r.Start()
+	defer r.Stop()
+
+	r.ReportCounter(10)
+	qps := r.QPS()
+	if qps != 0 {
+		t.Errorf("QPS mismatch, expected: 0, got: %v", qps)
 	}
 
-	r.Stop()
+	timeSource.Advance(bucketInterval)
+
+	qps = r.QPS()
+	expectedQPS := float64(10) / (float64(bucketInterval) * 10 / float64(time.Second))
+	if math.Abs(qps-expectedQPS) > floatResolution {
+		t.Errorf("QPS mismatch, expected: %v, got: %v", expectedQPS, qps)
+	}
+
+	r.ReportCounter(20)
+	qps = r.QPS()
+	if qps != expectedQPS {
+		t.Errorf("QPS mismatch, expected: %v, got: %v", expectedQPS, qps)
+	}
+
+	timeSource.Advance(bucketInterval)
+
+	qps = r.QPS()
+	expectedQPS = float64(30) / (float64(bucketInterval) * 10 / float64(time.Second))
+	if math.Abs(qps-expectedQPS) > floatResolution {
+		t.Errorf("QPS mismatch, expected: %v, got: %v", expectedQPS, qps)
+	}
+
+	r.ReportCounter(100)
+
+	timeSource.Advance(8 * bucketInterval)
+
+	qps = r.QPS()
+	expectedQPS = float64(130) / (float64(bucketInterval) * 10 / float64(time.Second))
+	if math.Abs(qps-expectedQPS) > floatResolution {
+		t.Errorf("QPS mismatch, expected: %v, got: %v", expectedQPS, qps)
+	}
+
+	timeSource.Advance(bucketInterval)
+	qps = r.QPS()
+	expectedQPS = float64(120) / (float64(bucketInterval) * 10 / float64(time.Second))
+	if math.Abs(qps-expectedQPS) > floatResolution {
+		t.Errorf("QPS mismatch, expected: %v, got: %v", expectedQPS, qps)
+	}
+
+	timeSource.Advance(bucketInterval)
+	qps = r.QPS()
+	expectedQPS = float64(100) / (float64(bucketInterval) * 10 / float64(time.Second))
+	if math.Abs(qps-expectedQPS) > floatResolution {
+		t.Errorf("QPS mismatch, expected: %v, got: %v", expectedQPS, qps)
+	}
 }

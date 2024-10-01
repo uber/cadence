@@ -233,3 +233,7 @@ func (rpo *MultiringResolver) MemberCount(service string) (int, error) {
 	}
 	return ring.MemberCount(), nil
 }
+
+func (ce *ChangedEvent) Empty() bool {
+	return len(ce.HostsAdded) == 0 && len(ce.HostsUpdated) == 0 && len(ce.HostsRemoved) == 0
+}

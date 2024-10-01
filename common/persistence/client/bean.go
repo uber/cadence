@@ -88,6 +88,8 @@ type (
 		ESConfig          *config.ElasticSearchConfig
 		PinotConfig       *config.PinotVisibilityConfig
 		PinotClient       pinot.GenericClient
+		OSClient          es.GenericClient
+		OSConfig          *config.ElasticSearchConfig
 	}
 )
 

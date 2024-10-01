@@ -113,3 +113,70 @@ func (r *emaFixedWindowQPSTracker) ReportCounter(delta int64) {
 func (r *emaFixedWindowQPSTracker) QPS() float64 {
 	return r.qps.Load()
 }
+
+type (
+	bucket struct {
+		counter   int64
+		timeIndex int
+	}
+	rollingWindowQPSTracker struct {
+		sync.RWMutex
+		timeSource     clock.TimeSource
+		bucketInterval time.Duration
+		buckets        []bucket
+
+		counter   int64
+		timeIndex int
+	}
+)
+
+func NewRollingWindowQPSTracker(timeSource clock.TimeSource, bucketInterval time.Duration, numBuckets int) QPSTracker {
+	return &rollingWindowQPSTracker{
+		timeSource:     timeSource,
+		bucketInterval: bucketInterval,
+		buckets:        make([]bucket, numBuckets),
+	}
+}
+
+func (r *rollingWindowQPSTracker) Start() {
+}
+
+func (r *rollingWindowQPSTracker) Stop() {
+}
+
+func (r *rollingWindowQPSTracker) getCurrentTimeIndex() int {
+	now := r.timeSource.Now()
+	return int(now.UnixNano() / int64(r.bucketInterval))
+}
+
+func (r *rollingWindowQPSTracker) ReportCounter(delta int64) {
+	r.Lock()
+	defer r.Unlock()
+	currentIndex := r.getCurrentTimeIndex()
+	if currentIndex == r.timeIndex {
+		r.counter += delta
+		return
+	}
+	r.buckets[r.timeIndex%len(r.buckets)] = bucket{
+		counter:   r.counter,
+		timeIndex: r.timeIndex,
+	}
+	r.timeIndex = currentIndex
+	r.counter = delta
+}
+
+func (r *rollingWindowQPSTracker) QPS() float64 {
+	r.RLock()
+	defer r.RUnlock()
+	currentIndex := r.getCurrentTimeIndex()
+	totalCounter := int64(0)
+	for _, b := range r.buckets {
+		if currentIndex-b.timeIndex <= len(r.buckets) {
+			totalCounter += b.counter
+		}
+	}
+	if currentIndex != r.timeIndex && currentIndex-r.timeIndex <= len(r.buckets) {
+		totalCounter += r.counter
+	}
+	return float64(totalCounter) / float64(r.bucketInterval) / float64(len(r.buckets)) * float64(time.Second)
+}
