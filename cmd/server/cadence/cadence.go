@@ -58,7 +58,7 @@ func startHandler(c *cli.Context) error {
 		return fmt.Errorf("Config file corrupted: %w", err)
 	}
 	if cfg.Log.Level == "debug" {
-		return fmt.Errorf("config=%v", cfg.String())
+		log.Printf("config=%v", cfg.String())
 	}
 	if cfg.DynamicConfig.Client == "" {
 		cfg.DynamicConfigClient.Filepath = constructPathIfNeed(rootDir, cfg.DynamicConfigClient.Filepath)
