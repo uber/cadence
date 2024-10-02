@@ -41,6 +41,7 @@ import (
 	es "github.com/uber/cadence/common/elasticsearch"
 	"github.com/uber/cadence/common/elasticsearch/esql"
 	"github.com/uber/cadence/common/tokenbucket"
+	"github.com/uber/cadence/tools/common/commoncli"
 )
 
 const (
@@ -89,7 +90,7 @@ func AdminCatIndices(c *cli.Context) error {
 	ctx := context.Background()
 	resp, err := esClient.CatIndices().Do(ctx)
 	if err != nil {
-		return PrintableError("Unable to cat indices", err)
+		return commoncli.Problem("Unable to cat indices", err)
 	}
 
 	table := []ESIndexRow{}
@@ -118,17 +119,17 @@ func AdminIndex(c *cli.Context) error {
 
 	messages, err := parseIndexerMessage(inputFileName)
 	if err != nil {
-		return PrintableError("Unable to parse indexer message", err)
+		return commoncli.Problem("Unable to parse indexer message", err)
 	}
 
 	bulkRequest := esClient.Bulk()
 	bulkConductFn := func() error {
 		_, err := bulkRequest.Do(context.Background())
 		if err != nil {
-			return PrintableError("Bulk failed", err)
+			return commoncli.Problem("Bulk failed", err)
 		}
 		if bulkRequest.NumberOfActions() != 0 {
-			return PrintableError(fmt.Sprintf("Bulk request not done, %d", bulkRequest.NumberOfActions()), err)
+			return commoncli.Problem(fmt.Sprintf("Bulk request not done, %d", bulkRequest.NumberOfActions()), err)
 		}
 		return nil
 	}
@@ -160,7 +161,7 @@ func AdminIndex(c *cli.Context) error {
 				Id(docID).
 				VersionType("internal")
 		default:
-			return PrintableError("Unknown message type", nil)
+			return commoncli.Problem("Unknown message type", nil)
 		}
 		bulkRequest.Add(req)
 
@@ -191,7 +192,7 @@ func AdminDelete(c *cli.Context) error {
 	// #nosec
 	file, err := os.Open(inputFileName)
 	if err != nil {
-		return PrintableError("Cannot open input file", nil)
+		return commoncli.Problem("Cannot open input file", nil)
 	}
 	defer file.Close()
 	scanner := bufio.NewScanner(file)
@@ -207,10 +208,10 @@ func AdminDelete(c *cli.Context) error {
 		}
 		_, err := bulkRequest.Do(context.Background())
 		if err != nil {
-			return PrintableError(fmt.Sprintf("Bulk failed, current processed row %d", i), err)
+			return commoncli.Problem(fmt.Sprintf("Bulk failed, current processed row %d", i), err)
 		}
 		if bulkRequest.NumberOfActions() != 0 {
-			return PrintableError(fmt.Sprintf("Bulk request not done, current processed row %d", i), err)
+			return commoncli.Problem(fmt.Sprintf("Bulk request not done, current processed row %d", i), err)
 		}
 		return nil
 	}
@@ -337,13 +338,13 @@ func GenerateReport(c *cli.Context) error {
 	e.ProcessQueryValue(timeKeyFilter, timeValProcess)
 	dsl, sortFields, err := e.ConvertPrettyCadence(sql, "")
 	if err != nil {
-		return PrintableError("Fail to convert sql to dsl", err)
+		return commoncli.Problem("Fail to convert sql to dsl", err)
 	}
 
 	// query client
 	resp, err := esClient.Search(index).Source(dsl).Do(ctx)
 	if err != nil {
-		return PrintableError("Fail to talk with ES", err)
+		return commoncli.Problem("Fail to talk with ES", err)
 	}
 
 	// Show result to terminal
@@ -353,7 +354,7 @@ func GenerateReport(c *cli.Context) error {
 	var buckets []interface{}
 	err = json.Unmarshal(*resp.Aggregations["groupby"], &groupby)
 	if err != nil {
-		return PrintableError("Fail to parse groupby", err)
+		return commoncli.Problem("Fail to parse groupby", err)
 	}
 	buckets = groupby["buckets"].([]interface{})
 	if len(buckets) == 0 {
@@ -448,7 +449,7 @@ func GenerateReport(c *cli.Context) error {
 	case "csv", "CSV":
 		return generateCSVReport(reportFilePath, headers, tableData)
 	default:
-		return PrintableError(fmt.Sprintf(`Report format %v not supported.`, reportFormat), nil)
+		return commoncli.Problem(fmt.Sprintf(`Report format %v not supported.`, reportFormat), nil)
 	}
 }
 
@@ -456,7 +457,7 @@ func generateCSVReport(reportFileName string, headers []string, tableData [][]st
 	// write csv report
 	f, err := os.Create(reportFileName)
 	if err != nil {
-		return PrintableError("Fail to create csv report file", err)
+		return commoncli.Problem("Fail to create csv report file", err)
 	}
 	csvContent := strings.Join(headers, ",") + "\n"
 	for _, data := range tableData {
@@ -473,7 +474,7 @@ func generateHTMLReport(reportFileName string, numBuckKeys int, sorted bool, hea
 	// write html report
 	f, err := os.Create(reportFileName)
 	if err != nil {
-		return PrintableError("Fail to create html report file", err)
+		return commoncli.Problem("Fail to create html report file", err)
 	}
 	var htmlContent string
 	m, n := len(headers), len(tableData)

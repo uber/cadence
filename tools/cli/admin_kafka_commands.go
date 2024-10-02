@@ -45,6 +45,7 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/common/types/mapper/thrift"
+	"github.com/uber/cadence/tools/common/commoncli"
 )
 
 type (
@@ -470,7 +471,7 @@ func doRereplicate(
 			EndVersion:    endEventVersion,
 		},
 	); err != nil {
-		return PrintableError("Failed to resend ndc workflow", err)
+		return commoncli.Problem("Failed to resend ndc workflow", err)
 	}
 	fmt.Printf("Done rereplication for wid: %v, rid:%v \n", wid, rid)
 	return nil

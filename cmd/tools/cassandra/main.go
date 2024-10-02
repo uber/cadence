@@ -21,7 +21,6 @@
 package main
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/uber/cadence/tools/cassandra"
@@ -30,9 +29,5 @@ import (
 )
 
 func main() {
-	err := cassandra.RunTool(os.Args)
-	if err != nil {
-		_, _ = fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
-	}
+	_ = cassandra.BuildCLIOptions().Run(os.Args) // exits on error
 }

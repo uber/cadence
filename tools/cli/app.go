@@ -27,6 +27,7 @@ import (
 
 	"github.com/uber/cadence/common/client"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/tools/common/commoncli"
 )
 
 // SetFactory is used to set the ClientFactory global
@@ -42,11 +43,7 @@ func NewCliApp() *cli.App {
 		"   Note: CLI feature version is for compatibility checking between server and CLI if enabled feature checking. Server is always backward compatible to older CLI versions, but not accepting newer than it can support.",
 		client.SupportedCLIVersion, metrics.ReleaseVersion, metrics.Revision)
 
-	app := cli.NewApp()
-	app.Name = "cadence"
-	app.Usage = "A command-line tool for cadence users"
-	app.Version = version
-	app.ExitErrHandler = ExitErrHandler
+	app := commoncli.New("cadence", "A command-line tool for cadence users", version)
 	app.Flags = []cli.Flag{
 		&cli.StringFlag{
 			Name:    FlagAddress,

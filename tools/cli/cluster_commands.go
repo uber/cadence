@@ -25,6 +25,8 @@ import (
 	"sort"
 
 	"github.com/urfave/cli/v2"
+
+	"github.com/uber/cadence/tools/common/commoncli"
 )
 
 type (
@@ -53,7 +55,7 @@ func GetSearchAttributes(c *cli.Context) error {
 
 	resp, err := wfClient.GetSearchAttributes(ctx)
 	if err != nil {
-		return PrintableError("Failed to get search attributes.", err)
+		return commoncli.Problem("Failed to get search attributes.", err)
 	}
 
 	table := SearchAttributesTable{}

@@ -41,6 +41,7 @@ import (
 	"github.com/uber/cadence/common/reconciliation/invariant"
 	"github.com/uber/cadence/common/reconciliation/store"
 	"github.com/uber/cadence/service/worker/scanner/executions"
+	"github.com/uber/cadence/tools/common/commoncli"
 )
 
 const (
@@ -52,7 +53,7 @@ func AdminDBScan(c *cli.Context) error {
 	scanType, err := executions.ScanTypeString(c.String(FlagScanType))
 
 	if err != nil {
-		return PrintableError("unknown scan type", err)
+		return commoncli.Problem("unknown scan type", err)
 	}
 
 	numberOfShards := getRequiredIntOption(c, FlagNumberOfShards)
@@ -62,7 +63,7 @@ func AdminDBScan(c *cli.Context) error {
 	for _, v := range collectionSlice {
 		collection, err := invariant.CollectionString(v)
 		if err != nil {
-			return PrintableError("unknown invariant collection", err)
+			return commoncli.Problem("unknown invariant collection", err)
 		}
 		collections = append(collections, collection)
 	}
@@ -72,13 +73,13 @@ func AdminDBScan(c *cli.Context) error {
 		logger, err = zap.NewDevelopment()
 		if err != nil {
 			// probably impossible with default config
-			return PrintableError("could not construct logger", err)
+			return commoncli.Problem("could not construct logger", err)
 		}
 	}
 
 	invariants := scanType.ToInvariants(collections, logger)
 	if len(invariants) < 1 {
-		return PrintableError(
+		return commoncli.Problem(
 			fmt.Sprintf("no invariants for scan type %q and collections %q",
 				scanType.String(),
 				collectionSlice),
@@ -91,7 +92,7 @@ func AdminDBScan(c *cli.Context) error {
 
 	dec := json.NewDecoder(input)
 	if err != nil {
-		return PrintableError("", err)
+		return commoncli.Problem("", err)
 	}
 	var data []fetcher.ExecutionRequest
 
@@ -210,7 +211,7 @@ func listExecutionsByShardID(
 	for executionIterator.HasNext() {
 		result, err := executionIterator.Next()
 		if err != nil {
-			return PrintableError(fmt.Sprintf("Failed to scan shard ID: %v for unsupported workflow. Please retry.", shardID), err)
+			return commoncli.Problem(fmt.Sprintf("Failed to scan shard ID: %v for unsupported workflow. Please retry.", shardID), err)
 		}
 		execution := result.(*persistence.ListConcreteExecutionsEntity)
 		executionInfo := execution.ExecutionInfo
@@ -222,10 +223,10 @@ func listExecutionsByShardID(
 				executionInfo.RunID,
 			)
 			if _, err = outputFile.WriteString(outStr); err != nil {
-				return PrintableError("Failed to write data to file", err)
+				return commoncli.Problem("Failed to write data to file", err)
 			}
 			if err = outputFile.Sync(); err != nil {
-				return PrintableError("Failed to sync data to file", err)
+				return commoncli.Problem("Failed to sync data to file", err)
 			}
 		}
 	}

@@ -32,6 +32,7 @@ import (
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/common/visibility"
 	"github.com/uber/cadence/service/worker/failovermanager"
+	"github.com/uber/cadence/tools/common/commoncli"
 )
 
 // An indirection for the prompt function so that it can be mocked in the unit tests
@@ -41,12 +42,12 @@ var promptFn = prompt
 func AdminAddSearchAttribute(c *cli.Context) error {
 	key := getRequiredOption(c, FlagSearchAttributesKey)
 	if err := visibility.ValidateSearchAttributeKey(key); err != nil {
-		return PrintableError("Invalid search-attribute key.", err)
+		return commoncli.Problem("Invalid search-attribute key.", err)
 	}
 
 	valType := getRequiredIntOption(c, FlagSearchAttributesType)
 	if !isValueTypeValid(valType) {
-		return PrintableError("Unknown Search Attributes value type.", nil)
+		return commoncli.Problem("Unknown Search Attributes value type.", nil)
 	}
 
 	// ask user for confirmation
@@ -66,7 +67,7 @@ func AdminAddSearchAttribute(c *cli.Context) error {
 
 	err := adminClient.AddSearchAttribute(ctx, request)
 	if err != nil {
-		return PrintableError("Add search attribute failed.", err)
+		return commoncli.Problem("Add search attribute failed.", err)
 	}
 	fmt.Println("Success. Note that for a multil-node Cadence cluster, DynamicConfig MUST be updated separately to whitelist the new attributes.")
 	return nil
@@ -80,7 +81,7 @@ func AdminDescribeCluster(c *cli.Context) error {
 	defer cancel()
 	response, err := adminClient.DescribeCluster(ctx)
 	if err != nil {
-		return PrintableError("Operation DescribeCluster failed.", err)
+		return commoncli.Problem("Operation DescribeCluster failed.", err)
 	}
 
 	prettyPrintJSONObject(response)
@@ -99,13 +100,13 @@ func AdminRebalanceStart(c *cli.Context) error {
 	}
 	input, err := json.Marshal(rbParams)
 	if err != nil {
-		return PrintableError("Failed to serialize params for failover workflow", err)
+		return commoncli.Problem("Failed to serialize params for failover workflow", err)
 	}
 	memo, err := getWorkflowMemo(map[string]interface{}{
 		common.MemoKeyForOperator: getOperator(),
 	})
 	if err != nil {
-		return PrintableError("Failed to serialize memo", err)
+		return commoncli.Problem("Failed to serialize memo", err)
 	}
 	request := &types.StartWorkflowExecutionRequest{
 		Domain:                              common.SystemLocalDomainName,
@@ -127,7 +128,7 @@ func AdminRebalanceStart(c *cli.Context) error {
 
 	resp, err := client.StartWorkflowExecution(tcCtx, request)
 	if err != nil {
-		return PrintableError("Failed to start failover workflow", err)
+		return commoncli.Problem("Failed to start failover workflow", err)
 	}
 	fmt.Println("Rebalance workflow started")
 	fmt.Println("wid: " + workflowID)

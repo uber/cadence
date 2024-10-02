@@ -37,6 +37,7 @@ import (
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/tools/cassandra"
+	"github.com/uber/cadence/tools/common/commoncli"
 	"github.com/uber/cadence/tools/sql"
 )
 
@@ -168,10 +169,7 @@ func BuildCLI(releaseVersion string, gitRevision string) *cli.App {
 		"   Note:  Feature version is for compatibility checking between server and clients if enabled feature checking. Server is always backward compatible to older CLI versions, but not accepting newer than it can support.",
 		releaseVersion, gitRevision, client.SupportedCLIVersion, client.SupportedGoSDKVersion, client.SupportedJavaSDKVersion)
 
-	app := cli.NewApp()
-	app.Name = "cadence"
-	app.Usage = "Cadence server"
-	app.Version = version
+	app := commoncli.New("cadence", "Cadence server", version)
 
 	app.Flags = []cli.Flag{
 		&cli.StringFlag{

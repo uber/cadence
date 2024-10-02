@@ -35,6 +35,7 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/tools/common/commoncli"
 )
 
 const (
@@ -149,7 +150,7 @@ func AdminGetDLQMessages(c *cli.Context) error {
 
 		resp, err := client.DescribeDomain(ctx, &types.DescribeDomainRequest{UUID: common.StringPtr(domainId)})
 		if err != nil {
-			return "", PrintableError("failed to describe domain", err)
+			return "", commoncli.Problem("failed to describe domain", err)
 		}
 		domainNames[domainId] = resp.DomainInfo.Name
 		return resp.DomainInfo.Name, nil
@@ -169,7 +170,7 @@ func AdminGetDLQMessages(c *cli.Context) error {
 				NextPageToken:         pageToken,
 			})
 			if err != nil {
-				return nil, PrintableError(fmt.Sprintf("fail to read dlq message for shard: %d", shardID), err)
+				return nil, commoncli.Problem(fmt.Sprintf("fail to read dlq message for shard: %d", shardID), err)
 			}
 
 			replicationTasks := map[int64]*types.ReplicationTask{}

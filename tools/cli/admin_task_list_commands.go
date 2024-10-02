@@ -28,6 +28,7 @@ import (
 	"github.com/urfave/cli/v2"
 
 	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/tools/common/commoncli"
 )
 
 type (
@@ -67,12 +68,12 @@ func AdminDescribeTaskList(c *cli.Context) error {
 
 	response, err := frontendClient.DescribeTaskList(ctx, request)
 	if err != nil {
-		return PrintableError("Operation DescribeTaskList failed.", err)
+		return commoncli.Problem("Operation DescribeTaskList failed.", err)
 	}
 
 	taskListStatus := response.GetTaskListStatus()
 	if taskListStatus == nil {
-		return PrintableError(colorMagenta("No tasklist status information."), nil)
+		return commoncli.Problem(colorMagenta("No tasklist status information."), nil)
 	}
 	if err := printTaskListStatus(taskListStatus); err != nil {
 		return fmt.Errorf("failed to print task list status: %w", err)
@@ -81,7 +82,7 @@ func AdminDescribeTaskList(c *cli.Context) error {
 
 	pollers := response.Pollers
 	if len(pollers) == 0 {
-		return PrintableError(colorMagenta("No poller for tasklist: "+taskList), nil)
+		return commoncli.Problem(colorMagenta("No poller for tasklist: "+taskList), nil)
 	}
 	return printTaskListPollers(pollers, taskListType)
 }
@@ -99,7 +100,7 @@ func AdminListTaskList(c *cli.Context) error {
 
 	response, err := frontendClient.GetTaskListsByDomain(ctx, request)
 	if err != nil {
-		return PrintableError("Operation GetTaskListByDomain failed.", err)
+		return commoncli.Problem("Operation GetTaskListByDomain failed.", err)
 	}
 
 	fmt.Println("Task Lists for domain " + domain + ":")
