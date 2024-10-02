@@ -260,6 +260,12 @@ func (p *ESProcessorImpl) shadowBulkAfterAction(id int64, requests []bulk.Generi
 		// This happens after configured retry, which means something bad happens on cluster or index
 		// When cluster back to live, bulkProcessor will re-commit those failure requests
 		p.logger.Error("Error commit bulk request in secondary processor.", tag.Error(err.Details))
+
+		for _, request := range requests {
+			p.logger.Error("ES request failed in secondary processor",
+				tag.ESResponseStatus(err.Status),
+				tag.ESRequest(request.String()))
+		}
 	}
 }
 
