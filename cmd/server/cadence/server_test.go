@@ -24,22 +24,22 @@
 package cadence
 
 import (
-	"github.com/golang/mock/gomock"
-	"github.com/stretchr/testify/assert"
-	"github.com/uber/cadence/common/dynamicconfig"
-	"github.com/uber/cadence/common/log/loggerimpl"
-	"github.com/uber/cadence/common/resource"
 	"log"
 	"os"
 	"testing"
 	"time"
 
+	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/config"
+	"github.com/uber/cadence/common/dynamicconfig"
+	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
+	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/testflags"
 	"github.com/uber/cadence/tools/cassandra"

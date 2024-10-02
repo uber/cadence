@@ -21,7 +21,6 @@
 package cadence
 
 import (
-	"github.com/uber/cadence/common/isolationgroup/isolationgroupapi"
 	"log"
 	"time"
 
@@ -40,6 +39,7 @@ import (
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/dynamicconfig/configstore"
 	"github.com/uber/cadence/common/elasticsearch"
+	"github.com/uber/cadence/common/isolationgroup/isolationgroupapi"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/membership"
