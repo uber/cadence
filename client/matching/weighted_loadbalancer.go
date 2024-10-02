@@ -38,11 +38,14 @@ import (
 	"github.com/uber/cadence/common/types"
 )
 
+const _backlogThreshold = 100
+
 type (
 	weightSelector struct {
 		sync.RWMutex
 		weights     []int64
 		initialized bool
+		threshold   int64
 	}
 
 	weightedLoadBalancer struct {
@@ -54,33 +57,12 @@ type (
 	}
 )
 
-func newWeightSelector(n int) *weightSelector {
-	pw := &weightSelector{weights: make([]int64, n)}
+func newWeightSelector(n int, threshold int64) *weightSelector {
+	pw := &weightSelector{weights: make([]int64, n), threshold: threshold}
 	for i := range pw.weights {
 		pw.weights[i] = -1
 	}
 	return pw
-}
-
-func (pw *weightSelector) pickZero() int {
-	pw.RLock()
-	defer pw.RUnlock()
-	if !pw.initialized {
-		return -1
-	}
-	if rand.Int63n(1000) != 0 {
-		return -1
-	}
-	zeroWeightsIndices := make([]int, 0, len(pw.weights))
-	for i, w := range pw.weights {
-		if w == 0 {
-			zeroWeightsIndices = append(zeroWeightsIndices, i)
-		}
-	}
-	if len(zeroWeightsIndices) == 0 {
-		return -1
-	}
-	return zeroWeightsIndices[rand.Intn(len(zeroWeightsIndices))]
 }
 
 func (pw *weightSelector) pick() int {
@@ -91,11 +73,15 @@ func (pw *weightSelector) pick() int {
 	if !pw.initialized {
 		return -1
 	}
+	shouldDrain := false
 	for i, w := range pw.weights {
 		totalWeight += w
 		cumulativeWeights[i] = totalWeight
+		if w > pw.threshold {
+			shouldDrain = true // only enable weight selection if backlog size is larger than the threshold
+		}
 	}
-	if totalWeight <= 0 {
+	if totalWeight <= 0 || !shouldDrain {
 		return -1
 	}
 	r := rand.Int63n(totalWeight)
@@ -183,12 +169,7 @@ func (lb *weightedLoadBalancer) PickReadPartition(
 	if !ok {
 		return lb.fallbackLoadBalancer.PickReadPartition(domainID, taskList, taskListType, forwardedFrom)
 	}
-	p := w.pickZero()
-	if p >= 0 {
-		lb.logger.Debug("pick read partition with zero weight", tag.WorkflowDomainID(domainID), tag.WorkflowTaskListName(taskList.GetName()), tag.WorkflowTaskListType(taskListType), tag.Dynamic("weights", w.weights), tag.Dynamic("tasklist-partition", p))
-		return getPartitionTaskListName(taskList.GetName(), p)
-	}
-	p = w.pick()
+	p := w.pick()
 	lb.logger.Debug("pick read partition", tag.WorkflowDomainID(domainID), tag.WorkflowTaskListName(taskList.GetName()), tag.WorkflowTaskListType(taskListType), tag.Dynamic("weights", w.weights), tag.Dynamic("tasklist-partition", p))
 	if p < 0 {
 		return lb.fallbackLoadBalancer.PickReadPartition(domainID, taskList, taskListType, forwardedFrom)
@@ -234,7 +215,7 @@ func (lb *weightedLoadBalancer) UpdateWeight(
 	}
 	wI := lb.weightCache.Get(taskListKey)
 	if wI == nil {
-		w := newWeightSelector(n)
+		w := newWeightSelector(n, _backlogThreshold)
 		wI, err = lb.weightCache.PutIfNotExist(taskListKey, w)
 		if err != nil {
 			return

@@ -39,7 +39,7 @@ import (
 
 func TestPollerWeight(t *testing.T) {
 	n := 4
-	pw := newWeightSelector(n)
+	pw := newWeightSelector(n, 100)
 	// uninitialized weights should return -1
 	assert.Equal(t, -1, pw.pick())
 	// all 0 weights should return -1
@@ -48,23 +48,23 @@ func TestPollerWeight(t *testing.T) {
 		assert.Equal(t, -1, pw.pick())
 	}
 	// if only one item has non-zero weight, always pick that item
-	pw.update(n, 3, 4)
+	pw.update(n, 3, 400)
 	for i := 0; i < 100; i++ {
 		assert.Equal(t, 3, pw.pick())
 	}
-	pw.update(n, 2, 3)
-	pw.update(n, 1, 2)
-	pw.update(n, 0, 1)
+	pw.update(n, 2, 300)
+	pw.update(n, 1, 200)
+	pw.update(n, 0, 100)
 	// test pick probabilities
 	testPickProbHelper(t, pw, time.Now().UnixNano())
 
 	// shrink size and test pick probabilities
-	pw.update(n-1, 2, 2)
+	pw.update(n-1, 2, 200)
 	testPickProbHelper(t, pw, time.Now().UnixNano())
 
 	// expand size and test pick probabilities
-	pw.update(n, 3, 3)
-	pw.update(n+1, 4, 4)
+	pw.update(n, 3, 300)
+	pw.update(n+1, 4, 400)
 	testPickProbHelper(t, pw, time.Now().UnixNano())
 }
 
@@ -193,7 +193,7 @@ func TestWeightedLoadBalancer_PickReadPartition(t *testing.T) {
 			name:               "WeightSelector pick returns negative",
 			domainID:           "domainC",
 			taskList:           types.TaskList{Name: "taskListC"},
-			weightCacheReturn:  newWeightSelector(2),
+			weightCacheReturn:  newWeightSelector(2, 100),
 			fallbackReturn:     "fallbackPartition",
 			expectedResult:     "fallbackPartition",
 			expectFallbackCall: true,
@@ -203,9 +203,9 @@ func TestWeightedLoadBalancer_PickReadPartition(t *testing.T) {
 			domainID: "domainD",
 			taskList: types.TaskList{Name: "taskListD"},
 			weightCacheReturn: func() *weightSelector {
-				pw := newWeightSelector(2)
+				pw := newWeightSelector(2, 10)
 				pw.update(2, 0, 0)
-				pw.update(2, 1, 1)
+				pw.update(2, 1, 11)
 				return pw
 			}(),
 			expectedResult:     getPartitionTaskListName("taskListD", 1),
@@ -318,7 +318,7 @@ func TestWeightedLoadBalancer_UpdateWeight(t *testing.T) {
 					domainID:     "domainA",
 					taskListName: "a",
 					taskListType: 0,
-				}, newWeightSelector(2)).Return(newWeightSelector(2), nil)
+				}, newWeightSelector(2, 100)).Return(newWeightSelector(2, 100), nil)
 			},
 		},
 		{
@@ -333,7 +333,7 @@ func TestWeightedLoadBalancer_UpdateWeight(t *testing.T) {
 					domainID:     "domainA",
 					taskListName: "a",
 					taskListType: 0,
-				}).Return(newWeightSelector(2))
+				}).Return(newWeightSelector(2, 100))
 			},
 		},
 	}
