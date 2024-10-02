@@ -487,3 +487,55 @@ func (m *MockBulkableRequest) String() string {
 func (m *MockBulkableRequest) Source() ([]string, error) {
 	return nil, fmt.Errorf("simulated source error")
 }
+
+func (s *esProcessorSuite) TestBulkAfterAction_Nack_Shadow_WithError() {
+	version := int64(3)
+	testKey := "testKey"
+	request := &mocks2.GenericBulkableRequest{}
+	request.On("String").Return("")
+	request.On("Source").Return([]string{string(`{"delete":{"_id":"testKey"}}`)}, nil)
+	requests := []bulk.GenericBulkableRequest{request}
+
+	mFailed := map[string]*bulk.GenericBulkResponseItem{
+		"index": {
+			Index:   testIndex,
+			Type:    testType,
+			ID:      testID,
+			Version: version,
+			Status:  400,
+		},
+	}
+	response := &bulk.GenericBulkResponse{
+		Took:   3,
+		Errors: false,
+		Items:  []map[string]*bulk.GenericBulkResponseItem{mFailed},
+	}
+
+	// Mock error to be passed to the after action functions
+	mockErr := &bulk.GenericError{
+		Status:  500,
+		Details: fmt.Errorf("Test error occurred"),
+	}
+
+	wid := "test-workflowID"
+	rid := "test-runID"
+	domainID := "test-domainID"
+	payload := s.getEncodedMsg(wid, rid, domainID)
+
+	mockKafkaMsg := &msgMocks.Message{}
+	mapVal := newKafkaMessageWithMetrics(mockKafkaMsg, &testStopWatch)
+	s.esProcessor.mapToKafkaMsg.Put(testKey, mapVal)
+
+	// Add mocked secondary processor
+	secondaryProcessor := &mocks2.GenericBulkProcessor{}
+	s.esProcessor.bulkProcessor = append(s.esProcessor.bulkProcessor, secondaryProcessor)
+
+	// Mock Kafka message Nack and Value
+	mockKafkaMsg.On("Nack").Return(nil).Once()
+	mockKafkaMsg.On("Value").Return(payload).Once()
+	s.mockScope.On("IncCounter", mock.AnythingOfType("int")).Return()
+	// Execute bulkAfterAction for primary processor with error
+	s.esProcessor.bulkAfterAction(0, requests, response, mockErr)
+	// Mocking secondary processor to test shadowBulkAfterAction with error
+	s.esProcessor.shadowBulkAfterAction(0, requests, response, mockErr)
+}
