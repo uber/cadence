@@ -34,12 +34,9 @@ import (
 
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/messaging"
+	"github.com/uber/cadence/common/config"
+	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/metrics"
-)
-
-const (
-	WfDiagnosticsAppName = "workflow-diagnostics"
 )
 
 type DiagnosticsWorkflow interface {
@@ -48,31 +45,33 @@ type DiagnosticsWorkflow interface {
 }
 
 type dw struct {
-	svcClient       workflowserviceclient.Interface
-	clientBean      client.Bean
-	metricsClient   metrics.Client
-	messagingClient messaging.Client
-	tallyScope      tally.Scope
-	worker          worker.Worker
-	producer        messaging.Producer
+	svcClient     workflowserviceclient.Interface
+	clientBean    client.Bean
+	metricsClient metrics.Client
+	logger        log.Logger
+	tallyScope    tally.Scope
+	worker        worker.Worker
+	kafkaCfg      config.KafkaConfig
 }
 
 type Params struct {
-	ServiceClient   workflowserviceclient.Interface
-	ClientBean      client.Bean
-	MetricsClient   metrics.Client
-	TallyScope      tally.Scope
-	MessagingClient messaging.Client
+	ServiceClient workflowserviceclient.Interface
+	ClientBean    client.Bean
+	MetricsClient metrics.Client
+	Logger        log.Logger
+	TallyScope    tally.Scope
+	KafkaCfg      config.KafkaConfig
 }
 
 // New creates a new diagnostics workflow.
 func New(params Params) DiagnosticsWorkflow {
 	return &dw{
-		svcClient:       params.ServiceClient,
-		metricsClient:   params.MetricsClient,
-		tallyScope:      params.TallyScope,
-		clientBean:      params.ClientBean,
-		messagingClient: params.MessagingClient,
+		svcClient:     params.ServiceClient,
+		metricsClient: params.MetricsClient,
+		tallyScope:    params.TallyScope,
+		clientBean:    params.ClientBean,
+		logger:        params.Logger,
+		kafkaCfg:      params.KafkaCfg,
 	}
 }
 
@@ -93,12 +92,6 @@ func (w *dw) Start() error {
 	newWorker.RegisterActivityWithOptions(w.rootCauseTimeouts, activity.RegisterOptions{Name: rootCauseTimeoutsActivity})
 	newWorker.RegisterActivityWithOptions(w.emitUsageLogs, activity.RegisterOptions{Name: emitUsageLogsActivity})
 	w.worker = newWorker
-
-	producer, err := w.messagingClient.NewProducer(WfDiagnosticsAppName)
-	if err != nil {
-		return err
-	}
-	w.producer = producer
 	return newWorker.Start()
 }
 

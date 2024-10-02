@@ -126,16 +126,18 @@ func Test__rootCauseTimeouts(t *testing.T) {
 	require.Equal(t, expectedRootCause, result)
 }
 
-func Test__emitUsageLogs(t *testing.T) {
-	dwtest := testDiagnosticWorkflow(t)
-	err := dwtest.emitUsageLogs(context.Background(), analytics.WfDiagnosticsUsageData{})
+func Test__emit(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	mockClient := messaging.NewMockClient(ctrl)
+	mockProducer := messaging.NewMockProducer(ctrl)
+	mockProducer.EXPECT().Publish(gomock.Any(), gomock.Any()).Return(nil)
+	mockClient.EXPECT().NewProducer(WfDiagnosticsAppName).Return(mockProducer, nil)
+	err := emit(context.Background(), analytics.WfDiagnosticsUsageData{}, mockClient)
 	require.NoError(t, err)
 }
 
 func testDiagnosticWorkflow(t *testing.T) *dw {
 	ctrl := gomock.NewController(t)
-	mockProducer := messaging.NewMockProducer(ctrl)
-	mockProducer.EXPECT().Publish(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 	mockClientBean := client.NewMockBean(ctrl)
 	mockFrontendClient := frontend.NewMockClient(ctrl)
 	mockClientBean.EXPECT().GetFrontendClient().Return(mockFrontendClient).AnyTimes()
@@ -152,7 +154,6 @@ func testDiagnosticWorkflow(t *testing.T) *dw {
 	}, nil).AnyTimes()
 	return &dw{
 		clientBean: mockClientBean,
-		producer:   mockProducer,
 	}
 }
 

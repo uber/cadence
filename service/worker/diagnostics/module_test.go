@@ -25,16 +25,12 @@ package diagnostics
 import (
 	"testing"
 
-	"github.com/Shopify/sarama/mocks"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 	"github.com/uber-go/tally"
 	"go.uber.org/cadence/.gen/go/shared"
 
 	"github.com/uber/cadence/client"
-	"github.com/uber/cadence/common/log/testlogger"
-	"github.com/uber/cadence/common/messaging"
-	"github.com/uber/cadence/common/messaging/kafka"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/resource"
 )
@@ -51,18 +47,14 @@ func setuptest(t *testing.T) (DiagnosticsWorkflow, *resource.Test) {
 	ctrl := gomock.NewController(t)
 	mockClientBean := client.NewMockBean(ctrl)
 	mockResource := resource.NewTest(t, ctrl, metrics.Worker)
-	logger := testlogger.New(t)
-	messaginClientMock := messaging.NewMockClient(ctrl)
-	messaginClientMock.EXPECT().NewProducer(gomock.Any()).Return(kafka.NewKafkaProducer("test-topic", mocks.NewSyncProducer(t, nil), logger), nil).MinTimes(1)
 	sdkClient := mockResource.GetSDKClient()
 	mockResource.SDKClient.EXPECT().DescribeDomain(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&shared.DescribeDomainResponse{}, nil).AnyTimes()
 	mockResource.SDKClient.EXPECT().PollForDecisionTask(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&shared.PollForDecisionTaskResponse{}, nil).AnyTimes()
 	mockResource.SDKClient.EXPECT().PollForActivityTask(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&shared.PollForActivityTaskResponse{}, nil).AnyTimes()
 	return New(Params{
-		ServiceClient:   sdkClient,
-		ClientBean:      mockClientBean,
-		MetricsClient:   nil,
-		TallyScope:      tally.TestScope(nil),
-		MessagingClient: messaginClientMock,
+		ServiceClient: sdkClient,
+		ClientBean:    mockClientBean,
+		MetricsClient: nil,
+		TallyScope:    tally.TestScope(nil),
 	}), mockResource
 }
