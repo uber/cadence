@@ -34,3 +34,9 @@ func TestShutdown(t *testing.T) {
 		i.Stop()
 	})
 }
+
+func TestNewResource(t *testing.T) {
+	assert.NotPanics(t, func() {
+		ensureGetAllIsolationGroupsFnIsSet(&Params{})
+	})
+}
