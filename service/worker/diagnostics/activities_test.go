@@ -34,7 +34,9 @@ import (
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/service/worker/diagnostics/analytics"
 	"github.com/uber/cadence/service/worker/diagnostics/invariants"
 )
 
@@ -122,6 +124,16 @@ func Test__rootCauseTimeouts(t *testing.T) {
 	result, err := dwtest.rootCauseTimeouts(context.Background(), rootCauseTimeoutsParams{History: testWorkflowExecutionHistoryResponse(), Domain: "test-domain", Issues: issues})
 	require.NoError(t, err)
 	require.Equal(t, expectedRootCause, result)
+}
+
+func Test__emit(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	mockClient := messaging.NewMockClient(ctrl)
+	mockProducer := messaging.NewMockProducer(ctrl)
+	mockProducer.EXPECT().Publish(gomock.Any(), gomock.Any()).Return(nil)
+	mockClient.EXPECT().NewProducer(WfDiagnosticsAppName).Return(mockProducer, nil)
+	err := emit(context.Background(), analytics.WfDiagnosticsUsageData{}, mockClient)
+	require.NoError(t, err)
 }
 
 func testDiagnosticWorkflow(t *testing.T) *dw {

@@ -255,6 +255,8 @@ func (s *server) startService() common.Daemon {
 		log.Fatalf("error creating async queue provider: %v", err)
 	}
 
+	params.KafkaConfig = s.cfg.Kafka
+
 	params.Logger.Info("Starting service " + s.name)
 
 	var daemon common.Daemon

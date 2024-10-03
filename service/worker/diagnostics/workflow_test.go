@@ -74,6 +74,7 @@ func (s *diagnosticsWorkflowTestSuite) SetupTest() {
 	s.workflowEnv.RegisterActivityWithOptions(s.dw.retrieveExecutionHistory, activity.RegisterOptions{Name: retrieveWfExecutionHistoryActivity})
 	s.workflowEnv.RegisterActivityWithOptions(s.dw.identifyTimeouts, activity.RegisterOptions{Name: identifyTimeoutsActivity})
 	s.workflowEnv.RegisterActivityWithOptions(s.dw.rootCauseTimeouts, activity.RegisterOptions{Name: rootCauseTimeoutsActivity})
+	s.workflowEnv.RegisterActivityWithOptions(s.dw.emitUsageLogs, activity.RegisterOptions{Name: emitUsageLogsActivity})
 }
 
 func (s *diagnosticsWorkflowTestSuite) TearDownTest() {
@@ -131,6 +132,7 @@ func (s *diagnosticsWorkflowTestSuite) TestWorkflow() {
 	s.workflowEnv.OnActivity(retrieveWfExecutionHistoryActivity, mock.Anything, mock.Anything).Return(nil, nil)
 	s.workflowEnv.OnActivity(identifyTimeoutsActivity, mock.Anything, mock.Anything).Return(issues, nil)
 	s.workflowEnv.OnActivity(rootCauseTimeoutsActivity, mock.Anything, mock.Anything).Return(rootCause, nil)
+	s.workflowEnv.OnActivity(emitUsageLogsActivity, mock.Anything, mock.Anything).Return(nil)
 	s.workflowEnv.ExecuteWorkflow(diagnosticsStarterWorkflow, params)
 	s.True(s.workflowEnv.IsWorkflowCompleted())
 	var result DiagnosticsStarterWorkflowResult

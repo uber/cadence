@@ -24,17 +24,24 @@ package diagnostics
 
 import (
 	"fmt"
+	"time"
 
 	"go.uber.org/cadence/workflow"
+
+	"github.com/uber/cadence/service/worker/diagnostics/analytics"
 )
 
 const (
 	diagnosticsStarterWorkflow = "diagnostics-starter-workflow"
+	emitUsageLogsActivity      = "emitUsageLogs"
 	queryDiagnosticsReport     = "query-diagnostics-report"
+
+	issueTypeTimeouts = "Timeout"
 )
 
 type DiagnosticsStarterWorkflowInput struct {
 	Domain     string
+	Identity   string
 	WorkflowID string
 	RunID      string
 }
@@ -43,7 +50,7 @@ type DiagnosticsStarterWorkflowResult struct {
 	DiagnosticsResult *DiagnosticsWorkflowResult
 }
 
-func (w *dw) DiagnosticsStarterWorkflow(ctx workflow.Context, params DiagnosticsWorkflowInput) (*DiagnosticsStarterWorkflowResult, error) {
+func (w *dw) DiagnosticsStarterWorkflow(ctx workflow.Context, params DiagnosticsStarterWorkflowInput) (*DiagnosticsStarterWorkflowResult, error) {
 	var result DiagnosticsWorkflowResult
 	err := workflow.SetQueryHandler(ctx, queryDiagnosticsReport, func() (DiagnosticsStarterWorkflowResult, error) {
 		return DiagnosticsStarterWorkflowResult{DiagnosticsResult: &result}, nil
@@ -52,14 +59,53 @@ func (w *dw) DiagnosticsStarterWorkflow(ctx workflow.Context, params Diagnostics
 		return nil, err
 	}
 
-	err = workflow.ExecuteChildWorkflow(ctx, w.DiagnosticsWorkflow, DiagnosticsWorkflowInput{
+	future := workflow.ExecuteChildWorkflow(ctx, w.DiagnosticsWorkflow, DiagnosticsWorkflowInput{
 		Domain:     params.Domain,
 		WorkflowID: params.WorkflowID,
 		RunID:      params.RunID,
-	}).Get(ctx, &result)
+	})
+
+	var childWfExec workflow.Execution
+	var childWfStart, childWfEnd time.Time
+	if err = future.GetChildWorkflowExecution().Get(ctx, &childWfExec); err != nil {
+		return nil, fmt.Errorf("Workflow Diagnostics start failed: %w", err)
+	}
+	childWfStart = workflow.Now(ctx)
+
+	err = future.Get(ctx, &result)
 	if err != nil {
-		return nil, fmt.Errorf("Workflow Diagnostics: %w", err)
+		return nil, fmt.Errorf("Workflow Diagnostics failed: %w", err)
+	}
+	childWfEnd = workflow.Now(ctx)
+
+	activityOptions := workflow.ActivityOptions{
+		ScheduleToCloseTimeout: time.Second * 10,
+		ScheduleToStartTimeout: time.Second * 5,
+		StartToCloseTimeout:    time.Second * 5,
+	}
+	activityCtx := workflow.WithActivityOptions(ctx, activityOptions)
+	err = workflow.ExecuteActivity(activityCtx, w.emitUsageLogs, analytics.WfDiagnosticsUsageData{
+		Domain:                params.Domain,
+		WorkflowID:            params.WorkflowID,
+		RunID:                 params.RunID,
+		Identity:              params.Identity,
+		IssueType:             getIssueType(result),
+		DiagnosticsWorkflowID: childWfExec.ID,
+		DiagnosticsRunID:      childWfExec.RunID,
+		DiagnosticsStartTime:  childWfStart,
+		DiagnosticsEndTime:    childWfEnd,
+	}).Get(ctx, nil)
+	if err != nil {
+		return nil, fmt.Errorf("EmitUsageLogs: %w", err)
 	}
 
 	return &DiagnosticsStarterWorkflowResult{DiagnosticsResult: &result}, nil
+}
+
+func getIssueType(result DiagnosticsWorkflowResult) string {
+	var issueType string
+	if result.Timeouts != nil {
+		issueType = issueTypeTimeouts
+	}
+	return issueType
 }

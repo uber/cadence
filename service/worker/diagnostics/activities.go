@@ -25,11 +25,17 @@ package diagnostics
 import (
 	"context"
 
+	"github.com/uber/cadence/common/messaging"
+	"github.com/uber/cadence/common/messaging/kafka"
 	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/service/worker/diagnostics/analytics"
 	"github.com/uber/cadence/service/worker/diagnostics/invariants"
 )
 
-const linkToTimeoutsRunbook = "https://cadenceworkflow.io/docs/workflow-troubleshooting/timeouts/"
+const (
+	linkToTimeoutsRunbook = "https://cadenceworkflow.io/docs/workflow-troubleshooting/timeouts/"
+	WfDiagnosticsAppName  = "workflow-diagnostics"
+)
 
 type retrieveExecutionHistoryInputParams struct {
 	Domain    string
@@ -71,4 +77,24 @@ func (w *dw) rootCauseTimeouts(ctx context.Context, info rootCauseTimeoutsParams
 		Domain:                   info.Domain,
 	})
 	return timeoutInvariant.RootCause(ctx, info.Issues)
+}
+
+func (w *dw) emitUsageLogs(ctx context.Context, info analytics.WfDiagnosticsUsageData) error {
+	client := w.newMessagingClient()
+	return emit(ctx, info, client)
+}
+
+func (w *dw) newMessagingClient() messaging.Client {
+	return kafka.NewKafkaClient(&w.kafkaCfg, w.metricsClient, w.logger, w.tallyScope, true)
+}
+
+func emit(ctx context.Context, info analytics.WfDiagnosticsUsageData, client messaging.Client) error {
+	producer, err := client.NewProducer(WfDiagnosticsAppName)
+	if err != nil {
+		return err
+	}
+	emitter := analytics.NewEmitter(analytics.EmitterParams{
+		Producer: producer,
+	})
+	return emitter.EmitUsageData(ctx, info)
 }

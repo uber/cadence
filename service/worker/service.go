@@ -29,6 +29,7 @@ import (
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cluster"
+	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/domain"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log/tag"
@@ -68,6 +69,7 @@ type (
 
 	// Config contains all the service config for worker
 	Config struct {
+		KafkaCfg                            config.KafkaConfig
 		ArchiverConfig                      *archiver.Config
 		IndexerCfg                          *indexer.Config
 		ScannerCfg                          *scanner.Config
@@ -344,6 +346,8 @@ func (s *Service) startDiagnostics() {
 		MetricsClient: s.GetMetricsClient(),
 		TallyScope:    s.params.MetricScope,
 		ClientBean:    s.GetClientBean(),
+		Logger:        s.GetLogger(),
+		KafkaCfg:      s.params.KafkaConfig,
 	}
 	if err := diagnostics.New(params).Start(); err != nil {
 		s.Stop()

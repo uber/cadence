@@ -34,6 +34,8 @@ import (
 
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/config"
+	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/metrics"
 )
 
@@ -46,15 +48,19 @@ type dw struct {
 	svcClient     workflowserviceclient.Interface
 	clientBean    client.Bean
 	metricsClient metrics.Client
+	logger        log.Logger
 	tallyScope    tally.Scope
 	worker        worker.Worker
+	kafkaCfg      config.KafkaConfig
 }
 
 type Params struct {
 	ServiceClient workflowserviceclient.Interface
 	ClientBean    client.Bean
 	MetricsClient metrics.Client
+	Logger        log.Logger
 	TallyScope    tally.Scope
+	KafkaCfg      config.KafkaConfig
 }
 
 // New creates a new diagnostics workflow.
@@ -64,6 +70,8 @@ func New(params Params) DiagnosticsWorkflow {
 		metricsClient: params.MetricsClient,
 		tallyScope:    params.TallyScope,
 		clientBean:    params.ClientBean,
+		logger:        params.Logger,
+		kafkaCfg:      params.KafkaCfg,
 	}
 }
 
@@ -82,6 +90,7 @@ func (w *dw) Start() error {
 	newWorker.RegisterActivityWithOptions(w.retrieveExecutionHistory, activity.RegisterOptions{Name: retrieveWfExecutionHistoryActivity})
 	newWorker.RegisterActivityWithOptions(w.identifyTimeouts, activity.RegisterOptions{Name: identifyTimeoutsActivity})
 	newWorker.RegisterActivityWithOptions(w.rootCauseTimeouts, activity.RegisterOptions{Name: rootCauseTimeoutsActivity})
+	newWorker.RegisterActivityWithOptions(w.emitUsageLogs, activity.RegisterOptions{Name: emitUsageLogsActivity})
 	w.worker = newWorker
 	return newWorker.Start()
 }
