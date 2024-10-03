@@ -34,6 +34,7 @@ import (
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
+	commonConfig "github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/metrics"
@@ -1857,6 +1858,382 @@ func Test_applyNonStartEventsToNoneCurrentBranchWithoutContinueAsNew(t *testing.
 
 			// Assertions
 			assert.Equal(t, test.expectError, err)
+		})
+	}
+}
+
+func Test_applyNonStartEventsMissingMutableState(t *testing.T) {
+	tests := map[string]struct {
+		mockTaskAffordance             func(mockTask *MockreplicationTask)
+		mockWorkflowResetterAffordance func(mockWorkflowResetter *MockWorkflowResetter)
+		mockNewWorkflowResetterFn      func(mockTask *MockreplicationTask, mockWorkflowResetter *MockWorkflowResetter) newWorkflowResetterFn
+		expectMutableState             execution.MutableState
+		validateError                  func(t *testing.T, err error)
+	}{
+		"Case1: non-reset workflow, should return retry task error": {
+			mockTaskAffordance: func(mockTask *MockreplicationTask) {
+				mockTask.EXPECT().isWorkflowReset().Return(false).Times(1)
+				mockTask.EXPECT().getFirstEvent().Return(&types.HistoryEvent{
+					ID:      10,
+					Version: 1,
+				}).Times(1)
+				mockTask.EXPECT().getDomainID().Return("test-domain-id").Times(1)
+				mockTask.EXPECT().getWorkflowID().Return("test-workflow-id").Times(1)
+				mockTask.EXPECT().getRunID().Return("test-run-id").Times(1)
+			},
+			mockWorkflowResetterAffordance: func(mockWorkflowResetter *MockWorkflowResetter) {},
+			mockNewWorkflowResetterFn: func(mockTask *MockreplicationTask, mockWorkflowResetter *MockWorkflowResetter) newWorkflowResetterFn {
+				return nil
+			},
+			expectMutableState: nil,
+			validateError: func(t *testing.T, err error) {
+				assert.IsType(t, &types.RetryTaskV2Error{}, err)
+				retryError := err.(*types.RetryTaskV2Error)
+				assert.Equal(t, "Resend events due to missing mutable state", retryError.Message)
+				assert.Equal(t, "test-domain-id", retryError.DomainID)
+				assert.Equal(t, "test-workflow-id", retryError.WorkflowID)
+				assert.Equal(t, "test-run-id", retryError.RunID)
+			},
+		},
+		"Case2: reset workflow, should return reset mutable state": {
+			mockTaskAffordance: func(mockTask *MockreplicationTask) {
+				mockTask.EXPECT().isWorkflowReset().Return(true).Times(1)
+				mockTask.EXPECT().getFirstEvent().Return(&types.HistoryEvent{
+					ID:      10,
+					Version: 1,
+				}).Times(2)
+				mockTask.EXPECT().getWorkflowResetMetadata().Return("base-run-id", "new-run-id", int64(1), false).Times(1)
+				mockTask.EXPECT().getDomainID().Return("test-domain-id").Times(1)
+				mockTask.EXPECT().getWorkflowID().Return("test-workflow-id").Times(1)
+				mockTask.EXPECT().getLogger().Return(log.NewNoop()).Times(1)
+				mockTask.EXPECT().getEventTime().Return(time.Now()).Times(1)
+				mockTask.EXPECT().getVersion().Return(int64(1)).Times(1)
+			},
+			mockWorkflowResetterAffordance: func(mockWorkflowResetter *MockWorkflowResetter) {
+				mockMutableState := execution.NewMockMutableState(gomock.NewController(t)) // Ensure consistent MutableState
+				mockWorkflowResetter.EXPECT().ResetWorkflow(
+					gomock.Any(),
+					gomock.Any(),
+					int64(9),
+					int64(1),
+					int64(10),
+					int64(1),
+				).Return(mockMutableState, nil).Times(1)
+			},
+			mockNewWorkflowResetterFn: func(mockTask *MockreplicationTask, mockWorkflowResetter *MockWorkflowResetter) newWorkflowResetterFn {
+				// Return the already created mockWorkflowResetter
+				return func(domainID, workflowID, baseRunID string, newContext execution.Context, newRunID string, logger log.Logger) WorkflowResetter {
+					return mockWorkflowResetter
+				}
+			},
+			expectMutableState: execution.NewMockMutableState(gomock.NewController(t)), // Match returned value
+			validateError:      func(t *testing.T, err error) { assert.NoError(t, err) },
+		},
+		"Case3: error during workflow reset": {
+			mockTaskAffordance: func(mockTask *MockreplicationTask) {
+				mockTask.EXPECT().isWorkflowReset().Return(true).Times(1)
+				mockTask.EXPECT().getFirstEvent().Return(&types.HistoryEvent{
+					ID:      10,
+					Version: 1,
+				}).Times(2)
+				mockTask.EXPECT().getWorkflowResetMetadata().Return("base-run-id", "new-run-id", int64(1), false).Times(1)
+				mockTask.EXPECT().getDomainID().Return("test-domain-id").Times(1)
+				mockTask.EXPECT().getWorkflowID().Return("test-workflow-id").Times(1)
+				mockTask.EXPECT().getLogger().Return(log.NewNoop()).Times(2)
+				mockTask.EXPECT().getEventTime().Return(time.Now()).Times(1)
+				mockTask.EXPECT().getVersion().Return(int64(1)).Times(1)
+			},
+			mockWorkflowResetterAffordance: func(mockWorkflowResetter *MockWorkflowResetter) {
+				mockWorkflowResetter.EXPECT().ResetWorkflow(
+					gomock.Any(),
+					gomock.Any(),
+					int64(9),
+					int64(1),
+					int64(10),
+					int64(1),
+				).Return(nil, fmt.Errorf("reset error")).Times(1)
+			},
+			mockNewWorkflowResetterFn: func(mockTask *MockreplicationTask, mockWorkflowResetter *MockWorkflowResetter) newWorkflowResetterFn {
+				// Return the already created mockWorkflowResetter
+				return func(domainID, workflowID, baseRunID string, newContext execution.Context, newRunID string, logger log.Logger) WorkflowResetter {
+					return mockWorkflowResetter
+				}
+			},
+			expectMutableState: nil,
+			validateError:      func(t *testing.T, err error) { assert.EqualError(t, err, "reset error") },
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			// Mock objects
+			mockTask := NewMockreplicationTask(ctrl)
+			mockExecutionContext := execution.NewMockContext(ctrl)
+			mockWorkflowResetter := NewMockWorkflowResetter(ctrl)
+
+			// Mock affordances
+			test.mockTaskAffordance(mockTask)
+			test.mockWorkflowResetterAffordance(mockWorkflowResetter)
+			newWorkflowResetterFn := test.mockNewWorkflowResetterFn(mockTask, mockWorkflowResetter)
+
+			// Call the function under test
+			mutableState, err := applyNonStartEventsMissingMutableState(
+				ctx.Background(),
+				mockExecutionContext,
+				mockTask,
+				newWorkflowResetterFn,
+			)
+
+			// Assertions
+			assert.Equal(t, test.expectMutableState, mutableState)
+			test.validateError(t, err)
+		})
+	}
+}
+
+func Test_applyNonStartEventsResetWorkflow(t *testing.T) {
+	tests := map[string]struct {
+		mockTaskAffordance               func(mockTask *MockreplicationTask)
+		mockStateBuilderAffordance       func(mockStateBuilder *execution.MockStateBuilder)
+		mockTransactionManagerAffordance func(mockTransactionManager *MocktransactionManager)
+		mockShardContextAffordance       func(mockShard *shard.MockContext)
+		expectError                      error
+	}{
+		"Case1: success case with no errors": {
+			mockTaskAffordance: func(mockTask *MockreplicationTask) {
+				mockTask.EXPECT().getLogger().Return(log.NewNoop()).Times(1)
+				mockTask.EXPECT().getDomainID().Return("test-domain-id").Times(1)
+				mockTask.EXPECT().getExecution().Return(&types.WorkflowExecution{
+					WorkflowID: "test-workflow-id",
+					RunID:      "test-run-id",
+				}).Times(1)
+				mockTask.EXPECT().getEvents().Return(nil).Times(1)
+				mockTask.EXPECT().getNewEvents().Return(nil).Times(1)
+				mockTask.EXPECT().getEventTime().Return(time.Now()).Times(2)
+				mockTask.EXPECT().getSourceCluster().Return("test-source-cluster").Times(1)
+			},
+			mockStateBuilderAffordance: func(mockStateBuilder *execution.MockStateBuilder) {
+				mockStateBuilder.EXPECT().ApplyEvents(
+					"test-domain-id",
+					gomock.Any(),
+					types.WorkflowExecution{
+						WorkflowID: "test-workflow-id",
+						RunID:      "test-run-id",
+					},
+					nil,
+					nil,
+				).Return(nil, nil).Times(1)
+			},
+			mockTransactionManagerAffordance: func(mockTransactionManager *MocktransactionManager) {
+				mockTransactionManager.EXPECT().createWorkflow(
+					gomock.Any(),
+					gomock.Any(),
+					gomock.Any(),
+				).Return(nil).Times(1)
+			},
+			mockShardContextAffordance: func(mockShard *shard.MockContext) {
+				mockShard.EXPECT().GetConfig().Return(&config.Config{
+					NumberOfShards:           0,
+					IsAdvancedVisConfigExist: false,
+					MaxResponseSize:          0,
+					HistoryCacheInitialSize:  dynamicconfig.GetIntPropertyFn(10),
+					HistoryCacheMaxSize:      dynamicconfig.GetIntPropertyFn(10),
+					HistoryCacheTTL:          dynamicconfig.GetDurationPropertyFn(10),
+					HostName:                 "test-host",
+					StandbyClusterDelay:      dynamicconfig.GetDurationPropertyFn(10),
+				}).Times(1)
+				mockShard.EXPECT().SetCurrentTime(gomock.Any(), gomock.Any()).Times(1)
+			},
+			expectError: nil,
+		},
+		"Case2: error during ApplyEvents": {
+			mockTaskAffordance: func(mockTask *MockreplicationTask) {
+				mockTask.EXPECT().getLogger().Return(log.NewNoop()).Times(2)
+				mockTask.EXPECT().getDomainID().Return("test-domain-id").Times(1)
+				mockTask.EXPECT().getExecution().Return(&types.WorkflowExecution{
+					WorkflowID: "test-workflow-id",
+					RunID:      "test-run-id",
+				}).Times(1)
+				mockTask.EXPECT().getEvents().Return(nil).Times(1)
+				mockTask.EXPECT().getNewEvents().Return(nil).Times(1)
+			},
+			mockStateBuilderAffordance: func(mockStateBuilder *execution.MockStateBuilder) {
+				mockStateBuilder.EXPECT().ApplyEvents(
+					"test-domain-id",
+					gomock.Any(),
+					types.WorkflowExecution{
+						WorkflowID: "test-workflow-id",
+						RunID:      "test-run-id",
+					},
+					nil,
+					nil,
+				).Return(nil, fmt.Errorf("applyEvents error")).Times(1)
+			},
+			mockTransactionManagerAffordance: func(mockTransactionManager *MocktransactionManager) {},
+			mockShardContextAffordance:       func(mockShard *shard.MockContext) {},
+			expectError:                      fmt.Errorf("applyEvents error"),
+		},
+		"Case3: error during createWorkflow": {
+			mockTaskAffordance: func(mockTask *MockreplicationTask) {
+				mockTask.EXPECT().getLogger().Return(log.NewNoop()).Times(2)
+				mockTask.EXPECT().getDomainID().Return("test-domain-id").Times(1)
+				mockTask.EXPECT().getExecution().Return(&types.WorkflowExecution{
+					WorkflowID: "test-workflow-id",
+					RunID:      "test-run-id",
+				}).Times(1)
+				mockTask.EXPECT().getEvents().Return(nil).Times(1)
+				mockTask.EXPECT().getNewEvents().Return(nil).Times(1)
+				mockTask.EXPECT().getEventTime().Return(time.Now()).Times(1)
+			},
+			mockStateBuilderAffordance: func(mockStateBuilder *execution.MockStateBuilder) {
+				mockStateBuilder.EXPECT().ApplyEvents(
+					"test-domain-id",
+					gomock.Any(),
+					types.WorkflowExecution{
+						WorkflowID: "test-workflow-id",
+						RunID:      "test-run-id",
+					},
+					nil,
+					nil,
+				).Return(nil, nil).Times(1)
+			},
+			mockTransactionManagerAffordance: func(mockTransactionManager *MocktransactionManager) {
+				mockTransactionManager.EXPECT().createWorkflow(
+					gomock.Any(),
+					gomock.Any(),
+					gomock.Any(),
+				).Return(fmt.Errorf("createWorkflow error")).Times(1)
+			},
+			mockShardContextAffordance: func(mockShard *shard.MockContext) {},
+			expectError:                fmt.Errorf("createWorkflow error"),
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			// Mock objects
+			mockTask := NewMockreplicationTask(ctrl)
+			mockExecutionContext := execution.NewMockContext(ctrl)
+			mockMutableState := execution.NewMockMutableState(ctrl)
+			mockStateBuilder := execution.NewMockStateBuilder(ctrl)
+			mockTransactionManager := NewMocktransactionManager(ctrl)
+			mockShard := shard.NewMockContext(ctrl)
+			logger := log.NewNoop()
+
+			// Mock affordances
+			test.mockTaskAffordance(mockTask)
+			test.mockStateBuilderAffordance(mockStateBuilder)
+			test.mockTransactionManagerAffordance(mockTransactionManager)
+			test.mockShardContextAffordance(mockShard)
+
+			// Mock functions
+			mockNewStateBuilderFn := func(mutableState execution.MutableState, logger log.Logger) execution.StateBuilder {
+				return mockStateBuilder
+			}
+
+			// Call the function under test
+			err := applyNonStartEventsResetWorkflow(
+				ctx.Background(),
+				mockExecutionContext,
+				mockMutableState,
+				mockTask,
+				mockNewStateBuilderFn,
+				mockTransactionManager,
+				cluster.Metadata{},
+				logger,
+				mockShard,
+			)
+
+			// Assertions
+			assert.Equal(t, test.expectError, err)
+		})
+	}
+}
+
+func Test_notify(t *testing.T) {
+	tests := map[string]struct {
+		clusterName          string
+		now                  time.Time
+		currentClusterName   string
+		primaryClusterName   string
+		expectSetCurrentTime bool
+	}{
+		"Case1: event from current cluster, should log a warning": {
+			clusterName:          "current-cluster",
+			now:                  time.Now(),
+			currentClusterName:   "current-cluster",
+			primaryClusterName:   "primary-cluster",
+			expectSetCurrentTime: false,
+		},
+		"Case2: event from different cluster, should update shard time": {
+			clusterName:          "other-cluster",
+			now:                  time.Now(),
+			currentClusterName:   "current-cluster",
+			primaryClusterName:   "primary-cluster",
+			expectSetCurrentTime: true,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			// Create ClusterInformation instances
+			clusterGroup := map[string]commonConfig.ClusterInformation{
+				"current-cluster": {
+					Enabled:                true,
+					InitialFailoverVersion: 1,
+					RPCName:                "current-cluster-rpc",
+					RPCAddress:             "127.0.0.1:8080",
+					RPCTransport:           "tchannel",
+				},
+				"other-cluster": {
+					Enabled:                true,
+					InitialFailoverVersion: 2,
+					RPCName:                "other-cluster-rpc",
+					RPCAddress:             "127.0.0.1:8081",
+					RPCTransport:           "grpc",
+				},
+			}
+
+			// Create Metadata instance
+			clusterMetadata := cluster.NewMetadata(
+				1,
+				test.primaryClusterName,
+				test.currentClusterName,
+				clusterGroup,
+				dynamicconfig.GetBoolPropertyFnFilteredByDomain(false),
+				metrics.NewNoopMetricsClient(),
+				log.NewNoop(),
+			)
+
+			// Mock Shard Context
+			mockShard := shard.NewMockContext(ctrl)
+			if test.expectSetCurrentTime {
+				mockShard.EXPECT().GetConfig().Return(&config.Config{
+					StandbyClusterDelay: dynamicconfig.GetDurationPropertyFn(5 * time.Minute),
+				}).Times(1)
+				mockShard.EXPECT().SetCurrentTime(test.clusterName, gomock.Any()).Times(1)
+			}
+
+			// Use Noop logger
+			logger := log.NewNoop()
+
+			// Call the function under test
+			notify(
+				test.clusterName,
+				test.now,
+				logger,
+				mockShard,
+				clusterMetadata,
+			)
 		})
 	}
 }

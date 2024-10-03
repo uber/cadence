@@ -75,6 +75,17 @@ services:
     pprof:
       port: ${WORKER_PORT_PPROF:7940}
 
+  shard-manager:
+    rpc:
+      port: 7941
+      bindOnLocalHost: true
+    metrics:
+      statsd:
+        hostPort: "127.0.0.1:8125"
+        prefix: "cadence"
+    pprof:
+      port: 7942
+
 clusterGroupMetadata:
   failoverVersionIncrement: 10
   primaryClusterName: "cluster0"
