@@ -27,6 +27,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/uber/cadence/common/log/loggerimpl"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -688,6 +689,21 @@ func TestUpdateRequest(t *testing.T) {
 			assert.Equal(t, td.expectedErr, err)
 		})
 	}
+}
+
+func TestNewDefaultIsolationGroupStateWatcherWithConfigStoreClient(t *testing.T) {
+	dc := dynamicconfig.NewNopCollection()
+	domainCache := cache.NewNoOpDomainCache()
+	client := metrics.NewNoopMetricsClient()
+	ig := func() []string { return nil }
+	NewDefaultIsolationGroupStateWatcherWithConfigStoreClient(
+		loggerimpl.NewNopLogger(),
+		dc,
+		domainCache,
+		nil,
+		client,
+		ig,
+	)
 }
 
 func TestIsolationGroupShutdown(t *testing.T) {

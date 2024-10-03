@@ -158,11 +158,6 @@ func New(
 	dispatcher := params.RPCFactory.GetDispatcher()
 	membershipResolver := params.MembershipResolver
 
-	// defaults to empty
-	if params.GetIsolationGroups == nil {
-		params.GetIsolationGroups = func() []string { return []string{} }
-	}
-
 	dynamicCollection := dynamicconfig.NewCollection(
 		params.DynamicConfig,
 		logger,
