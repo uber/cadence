@@ -172,7 +172,6 @@ func BuildCLI(releaseVersion string, gitRevision string) *cli.App {
 	app.Name = "cadence"
 	app.Usage = "Cadence server"
 	app.Version = version
-
 	app.Flags = []cli.Flag{
 		&cli.StringFlag{
 			Name:    "root",

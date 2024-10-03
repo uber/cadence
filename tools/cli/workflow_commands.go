@@ -46,6 +46,7 @@ import (
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/execution"
+	"github.com/uber/cadence/tools/common/commoncli"
 )
 
 // RestartWorkflow restarts a workflow execution
@@ -70,7 +71,7 @@ func RestartWorkflow(c *cli.Context) error {
 	)
 
 	if err != nil {
-		return PrintableError("Restart workflow failed.", err)
+		return commoncli.Problem("Restart workflow failed.", err)
 	}
 	fmt.Printf("Restarted Workflow Id: %s, run Id: %s\n", wid, resp.GetRunID())
 	return nil
@@ -99,7 +100,7 @@ func DiagnoseWorkflow(c *cli.Context) error {
 	)
 
 	if err != nil {
-		return PrintableError("Diagnose workflow failed.", err)
+		return commoncli.Problem("Diagnose workflow failed.", err)
 	}
 	fmt.Println("Workflow diagnosis started. Query the diagnostic workflow to get diagnostics report.")
 	fmt.Println("============Diagnostic Workflow details============")
@@ -117,7 +118,7 @@ func ShowHistory(c *cli.Context) error {
 // ShowHistoryWithWID shows the history of given workflow with workflow_id
 func ShowHistoryWithWID(c *cli.Context) error {
 	if !c.Args().Present() {
-		return PrintableError("Argument workflow_id is required.", nil)
+		return commoncli.Problem("Argument workflow_id is required.", nil)
 	}
 	wid := c.Args().First()
 	rid := ""
@@ -146,7 +147,7 @@ func showHistoryHelper(c *cli.Context, wid, rid string) error {
 	defer cancel()
 	history, err := GetHistory(ctx, wfClient, domain, wid, rid)
 	if err != nil {
-		return PrintableError(fmt.Sprintf("Failed to get history on workflow id: %s, run id: %s.", wid, rid), err)
+		return commoncli.Problem(fmt.Sprintf("Failed to get history on workflow id: %s, run id: %s.", wid, rid), err)
 	}
 
 	prevEvent := types.HistoryEvent{}
@@ -164,7 +165,7 @@ func showHistoryHelper(c *cli.Context, wid, rid string) error {
 	} else if c.IsSet(FlagEventID) { // only dump that event
 		eventID := c.Int(FlagEventID)
 		if eventID <= 0 || eventID > len(history.Events) {
-			return PrintableError("EventId out of range.", fmt.Errorf("number should be 1 - %d inclusive", len(history.Events)))
+			return commoncli.Problem("EventId out of range.", fmt.Errorf("number should be 1 - %d inclusive", len(history.Events)))
 		}
 		e := history.Events[eventID-1]
 		fmt.Println(anyToString(e, true, 0))
@@ -203,10 +204,10 @@ func showHistoryHelper(c *cli.Context, wid, rid string) error {
 		serializer := &JSONHistorySerializer{}
 		data, err := serializer.Serialize(history)
 		if err != nil {
-			return PrintableError("Failed to serialize history data.", err)
+			return commoncli.Problem("Failed to serialize history data.", err)
 		}
 		if err := ioutil.WriteFile(outputFileName, data, 0666); err != nil {
-			return PrintableError("Failed to export history data file.", err)
+			return commoncli.Problem("Failed to export history data file.", err)
 		}
 	}
 
@@ -221,9 +222,9 @@ func showHistoryHelper(c *cli.Context, wid, rid string) error {
 	})
 	if err != nil {
 		if _, ok := err.(*types.EntityNotExistsError); ok {
-			return PrintableError("workflow not exist", err)
+			return commoncli.Problem("workflow not exist", err)
 		}
-		return PrintableError("Describe workflow execution failed, cannot get information of pending activities", err)
+		return commoncli.Problem("Describe workflow execution failed, cannot get information of pending activities", err)
 	}
 	fmt.Println("History Source: Default Storage")
 
@@ -265,7 +266,7 @@ func startWorkflowHelper(c *cli.Context, shouldPrintProgress bool) error {
 		resp, err := serviceClient.StartWorkflowExecution(tcCtx, startRequest)
 
 		if err != nil {
-			return PrintableError("Failed to create workflow.", err)
+			return commoncli.Problem("Failed to create workflow.", err)
 		}
 		fmt.Printf("Started Workflow Id: %s, run Id: %s\n", wid, resp.GetRunID())
 		return nil
@@ -277,7 +278,7 @@ func startWorkflowHelper(c *cli.Context, shouldPrintProgress bool) error {
 		resp, err := serviceClient.StartWorkflowExecution(tcCtx, startRequest)
 
 		if err != nil {
-			return PrintableError("Failed to run workflow.", err)
+			return commoncli.Problem("Failed to run workflow.", err)
 		}
 
 		// print execution summary
@@ -312,7 +313,7 @@ func constructStartWorkflowRequest(c *cli.Context) (*types.StartWorkflowExecutio
 	workflowType := getRequiredOption(c, FlagWorkflowType)
 	et := c.Int(FlagExecutionTimeout)
 	if et == 0 {
-		return nil, PrintableError(fmt.Sprintf("Option %s format is invalid.", FlagExecutionTimeout), nil)
+		return nil, commoncli.Problem(fmt.Sprintf("Option %s format is invalid.", FlagExecutionTimeout), nil)
 	}
 	dt := c.Int(FlagDecisionTimeout)
 	wid := c.String(FlagWorkflowID)
@@ -373,7 +374,7 @@ func constructStartWorkflowRequest(c *cli.Context) (*types.StartWorkflowExecutio
 	if c.IsSet(FirstRunAtTime) {
 		t, err := time.Parse(time.RFC3339, c.String(FirstRunAtTime))
 		if err != nil {
-			return nil, PrintableError("First_run_at time format invalid, please use RFC3339", err)
+			return nil, commoncli.Problem("First_run_at time format invalid, please use RFC3339", err)
 		}
 		startRequest.FirstRunAtTimeStamp = common.Int64Ptr(t.UnixNano())
 	}
@@ -437,7 +438,7 @@ func processHeader(c *cli.Context) (map[string][]byte, error) {
 	headerValues := processMultipleJSONValues(processJSONInputHelper(c, jsonTypeHeader))
 
 	if len(headerKeys) != len(headerValues) {
-		return nil, PrintableError("Number of header keys and values are not equal.", nil)
+		return nil, commoncli.Problem("Number of header keys and values are not equal.", nil)
 	}
 
 	return mapFromKeysValues(headerKeys, headerValues), nil
@@ -541,7 +542,7 @@ func TerminateWorkflow(c *cli.Context) error {
 	)
 
 	if err != nil {
-		return PrintableError("Terminate workflow failed.", err)
+		return commoncli.Problem("Terminate workflow failed.", err)
 	}
 	fmt.Println("Terminate workflow succeeded.")
 
@@ -574,7 +575,7 @@ func CancelWorkflow(c *cli.Context) error {
 		},
 	)
 	if err != nil {
-		return PrintableError("Cancel workflow failed.", err)
+		return commoncli.Problem("Cancel workflow failed.", err)
 	}
 	fmt.Println("Cancel workflow succeeded.")
 	return nil
@@ -608,7 +609,7 @@ func SignalWorkflow(c *cli.Context) error {
 	)
 
 	if err != nil {
-		return PrintableError("Signal workflow failed.", err)
+		return commoncli.Problem("Signal workflow failed.", err)
 	}
 	fmt.Println("Signal workflow succeeded.")
 	return nil
@@ -628,7 +629,7 @@ func SignalWithStartWorkflowExecution(c *cli.Context) error {
 
 	resp, err := serviceClient.SignalWithStartWorkflowExecution(tcCtx, signalWithStartRequest)
 	if err != nil {
-		return PrintableError("SignalWithStart workflow failed.", err)
+		return commoncli.Problem("SignalWithStart workflow failed.", err)
 	}
 	fmt.Printf("SignalWithStart workflow succeeded. Workflow Id: %s, run Id: %s\n", signalWithStartRequest.GetWorkflowID(), resp.GetRunID())
 	return nil
@@ -718,7 +719,7 @@ func queryWorkflowHelper(c *cli.Context, queryType string) error {
 		case "not_completed_cleanly":
 			rejectCondition = types.QueryRejectConditionNotCompletedCleanly
 		default:
-			return PrintableError(fmt.Sprintf("invalid reject condition %v, valid values are \"not_open\" and \"not_completed_cleanly\"", c.String(FlagQueryRejectCondition)), nil)
+			return commoncli.Problem(fmt.Sprintf("invalid reject condition %v, valid values are \"not_open\" and \"not_completed_cleanly\"", c.String(FlagQueryRejectCondition)), nil)
 		}
 		queryRequest.QueryRejectCondition = &rejectCondition
 	}
@@ -731,13 +732,13 @@ func queryWorkflowHelper(c *cli.Context, queryType string) error {
 		case "strong":
 			consistencyLevel = types.QueryConsistencyLevelStrong
 		default:
-			return PrintableError(fmt.Sprintf("invalid query consistency level %v, valid values are \"eventual\" and \"strong\"", c.String(FlagQueryConsistencyLevel)), nil)
+			return commoncli.Problem(fmt.Sprintf("invalid query consistency level %v, valid values are \"eventual\" and \"strong\"", c.String(FlagQueryConsistencyLevel)), nil)
 		}
 		queryRequest.QueryConsistencyLevel = &consistencyLevel
 	}
 	queryResponse, err := serviceClient.QueryWorkflow(tcCtx, queryRequest)
 	if err != nil {
-		return PrintableError("Query workflow failed.", err)
+		return commoncli.Problem("Query workflow failed.", err)
 	}
 
 	if queryResponse.QueryRejected != nil {
@@ -801,7 +802,7 @@ func CountWorkflow(c *cli.Context) error {
 	defer cancel()
 	response, err := wfClient.CountWorkflowExecutions(ctx, request)
 	if err != nil {
-		return PrintableError("Failed to count workflow.", err)
+		return commoncli.Problem("Failed to count workflow.", err)
 	}
 
 	fmt.Println(response.GetCount())
@@ -828,7 +829,7 @@ func DescribeWorkflow(c *cli.Context) error {
 // DescribeWorkflowWithID show information about the specified workflow execution
 func DescribeWorkflowWithID(c *cli.Context) error {
 	if !c.Args().Present() {
-		return PrintableError("Argument workflow_id is required.", nil)
+		return commoncli.Problem("Argument workflow_id is required.", nil)
 	}
 	wid := c.Args().First()
 	rid := ""
@@ -857,7 +858,7 @@ func describeWorkflowHelper(c *cli.Context, wid, rid string) error {
 		},
 	})
 	if err != nil {
-		return PrintableError("Describe workflow execution failed", err)
+		return commoncli.Problem("Describe workflow execution failed", err)
 	}
 
 	if printResetPointsOnly {
@@ -1272,7 +1273,7 @@ func listWorkflowExecutions(client frontend.Client, pageSize int, domain, query 
 		defer cancel()
 		response, err := client.ListWorkflowExecutions(ctx, request)
 		if err != nil {
-			return nil, nil, PrintableError("Failed to list workflow.", err)
+			return nil, nil, commoncli.Problem("Failed to list workflow.", err)
 		}
 		return response.Executions, response.NextPageToken, nil
 	}
@@ -1300,7 +1301,7 @@ func listOpenWorkflow(client frontend.Client, pageSize int, earliestTime, latest
 		defer cancel()
 		response, err := client.ListOpenWorkflowExecutions(ctx, request)
 		if err != nil {
-			return nil, nil, PrintableError("Failed to list open workflow.", err)
+			return nil, nil, commoncli.Problem("Failed to list open workflow.", err)
 		}
 		return response.Executions, response.NextPageToken, nil
 	}
@@ -1331,7 +1332,7 @@ func listClosedWorkflow(client frontend.Client, pageSize int, earliestTime, late
 		defer cancel()
 		response, err := client.ListClosedWorkflowExecutions(ctx, request)
 		if err != nil {
-			return nil, nil, PrintableError("Failed to list closed workflow.", err)
+			return nil, nil, commoncli.Problem("Failed to list closed workflow.", err)
 		}
 		return response.Executions, response.NextPageToken, nil
 	}
@@ -1355,7 +1356,7 @@ func listWorkflows(c *cli.Context) (getWorkflowPageFn, error) {
 	var err error
 	if c.IsSet(FlagWorkflowStatus) {
 		if queryOpen {
-			return nil, PrintableError(optionErr, errors.New("you can only filter on status for closed workflow, not open workflow"))
+			return nil, commoncli.Problem(optionErr, errors.New("you can only filter on status for closed workflow, not open workflow"))
 		}
 		workflowStatus, err = getWorkflowStatus(c.String(FlagWorkflowStatus))
 		if err != nil {
@@ -1366,7 +1367,7 @@ func listWorkflows(c *cli.Context) (getWorkflowPageFn, error) {
 	}
 
 	if len(workflowID) > 0 && len(workflowType) > 0 {
-		return nil, PrintableError(optionErr, errors.New("you can filter on workflow_id or workflow_type, but not on both"))
+		return nil, commoncli.Problem(optionErr, errors.New("you can filter on workflow_id or workflow_type, but not on both"))
 	}
 
 	ctx, cancel := newContextForLongPoll(c)
@@ -1381,7 +1382,7 @@ func listWorkflows(c *cli.Context) (getWorkflowPageFn, error) {
 	if err == nil {
 		_, err = fmt.Fprintf(os.Stderr, "Fetching %v workflows...\n", resp.GetCount())
 		if err != nil {
-			return nil, PrintableError("Failed to print to stderr", err)
+			return nil, commoncli.Problem("Failed to print to stderr", err)
 		}
 	}
 
@@ -1424,7 +1425,7 @@ func listArchivedWorkflows(c *cli.Context) getWorkflowPageFn {
 		result, err := wfClient.ListArchivedWorkflowExecutions(ctx, request)
 		if err != nil {
 			cancel()
-			return nil, nil, PrintableError("Failed to list archived workflow.", err)
+			return nil, nil, commoncli.Problem("Failed to list archived workflow.", err)
 		}
 		return result.Executions, result.NextPageToken, nil
 	}
@@ -1456,7 +1457,7 @@ func scanWorkflowExecutions(client frontend.Client, pageSize int, nextPageToken 
 	defer cancel()
 	response, err := client.ScanWorkflowExecutions(ctx, request)
 	if err != nil {
-		return nil, nil, PrintableError("Failed to list workflow.", err)
+		return nil, nil, commoncli.Problem("Failed to list workflow.", err)
 	}
 	return response.Executions, response.NextPageToken, nil
 }
@@ -1465,7 +1466,7 @@ func getWorkflowStatus(statusStr string) (types.WorkflowExecutionCloseStatus, er
 	if status, ok := workflowClosedStatusMap[strings.ToLower(statusStr)]; ok {
 		return status, nil
 	}
-	return -1, PrintableError(optionErr, errors.New("option status is not one of allowed values "+
+	return -1, commoncli.Problem(optionErr, errors.New("option status is not one of allowed values "+
 		"[completed, failed, canceled, terminated, continued_as_new, timed_out]"))
 }
 
@@ -1514,18 +1515,18 @@ func ResetWorkflow(c *cli.Context) error {
 	wid := getRequiredOption(c, FlagWorkflowID)
 	reason := getRequiredOption(c, FlagReason)
 	if len(reason) == 0 {
-		return PrintableError("wrong reason", fmt.Errorf("reason cannot be empty"))
+		return commoncli.Problem("wrong reason", fmt.Errorf("reason cannot be empty"))
 	}
 	eventID := c.Int64(FlagEventID)
 	resetType := c.String(FlagResetType)
 	decisionOffset := c.Int(FlagDecisionOffset)
 	if decisionOffset > 0 {
-		return PrintableError("Only decision offset <=0 is supported", nil)
+		return commoncli.Problem("Only decision offset <=0 is supported", nil)
 	}
 
 	extraForResetType, ok := resetTypesMap[resetType]
 	if !ok && eventID <= 0 {
-		return PrintableError("Must specify valid eventID or valid resetType", nil)
+		return commoncli.Problem("Must specify valid eventID or valid resetType", nil)
 	}
 	if ok && len(extraForResetType) > 0 {
 		getRequiredOption(c, extraForResetType)
@@ -1540,7 +1541,7 @@ func ResetWorkflow(c *cli.Context) error {
 	if rid == "" {
 		rid, err = getCurrentRunID(ctx, domain, wid, frontendClient)
 		if err != nil {
-			return PrintableError("Cannot get latest RunID as default", err)
+			return commoncli.Problem("Cannot get latest RunID as default", err)
 		}
 	}
 
@@ -1549,7 +1550,7 @@ func ResetWorkflow(c *cli.Context) error {
 	if resetType != "" {
 		resetBaseRunID, decisionFinishID, err = getResetEventIDByType(ctx, c, resetType, decisionOffset, domain, wid, rid, frontendClient)
 		if err != nil {
-			return PrintableError("getResetEventIDByType failed", err)
+			return commoncli.Problem("getResetEventIDByType failed", err)
 		}
 	}
 	resp, err := frontendClient.ResetWorkflowExecution(ctx, &types.ResetWorkflowExecutionRequest{
@@ -1564,7 +1565,7 @@ func ResetWorkflow(c *cli.Context) error {
 		SkipSignalReapply:     c.Bool(FlagSkipSignalReapply),
 	})
 	if err != nil {
-		return PrintableError("reset failed", err)
+		return commoncli.Problem("reset failed", err)
 	}
 	prettyPrintJSONObject(resp)
 	return nil
@@ -1618,7 +1619,7 @@ func ResetInBatch(c *cli.Context) error {
 	resetType := getRequiredOption(c, FlagResetType)
 	decisionOffset := c.Int(FlagDecisionOffset)
 	if decisionOffset > 0 {
-		return PrintableError("Only decision offset <=0 is supported", nil)
+		return commoncli.Problem("Only decision offset <=0 is supported", nil)
 	}
 
 	inFileName := c.String(FlagInputFile)
@@ -1633,13 +1634,13 @@ func ResetInBatch(c *cli.Context) error {
 
 	extraForResetType, ok := resetTypesMap[resetType]
 	if !ok {
-		return PrintableError("Not supported reset type", nil)
+		return commoncli.Problem("Not supported reset type", nil)
 	} else if len(extraForResetType) > 0 {
 		getRequiredOption(c, extraForResetType)
 	}
 
 	if excludeFileName != "" && excludeQuery != "" {
-		return PrintableError("Only one of the excluding option is allowed", nil)
+		return commoncli.Problem("Only one of the excluding option is allowed", nil)
 	}
 
 	batchResetParams := batchResetParamsType{
@@ -1655,7 +1656,7 @@ func ResetInBatch(c *cli.Context) error {
 	}
 
 	if inFileName == "" && query == "" {
-		return PrintableError("Must provide input file or list query to get target workflows to reset", nil)
+		return commoncli.Problem("Must provide input file or list query to get target workflows to reset", nil)
 	}
 
 	wg := &sync.WaitGroup{}
@@ -1685,7 +1686,7 @@ func ResetInBatch(c *cli.Context) error {
 	if len(inFileName) > 0 {
 		inFile, err := os.Open(inFileName)
 		if err != nil {
-			return PrintableError("Open failed", err)
+			return commoncli.Problem("Open failed", err)
 		}
 		defer inFile.Close()
 		scanner := bufio.NewScanner(inFile)
@@ -1699,7 +1700,7 @@ func ResetInBatch(c *cli.Context) error {
 			}
 			cols := strings.Split(line, separator)
 			if len(cols) < 1 {
-				return PrintableError("Split failed", fmt.Errorf("line %v has less than 1 cols separated by comma, only %v ", idx, len(cols)))
+				return commoncli.Problem("Split failed", fmt.Errorf("line %v has less than 1 cols separated by comma, only %v ", idx, len(cols)))
 			}
 			fmt.Printf("Start processing line %v ...\n", idx)
 			wid := strings.TrimSpace(cols[0])
@@ -2170,7 +2171,7 @@ func CompleteActivity(c *cli.Context) error {
 	rid := getRequiredOption(c, FlagRunID)
 	activityID := getRequiredOption(c, FlagActivityID)
 	if len(activityID) == 0 {
-		return PrintableError("Invalid activityID", fmt.Errorf("activityID cannot be empty"))
+		return commoncli.Problem("Invalid activityID", fmt.Errorf("activityID cannot be empty"))
 	}
 	result := getRequiredOption(c, FlagResult)
 	identity := getRequiredOption(c, FlagIdentity)
@@ -2187,7 +2188,7 @@ func CompleteActivity(c *cli.Context) error {
 		Identity:   identity,
 	})
 	if err != nil {
-		return PrintableError("Completing activity failed", err)
+		return commoncli.Problem("Completing activity failed", err)
 	}
 	fmt.Println("Complete activity successfully.")
 	return nil
@@ -2200,7 +2201,7 @@ func FailActivity(c *cli.Context) error {
 	rid := getRequiredOption(c, FlagRunID)
 	activityID := getRequiredOption(c, FlagActivityID)
 	if len(activityID) == 0 {
-		return PrintableError("Invalid activityID", fmt.Errorf("activityID cannot be empty"))
+		return commoncli.Problem("Invalid activityID", fmt.Errorf("activityID cannot be empty"))
 	}
 	reason := getRequiredOption(c, FlagReason)
 	detail := getRequiredOption(c, FlagDetail)
@@ -2219,7 +2220,7 @@ func FailActivity(c *cli.Context) error {
 		Identity:   identity,
 	})
 	if err != nil {
-		return PrintableError("Failing activity failed", err)
+		return commoncli.Problem("Failing activity failed", err)
 	}
 	fmt.Println("Fail activity successfully.")
 	return nil
@@ -2229,7 +2230,7 @@ func FailActivity(c *cli.Context) error {
 func ObserveHistoryWithID(c *cli.Context) error {
 	domain := getRequiredOption(c, FlagDomain)
 	if !c.Args().Present() {
-		return PrintableError("Argument workflow_id is required.", nil)
+		return commoncli.Problem("Argument workflow_id is required.", nil)
 	}
 	wid := c.Args().First()
 	rid := ""

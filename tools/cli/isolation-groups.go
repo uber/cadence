@@ -29,6 +29,7 @@ import (
 	"github.com/urfave/cli/v2"
 
 	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/tools/common/commoncli"
 )
 
 func AdminGetGlobalIsolationGroups(c *cli.Context) error {
@@ -40,7 +41,7 @@ func AdminGetGlobalIsolationGroups(c *cli.Context) error {
 	req := &types.GetGlobalIsolationGroupsRequest{}
 	igs, err := adminClient.GetGlobalIsolationGroups(ctx, req)
 	if err != nil {
-		return PrintableError("failed to get isolation-groups:", err)
+		return commoncli.Problem("failed to get isolation-groups:", err)
 	}
 
 	format := c.String(FlagFormat)
@@ -68,7 +69,7 @@ func AdminUpdateGlobalIsolationGroups(c *cli.Context) error {
 		false,
 	)
 	if err != nil {
-		return PrintableError("invalid args:", err)
+		return commoncli.Problem("invalid args:", err)
 	}
 
 	cfg, err := parseIsolationGroupCliInputCfg(
@@ -77,14 +78,14 @@ func AdminUpdateGlobalIsolationGroups(c *cli.Context) error {
 		c.Bool(FlagIsolationGroupsRemoveAllDrains),
 	)
 	if err != nil {
-		return PrintableError("failed to parse input:", err)
+		return commoncli.Problem("failed to parse input:", err)
 	}
 
 	_, err = adminClient.UpdateGlobalIsolationGroups(ctx, &types.UpdateGlobalIsolationGroupsRequest{
 		IsolationGroups: *cfg,
 	})
 	if err != nil {
-		return PrintableError("failed to update isolation-groups", fmt.Errorf("used %#v, got %v", cfg, err))
+		return commoncli.Problem("failed to update isolation-groups", fmt.Errorf("used %#v, got %v", cfg, err))
 	}
 	return nil
 }
@@ -101,7 +102,7 @@ func AdminGetDomainIsolationGroups(c *cli.Context) error {
 	}
 	igs, err := adminClient.GetDomainIsolationGroups(ctx, req)
 	if err != nil {
-		return PrintableError("failed to get isolation-groups:", err)
+		return commoncli.Problem("failed to get isolation-groups:", err)
 	}
 
 	format := c.String(FlagFormat)
@@ -127,7 +128,7 @@ func AdminUpdateDomainIsolationGroups(c *cli.Context) error {
 		true,
 	)
 	if err != nil {
-		return PrintableError("invalid args:", err)
+		return commoncli.Problem("invalid args:", err)
 	}
 
 	ctx, cancel := newContext(c)
@@ -139,7 +140,7 @@ func AdminUpdateDomainIsolationGroups(c *cli.Context) error {
 		c.Bool(FlagIsolationGroupsRemoveAllDrains),
 	)
 	if err != nil {
-		return PrintableError("failed to parse input:", err)
+		return commoncli.Problem("failed to parse input:", err)
 	}
 
 	req := &types.UpdateDomainIsolationGroupsRequest{
@@ -149,7 +150,7 @@ func AdminUpdateDomainIsolationGroups(c *cli.Context) error {
 	_, err = adminClient.UpdateDomainIsolationGroups(ctx, req)
 
 	if err != nil {
-		return PrintableError("failed to update isolation-groups", fmt.Errorf("used %#v, got %v", req, err))
+		return commoncli.Problem("failed to update isolation-groups", fmt.Errorf("used %#v, got %v", req, err))
 	}
 	return nil
 }

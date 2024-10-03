@@ -39,6 +39,7 @@ import (
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/.gen/go/sqlblobs"
 	"github.com/uber/cadence/common/codec"
+	"github.com/uber/cadence/tools/common/commoncli"
 )
 
 var decodingTypes = map[string]func() codec.ThriftObject{
@@ -80,11 +81,11 @@ func AdminDBDataDecodeThrift(c *cli.Context) error {
 	encoding := c.String(FlagInputEncoding)
 	data, err := decodeUserInput(input, encoding)
 	if err != nil {
-		return PrintableError("failed to decode input", err)
+		return commoncli.Problem("failed to decode input", err)
 	}
 
 	if _, err := decodeThriftPayload(data); err != nil {
-		return PrintableError("failed to decode thrift payload", err.err)
+		return commoncli.Problem("failed to decode thrift payload", err.err)
 	}
 	return nil
 }

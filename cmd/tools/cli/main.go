@@ -21,10 +21,10 @@
 package main
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/uber/cadence/tools/cli"
+	"github.com/uber/cadence/tools/common/commoncli"
 
 	_ "github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra"              // needed to load cassandra plugin
 	_ "github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql/public" // needed to load the default gocql client
@@ -36,8 +36,5 @@ import (
 // See cadence/tools/cli/README.md for usage
 func main() {
 	app := cli.NewCliApp()
-	if err := app.Run(os.Args); err != nil {
-		_, _ = fmt.Fprintln(app.ErrWriter, err)
-		os.Exit(1)
-	}
+	commoncli.ExitHandler(app.Run(os.Args))
 }

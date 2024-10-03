@@ -32,6 +32,7 @@ import (
 	"github.com/uber/cadence/bench"
 	"github.com/uber/cadence/bench/lib"
 	"github.com/uber/cadence/common/config"
+	"github.com/uber/cadence/tools/common/commoncli"
 )
 
 const (
@@ -105,7 +106,6 @@ func buildCLI() *cli.App {
 	app.Name = "cadence-bench"
 	app.Usage = "Cadence bench"
 	app.Version = "0.0.1"
-
 	app.Flags = []cli.Flag{
 		&cli.StringFlag{
 			Name:    flagRoot,
@@ -152,8 +152,5 @@ func buildCLI() *cli.App {
 
 func main() {
 	app := buildCLI()
-	if err := app.Run(os.Args); err != nil {
-		_, _ = fmt.Fprintln(app.ErrWriter, err)
-		os.Exit(1)
-	}
+	commoncli.ExitHandler(app.Run(os.Args))
 }

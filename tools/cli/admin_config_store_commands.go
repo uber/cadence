@@ -30,6 +30,7 @@ import (
 
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/tools/common/commoncli"
 )
 
 type cliEntry struct {
@@ -65,7 +66,7 @@ func AdminGetDynamicConfig(c *cli.Context) error {
 
 		val, err := adminClient.ListDynamicConfig(ctx, req)
 		if err != nil {
-			return PrintableError("Failed to get dynamic config value(s)", err)
+			return commoncli.Problem("Failed to get dynamic config value(s)", err)
 		}
 
 		if val == nil || val.Entries == nil || len(val.Entries) == 0 {
@@ -84,7 +85,7 @@ func AdminGetDynamicConfig(c *cli.Context) error {
 	} else {
 		parsedFilters, err := parseInputFilterArray(filters)
 		if err != nil {
-			return PrintableError("Failed to parse input filter array", err)
+			return commoncli.Problem("Failed to parse input filter array", err)
 		}
 
 		req := &types.GetDynamicConfigRequest{
@@ -94,13 +95,13 @@ func AdminGetDynamicConfig(c *cli.Context) error {
 
 		val, err := adminClient.GetDynamicConfig(ctx, req)
 		if err != nil {
-			return PrintableError("Failed to get dynamic config value", err)
+			return commoncli.Problem("Failed to get dynamic config value", err)
 		}
 
 		var umVal interface{}
 		err = json.Unmarshal(val.Value.Data, &umVal)
 		if err != nil {
-			return PrintableError("Failed to unmarshal response", err)
+			return commoncli.Problem("Failed to unmarshal response", err)
 		}
 
 		if umVal == nil {
@@ -131,11 +132,11 @@ func AdminUpdateDynamicConfig(c *cli.Context) error {
 			var parsedInputValue *cliValue
 			err := json.Unmarshal([]byte(valueString), &parsedInputValue)
 			if err != nil {
-				return PrintableError("Unable to unmarshal value to inputValue", err)
+				return commoncli.Problem("Unable to unmarshal value to inputValue", err)
 			}
 			parsedValue, err := convertFromInputValue(parsedInputValue)
 			if err != nil {
-				return PrintableError("Unable to convert from inputValue to DynamicConfigValue", err)
+				return commoncli.Problem("Unable to convert from inputValue to DynamicConfigValue", err)
 			}
 			parsedValues = append(parsedValues, parsedValue)
 		}
@@ -150,7 +151,7 @@ func AdminUpdateDynamicConfig(c *cli.Context) error {
 
 	err := adminClient.UpdateDynamicConfig(ctx, req)
 	if err != nil {
-		return PrintableError("Failed to update dynamic config value", err)
+		return commoncli.Problem("Failed to update dynamic config value", err)
 	}
 	fmt.Printf("Dynamic Config %q updated with %s \n", dcName, dcValues)
 	return nil
@@ -168,7 +169,7 @@ func AdminRestoreDynamicConfig(c *cli.Context) error {
 
 	parsedFilters, err := parseInputFilterArray(filters)
 	if err != nil {
-		return PrintableError("Failed to parse input filter array", err)
+		return commoncli.Problem("Failed to parse input filter array", err)
 	}
 
 	req := &types.RestoreDynamicConfigRequest{
@@ -178,7 +179,7 @@ func AdminRestoreDynamicConfig(c *cli.Context) error {
 
 	err = adminClient.RestoreDynamicConfig(ctx, req)
 	if err != nil {
-		return PrintableError("Failed to restore dynamic config value", err)
+		return commoncli.Problem("Failed to restore dynamic config value", err)
 	}
 	fmt.Printf("Dynamic Config %q restored\n", dcName)
 	return nil
@@ -197,7 +198,7 @@ func AdminListDynamicConfig(c *cli.Context) error {
 
 	val, err := adminClient.ListDynamicConfig(ctx, req)
 	if err != nil {
-		return PrintableError("Failed to list dynamic config value(s)", err)
+		return commoncli.Problem("Failed to list dynamic config value(s)", err)
 	}
 
 	if val == nil || val.Entries == nil || len(val.Entries) == 0 {

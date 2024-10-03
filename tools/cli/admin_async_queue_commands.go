@@ -29,6 +29,7 @@ import (
 	"github.com/urfave/cli/v2"
 
 	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/tools/common/commoncli"
 )
 
 func AdminGetAsyncWFConfig(c *cli.Context) error {
@@ -45,7 +46,7 @@ func AdminGetAsyncWFConfig(c *cli.Context) error {
 
 	resp, err := adminClient.GetDomainAsyncWorkflowConfiguraton(ctx, req)
 	if err != nil {
-		return PrintableError("Failed to get async wf queue config", err)
+		return commoncli.Problem("Failed to get async wf queue config", err)
 	}
 
 	if resp == nil || resp.Configuration == nil {
@@ -67,7 +68,7 @@ func AdminUpdateAsyncWFConfig(c *cli.Context) error {
 	var cfg types.AsyncWorkflowConfiguration
 	err := json.Unmarshal([]byte(asyncWFCfgJSON), &cfg)
 	if err != nil {
-		return PrintableError("Failed to parse async workflow config", err)
+		return commoncli.Problem("Failed to parse async workflow config", err)
 	}
 
 	ctx, cancel := newContext(c)
@@ -80,7 +81,7 @@ func AdminUpdateAsyncWFConfig(c *cli.Context) error {
 
 	_, err = adminClient.UpdateDomainAsyncWorkflowConfiguraton(ctx, req)
 	if err != nil {
-		return PrintableError("Failed to update async workflow queue config", err)
+		return commoncli.Problem("Failed to update async workflow queue config", err)
 	}
 
 	fmt.Printf("Successfully updated async workflow queue config for domain %s\n", domainName)

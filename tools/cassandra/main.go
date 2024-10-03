@@ -32,7 +32,7 @@ import (
 // RunTool runs the cadence-cassandra-tool command line tool
 func RunTool(args []string) error {
 	app := BuildCLIOptions()
-	return app.Run(args)
+	return app.Run(args) // exits on error
 }
 
 // SetupSchema setups the cassandra schema

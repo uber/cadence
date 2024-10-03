@@ -31,6 +31,7 @@ import (
 
 	"github.com/uber/cadence/canary"
 	"github.com/uber/cadence/common/config"
+	"github.com/uber/cadence/tools/common/commoncli"
 )
 
 func startHandler(c *cli.Context) error {
@@ -91,7 +92,6 @@ func buildCLI() *cli.App {
 	app.Name = "cadence-canary"
 	app.Usage = "Cadence canary"
 	app.Version = "0.0.1"
-
 	app.Flags = []cli.Flag{
 		&cli.StringFlag{
 			Name:    "root",
@@ -147,8 +147,5 @@ func buildCLI() *cli.App {
 
 func main() {
 	app := buildCLI()
-	if err := app.Run(os.Args); err != nil {
-		_, _ = fmt.Fprintln(app.ErrWriter, err)
-		os.Exit(1)
-	}
+	commoncli.ExitHandler(app.Run(os.Args))
 }
