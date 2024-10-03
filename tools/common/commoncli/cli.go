@@ -30,7 +30,6 @@ import (
 	"strings"
 
 	"github.com/fatih/color"
-	"github.com/urfave/cli/v2"
 )
 
 var (
@@ -38,33 +37,21 @@ var (
 	colorMagenta = color.New(color.FgMagenta).SprintFunc()
 )
 
-func New(name, usage, version string) *cli.App {
-	if version == "" {
-		version = "0.0.1" // common "unversioned" value across many, tho likely worth dropping
-	}
-
-	app := cli.NewApp()
-	app.Name = name
-	app.Usage = usage
-	app.Version = version
-	app.ExitErrHandler = exitHandler
-	return app
-}
-
-func exitHandler(ctx *cli.Context, err error) {
+// ExitHandler converts errors that urfave/cli did not handle into a nicely
+// printed message, and an appropriate os.Exit call to ensure this func never
+// returns from either branch.
+//
+// This should be used instead of an in-CLI ExitErrHandler, as using that still
+// leaves a dangling `err` return value from *cli.App.Run(), which is awkward
+// in a number of ways.
+func ExitHandler(err error) {
 	if err == nil {
-		return // no forced exit(0), just let the process end normally
+		// no error, which (oddly) includes some command-not-found paths
+		os.Exit(0)
 	}
 
-	// try to let the default urfave error handler take care of it.
-	// this exits if it finds a special error type.
-	//
-	// in particular, this takes care of "bad command" failures, which are
-	// returned as a urfave ExitCoder error, which we do not use anywhere.
-	cli.HandleExitCoder(err)
-
-	// if we're still here, it didn't exit the process,
-	// so it's apparently worth handling.
+	// print what we can to stderr.
+	// and ignore errs while doing so, since we have no real alternative.
 	_ = printErr(err, os.Stderr)
 
 	// all errors are "fatal", unlike default behavior which only fails if you

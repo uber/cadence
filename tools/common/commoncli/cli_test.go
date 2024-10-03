@@ -31,12 +31,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestNew(t *testing.T) {
-	// largely for coverage, but currently this always returns a non-nil value.
-	assert.NotNil(t, New("", "", ""))
-	assert.NotNil(t, New("a", "b", "c"))
-}
-
 func TestPrintErr(t *testing.T) {
 	run := func(t *testing.T, err error) string {
 		t.Helper()

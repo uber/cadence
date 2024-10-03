@@ -25,7 +25,6 @@ import (
 
 	"github.com/urfave/cli/v2"
 
-	"github.com/uber/cadence/tools/common/commoncli"
 	cliflag "github.com/uber/cadence/tools/common/flag"
 	"github.com/uber/cadence/tools/common/schema"
 )
@@ -53,7 +52,11 @@ func cliHandler(c *cli.Context, handler func(c *cli.Context) error) error {
 
 // BuildCLIOptions builds the options for cli
 func BuildCLIOptions() *cli.App {
-	app := commoncli.New("cadence-sql-tool", "Command line tool for cadence sql operations", "")
+
+	app := cli.NewApp()
+	app.Name = "cadence-sql-tool"
+	app.Usage = "Command line tool for cadence sql operations"
+	app.Version = "0.0.1"
 
 	app.Flags = []cli.Flag{
 		&cli.StringFlag{

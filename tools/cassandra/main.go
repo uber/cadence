@@ -26,7 +26,6 @@ import (
 	"github.com/urfave/cli/v2"
 
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
-	"github.com/uber/cadence/tools/common/commoncli"
 	"github.com/uber/cadence/tools/common/schema"
 )
 
@@ -63,7 +62,11 @@ func cliHandler(c *cli.Context, handler func(c *cli.Context) error) error {
 }
 
 func BuildCLIOptions() *cli.App {
-	app := commoncli.New("cadence-cassandra-tool", "Command line tool for cadence cassandra operations", "")
+
+	app := cli.NewApp()
+	app.Name = "cadence-cassandra-tool"
+	app.Usage = "Command line tool for cadence cassandra operations"
+	app.Version = "0.0.1"
 
 	app.Flags = []cli.Flag{
 		&cli.StringFlag{

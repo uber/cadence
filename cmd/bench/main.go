@@ -102,8 +102,10 @@ func getZone(c *cli.Context) string {
 }
 
 func buildCLI() *cli.App {
-	app := commoncli.New("cadence-bench", "Cadence bench", "")
-
+	app := cli.NewApp()
+	app.Name = "cadence-bench"
+	app.Usage = "Cadence bench"
+	app.Version = "0.0.1"
 	app.Flags = []cli.Flag{
 		&cli.StringFlag{
 			Name:    flagRoot,
@@ -150,5 +152,5 @@ func buildCLI() *cli.App {
 
 func main() {
 	app := buildCLI()
-	_ = app.Run(os.Args) // exits on error
+	commoncli.ExitHandler(app.Run(os.Args))
 }

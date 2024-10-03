@@ -381,8 +381,6 @@ $(BUILD)/gomod-lint: go.mod internal/tools/go.mod common/archiver/gcloud/go.mod 
 # it's a coarse "you probably don't need to re-lint" filter, nothing more.
 $(BUILD)/code-lint: $(LINT_SRC) $(BIN)/revive | $(BUILD)
 	$Q echo "lint..."
-	$Q # should probably be in a file but this is easier for now
-	$Q if grep -F 'cli.NewApp()' $(filter-out ./tools/common/commoncli/cli.go,$(LINT_SRC)); then echo -e "\nuse tools/common/commoncli instead\n" >&2 ; exit 1; fi
 	$Q # non-optional vet checks.  unfortunately these are not currently included in `go test`'s default behavior.
 	$Q go vet -copylocks ./... ./common/archiver/gcloud/...
 	$Q $(BIN)/revive -config revive.toml -exclude './vendor/...' -exclude './.gen/...' -formatter stylish ./...
