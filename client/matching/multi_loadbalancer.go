@@ -24,6 +24,8 @@ package matching
 
 import (
 	"github.com/uber/cadence/common/dynamicconfig"
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -33,6 +35,7 @@ type (
 		loadBalancers        map[string]LoadBalancer
 		domainIDToName       func(string) (string, error)
 		loadbalancerStrategy dynamicconfig.StringPropertyFnWithTaskListInfoFilters
+		logger               log.Logger
 	}
 )
 
@@ -41,12 +44,14 @@ func NewMultiLoadBalancer(
 	loadBalancers map[string]LoadBalancer,
 	domainIDToName func(string) (string, error),
 	dc *dynamicconfig.Collection,
+	logger log.Logger,
 ) LoadBalancer {
 	return &multiLoadBalancer{
 		defaultLoadBalancer:  defaultLoadBalancer,
 		loadBalancers:        loadBalancers,
 		domainIDToName:       domainIDToName,
 		loadbalancerStrategy: dc.GetStringPropertyFilteredByTaskListInfo(dynamicconfig.TasklistLoadBalancerStrategy),
+		logger:               logger,
 	}
 }
 
@@ -63,6 +68,7 @@ func (lb *multiLoadBalancer) PickWritePartition(
 	strategy := lb.loadbalancerStrategy(domainName, taskList.GetName(), taskListType)
 	loadBalancer, ok := lb.loadBalancers[strategy]
 	if !ok {
+		lb.logger.Warn("unsupported load balancer strategy", tag.Value(strategy))
 		return lb.defaultLoadBalancer.PickWritePartition(domainID, taskList, taskListType, forwardedFrom)
 	}
 	return loadBalancer.PickWritePartition(domainID, taskList, taskListType, forwardedFrom)
@@ -81,6 +87,7 @@ func (lb *multiLoadBalancer) PickReadPartition(
 	strategy := lb.loadbalancerStrategy(domainName, taskList.GetName(), taskListType)
 	loadBalancer, ok := lb.loadBalancers[strategy]
 	if !ok {
+		lb.logger.Warn("unsupported load balancer strategy", tag.Value(strategy))
 		return lb.defaultLoadBalancer.PickReadPartition(domainID, taskList, taskListType, forwardedFrom)
 	}
 	return loadBalancer.PickReadPartition(domainID, taskList, taskListType, forwardedFrom)
@@ -101,6 +108,7 @@ func (lb *multiLoadBalancer) UpdateWeight(
 	strategy := lb.loadbalancerStrategy(domainName, taskList.GetName(), taskListType)
 	loadBalancer, ok := lb.loadBalancers[strategy]
 	if !ok {
+		lb.logger.Warn("unsupported load balancer strategy", tag.Value(strategy))
 		return
 	}
 	loadBalancer.UpdateWeight(domainID, taskList, taskListType, forwardedFrom, partition, weight)
