@@ -71,7 +71,6 @@ func TestNewConfig(t *testing.T) {
 		"EnableTaskInfoLogByDomainID":     {dynamicconfig.MatchingEnableTaskInfoLogByDomainID, true},
 		"ActivityTaskSyncMatchWaitTime":   {dynamicconfig.MatchingActivityTaskSyncMatchWaitTime, time.Duration(24)},
 		"EnableTasklistIsolation":         {dynamicconfig.EnableTasklistIsolation, false},
-		"AllIsolationGroups":              {dynamicconfig.AllIsolationGroups, []interface{}{"a", "b", "c"}},
 		"AsyncTaskDispatchTimeout":        {dynamicconfig.AsyncTaskDispatchTimeout, time.Duration(25)},
 		"LocalPollWaitTime":               {dynamicconfig.LocalPollWaitTime, time.Duration(10)},
 		"LocalTaskWaitTime":               {dynamicconfig.LocalTaskWaitTime, time.Duration(10)},
@@ -79,6 +78,7 @@ func TestNewConfig(t *testing.T) {
 		"TaskDispatchRPS":                 {nil, 100000.0},
 		"TaskDispatchRPSTTL":              {nil, time.Minute},
 		"MaxTimeBetweenTaskDeletes":       {nil, time.Second},
+		"AllIsolationGroups":              {nil, []string{"zone-1", "zone-2"}},
 		"EnableTasklistOwnershipGuard":    {dynamicconfig.MatchingEnableTasklistGuardAgainstOwnershipShardLoss, false},
 	}
 	client := dynamicconfig.NewInMemoryClient()
@@ -92,7 +92,7 @@ func TestNewConfig(t *testing.T) {
 	}
 	dc := dynamicconfig.NewCollection(client, testlogger.New(t))
 
-	config := NewConfig(dc, hostname)
+	config := NewConfig(dc, hostname, isolationGroupsHelper)
 
 	assertFieldsMatch(t, *config, fields)
 }
@@ -148,10 +148,16 @@ func getValue(f *reflect.Value) interface{} {
 			return fn()
 		case dynamicconfig.StringPropertyFn:
 			return fn()
+		case func() []string:
+			return fn()
 		default:
 			panic("Unable to handle type: " + f.Type().Name())
 		}
 	default:
 		return f.Interface()
 	}
+}
+
+func isolationGroupsHelper() []string {
+	return []string{"zone-1", "zone-2"}
 }

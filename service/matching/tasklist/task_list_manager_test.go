@@ -51,10 +51,10 @@ import (
 )
 
 func defaultTestConfig() *config.Config {
-	config := config.NewConfig(dynamicconfig.NewNopCollection(), "some random hostname")
+	config := config.NewConfig(dynamicconfig.NewNopCollection(), "some random hostname", getIsolationgroupsHelper)
 	config.LongPollExpirationInterval = dynamicconfig.GetDurationPropertyFnFilteredByTaskListInfo(100 * time.Millisecond)
 	config.MaxTaskDeleteBatchSize = dynamicconfig.GetIntPropertyFilteredByTaskListInfo(1)
-	config.AllIsolationGroups = []string{"datacenterA", "datacenterB"}
+	config.AllIsolationGroups = getIsolationgroupsHelper
 	config.GetTasksBatchSize = dynamicconfig.GetIntPropertyFilteredByTaskListInfo(10)
 	config.AsyncTaskDispatchTimeout = dynamicconfig.GetDurationPropertyFnFilteredByTaskListInfo(10 * time.Millisecond)
 	config.LocalTaskWaitTime = dynamicconfig.GetDurationPropertyFnFilteredByTaskListInfo(time.Millisecond)
@@ -247,7 +247,7 @@ func TestDescribeTaskList(t *testing.T) {
 }
 
 func TestCheckIdleTaskList(t *testing.T) {
-	cfg := config.NewConfig(dynamicconfig.NewNopCollection(), "some random hostname")
+	cfg := config.NewConfig(dynamicconfig.NewNopCollection(), "some random hostname", getIsolationgroupsHelper)
 	cfg.IdleTasklistCheckInterval = dynamicconfig.GetDurationPropertyFnFilteredByTaskListInfo(10 * time.Millisecond)
 
 	t.Run("Idle task-list", func(t *testing.T) {
@@ -319,7 +319,7 @@ func TestAddTaskStandby(t *testing.T) {
 	controller := gomock.NewController(t)
 	logger := testlogger.New(t)
 
-	cfg := config.NewConfig(dynamicconfig.NewNopCollection(), "some random hostname")
+	cfg := config.NewConfig(dynamicconfig.NewNopCollection(), "some random hostname", getIsolationgroupsHelper)
 	cfg.IdleTasklistCheckInterval = dynamicconfig.GetDurationPropertyFnFilteredByTaskListInfo(10 * time.Millisecond)
 
 	tlm := createTestTaskListManagerWithConfig(t, logger, controller, cfg)
@@ -380,7 +380,7 @@ func TestGetPollerIsolationGroup(t *testing.T) {
 
 	bgCtx := ContextWithPollerID(context.Background(), "poller0")
 	bgCtx = ContextWithIdentity(bgCtx, "id0")
-	bgCtx = ContextWithIsolationGroup(bgCtx, config.AllIsolationGroups[0])
+	bgCtx = ContextWithIsolationGroup(bgCtx, getIsolationgroupsHelper()[0])
 	ctx, cancel := context.WithTimeout(bgCtx, time.Second)
 	_, err := tlm.GetTask(ctx, nil)
 	cancel()
@@ -390,7 +390,7 @@ func TestGetPollerIsolationGroup(t *testing.T) {
 	// we should get isolation groups that showed up within last 10 seconds
 	groups := tlm.getPollerIsolationGroups()
 	assert.Equal(t, 1, len(groups))
-	assert.Equal(t, config.AllIsolationGroups[0], groups[0])
+	assert.Equal(t, getIsolationgroupsHelper()[0], groups[0])
 
 	// after 10s, the poller from that isolation group are cleared from the poller history
 	time.Sleep(10 * time.Second)
@@ -412,7 +412,7 @@ func TestGetPollerIsolationGroup(t *testing.T) {
 	groups = tlm.getPollerIsolationGroups()
 	wg.Wait()
 	assert.Equal(t, 1, len(groups))
-	assert.Equal(t, config.AllIsolationGroups[0], groups[0])
+	assert.Equal(t, getIsolationgroupsHelper()[0], groups[0])
 }
 
 // return a client side tasklist throttle error from the rate limiter.
@@ -890,4 +890,8 @@ func TestTaskExpiryAndCompletion(t *testing.T) {
 			tlm.Stop()
 		})
 	}
+}
+
+func getIsolationgroupsHelper() []string {
+	return []string{"datacenterA", "datacenterB"}
 }

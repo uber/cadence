@@ -171,6 +171,8 @@ func New(
 	dispatcher := params.RPCFactory.GetDispatcher()
 	membershipResolver := params.MembershipResolver
 
+	ensureGetAllIsolationGroupsFnIsSet(params)
+
 	dynamicCollection := dynamicconfig.NewCollection(
 		params.DynamicConfig,
 		logger,
@@ -706,6 +708,7 @@ func ensureIsolationGroupStateHandlerOrDefault(
 		domainCache,
 		isolationGroupStore,
 		params.MetricsClient,
+		params.GetIsolationGroups,
 	)
 }
 
@@ -715,4 +718,10 @@ func ensurePartitionerOrDefault(params *Params, state isolationgroup.State) part
 		return params.Partitioner
 	}
 	return partition.NewDefaultPartitioner(params.Logger, state)
+}
+
+func ensureGetAllIsolationGroupsFnIsSet(params *Params) {
+	if params.GetIsolationGroups == nil {
+		params.GetIsolationGroups = func() []string { return []string{} }
+	}
 }

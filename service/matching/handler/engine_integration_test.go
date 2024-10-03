@@ -134,9 +134,13 @@ func (s *matchingEngineSuite) SetupTest() {
 	s.mockIsolationStore = dynamicconfig.NewMockClient(s.controller)
 	dcClient := dynamicconfig.NewInMemoryClient()
 	dcClient.UpdateValue(dynamicconfig.EnableTasklistIsolation, true)
-	dcClient.UpdateValue(dynamicconfig.AllIsolationGroups, []interface{}{"datacenterA", "datacenterB"})
 	dc := dynamicconfig.NewCollection(dcClient, s.logger)
-	isolationGroupState, _ := defaultisolationgroupstate.NewDefaultIsolationGroupStateWatcherWithConfigStoreClient(s.logger, dc, s.mockDomainCache, s.mockIsolationStore, metrics.NewNoopMetricsClient())
+	isolationGroupState, _ := defaultisolationgroupstate.NewDefaultIsolationGroupStateWatcherWithConfigStoreClient(s.logger,
+		dc,
+		s.mockDomainCache,
+		s.mockIsolationStore,
+		metrics.NewNoopMetricsClient(),
+		getIsolationGroupsHelper)
 	s.partitioner = partition.NewDefaultPartitioner(s.logger, isolationGroupState)
 	s.handlerContext = newHandlerContext(
 		context.Background(),
@@ -467,7 +471,7 @@ func (s *matchingEngineSuite) AddAndPollTasks(taskType int, enableIsolation bool
 	s.matchingEngine.config.LongPollExpirationInterval = dynamicconfig.GetDurationPropertyFnFilteredByTaskListInfo(10 * time.Millisecond)
 	s.matchingEngine.config.EnableTasklistIsolation = dynamicconfig.GetBoolPropertyFnFilteredByDomainID(enableIsolation)
 
-	isolationGroups := s.matchingEngine.config.AllIsolationGroups
+	isolationGroups := s.matchingEngine.config.AllIsolationGroups()
 
 	const taskCount = 6
 	const initialRangeID = 102
@@ -580,7 +584,7 @@ func (s *matchingEngineSuite) SyncMatchTasks(taskType int, enableIsolation bool)
 
 	for i := int64(0); i < taskCount; i++ {
 		scheduleID := i * 3
-		group := isolationGroups[int(i)%len(isolationGroups)]
+		group := isolationGroups()[int(i)%len(isolationGroups())]
 		var wg sync.WaitGroup
 		var result *pollTaskResponse
 		var pollErr error
@@ -613,7 +617,7 @@ func (s *matchingEngineSuite) SyncMatchTasks(taskType int, enableIsolation bool)
 	// Revert the dispatch RPS and verify that poller will get the task
 	for i := int64(0); i < throttledTaskCount; i++ {
 		scheduleID := i * 3
-		group := isolationGroups[int(i)%len(isolationGroups)]
+		group := isolationGroups()[int(i)%len(isolationGroups())]
 		var wg sync.WaitGroup
 		var result *pollTaskResponse
 		var pollErr error
@@ -737,7 +741,7 @@ func (s *matchingEngineSuite) ConcurrentAddAndPollTasks(taskType int, workerCoun
 		go func() {
 			defer wg.Done()
 			for i := int64(0); i < taskCount; i++ {
-				group := isolationGroups[int(i)%len(isolationGroups)] // let each worker to generate tasks for all isolation groups
+				group := isolationGroups()[int(i)%len(isolationGroups())] // let each worker to generate tasks for all isolation groups
 				addRequest := &addTaskRequest{
 					TaskType:                      taskType,
 					DomainUUID:                    testParam.DomainID,
@@ -763,7 +767,7 @@ func (s *matchingEngineSuite) ConcurrentAddAndPollTasks(taskType int, workerCoun
 			defer wg.Done()
 			for i := int64(0); i < taskCount; {
 				maxDispatch := dispatchLimitFn(wNum, i)
-				group := isolationGroups[int(wNum)%len(isolationGroups)] // let each worker only polls from one isolation group
+				group := isolationGroups()[int(wNum)%len(isolationGroups())] // let each worker only polls from one isolation group
 				pollReq := &pollTaskRequest{
 					TaskType:         taskType,
 					DomainUUID:       testParam.DomainID,
@@ -1087,7 +1091,7 @@ func (s *matchingEngineSuite) DrainBacklogNoPollersIsolationGroup(taskType int) 
 			ScheduleID:                    scheduleID,
 			TaskList:                      testParam.TaskList,
 			ScheduleToStartTimeoutSeconds: 1,
-			PartitionConfig:               map[string]string{partition.IsolationGroupKey: isolationGroups[int(i)%len(isolationGroups)]},
+			PartitionConfig:               map[string]string{partition.IsolationGroupKey: isolationGroups()[int(i)%len(isolationGroups())]},
 		}
 		_, err := addTask(s.matchingEngine, s.handlerContext, addRequest)
 		s.NoError(err)
@@ -1102,7 +1106,7 @@ func (s *matchingEngineSuite) DrainBacklogNoPollersIsolationGroup(taskType int) 
 			DomainUUID:     testParam.DomainID,
 			TaskList:       testParam.TaskList,
 			Identity:       testParam.Identity,
-			IsolationGroup: isolationGroups[0],
+			IsolationGroup: isolationGroups()[0],
 		}
 		result, err := pollTask(s.matchingEngine, s.handlerContext, pollReq)
 		s.NoError(err)
@@ -1147,7 +1151,7 @@ func (s *matchingEngineSuite) TestAddStickyDecisionNoPollerIsolation() {
 		DomainUUID:     testParam.DomainID,
 		TaskList:       testParam.TaskList,
 		Identity:       testParam.Identity,
-		IsolationGroup: isolationGroups[0],
+		IsolationGroup: isolationGroups()[0],
 	}
 	result, err := pollTask(s.matchingEngine, s.handlerContext, pollReq)
 	s.NoError(err)
@@ -1164,10 +1168,10 @@ func (s *matchingEngineSuite) TestAddStickyDecisionNoPollerIsolation() {
 			ScheduleID:                    scheduleID,
 			TaskList:                      testParam.TaskList,
 			ScheduleToStartTimeoutSeconds: 1,
-			PartitionConfig:               map[string]string{partition.IsolationGroupKey: isolationGroups[int(i)%len(isolationGroups)]},
+			PartitionConfig:               map[string]string{partition.IsolationGroupKey: isolationGroups()[int(i)%len(isolationGroups())]},
 		}
 		_, err := addTask(s.matchingEngine, s.handlerContext, addRequest)
-		if int(i)%len(isolationGroups) == 0 {
+		if int(i)%len(isolationGroups()) == 0 {
 			s.NoError(err)
 			count++
 			scheduleIDs = append(scheduleIDs, scheduleID)
@@ -1187,7 +1191,7 @@ func (s *matchingEngineSuite) TestAddStickyDecisionNoPollerIsolation() {
 			DomainUUID:     testParam.DomainID,
 			TaskList:       testParam.TaskList,
 			Identity:       testParam.Identity,
-			IsolationGroup: isolationGroups[0],
+			IsolationGroup: isolationGroups()[0],
 		}
 		result, err := pollTask(s.matchingEngine, s.handlerContext, pollReq)
 		s.NoError(err)
@@ -1343,10 +1347,9 @@ func validateTimeRange(t time.Time, expectedDuration time.Duration) bool {
 }
 
 func defaultTestConfig() *config.Config {
-	config := config.NewConfig(dynamicconfig.NewNopCollection(), "some random hostname")
+	config := config.NewConfig(dynamicconfig.NewNopCollection(), "some random hostname", getIsolationGroupsHelper)
 	config.LongPollExpirationInterval = dynamicconfig.GetDurationPropertyFnFilteredByTaskListInfo(100 * time.Millisecond)
 	config.MaxTaskDeleteBatchSize = dynamicconfig.GetIntPropertyFilteredByTaskListInfo(1)
-	config.AllIsolationGroups = []string{"datacenterA", "datacenterB"}
 	config.GetTasksBatchSize = dynamicconfig.GetIntPropertyFilteredByTaskListInfo(10)
 	config.AsyncTaskDispatchTimeout = dynamicconfig.GetDurationPropertyFnFilteredByTaskListInfo(10 * time.Millisecond)
 	config.MaxTimeBetweenTaskDeletes = time.Duration(0)
@@ -1572,4 +1575,8 @@ func pollTask(engine *matchingEngineImpl, hCtx *handlerContext, request *pollTas
 
 func isEmptyToken(token *common.TaskToken) bool {
 	return token == nil || *token == common.TaskToken{}
+}
+
+func getIsolationGroupsHelper() []string {
+	return []string{"zone-a", "zone-b"}
 }

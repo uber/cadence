@@ -20,23 +20,37 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package resource
+package isolationgroupapi
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
-func TestShutdown(t *testing.T) {
-	i := Impl{}
-	assert.NotPanics(t, func() {
-		i.Stop()
-	})
-}
+func TestMapAllIsolationGroupStates(t *testing.T) {
 
-func TestNewResource(t *testing.T) {
-	assert.NotPanics(t, func() {
-		ensureGetAllIsolationGroupsFnIsSet(&Params{})
-	})
+	tests := map[string]struct {
+		in          []interface{}
+		expected    []string
+		expectedErr error
+	}{
+		"valid mapping": {
+			in:       []interface{}{"zone-1", "zone-2", "zone-3"},
+			expected: []string{"zone-1", "zone-2", "zone-3"},
+		},
+		"invalid mapping": {
+			in:          []interface{}{1, 2, 3},
+			expectedErr: errors.New("failed to get all-isolation-groups response from dynamic config: got 1 (int)"),
+		},
+	}
+
+	for name, td := range tests {
+		t.Run(name, func(t *testing.T) {
+			res, err := MapAllIsolationGroupsResponse(td.in)
+			assert.Equal(t, td.expected, res)
+			assert.Equal(t, td.expectedErr, err)
+		})
+	}
 }

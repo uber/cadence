@@ -194,7 +194,7 @@ func NewManager(
 	tlMgr.qpsTracker = stats.NewEmaFixedWindowQPSTracker(timeSource, 0.5, 10*time.Second)
 	var isolationGroups []string
 	if tlMgr.isIsolationMatcherEnabled() {
-		isolationGroups = config.AllIsolationGroups
+		isolationGroups = config.AllIsolationGroups()
 	}
 	var fwdr *Forwarder
 	if tlMgr.isFowardingAllowed(taskList, *taskListKind) {
@@ -604,7 +604,7 @@ func (c *taskListManagerImpl) getIsolationGroupForTask(ctx context.Context, task
 			partitionConfig[k] = v
 		}
 		partitionConfig[partition.WorkflowIDKey] = taskInfo.WorkflowID
-		pollerIsolationGroups := c.config.AllIsolationGroups
+		pollerIsolationGroups := c.config.AllIsolationGroups()
 		// Not all poller information are available at the time of task list manager creation,
 		// because we don't persist poller information in database, so in the first minute, we always assume
 		// pollers are available in all isolation groups to avoid the risk of leaking a task to another isolation group.
@@ -613,7 +613,7 @@ func (c *taskListManagerImpl) getIsolationGroupForTask(ctx context.Context, task
 			pollerIsolationGroups = c.getPollerIsolationGroups()
 			if len(pollerIsolationGroups) == 0 {
 				// we don't have any pollers, use all isolation groups and wait for pollers' arriving
-				pollerIsolationGroups = c.config.AllIsolationGroups
+				pollerIsolationGroups = c.config.AllIsolationGroups()
 			}
 		}
 		group, err := c.partitioner.GetIsolationGroupByDomainID(ctx, taskInfo.DomainID, partitionConfig, pollerIsolationGroups)
