@@ -93,7 +93,7 @@ func (c *clientImpl) PollForActivityTask(
 	ctx context.Context,
 	request *types.MatchingPollForActivityTaskRequest,
 	opts ...yarpc.CallOption,
-) (*types.PollForActivityTaskResponse, error) {
+) (*types.MatchingPollForActivityTaskResponse, error) {
 	partition := c.loadBalancer.PickReadPartition(
 		request.GetDomainUUID(),
 		*request.PollRequest.GetTaskList(),

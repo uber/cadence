@@ -107,8 +107,8 @@ func (c *matchingClient) ListTaskListPartitions(ctx context.Context, mp1 *types.
 	return resp, err
 }
 
-func (c *matchingClient) PollForActivityTask(ctx context.Context, mp1 *types.MatchingPollForActivityTaskRequest, p1 ...yarpc.CallOption) (pp1 *types.PollForActivityTaskResponse, err error) {
-	var resp *types.PollForActivityTaskResponse
+func (c *matchingClient) PollForActivityTask(ctx context.Context, mp1 *types.MatchingPollForActivityTaskRequest, p1 ...yarpc.CallOption) (mp2 *types.MatchingPollForActivityTaskResponse, err error) {
+	var resp *types.MatchingPollForActivityTaskResponse
 	op := func() error {
 		var err error
 		resp, err = c.client.PollForActivityTask(ctx, mp1, p1...)

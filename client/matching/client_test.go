@@ -228,9 +228,9 @@ func TestClient_withResponse(t *testing.T) {
 			mock: func(p *MockPeerResolver, balancer *MockLoadBalancer, c *MockClient) {
 				balancer.EXPECT().PickReadPartition(_testDomainUUID, types.TaskList{Name: _testTaskList}, persistence.TaskListTypeActivity, "").Return(_testPartition)
 				p.EXPECT().FromTaskList(_testPartition).Return("peer0", nil)
-				c.EXPECT().PollForActivityTask(gomock.Any(), gomock.Any(), []yarpc.CallOption{yarpc.WithShardKey("peer0")}).Return(&types.PollForActivityTaskResponse{}, nil)
+				c.EXPECT().PollForActivityTask(gomock.Any(), gomock.Any(), []yarpc.CallOption{yarpc.WithShardKey("peer0")}).Return(&types.MatchingPollForActivityTaskResponse{}, nil)
 			},
-			want: &types.PollForActivityTaskResponse{},
+			want: &types.MatchingPollForActivityTaskResponse{},
 		},
 		{
 			name: "PollForActivityTask - Error in resolving peer",
