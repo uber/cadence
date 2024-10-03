@@ -21,12 +21,13 @@
 package cli
 
 import (
-	"github.com/uber/cadence/common/testing/testdatagen/idlfuzzedtestdata"
-	"github.com/uber/cadence/common/types"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
+
+	"github.com/uber/cadence/common/testing/testdatagen/idlfuzzedtestdata"
+	"github.com/uber/cadence/common/types"
 )
 
 func Test_ParseIntMultiRange(t *testing.T) {
