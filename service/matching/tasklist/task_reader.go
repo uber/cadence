@@ -194,7 +194,7 @@ dispatchLoop:
 }
 
 func (tr *taskReader) getTasksPump() {
-	updateAckTimer := time.NewTimer(tr.config.UpdateAckInterval())
+	updateAckTimer := tr.timeSource.NewTimer(tr.config.UpdateAckInterval())
 	defer updateAckTimer.Stop()
 getTasksPumpLoop:
 	for {
@@ -235,7 +235,7 @@ getTasksPumpLoop:
 				// There maybe more tasks. We yield now, but signal pump to check again later.
 				tr.Signal()
 			}
-		case <-updateAckTimer.C:
+		case <-updateAckTimer.Chan():
 			{
 				ackLevel := tr.taskAckManager.GetAckLevel()
 				if size, err := tr.db.GetTaskListSize(ackLevel); err == nil {
@@ -248,7 +248,7 @@ getTasksPumpLoop:
 					// keep going as saving ack is not critical
 				}
 				tr.Signal() // periodically signal pump to check persistence for tasks
-				updateAckTimer = time.NewTimer(tr.config.UpdateAckInterval())
+				updateAckTimer.Reset(tr.config.UpdateAckInterval())
 			}
 		}
 		tr.scope.UpdateGauge(metrics.TaskBacklogPerTaskListGauge, float64(tr.taskAckManager.GetBacklogCount()))
