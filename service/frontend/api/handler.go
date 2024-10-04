@@ -239,7 +239,7 @@ func (wh *WorkflowHandler) DiagnoseWorkflowExecution(ctx context.Context, reques
 			Name: "diagnostics-starter-workflow",
 		},
 		TaskList: &types.TaskList{
-			Name: "wf-diagnostics",
+			Name: "diagnostics-wf-tasklist",
 		},
 		Input:                               inputInBytes,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(86400), // 24 hours
