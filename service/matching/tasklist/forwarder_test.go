@@ -235,7 +235,7 @@ func (t *ForwarderTestSuite) TestForwardPollForActivity() {
 	pollerID := uuid.New()
 	ctx := ContextWithPollerID(context.Background(), pollerID)
 	ctx = ContextWithIdentity(ctx, "id1")
-	resp := &types.PollForActivityTaskResponse{}
+	resp := &types.MatchingPollForActivityTaskResponse{}
 
 	var request *types.MatchingPollForActivityTaskRequest
 	t.client.EXPECT().PollForActivityTask(gomock.Any(), gomock.Any()).Do(

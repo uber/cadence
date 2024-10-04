@@ -81,7 +81,7 @@ var (
 		ForwardedFrom:  ForwardedFrom,
 		IsolationGroup: IsolationGroup,
 	}
-	MatchingPollForActivityTaskResponse = types.PollForActivityTaskResponse{
+	MatchingPollForActivityTaskResponse = types.MatchingPollForActivityTaskResponse{
 		TaskToken:                       TaskToken,
 		WorkflowExecution:               &WorkflowExecution,
 		ActivityID:                      ActivityID,

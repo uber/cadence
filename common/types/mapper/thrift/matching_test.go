@@ -262,6 +262,31 @@ func TestMatchingPollForDecisionResponse(t *testing.T) {
 	}
 }
 
+func TestMatchingPollForActivityTaskResponse(t *testing.T) {
+	testCases := []struct {
+		desc  string
+		input *types.MatchingPollForActivityTaskResponse
+	}{
+		{
+			desc:  "non-nil input test",
+			input: &testdata.MatchingPollForActivityTaskResponse,
+		},
+		{
+			desc:  "empty input test",
+			input: &types.MatchingPollForActivityTaskResponse{},
+		},
+		{
+			desc:  "nil input test",
+			input: nil,
+		},
+	}
+	for _, tc := range testCases {
+		thriftObj := FromMatchingPollForActivityTaskResponse(tc.input)
+		roundTripObj := ToMatchingPollForActivityTaskResponse(thriftObj)
+		assert.Equal(t, tc.input, roundTripObj)
+	}
+}
+
 func TestMatchingQueryWorkflowRequest(t *testing.T) {
 	testCases := []struct {
 		desc  string

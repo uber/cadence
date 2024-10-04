@@ -554,8 +554,9 @@ func (wh *WorkflowHandler) PollForActivityTask(
 		return &types.PollForActivityTaskResponse{}, nil
 	}
 	pollerID := uuid.New().String()
+	var matchingResp *types.MatchingPollForActivityTaskResponse
 	op := func() error {
-		resp, err = wh.GetMatchingClient().PollForActivityTask(ctx, &types.MatchingPollForActivityTaskRequest{
+		matchingResp, err = wh.GetMatchingClient().PollForActivityTask(ctx, &types.MatchingPollForActivityTaskRequest{
 			DomainUUID:     domainID,
 			PollerID:       pollerID,
 			PollRequest:    pollRequest,
@@ -581,7 +582,24 @@ func (wh *WorkflowHandler) PollForActivityTask(
 			return nil, err
 		}
 	}
-	return resp, nil
+	return &types.PollForActivityTaskResponse{
+		TaskToken:                       matchingResp.TaskToken,
+		WorkflowExecution:               matchingResp.WorkflowExecution,
+		ActivityID:                      matchingResp.ActivityID,
+		ActivityType:                    matchingResp.ActivityType,
+		Input:                           matchingResp.Input,
+		ScheduledTimestamp:              matchingResp.ScheduledTimestamp,
+		ScheduleToCloseTimeoutSeconds:   matchingResp.ScheduleToCloseTimeoutSeconds,
+		StartedTimestamp:                matchingResp.StartedTimestamp,
+		StartToCloseTimeoutSeconds:      matchingResp.StartToCloseTimeoutSeconds,
+		HeartbeatTimeoutSeconds:         matchingResp.HeartbeatTimeoutSeconds,
+		Attempt:                         matchingResp.Attempt,
+		ScheduledTimestampOfThisAttempt: matchingResp.ScheduledTimestampOfThisAttempt,
+		HeartbeatDetails:                matchingResp.HeartbeatDetails,
+		WorkflowType:                    matchingResp.WorkflowType,
+		WorkflowDomain:                  matchingResp.WorkflowDomain,
+		Header:                          matchingResp.Header,
+	}, nil
 }
 
 // PollForDecisionTask - Poll for a decision task.

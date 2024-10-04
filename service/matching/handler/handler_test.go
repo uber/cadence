@@ -277,7 +277,7 @@ func (s *handlerSuite) TestPollForActivityTask() {
 			setupMocks: func() {
 				s.mockLimiter.EXPECT().Allow().Return(true).Times(1)
 				s.mockEngine.EXPECT().PollForActivityTask(gomock.Any(), &request).
-					Return(&types.PollForActivityTaskResponse{TaskToken: []byte("task-token")}, nil).Times(1)
+					Return(&types.MatchingPollForActivityTaskResponse{TaskToken: []byte("task-token")}, nil).Times(1)
 			},
 			getCtx: func() (context.Context, context.CancelFunc) {
 				ctx, cancel := context.WithDeadline(context.Background(), time.Now())
@@ -331,7 +331,7 @@ func (s *handlerSuite) TestPollForActivityTask() {
 				s.Equal(tc.err, err)
 			} else {
 				s.NoError(err)
-				s.Equal(&types.PollForActivityTaskResponse{TaskToken: []byte("task-token")}, resp)
+				s.Equal(&types.MatchingPollForActivityTaskResponse{TaskToken: []byte("task-token")}, resp)
 			}
 		})
 	}

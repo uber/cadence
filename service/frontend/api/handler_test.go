@@ -309,6 +309,45 @@ func (s *workflowHandlerSuite) TestPollForActivityTask_IsolationGroupDrained() {
 	s.Equal(&types.PollForActivityTaskResponse{}, resp)
 }
 
+func (s *workflowHandlerSuite) TestPollForActivityTask_Success() {
+	config := s.newConfig(dc.NewInMemoryClient())
+	config.EnableTasklistIsolation = dc.GetBoolPropertyFnFilteredByDomain(true)
+	wh := s.getWorkflowHandler(config)
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	defer cancel()
+	isolationGroup := "dca1"
+	ctx = partition.ContextWithIsolationGroup(ctx, isolationGroup)
+
+	s.mockDomainCache.EXPECT().GetDomainID(s.testDomain).Return(s.testDomainID, nil)
+	s.mockResource.IsolationGroups.EXPECT().IsDrained(gomock.Any(), s.testDomain, isolationGroup).Return(false, nil).AnyTimes()
+	s.mockMatchingClient.EXPECT().PollForActivityTask(gomock.Any(), gomock.Any()).Return(&types.MatchingPollForActivityTaskResponse{
+		TaskToken: []byte("token"),
+		WorkflowExecution: &types.WorkflowExecution{
+			WorkflowID: "wid",
+			RunID:      "rid",
+		},
+		ActivityID: "1",
+		Input:      []byte(`{"key": "value"}`),
+	}, nil)
+	resp, err := wh.PollForActivityTask(ctx, &types.PollForActivityTaskRequest{
+		Domain: s.testDomain,
+		TaskList: &types.TaskList{
+			Name: "task-list",
+		},
+	})
+	s.NoError(err)
+	s.Equal(&types.PollForActivityTaskResponse{
+		TaskToken: []byte("token"),
+		WorkflowExecution: &types.WorkflowExecution{
+			WorkflowID: "wid",
+			RunID:      "rid",
+		},
+		ActivityID: "1",
+		Input:      []byte(`{"key": "value"}`),
+	}, resp)
+}
+
 func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_RequestIdNotSet() {
 	config := s.newConfig(dc.NewInMemoryClient())
 	config.UserRPS = dc.GetIntPropertyFn(10)

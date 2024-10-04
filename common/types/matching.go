@@ -480,6 +480,26 @@ func (v *MatchingPollForDecisionTaskResponse) GetTotalHistoryBytes() (o int64) {
 	return
 }
 
+type MatchingPollForActivityTaskResponse struct {
+	TaskToken                       []byte             `json:"taskToken,omitempty"`
+	WorkflowExecution               *WorkflowExecution `json:"workflowExecution,omitempty"`
+	ActivityID                      string             `json:"activityId,omitempty"`
+	ActivityType                    *ActivityType      `json:"activityType,omitempty"`
+	Input                           []byte             `json:"input,omitempty"`
+	ScheduledTimestamp              *int64             `json:"scheduledTimestamp,omitempty"`
+	ScheduleToCloseTimeoutSeconds   *int32             `json:"scheduleToCloseTimeoutSeconds,omitempty"`
+	StartedTimestamp                *int64             `json:"startedTimestamp,omitempty"`
+	StartToCloseTimeoutSeconds      *int32             `json:"startToCloseTimeoutSeconds,omitempty"`
+	HeartbeatTimeoutSeconds         *int32             `json:"heartbeatTimeoutSeconds,omitempty"`
+	Attempt                         int32              `json:"attempt,omitempty"`
+	ScheduledTimestampOfThisAttempt *int64             `json:"scheduledTimestampOfThisAttempt,omitempty"`
+	HeartbeatDetails                []byte             `json:"heartbeatDetails,omitempty"`
+	WorkflowType                    *WorkflowType      `json:"workflowType,omitempty"`
+	WorkflowDomain                  string             `json:"workflowDomain,omitempty"`
+	Header                          *Header            `json:"header,omitempty"`
+	BacklogCountHint                int64              `json:"backlogCountHint,omitempty"`
+}
+
 // MatchingQueryWorkflowRequest is an internal type (TBD...)
 type MatchingQueryWorkflowRequest struct {
 	DomainUUID    string                `json:"domainUUID,omitempty"`

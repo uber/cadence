@@ -78,7 +78,7 @@ func TestThriftHandler(t *testing.T) {
 		assert.Equal(t, expectedErr, err)
 	})
 	t.Run("PollForActivityTask", func(t *testing.T) {
-		h.EXPECT().PollForActivityTask(ctx, &types.MatchingPollForActivityTaskRequest{}).Return(&types.PollForActivityTaskResponse{}, internalErr).Times(1)
+		h.EXPECT().PollForActivityTask(ctx, &types.MatchingPollForActivityTaskRequest{}).Return(&types.MatchingPollForActivityTaskResponse{}, internalErr).Times(1)
 		resp, err := th.PollForActivityTask(ctx, &m.PollForActivityTaskRequest{})
 		assert.Equal(t, s.PollForActivityTaskResponse{WorkflowDomain: common.StringPtr(""), ActivityId: common.StringPtr(""), Attempt: common.Int32Ptr(0)}, *resp)
 		assert.Equal(t, expectedErr, err)

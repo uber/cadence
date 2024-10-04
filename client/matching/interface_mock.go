@@ -177,14 +177,14 @@ func (mr *MockClientMockRecorder) ListTaskListPartitions(arg0, arg1 interface{},
 }
 
 // PollForActivityTask mocks base method.
-func (m *MockClient) PollForActivityTask(arg0 context.Context, arg1 *types.MatchingPollForActivityTaskRequest, arg2 ...yarpc.CallOption) (*types.PollForActivityTaskResponse, error) {
+func (m *MockClient) PollForActivityTask(arg0 context.Context, arg1 *types.MatchingPollForActivityTaskRequest, arg2 ...yarpc.CallOption) (*types.MatchingPollForActivityTaskResponse, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "PollForActivityTask", varargs...)
-	ret0, _ := ret[0].(*types.PollForActivityTaskResponse)
+	ret0, _ := ret[0].(*types.MatchingPollForActivityTaskResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

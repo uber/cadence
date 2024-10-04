@@ -324,7 +324,7 @@ func ToMatchingPollForActivityTaskRequest(t *matchingv1.PollForActivityTaskReque
 	}
 }
 
-func FromMatchingPollForActivityTaskResponse(t *types.PollForActivityTaskResponse) *matchingv1.PollForActivityTaskResponse {
+func FromMatchingPollForActivityTaskResponse(t *types.MatchingPollForActivityTaskResponse) *matchingv1.PollForActivityTaskResponse {
 	if t == nil {
 		return nil
 	}
@@ -348,11 +348,11 @@ func FromMatchingPollForActivityTaskResponse(t *types.PollForActivityTaskRespons
 	}
 }
 
-func ToMatchingPollForActivityTaskResponse(t *matchingv1.PollForActivityTaskResponse) *types.PollForActivityTaskResponse {
+func ToMatchingPollForActivityTaskResponse(t *matchingv1.PollForActivityTaskResponse) *types.MatchingPollForActivityTaskResponse {
 	if t == nil {
 		return nil
 	}
-	return &types.PollForActivityTaskResponse{
+	return &types.MatchingPollForActivityTaskResponse{
 		TaskToken:                       t.TaskToken,
 		WorkflowExecution:               ToWorkflowExecution(t.WorkflowExecution),
 		ActivityID:                      t.ActivityId,
