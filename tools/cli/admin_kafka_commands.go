@@ -497,7 +497,7 @@ func AdminRereplicate(c *cli.Context) error {
 	if c.IsSet(FlagContextTimeout) {
 		contextTimeout = time.Duration(c.Int(FlagContextTimeout)) * time.Second
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), contextTimeout)
+	ctx, cancel := context.WithTimeout(c.Context, contextTimeout)
 	defer cancel()
 
 	return doRereplicate(

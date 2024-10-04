@@ -23,7 +23,6 @@
 package cli
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -263,7 +262,7 @@ func (cl *dbLoadCloser) Load() []*persistence.TimerTaskInfo {
 			return err
 		}
 
-		err = throttleRetry.Do(context.Background(), op)
+		err = throttleRetry.Do(cl.ctx.Context, op)
 
 		if err != nil {
 			ErrorAndExit("cannot get timer tasks for shard", err)
