@@ -263,7 +263,7 @@ func (cl *dbLoadCloser) Load() []*persistence.TimerTaskInfo {
 			return err
 		}
 
-		err = throttleRetry.Do(context.Background(), op)
+		err = throttleRetry.Do(c.Context, op)
 
 		if err != nil {
 			ErrorAndExit("cannot get timer tasks for shard", err)

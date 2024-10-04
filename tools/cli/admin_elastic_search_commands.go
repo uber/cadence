@@ -87,7 +87,7 @@ type ESIndexRow struct {
 func AdminCatIndices(c *cli.Context) error {
 	esClient := cFactory.ElasticSearchClient(c)
 
-	ctx := context.Background()
+	ctx := c.Context
 	resp, err := esClient.CatIndices().Do(ctx)
 	if err != nil {
 		return commoncli.Problem("Unable to cat indices", err)
@@ -124,7 +124,7 @@ func AdminIndex(c *cli.Context) error {
 
 	bulkRequest := esClient.Bulk()
 	bulkConductFn := func() error {
-		_, err := bulkRequest.Do(context.Background())
+		_, err := bulkRequest.Do(c.Context)
 		if err != nil {
 			return commoncli.Problem("Bulk failed", err)
 		}
@@ -206,7 +206,7 @@ func AdminDelete(c *cli.Context) error {
 		if !ok {
 			time.Sleep(waitTime)
 		}
-		_, err := bulkRequest.Do(context.Background())
+		_, err := bulkRequest.Do(c.Context)
 		if err != nil {
 			return commoncli.Problem(fmt.Sprintf("Bulk failed, current processed row %d", i), err)
 		}
@@ -330,7 +330,7 @@ func GenerateReport(c *cli.Context) error {
 		reportFilePath = "./report." + reportFormat
 	}
 	esClient := cFactory.ElasticSearchClient(c)
-	ctx := context.Background()
+	ctx := c.Context
 
 	// convert sql to dsl
 	e := esql.NewESql()
