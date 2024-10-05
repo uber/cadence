@@ -58,7 +58,7 @@ func TestNewRoundRobinLoadBalancer(t *testing.T) {
 func TestPickPartition(t *testing.T) {
 	tests := []struct {
 		name           string
-		domainName     string
+		domainID       string
 		taskList       types.TaskList
 		taskListType   int
 		forwardedFrom  string
@@ -68,7 +68,7 @@ func TestPickPartition(t *testing.T) {
 	}{
 		{
 			name:           "ForwardedFrom is not empty",
-			domainName:     "testDomain",
+			domainID:       "testDomain",
 			taskList:       types.TaskList{Name: "testTaskList", Kind: types.TaskListKindNormal.Ptr()},
 			taskListType:   1,
 			forwardedFrom:  "otherDomain",
@@ -78,7 +78,7 @@ func TestPickPartition(t *testing.T) {
 		},
 		{
 			name:           "Sticky task list",
-			domainName:     "testDomain",
+			domainID:       "testDomain",
 			taskList:       types.TaskList{Name: "testTaskList", Kind: types.TaskListKindSticky.Ptr()},
 			taskListType:   1,
 			forwardedFrom:  "",
@@ -88,7 +88,7 @@ func TestPickPartition(t *testing.T) {
 		},
 		{
 			name:           "Reserved task list prefix",
-			domainName:     "testDomain",
+			domainID:       "testDomain",
 			taskList:       types.TaskList{Name: fmt.Sprintf("%vTest", common.ReservedTaskListPrefix), Kind: types.TaskListKindNormal.Ptr()},
 			taskListType:   1,
 			forwardedFrom:  "",
@@ -98,7 +98,7 @@ func TestPickPartition(t *testing.T) {
 		},
 		{
 			name:           "nPartitions <= 1",
-			domainName:     "testDomain",
+			domainID:       "testDomain",
 			taskList:       types.TaskList{Name: "testTaskList", Kind: types.TaskListKindNormal.Ptr()},
 			taskListType:   1,
 			forwardedFrom:  "",
@@ -108,19 +108,19 @@ func TestPickPartition(t *testing.T) {
 		},
 		{
 			name:          "Cache miss and partitioned task list",
-			domainName:    "testDomain",
+			domainID:      "testDomain",
 			taskList:      types.TaskList{Name: "testTaskList", Kind: types.TaskListKindNormal.Ptr()},
 			taskListType:  1,
 			forwardedFrom: "",
 			nPartitions:   3,
 			setupCache: func(mockCache *cache.MockCache) {
 				mockCache.EXPECT().Get(key{
-					domainName:   "testDomain",
+					domainID:     "testDomain",
 					taskListName: "testTaskList",
 					taskListType: 1,
 				}).Return(nil)
 				mockCache.EXPECT().PutIfNotExist(key{
-					domainName:   "testDomain",
+					domainID:     "testDomain",
 					taskListName: "testTaskList",
 					taskListType: 1,
 				}, gomock.Any()).DoAndReturn(func(key key, val interface{}) (interface{}, error) {
@@ -134,19 +134,19 @@ func TestPickPartition(t *testing.T) {
 		},
 		{
 			name:          "Cache error and partitioned task list",
-			domainName:    "testDomain",
+			domainID:      "testDomain",
 			taskList:      types.TaskList{Name: "testTaskList", Kind: types.TaskListKindNormal.Ptr()},
 			taskListType:  1,
 			forwardedFrom: "",
 			nPartitions:   3,
 			setupCache: func(mockCache *cache.MockCache) {
 				mockCache.EXPECT().Get(key{
-					domainName:   "testDomain",
+					domainID:     "testDomain",
 					taskListName: "testTaskList",
 					taskListType: 1,
 				}).Return(nil)
 				mockCache.EXPECT().PutIfNotExist(key{
-					domainName:   "testDomain",
+					domainID:     "testDomain",
 					taskListName: "testTaskList",
 					taskListType: 1,
 				}, gomock.Any()).Return(nil, fmt.Errorf("cache error"))
@@ -155,14 +155,14 @@ func TestPickPartition(t *testing.T) {
 		},
 		{
 			name:          "Cache hit and partitioned task list",
-			domainName:    "testDomain",
+			domainID:      "testDomain",
 			taskList:      types.TaskList{Name: "testTaskList", Kind: types.TaskListKindNormal.Ptr()},
 			taskListType:  1,
 			forwardedFrom: "",
 			nPartitions:   3,
 			setupCache: func(mockCache *cache.MockCache) {
 				mockCache.EXPECT().Get(key{
-					domainName:   "testDomain",
+					domainID:     "testDomain",
 					taskListName: "testTaskList",
 					taskListType: 1,
 				}).Return(new(int64))
@@ -183,7 +183,7 @@ func TestPickPartition(t *testing.T) {
 
 			// Call the pickPartition function
 			result := pickPartition(
-				tt.domainName,
+				tt.domainID,
 				tt.taskList,
 				tt.taskListType,
 				tt.forwardedFrom,
@@ -233,8 +233,8 @@ func TestPickWritePartition(t *testing.T) {
 				assert.Equal(t, 1, taskListType)
 				return 4
 			},
-			pickPartitionFn: func(domainName string, taskList types.TaskList, taskListType int, forwardedFrom string, nPartitions int, partitionCache cache.Cache, t *testing.T) string {
-				assert.Equal(t, "testDomainName", domainName) // Assert parameters with t
+			pickPartitionFn: func(domainID string, taskList types.TaskList, taskListType int, forwardedFrom string, nPartitions int, partitionCache cache.Cache, t *testing.T) string {
+				assert.Equal(t, "testDomainID", domainID) // Assert parameters with t
 				assert.Equal(t, "testTaskList", taskList.GetName())
 				assert.Equal(t, 1, taskListType)
 				assert.Equal(t, "", forwardedFrom)
@@ -325,8 +325,8 @@ func TestPickReadPartition(t *testing.T) {
 				assert.Equal(t, 1, taskListType)
 				return 4
 			},
-			pickPartitionFn: func(domainName string, taskList types.TaskList, taskListType int, forwardedFrom string, nPartitions int, partitionCache cache.Cache, t *testing.T) string {
-				assert.Equal(t, "testDomainName", domainName) // Assert parameters with t
+			pickPartitionFn: func(domainID string, taskList types.TaskList, taskListType int, forwardedFrom string, nPartitions int, partitionCache cache.Cache, t *testing.T) string {
+				assert.Equal(t, "testDomainID", domainID) // Assert parameters with t
 				assert.Equal(t, "testTaskList", taskList.GetName())
 				assert.Equal(t, 1, taskListType)
 				assert.Equal(t, "", forwardedFrom)

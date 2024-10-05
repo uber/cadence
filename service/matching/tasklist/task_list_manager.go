@@ -27,6 +27,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"sort"
 	"sync"
 	"sync/atomic"
@@ -365,12 +366,23 @@ func (c *taskListManagerImpl) GetTask(
 		return nil, ErrNoTasks
 	}
 	c.liveness.MarkAlive()
+	// TODO: consider return early if QPS and backlog count are both 0,
+	// since there is no task to be returned
 	task, err := c.getTask(ctx, maxDispatchPerSecond)
 	if err != nil {
 		return nil, fmt.Errorf("couldn't get task: %w", err)
 	}
 	task.domainName = c.domainName
-	task.BacklogCountHint = c.taskAckManager.GetBacklogCount()
+	// according to Little's Law, the average number of tasks in the queue L = λW
+	// where λ is the average arrival rate and W is the average wait time a task spends in the queue
+	// here λ is the QPS and W is the average match latency which is 10ms
+	// so the backlog hint should be backlog count + L.
+	smoothingNumber := int64(0)
+	qps := c.qpsTracker.QPS()
+	if qps > 0.01 {
+		smoothingNumber = int64(math.Ceil(qps * 0.01))
+	}
+	task.BacklogCountHint = c.taskAckManager.GetBacklogCount() + smoothingNumber
 	return task, nil
 }
 

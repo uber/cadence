@@ -266,6 +266,7 @@ func TestClient_withResponse(t *testing.T) {
 				balancer.EXPECT().PickReadPartition(_testDomainUUID, types.TaskList{Name: _testTaskList}, persistence.TaskListTypeDecision, "").Return(_testPartition)
 				p.EXPECT().FromTaskList(_testPartition).Return("peer0", nil)
 				c.EXPECT().PollForDecisionTask(gomock.Any(), gomock.Any(), []yarpc.CallOption{yarpc.WithShardKey("peer0")}).Return(&types.MatchingPollForDecisionTaskResponse{}, nil)
+				balancer.EXPECT().UpdateWeight(_testDomainUUID, types.TaskList{Name: _testTaskList}, persistence.TaskListTypeDecision, "", _testPartition, int64(0))
 			},
 			want: &types.MatchingPollForDecisionTaskResponse{},
 		},

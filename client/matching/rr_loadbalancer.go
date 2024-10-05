@@ -23,7 +23,6 @@
 package matching
 
 import (
-	"fmt"
 	"strings"
 	"sync/atomic"
 
@@ -35,7 +34,7 @@ import (
 
 type (
 	key struct {
-		domainName   string
+		domainID     string
 		taskListName string
 		taskListType int
 	}
@@ -93,7 +92,7 @@ func (lb *roundRobinLoadBalancer) PickWritePartition(
 	if nRead := lb.nReadPartitions(domainName, taskList.GetName(), taskListType); nPartitions > nRead {
 		nPartitions = nRead
 	}
-	return lb.pickPartitionFn(domainName, taskList, taskListType, forwardedFrom, nPartitions, lb.writeCache)
+	return lb.pickPartitionFn(domainID, taskList, taskListType, forwardedFrom, nPartitions, lb.writeCache)
 }
 
 func (lb *roundRobinLoadBalancer) PickReadPartition(
@@ -107,11 +106,11 @@ func (lb *roundRobinLoadBalancer) PickReadPartition(
 		return taskList.GetName()
 	}
 	n := lb.nReadPartitions(domainName, taskList.GetName(), taskListType)
-	return lb.pickPartitionFn(domainName, taskList, taskListType, forwardedFrom, n, lb.readCache)
+	return lb.pickPartitionFn(domainID, taskList, taskListType, forwardedFrom, n, lb.readCache)
 }
 
 func pickPartition(
-	domainName string,
+	domainID string,
 	taskList types.TaskList,
 	taskListType int,
 	forwardedFrom string,
@@ -131,7 +130,7 @@ func pickPartition(
 	}
 
 	taskListKey := key{
-		domainName:   domainName,
+		domainID:     domainID,
 		taskListName: taskListName,
 		taskListType: taskListType,
 	}
@@ -150,9 +149,16 @@ func pickPartition(
 		return taskListName
 	}
 
-	p := atomic.AddInt64(valAddr, 1) % int64(nPartitions)
-	if p == 0 {
-		return taskListName
-	}
-	return fmt.Sprintf("%v%v/%v", common.ReservedTaskListPrefix, taskListName, p)
+	p := int(atomic.AddInt64(valAddr, 1) % int64(nPartitions))
+	return getPartitionTaskListName(taskList.GetName(), p)
+}
+
+func (lb *roundRobinLoadBalancer) UpdateWeight(
+	domainID string,
+	taskList types.TaskList,
+	taskListType int,
+	forwardedFrom string,
+	partition string,
+	weight int64,
+) {
 }

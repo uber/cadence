@@ -35,3 +35,34 @@ This is the first algorithm and it's been widely adopted in production. It's com
 
 ## Round-Robin Selection
 This algorithm also ensure a fair distribution of requests even with a small number of requests. It also uses a shared nothing architecture but it's soft stateful because it uses a cache to remember the previous selected partition.
+
+## Weighted Selection
+The algorithm selects a partition based on the backlog size of each partition if any partition has a backlog size larger than 100. If all partitions don't have a large backlog, it falls back to round-robin selection. It can be proven mathematically that it's better than the previous 2 algorithms.
+
+For a tasklist with $N$ partitions, assuming the number of tasks in each partition is represented by $L_i$, the utilization fraction of partition $i$ is:
+
+$$U_i = \frac{L_i}{\Sigma_{i=0}^{n-1}L_i}, \forall i \in \{0,1,..,N-1\}$$
+
+According to Little's Law, in a stable queue system, the average number of tasks in a queue
+
+$$L = \lambda W$$
+
+ where $\lambda$ is the average arrival rate and $W$ is the average wait time a task spends in the queue. A queue is stable if the utilization factor $\rho$ is less than 1, where
+
+ $$\rho = \frac{\lambda}{X\mu}$$
+
+Here $\lambda$ is the arrival rate of tasks, $\mu$ is the service rate of a single poller, and $X$ is the number of pollers. However, there might be some time that $\rho$ is greater than 1, in which case, tasks are not dropped but persisted into the database. Assuming the number of tasks in the database for partition $i$ is $B_{i}$, the arrival rate is $\lambda_{i}$, the utilization fraction is:
+
+$$U_i = \frac{B_i+\lambda_iW}{\Sigma_{i=0}^{n-1}B_i+W\Sigma_{i=0}^{n-1}\lambda_i}, \forall i \in \{0,1,..,N-1\}$$
+
+To maximize the utilization of pollers, the probability of partition $i$ being selected for a poller should be:
+
+$$P_i = U_{i}, \forall i \in \{0,1,..,N-1\}$$
+
+Assuming $B_i=0, \forall i \in \{0,1,..,N-1\}$ and $\lambda_i=\frac{\lambda}{N}, \forall i \in \{0,1,..,N-1\}$,
+
+$$P_i = \frac{1}{N}, \forall i \in \{0,1,..,N-1\}$$
+
+It means that when the queue system is stable and the producer traffic is evenly distributed among all partitions, selecting partition based on number of tasks is equivalent to random and round-robin selection.
+
+Here λ is the producer QPS and W is the average matching latency. In production, we observed that the average matching latency is about 10ms, and most tasklists only have a few hundred producer QPS of traffic. So for most stable partitions, $L$ is less than 10. So if no partition has a very large backlog size, it's safe to fallback to random selection or round-robin selection algorithm.
