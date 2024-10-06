@@ -121,7 +121,7 @@ func (w *taskWriter) isStopped() bool {
 	return atomic.LoadInt64(&w.stopped) == 1
 }
 
-func (w *taskWriter) appendTask(taskInfo *persistence.TaskInfo) (*persistence.CreateTasksResponse, error) {
+func (w *taskWriter) appendTask(ctx context.Context, taskInfo *persistence.TaskInfo) (*persistence.CreateTasksResponse, error) {
 	if w.isStopped() {
 		return nil, errShutdown
 	}
@@ -142,8 +142,8 @@ func (w *taskWriter) appendTask(taskInfo *persistence.TaskInfo) (*persistence.Cr
 			// it to cassandra, just bail out and fail this request
 			return nil, errShutdown
 		}
-	default: // channel is full, throttle
-		return nil, createServiceBusyError("Too many outstanding appends to the TaskList")
+	case <-ctx.Done(): // channel is full, throttle
+		return nil, ErrTooManyOutstandingTasks
 	}
 }
 
