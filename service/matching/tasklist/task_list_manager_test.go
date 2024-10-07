@@ -892,6 +892,39 @@ func TestTaskExpiryAndCompletion(t *testing.T) {
 	}
 }
 
+func TestTaskListManagerImpl_HasPollerAfter(t *testing.T) {
+	for name, tc := range map[string]struct {
+		outstandingPollers []string
+		prepareManager     func(*taskListManagerImpl)
+	}{
+		"has_outstanding_pollers": {
+			prepareManager: func(tlm *taskListManagerImpl) {
+				tlm.addOutstandingPoller("poller1", "group1", func() {})
+				tlm.addOutstandingPoller("poller2", "group2", func() {})
+			},
+		},
+		"no_outstanding_pollers": {
+			prepareManager: func(tlm *taskListManagerImpl) {
+				tlm.pollerHistory.UpdatePollerInfo("identity", poller.Info{RatePerSecond: 1.0, IsolationGroup: "isolationGroup"})
+			},
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			controller := gomock.NewController(t)
+			logger := testlogger.New(t)
+			tlm := createTestTaskListManager(t, logger, controller)
+			err := tlm.Start()
+			assert.NoError(t, err)
+
+			if tc.prepareManager != nil {
+				tc.prepareManager(tlm)
+			}
+
+			assert.True(t, tlm.HasPollerAfter(time.Time{}))
+		})
+	}
+}
+
 func getIsolationgroupsHelper() []string {
 	return []string{"datacenterA", "datacenterB"}
 }
