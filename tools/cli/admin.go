@@ -368,7 +368,18 @@ func newAdminHistoryHostCommands() []*cli.Command {
 	}
 }
 
+// may be better to do this inside an "ensure setup" in each method,
+// but this reduces branches for testing.
+func withDomainClient(c *cli.Context, admin bool, cb func(dc *domainCLIImpl) error) error {
+	dc, err := newDomainCLI(c, admin)
+	if err != nil {
+		return err
+	}
+	return cb(dc)
+}
+
 func newAdminDomainCommands() []*cli.Command {
+
 	return []*cli.Command{
 		{
 			Name:    "register",
@@ -376,7 +387,9 @@ func newAdminDomainCommands() []*cli.Command {
 			Usage:   "Register workflow domain",
 			Flags:   adminRegisterDomainFlags,
 			Action: func(c *cli.Context) error {
-				return newDomainCLI(c, true).RegisterDomain(c)
+				return withDomainClient(c, true, func(dc *domainCLIImpl) error {
+					return dc.RegisterDomain(c)
+				})
 			},
 		},
 		{
@@ -385,7 +398,9 @@ func newAdminDomainCommands() []*cli.Command {
 			Usage:   "Update existing workflow domain",
 			Flags:   adminUpdateDomainFlags,
 			Action: func(c *cli.Context) error {
-				return newDomainCLI(c, true).UpdateDomain(c)
+				return withDomainClient(c, true, func(dc *domainCLIImpl) error {
+					return dc.UpdateDomain(c)
+				})
 			},
 		},
 		{
@@ -394,7 +409,9 @@ func newAdminDomainCommands() []*cli.Command {
 			Usage:   "Deprecate existing workflow domain",
 			Flags:   adminDeprecateDomainFlags,
 			Action: func(c *cli.Context) error {
-				return newDomainCLI(c, true).DeprecateDomain(c)
+				return withDomainClient(c, true, func(dc *domainCLIImpl) error {
+					return dc.DeprecateDomain(c)
+				})
 			},
 		},
 		{
@@ -403,7 +420,9 @@ func newAdminDomainCommands() []*cli.Command {
 			Usage:   "Describe existing workflow domain",
 			Flags:   adminDescribeDomainFlags,
 			Action: func(c *cli.Context) error {
-				return newDomainCLI(c, true).DescribeDomain(c)
+				return withDomainClient(c, true, func(dc *domainCLIImpl) error {
+					return dc.DescribeDomain(c)
+				})
 			},
 		},
 		{
@@ -460,7 +479,9 @@ func newAdminDomainCommands() []*cli.Command {
 				getFormatFlag(),
 			},
 			Action: func(c *cli.Context) error {
-				return newDomainCLI(c, false).ListDomains(c)
+				return withDomainClient(c, false, func(dc *domainCLIImpl) error {
+					return dc.ListDomains(c)
+				})
 			},
 		},
 	}
@@ -741,7 +762,9 @@ func newAdminClusterCommands() []*cli.Command {
 				},
 			},
 			Action: func(c *cli.Context) error {
-				return newDomainCLI(c, false).FailoverDomains(c)
+				return withDomainClient(c, false, func(dc *domainCLIImpl) error {
+					return dc.FailoverDomains(c)
+				})
 			},
 		},
 		{

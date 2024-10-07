@@ -41,11 +41,14 @@ import (
 func TerminateBatchJob(c *cli.Context) error {
 	jobID := getRequiredOption(c, FlagJobID)
 	reason := getRequiredOption(c, FlagReason)
-	svcClient := cFactory.ServerFrontendClient(c)
+	svcClient, err := getDeps(c).ServerFrontendClient(c)
+	if err != nil {
+		return err
+	}
 	tcCtx, cancel := newContext(c)
 	defer cancel()
 
-	err := svcClient.TerminateWorkflowExecution(
+	err = svcClient.TerminateWorkflowExecution(
 		tcCtx,
 		&types.TerminateWorkflowExecutionRequest{
 			Domain: common.BatcherLocalDomainName,
@@ -71,7 +74,10 @@ func TerminateBatchJob(c *cli.Context) error {
 func DescribeBatchJob(c *cli.Context) error {
 	jobID := getRequiredOption(c, FlagJobID)
 
-	svcClient := cFactory.ServerFrontendClient(c)
+	svcClient, err := getDeps(c).ServerFrontendClient(c)
+	if err != nil {
+		return err
+	}
 	tcCtx, cancel := newContext(c)
 	defer cancel()
 
@@ -116,7 +122,10 @@ func DescribeBatchJob(c *cli.Context) error {
 func ListBatchJobs(c *cli.Context) error {
 	domain := getRequiredOption(c, FlagDomain)
 	pageSize := c.Int(FlagPageSize)
-	svcClient := cFactory.ServerFrontendClient(c)
+	svcClient, err := getDeps(c).ServerFrontendClient(c)
+	if err != nil {
+		return err
+	}
 
 	tcCtx, cancel := newContext(c)
 	defer cancel()
@@ -181,7 +190,10 @@ func StartBatchJob(c *cli.Context) error {
 	retryAttempt := c.Int(FlagRetryAttempts)
 	heartBeatTimeout := time.Duration(c.Int(FlagActivityHeartBeatTimeout)) * time.Second
 
-	svcClient := cFactory.ServerFrontendClient(c)
+	svcClient, err := getDeps(c).ServerFrontendClient(c)
+	if err != nil {
+		return err
+	}
 	tcCtx, cancel := newContext(c)
 	defer cancel()
 

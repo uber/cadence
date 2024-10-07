@@ -33,7 +33,10 @@ import (
 )
 
 func AdminGetAsyncWFConfig(c *cli.Context) error {
-	adminClient := cFactory.ServerAdminClient(c)
+	adminClient, err := getDeps(c).ServerAdminClient(c)
+	if err != nil {
+		return err
+	}
 
 	domainName := getRequiredOption(c, FlagDomain)
 
@@ -60,13 +63,16 @@ func AdminGetAsyncWFConfig(c *cli.Context) error {
 }
 
 func AdminUpdateAsyncWFConfig(c *cli.Context) error {
-	adminClient := cFactory.ServerAdminClient(c)
+	adminClient, err := getDeps(c).ServerAdminClient(c)
+	if err != nil {
+		return err
+	}
 
 	domainName := getRequiredOption(c, FlagDomain)
 	asyncWFCfgJSON := getRequiredOption(c, FlagJSON)
 
 	var cfg types.AsyncWorkflowConfiguration
-	err := json.Unmarshal([]byte(asyncWFCfgJSON), &cfg)
+	err = json.Unmarshal([]byte(asyncWFCfgJSON), &cfg)
 	if err != nil {
 		return commoncli.Problem("Failed to parse async workflow config", err)
 	}

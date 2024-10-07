@@ -55,7 +55,10 @@ func AdminAddSearchAttribute(c *cli.Context) error {
 		color.YellowString(key), color.YellowString(intValTypeToString(valType)))
 	promptFn(promptMsg)
 
-	adminClient := cFactory.ServerAdminClient(c)
+	adminClient, err := getDeps(c).ServerAdminClient(c)
+	if err != nil {
+		return err
+	}
 	ctx, cancel := newContext(c)
 	defer cancel()
 	request := &types.AddSearchAttributeRequest{
@@ -65,7 +68,7 @@ func AdminAddSearchAttribute(c *cli.Context) error {
 		SecurityToken: c.String(FlagSecurityToken),
 	}
 
-	err := adminClient.AddSearchAttribute(ctx, request)
+	err = adminClient.AddSearchAttribute(ctx, request)
 	if err != nil {
 		return commoncli.Problem("Add search attribute failed.", err)
 	}
@@ -75,7 +78,10 @@ func AdminAddSearchAttribute(c *cli.Context) error {
 
 // AdminDescribeCluster is used to dump information about the cluster
 func AdminDescribeCluster(c *cli.Context) error {
-	adminClient := cFactory.ServerAdminClient(c)
+	adminClient, err := getDeps(c).ServerAdminClient(c)
+	if err != nil {
+		return err
+	}
 
 	ctx, cancel := newContext(c)
 	defer cancel()
@@ -89,7 +95,10 @@ func AdminDescribeCluster(c *cli.Context) error {
 }
 
 func AdminRebalanceStart(c *cli.Context) error {
-	client := getCadenceClient(c)
+	client, err := getCadenceClient(c)
+	if err != nil {
+		return err
+	}
 	tcCtx, cancel := newContext(c)
 	defer cancel()
 

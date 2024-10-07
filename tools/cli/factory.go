@@ -24,7 +24,8 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
-	"io/ioutil"
+	"fmt"
+	"os"
 	"time"
 
 	"github.com/olivere/elastic"
@@ -49,6 +50,7 @@ import (
 	"github.com/uber/cadence/common"
 	cc "github.com/uber/cadence/common/client"
 	"github.com/uber/cadence/common/config"
+	"github.com/uber/cadence/tools/common/commoncli"
 )
 
 const (
@@ -66,32 +68,27 @@ const (
 
 // ClientFactory is used to construct rpc clients
 type ClientFactory interface {
-	ServerFrontendClient(c *cli.Context) frontend.Client
-	ServerAdminClient(c *cli.Context) admin.Client
+	ServerFrontendClient(c *cli.Context) (frontend.Client, error)
+	ServerAdminClient(c *cli.Context) (admin.Client, error)
 
 	// ServerFrontendClientForMigration frontend client of the migration destination
-	ServerFrontendClientForMigration(c *cli.Context) frontend.Client
+	ServerFrontendClientForMigration(c *cli.Context) (frontend.Client, error)
 	// ServerAdminClientForMigration admin client of the migration destination
-	ServerAdminClientForMigration(c *cli.Context) admin.Client
+	ServerAdminClientForMigration(c *cli.Context) (admin.Client, error)
 
-	ElasticSearchClient(c *cli.Context) *elastic.Client
+	ElasticSearchClient(c *cli.Context) (*elastic.Client, error)
 
 	ServerConfig(c *cli.Context) (*config.Config, error)
 }
 
 type clientFactory struct {
-	dispatcher          *yarpc.Dispatcher
-	dispatcherMigration *yarpc.Dispatcher
+	dispatcher          *yarpc.Dispatcher // lazy, via ensureDispatcher
+	dispatcherMigration *yarpc.Dispatcher // lazy, via ensureDispatcherForMigration
 	logger              *zap.Logger
 }
 
 // NewClientFactory creates a new ClientFactory
-func NewClientFactory() ClientFactory {
-	logger, err := zap.NewDevelopment()
-	if err != nil {
-		panic(err)
-	}
-
+func NewClientFactory(logger *zap.Logger) ClientFactory {
 	return &clientFactory{
 		logger: logger,
 	}
@@ -106,12 +103,24 @@ func (b *clientFactory) ServerConfig(c *cli.Context) (*config.Config, error) {
 
 	var cfg config.Config
 	err := config.Load(env, configDir, zone, &cfg)
-	return &cfg, err
+	if err != nil {
+		return nil, commoncli.Problem(
+			fmt.Sprintf(
+				"failed to load config (for --%v %q --%v %q --%v %q)",
+				FlagServiceEnv, env, FlagServiceZone, zone, FlagServiceConfigDir, configDir,
+			),
+			err,
+		)
+	}
+	return &cfg, nil
 }
 
 // ServerFrontendClient builds a frontend client (based on server side thrift interface)
-func (b *clientFactory) ServerFrontendClient(c *cli.Context) frontend.Client {
-	b.ensureDispatcher(c)
+func (b *clientFactory) ServerFrontendClient(c *cli.Context) (frontend.Client, error) {
+	err := b.ensureDispatcher(c)
+	if err != nil {
+		return nil, commoncli.Problem("failed to create frontend client dependency", err)
+	}
 	clientConfig := b.dispatcher.ClientConfig(cadenceFrontendService)
 	if c.String(FlagTransport) == grpcTransport {
 		return grpcClient.NewFrontendClient(
@@ -119,24 +128,30 @@ func (b *clientFactory) ServerFrontendClient(c *cli.Context) frontend.Client {
 			apiv1.NewWorkflowAPIYARPCClient(clientConfig),
 			apiv1.NewWorkerAPIYARPCClient(clientConfig),
 			apiv1.NewVisibilityAPIYARPCClient(clientConfig),
-		)
+		), nil
 	}
-	return thrift.NewFrontendClient(serverFrontend.New(clientConfig))
+	return thrift.NewFrontendClient(serverFrontend.New(clientConfig)), nil
 }
 
 // ServerAdminClient builds an admin client (based on server side thrift interface)
-func (b *clientFactory) ServerAdminClient(c *cli.Context) admin.Client {
-	b.ensureDispatcher(c)
+func (b *clientFactory) ServerAdminClient(c *cli.Context) (admin.Client, error) {
+	err := b.ensureDispatcher(c)
+	if err != nil {
+		return nil, commoncli.Problem("failed to create admin client dependency", err)
+	}
 	clientConfig := b.dispatcher.ClientConfig(cadenceFrontendService)
 	if c.String(FlagTransport) == grpcTransport {
-		return grpcClient.NewAdminClient(adminv1.NewAdminAPIYARPCClient(clientConfig))
+		return grpcClient.NewAdminClient(adminv1.NewAdminAPIYARPCClient(clientConfig)), nil
 	}
-	return thrift.NewAdminClient(serverAdmin.New(clientConfig))
+	return thrift.NewAdminClient(serverAdmin.New(clientConfig)), nil
 }
 
 // ServerFrontendClientForMigration builds a frontend client (based on server side thrift interface)
-func (b *clientFactory) ServerFrontendClientForMigration(c *cli.Context) frontend.Client {
-	b.ensureDispatcherForMigration(c)
+func (b *clientFactory) ServerFrontendClientForMigration(c *cli.Context) (frontend.Client, error) {
+	err := b.ensureDispatcherForMigration(c)
+	if err != nil {
+		return nil, commoncli.Problem("failed to create frontend client dependency", err)
+	}
 	clientConfig := b.dispatcherMigration.ClientConfig(cadenceFrontendService)
 	if c.String(FlagTransport) == grpcTransport {
 		return grpcClient.NewFrontendClient(
@@ -144,23 +159,26 @@ func (b *clientFactory) ServerFrontendClientForMigration(c *cli.Context) fronten
 			apiv1.NewWorkflowAPIYARPCClient(clientConfig),
 			apiv1.NewWorkerAPIYARPCClient(clientConfig),
 			apiv1.NewVisibilityAPIYARPCClient(clientConfig),
-		)
+		), nil
 	}
-	return thrift.NewFrontendClient(serverFrontend.New(clientConfig))
+	return thrift.NewFrontendClient(serverFrontend.New(clientConfig)), nil
 }
 
 // ServerAdminClientForMigration builds an admin client (based on server side thrift interface)
-func (b *clientFactory) ServerAdminClientForMigration(c *cli.Context) admin.Client {
-	b.ensureDispatcherForMigration(c)
+func (b *clientFactory) ServerAdminClientForMigration(c *cli.Context) (admin.Client, error) {
+	err := b.ensureDispatcherForMigration(c)
+	if err != nil {
+		return nil, commoncli.Problem("failed to create admin client dependency", err)
+	}
 	clientConfig := b.dispatcherMigration.ClientConfig(cadenceFrontendService)
 	if c.String(FlagTransport) == grpcTransport {
-		return grpcClient.NewAdminClient(adminv1.NewAdminAPIYARPCClient(clientConfig))
+		return grpcClient.NewAdminClient(adminv1.NewAdminAPIYARPCClient(clientConfig)), nil
 	}
-	return thrift.NewAdminClient(serverAdmin.New(clientConfig))
+	return thrift.NewAdminClient(serverAdmin.New(clientConfig)), nil
 }
 
 // ElasticSearchClient builds an ElasticSearch client
-func (b *clientFactory) ElasticSearchClient(c *cli.Context) *elastic.Client {
+func (b *clientFactory) ElasticSearchClient(c *cli.Context) (*elastic.Client, error) {
 	url := getRequiredOption(c, FlagURL)
 	retrier := elastic.NewBackoffRetrier(elastic.NewExponentialBackoff(128*time.Millisecond, 513*time.Millisecond))
 
@@ -169,27 +187,47 @@ func (b *clientFactory) ElasticSearchClient(c *cli.Context) *elastic.Client {
 		elastic.SetRetrier(retrier),
 	)
 	if err != nil {
-		b.logger.Fatal("Unable to create ElasticSearch client", zap.Error(err))
+		return nil, commoncli.Problem(
+			fmt.Sprintf("failed to create ElasticSearch client (for --%v %q)", FlagURL, url),
+			err,
+		)
 	}
 
-	return client
+	return client, nil
 }
 
-func (b *clientFactory) ensureDispatcher(c *cli.Context) {
+func (b *clientFactory) ensureDispatcher(c *cli.Context) error {
 	if b.dispatcher != nil {
-		return
+		return nil
 	}
-	b.dispatcher = b.newClientDispatcher(c, c.String(FlagAddress))
+	d, err := b.newClientDispatcher(c, c.String(FlagAddress))
+	if err != nil {
+		return commoncli.Problem(
+			fmt.Sprintf("failed to create dispatcher (for --%v %q)", FlagAddress, c.String(FlagAddress)),
+			err,
+		)
+	}
+	b.dispatcher = d
+	return nil
 }
 
-func (b *clientFactory) ensureDispatcherForMigration(c *cli.Context) {
+func (b *clientFactory) ensureDispatcherForMigration(c *cli.Context) error {
 	if b.dispatcherMigration != nil {
-		return
+		return nil
 	}
-	b.dispatcherMigration = b.newClientDispatcher(c, c.String(FlagDestinationAddress))
+	dm, err := b.newClientDispatcher(c, c.String(FlagDestinationAddress))
+	if err != nil {
+		return fmt.Errorf(
+			"failed to create dispatcher for migration (for --%v %q): %w",
+			FlagDestinationAddress, c.String(FlagDestinationAddress),
+			err,
+		)
+	}
+	b.dispatcherMigration = dm
+	return nil
 }
 
-func (b *clientFactory) newClientDispatcher(c *cli.Context, hostPortOverride string) *yarpc.Dispatcher {
+func (b *clientFactory) newClientDispatcher(c *cli.Context, hostPortOverride string) (*yarpc.Dispatcher, error) {
 	shouldUseGrpc := c.String(FlagTransport) == grpcTransport
 
 	hostPort := tchannelPort
@@ -206,9 +244,12 @@ func (b *clientFactory) newClientDispatcher(c *cli.Context, hostPortOverride str
 
 		tlsCertificatePath := c.String(FlagTLSCertPath)
 		if tlsCertificatePath != "" {
-			caCert, err := ioutil.ReadFile(tlsCertificatePath)
+			caCert, err := os.ReadFile(tlsCertificatePath)
 			if err != nil {
-				b.logger.Fatal("Failed to load server CA certificate", zap.Error(err))
+				return nil, commoncli.Problem(
+					fmt.Sprintf("unable to find server CA certificate, from --%s %q", FlagTLSCertPath, tlsCertificatePath),
+					err,
+				)
 			}
 			caCertPool := x509.NewCertPool()
 			if !caCertPool.AppendCertsFromPEM(caCert) {
@@ -224,7 +265,7 @@ func (b *clientFactory) newClientDispatcher(c *cli.Context, hostPortOverride str
 	} else {
 		ch, err := tchannel.NewChannelTransport(tchannel.ServiceName(cadenceClientName), tchannel.ListenAddr("127.0.0.1:0"))
 		if err != nil {
-			b.logger.Fatal("Failed to create transport channel", zap.Error(err))
+			return nil, commoncli.Problem("failed create tchannel client transport", err)
 		}
 		outbounds = transport.Outbounds{Unary: ch.NewSingleOutbound(hostPort)}
 	}
@@ -238,12 +279,16 @@ func (b *clientFactory) newClientDispatcher(c *cli.Context, hostPortOverride str
 	})
 
 	if err := dispatcher.Start(); err != nil {
-		if err := dispatcher.Stop(); err != nil {
-			b.logger.Fatal("Failed to stop outbound transport channel", zap.Error(err))
+		if stoperr := dispatcher.Stop(); stoperr != nil {
+			return nil, commoncli.Problem(
+				"failed to start (and stop) tchannel dispatcher",
+				// currently does not print very well due to joined errors, but that can be improved
+				fmt.Errorf("start err: %w, stop err: %w", err, stoperr),
+			)
 		}
-		b.logger.Fatal("Failed to create outbound transport channel: %v", zap.Error(err))
+		return nil, commoncli.Problem("failed to start tchannel dispatcher", err)
 	}
-	return dispatcher
+	return dispatcher, nil
 }
 
 type versionMiddleware struct {

@@ -33,7 +33,10 @@ import (
 )
 
 func AdminGetGlobalIsolationGroups(c *cli.Context) error {
-	adminClient := cFactory.ServerAdminClient(c)
+	adminClient, err := getDeps(c).ServerAdminClient(c)
+	if err != nil {
+		return err
+	}
 
 	ctx, cancel := newContext(c)
 	defer cancel()
@@ -55,12 +58,15 @@ func AdminGetGlobalIsolationGroups(c *cli.Context) error {
 }
 
 func AdminUpdateGlobalIsolationGroups(c *cli.Context) error {
-	adminClient := cFactory.ServerAdminClient(c)
+	adminClient, err := getDeps(c).ServerAdminClient(c)
+	if err != nil {
+		return err
+	}
 
 	ctx, cancel := newContext(c)
 	defer cancel()
 
-	err := validateIsolationGroupUpdateArgs(
+	err = validateIsolationGroupUpdateArgs(
 		c.String(FlagDomain),
 		c.String(FlagDomain),
 		c.StringSlice(FlagIsolationGroupSetDrains),
@@ -91,7 +97,10 @@ func AdminUpdateGlobalIsolationGroups(c *cli.Context) error {
 }
 
 func AdminGetDomainIsolationGroups(c *cli.Context) error {
-	adminClient := cFactory.ServerAdminClient(c)
+	adminClient, err := getDeps(c).ServerAdminClient(c)
+	if err != nil {
+		return err
+	}
 	domain := c.String(FlagDomain)
 
 	ctx, cancel := newContext(c)
@@ -116,10 +125,13 @@ func AdminGetDomainIsolationGroups(c *cli.Context) error {
 }
 
 func AdminUpdateDomainIsolationGroups(c *cli.Context) error {
-	adminClient := cFactory.ServerAdminClient(c)
+	adminClient, err := getDeps(c).ServerAdminClient(c)
+	if err != nil {
+		return err
+	}
 	domain := c.String(FlagDomain)
 
-	err := validateIsolationGroupUpdateArgs(
+	err = validateIsolationGroupUpdateArgs(
 		c.String(FlagDomain),
 		c.String(FlagDomain),
 		c.StringSlice(FlagIsolationGroupSetDrains),

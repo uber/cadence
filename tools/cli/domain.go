@@ -53,7 +53,9 @@ func newDomainCommands() []*cli.Command {
 			Usage:   "Register workflow domain",
 			Flags:   registerDomainFlags,
 			Action: func(c *cli.Context) error {
-				return newDomainCLI(c, false).RegisterDomain(c)
+				return withDomainClient(c, false, func(dc *domainCLIImpl) error {
+					return dc.RegisterDomain(c)
+				})
 			},
 		},
 		{
@@ -62,7 +64,9 @@ func newDomainCommands() []*cli.Command {
 			Usage:   "Update existing workflow domain",
 			Flags:   updateDomainFlags,
 			Action: func(c *cli.Context) error {
-				return newDomainCLI(c, false).UpdateDomain(c)
+				return withDomainClient(c, false, func(dc *domainCLIImpl) error {
+					return dc.UpdateDomain(c)
+				})
 			},
 		},
 		{
@@ -71,7 +75,9 @@ func newDomainCommands() []*cli.Command {
 			Usage:   "Deprecate existing workflow domain",
 			Flags:   deprecateDomainFlags,
 			Action: func(c *cli.Context) error {
-				return newDomainCLI(c, false).DeprecateDomain(c)
+				return withDomainClient(c, false, func(dc *domainCLIImpl) error {
+					return dc.DeprecateDomain(c)
+				})
 			},
 		},
 		{
@@ -80,7 +86,9 @@ func newDomainCommands() []*cli.Command {
 			Usage:   "Describe existing workflow domain",
 			Flags:   describeDomainFlags,
 			Action: func(c *cli.Context) error {
-				return newDomainCLI(c, false).DescribeDomain(c)
+				return withDomainClient(c, false, func(dc *domainCLIImpl) error {
+					return dc.DescribeDomain(c)
+				})
 			},
 		},
 		{

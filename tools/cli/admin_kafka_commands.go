@@ -481,7 +481,10 @@ func doRereplicate(
 func AdminRereplicate(c *cli.Context) error {
 	sourceCluster := getRequiredOption(c, FlagSourceCluster)
 
-	adminClient := cFactory.ServerAdminClient(c)
+	adminClient, err := getDeps(c).ServerAdminClient(c)
+	if err != nil {
+		return err
+	}
 	var endEventID, endVersion *int64
 	if c.IsSet(FlagMaxEventID) {
 		endEventID = common.Int64Ptr(c.Int64(FlagMaxEventID) + 1)

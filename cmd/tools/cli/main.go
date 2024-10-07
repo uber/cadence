@@ -23,6 +23,8 @@ package main
 import (
 	"os"
 
+	"go.uber.org/zap"
+
 	"github.com/uber/cadence/tools/cli"
 	"github.com/uber/cadence/tools/common/commoncli"
 
@@ -35,6 +37,13 @@ import (
 // Start using this CLI tool with command
 // See cadence/tools/cli/README.md for usage
 func main() {
-	app := cli.NewCliApp()
+	app := cli.NewCliApp(cli.NewClientFactory(must(zap.NewDevelopment())))
 	commoncli.ExitHandler(app.Run(os.Args))
+}
+
+func must[T any](v T, err error) T {
+	if err != nil {
+		panic(err)
+	}
+	return v
 }

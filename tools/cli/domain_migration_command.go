@@ -117,13 +117,29 @@ type DomainMigrationCommand interface {
 	DynamicConfigCheck(c *cli.Context) DomainMigrationRow
 }
 
-func (d *domainMigrationCLIImpl) NewDomainMigrationCLIImpl(c *cli.Context) *domainMigrationCLIImpl {
-	return &domainMigrationCLIImpl{
-		frontendClient:         cFactory.ServerFrontendClient(c),
-		destinationClient:      cFactory.ServerFrontendClientForMigration(c),
-		frontendAdminClient:    cFactory.ServerAdminClient(c),
-		destinationAdminClient: cFactory.ServerAdminClientForMigration(c),
+func (d *domainMigrationCLIImpl) NewDomainMigrationCLIImpl(c *cli.Context) (*domainMigrationCLIImpl, error) {
+	fc, err := getDeps(c).ServerFrontendClient(c)
+	if err != nil {
+		return nil, err
 	}
+	fcm, err := getDeps(c).ServerFrontendClientForMigration(c)
+	if err != nil {
+		return nil, err
+	}
+	ac, err := getDeps(c).ServerAdminClient(c)
+	if err != nil {
+		return nil, err
+	}
+	acm, err := getDeps(c).ServerAdminClientForMigration(c)
+	if err != nil {
+		return nil, err
+	}
+	return &domainMigrationCLIImpl{
+		frontendClient:         fc,
+		destinationClient:      fcm,
+		frontendAdminClient:    ac,
+		destinationAdminClient: acm,
+	}, nil
 }
 
 // Export a function to create an instance of the domainMigrationCLIImpl.

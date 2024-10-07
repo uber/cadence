@@ -94,7 +94,10 @@ func AdminFailoverResume(c *cli.Context) error {
 
 // AdminFailoverQuery query a failover workflow
 func AdminFailoverQuery(c *cli.Context) error {
-	client := getCadenceClient(c)
+	client, err := getCadenceClient(c)
+	if err != nil {
+		return err
+	}
 	tcCtx, cancel := newContext(c)
 	defer cancel()
 	workflowID := getFailoverWorkflowID(c)
@@ -124,7 +127,10 @@ func AdminFailoverQuery(c *cli.Context) error {
 
 // AdminFailoverAbort abort a failover workflow
 func AdminFailoverAbort(c *cli.Context) error {
-	client := getCadenceClient(c)
+	client, err := getCadenceClient(c)
+	if err != nil {
+		return err
+	}
 	tcCtx, cancel := newContext(c)
 	defer cancel()
 
@@ -143,7 +149,7 @@ func AdminFailoverAbort(c *cli.Context) error {
 		Reason: reason,
 	}
 
-	err := client.TerminateWorkflowExecution(tcCtx, request)
+	err = client.TerminateWorkflowExecution(tcCtx, request)
 	if err != nil {
 		return commoncli.Problem("Failed to abort failover workflow", err)
 	}
@@ -154,7 +160,10 @@ func AdminFailoverAbort(c *cli.Context) error {
 
 // AdminFailoverRollback rollback a failover run
 func AdminFailoverRollback(c *cli.Context) error {
-	client := getCadenceClient(c)
+	client, err := getCadenceClient(c)
+	if err != nil {
+		return err
+	}
 	tcCtx, cancel := newContext(c)
 	defer cancel()
 
@@ -250,9 +259,12 @@ func isWorkflowRunning(queryResult *failovermanager.QueryResult) bool {
 		queryResult.State == failovermanager.WorkflowPaused
 }
 
-func getCadenceClient(c *cli.Context) frontend.Client {
-	svcClient := cFactory.ServerFrontendClient(c)
-	return svcClient
+func getCadenceClient(c *cli.Context) (frontend.Client, error) {
+	svcClient, err := getDeps(c).ServerFrontendClient(c)
+	if err != nil {
+		return nil, err
+	}
+	return svcClient, nil
 }
 
 func getRunID(c *cli.Context) string {
@@ -278,7 +290,10 @@ func failoverStart(c *cli.Context, params *startParams) error {
 		gracefulFailoverTimeoutInSeconds = common.Int32Ptr(int32(params.failoverTimeout))
 	}
 
-	client := getCadenceClient(c)
+	client, err := getCadenceClient(c)
+	if err != nil {
+		return err
+	}
 	tcCtx, cancel := newContext(c)
 	defer cancel()
 	memo, err := getWorkflowMemo(map[string]interface{}{
@@ -366,7 +381,10 @@ func isWorkflowTerminated(descResp *types.DescribeWorkflowExecutionResponse) boo
 }
 
 func executePauseOrResume(c *cli.Context, workflowID string, isPause bool) error {
-	client := getCadenceClient(c)
+	client, err := getCadenceClient(c)
+	if err != nil {
+		return err
+	}
 	tcCtx, cancel := newContext(c)
 	defer cancel()
 

@@ -83,9 +83,6 @@ func AdminDBClean(c *cli.Context) error {
 	input := getInputFile(c.String(FlagInputFile))
 
 	dec := json.NewDecoder(input)
-	if err != nil {
-		return commoncli.Problem("", err)
-	}
 	var data []*store.ScanOutputEntity
 
 	for {
