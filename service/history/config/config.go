@@ -24,7 +24,6 @@ import (
 	"time"
 
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 )
@@ -161,32 +160,6 @@ type Config struct {
 	TransferProcessorValidationInterval                  dynamicconfig.DurationPropertyFn
 	TransferProcessorVisibilityArchivalTimeLimit         dynamicconfig.DurationPropertyFn
 
-	// CrossClusterQueueProcessor settings
-	CrossClusterTaskBatchSize                                     dynamicconfig.IntPropertyFn
-	CrossClusterTaskDeleteBatchSize                               dynamicconfig.IntPropertyFn
-	CrossClusterTaskFetchBatchSize                                dynamicconfig.IntPropertyFnWithShardIDFilter
-	CrossClusterSourceProcessorMaxPollRPS                         dynamicconfig.IntPropertyFn
-	CrossClusterSourceProcessorMaxPollInterval                    dynamicconfig.DurationPropertyFn
-	CrossClusterSourceProcessorMaxPollIntervalJitterCoefficient   dynamicconfig.FloatPropertyFn
-	CrossClusterSourceProcessorUpdateAckInterval                  dynamicconfig.DurationPropertyFn
-	CrossClusterSourceProcessorUpdateAckIntervalJitterCoefficient dynamicconfig.FloatPropertyFn
-	CrossClusterSourceProcessorMaxRedispatchQueueSize             dynamicconfig.IntPropertyFn
-	CrossClusterSourceProcessorMaxPendingTaskSize                 dynamicconfig.IntPropertyFn
-
-	// CrossClusterTargetTaskProcessor settings
-	CrossClusterTargetProcessorMaxPendingTasks            dynamicconfig.IntPropertyFn
-	CrossClusterTargetProcessorMaxRetryCount              dynamicconfig.IntPropertyFn
-	CrossClusterTargetProcessorTaskWaitInterval           dynamicconfig.DurationPropertyFn
-	CrossClusterTargetProcessorServiceBusyBackoffInterval dynamicconfig.DurationPropertyFn
-	CrossClusterTargetProcessorJitterCoefficient          dynamicconfig.FloatPropertyFn
-
-	// CrossClusterTaskFetcher settings
-	CrossClusterFetcherParallelism                dynamicconfig.IntPropertyFn
-	CrossClusterFetcherAggregationInterval        dynamicconfig.DurationPropertyFn
-	CrossClusterFetcherServiceBusyBackoffInterval dynamicconfig.DurationPropertyFn
-	CrossClusterFetcherErrorBackoffInterval       dynamicconfig.DurationPropertyFn
-	CrossClusterFetcherJitterCoefficient          dynamicconfig.FloatPropertyFn
-
 	// ReplicatorQueueProcessor settings
 	ReplicatorTaskDeleteBatchSize          dynamicconfig.IntPropertyFn
 	ReplicatorReadTaskMaxRetryCount        dynamicconfig.IntPropertyFn
@@ -218,8 +191,6 @@ type Config struct {
 	EnableParentClosePolicy dynamicconfig.BoolPropertyFnWithDomainFilter
 	// whether or not enable system workers for processing parent close policy task
 	EnableParentClosePolicyWorker dynamicconfig.BoolPropertyFn
-	// whether to enable system workers for processing ElasticSearch Analyzer
-	EnableESAnalyzer dynamicconfig.BoolPropertyFn
 	// parent close policy will be processed by sys workers(if enabled) if
 	// the number of children greater than or equal to this threshold
 	ParentClosePolicyThreshold dynamicconfig.IntPropertyFnWithDomainFilter
@@ -308,7 +279,6 @@ type Config struct {
 	// EnableContextHeaderInVisibility whether to enable indexing context header in visibility
 	EnableContextHeaderInVisibility dynamicconfig.BoolPropertyFnWithDomainFilter
 
-	EnableCrossClusterEngine              dynamicconfig.BoolPropertyFn
 	EnableCrossClusterOperationsForDomain dynamicconfig.BoolPropertyFnWithDomainFilter
 
 	// Data integrity check related config knobs
@@ -358,7 +328,7 @@ type Config struct {
 }
 
 // New returns new service config with default values
-func New(dc *dynamicconfig.Collection, numberOfShards int, maxMessageSize int, storeType string, isAdvancedVisConfigExist bool, hostname string) *Config {
+func New(dc *dynamicconfig.Collection, numberOfShards int, maxMessageSize int, isAdvancedVisConfigExist bool, hostname string) *Config {
 	cfg := &Config{
 		NumberOfShards:                         numberOfShards,
 		IsAdvancedVisConfigExist:               isAdvancedVisConfigExist,
@@ -475,29 +445,6 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, maxMessageSize int, s
 		TransferProcessorValidationInterval:                  dc.GetDurationProperty(dynamicconfig.TransferProcessorValidationInterval),
 		TransferProcessorVisibilityArchivalTimeLimit:         dc.GetDurationProperty(dynamicconfig.TransferProcessorVisibilityArchivalTimeLimit),
 
-		CrossClusterTaskBatchSize:                                     dc.GetIntProperty(dynamicconfig.CrossClusterTaskBatchSize),
-		CrossClusterTaskDeleteBatchSize:                               dc.GetIntProperty(dynamicconfig.CrossClusterTaskDeleteBatchSize),
-		CrossClusterTaskFetchBatchSize:                                dc.GetIntPropertyFilteredByShardID(dynamicconfig.CrossClusterTaskFetchBatchSize),
-		CrossClusterSourceProcessorMaxPollRPS:                         dc.GetIntProperty(dynamicconfig.CrossClusterSourceProcessorMaxPollRPS),
-		CrossClusterSourceProcessorMaxPollInterval:                    dc.GetDurationProperty(dynamicconfig.CrossClusterSourceProcessorMaxPollInterval),
-		CrossClusterSourceProcessorMaxPollIntervalJitterCoefficient:   dc.GetFloat64Property(dynamicconfig.CrossClusterSourceProcessorMaxPollIntervalJitterCoefficient),
-		CrossClusterSourceProcessorUpdateAckInterval:                  dc.GetDurationProperty(dynamicconfig.CrossClusterSourceProcessorUpdateAckInterval),
-		CrossClusterSourceProcessorUpdateAckIntervalJitterCoefficient: dc.GetFloat64Property(dynamicconfig.CrossClusterSourceProcessorUpdateAckIntervalJitterCoefficient),
-		CrossClusterSourceProcessorMaxRedispatchQueueSize:             dc.GetIntProperty(dynamicconfig.CrossClusterSourceProcessorMaxRedispatchQueueSize),
-		CrossClusterSourceProcessorMaxPendingTaskSize:                 dc.GetIntProperty(dynamicconfig.CrossClusterSourceProcessorMaxPendingTaskSize),
-
-		CrossClusterTargetProcessorMaxPendingTasks:            dc.GetIntProperty(dynamicconfig.CrossClusterTargetProcessorMaxPendingTasks),
-		CrossClusterTargetProcessorMaxRetryCount:              dc.GetIntProperty(dynamicconfig.CrossClusterTargetProcessorMaxRetryCount),
-		CrossClusterTargetProcessorTaskWaitInterval:           dc.GetDurationProperty(dynamicconfig.CrossClusterTargetProcessorTaskWaitInterval),
-		CrossClusterTargetProcessorServiceBusyBackoffInterval: dc.GetDurationProperty(dynamicconfig.CrossClusterTargetProcessorServiceBusyBackoffInterval),
-		CrossClusterTargetProcessorJitterCoefficient:          dc.GetFloat64Property(dynamicconfig.CrossClusterTargetProcessorJitterCoefficient),
-
-		CrossClusterFetcherParallelism:                dc.GetIntProperty(dynamicconfig.CrossClusterFetcherParallelism),
-		CrossClusterFetcherAggregationInterval:        dc.GetDurationProperty(dynamicconfig.CrossClusterFetcherAggregationInterval),
-		CrossClusterFetcherServiceBusyBackoffInterval: dc.GetDurationProperty(dynamicconfig.CrossClusterFetcherServiceBusyBackoffInterval),
-		CrossClusterFetcherErrorBackoffInterval:       dc.GetDurationProperty(dynamicconfig.CrossClusterFetcherErrorBackoffInterval),
-		CrossClusterFetcherJitterCoefficient:          dc.GetFloat64Property(dynamicconfig.CrossClusterFetcherJitterCoefficient),
-
 		ReplicatorTaskDeleteBatchSize:          dc.GetIntProperty(dynamicconfig.ReplicatorTaskDeleteBatchSize),
 		ReplicatorReadTaskMaxRetryCount:        dc.GetIntProperty(dynamicconfig.ReplicatorReadTaskMaxRetryCount),
 		ReplicatorProcessorFetchTasksBatchSize: dc.GetIntPropertyFilteredByShardID(dynamicconfig.ReplicatorTaskBatchSize),
@@ -542,6 +489,7 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, maxMessageSize int, s
 		ThrottledLogRPS:   dc.GetIntProperty(dynamicconfig.HistoryThrottledLogRPS),
 		EnableStickyQuery: dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableStickyQuery),
 
+		EnableQueryAttributeValidation:           dc.GetBoolProperty(dynamicconfig.EnableQueryAttributeValidation),
 		ValidSearchAttributes:                    dc.GetMapProperty(dynamicconfig.ValidSearchAttributes),
 		SearchAttributesNumberOfKeysLimit:        dc.GetIntPropertyFilteredByDomain(dynamicconfig.SearchAttributesNumberOfKeysLimit),
 		SearchAttributesSizeOfValueLimit:         dc.GetIntPropertyFilteredByDomain(dynamicconfig.SearchAttributesSizeOfValueLimit),
@@ -585,7 +533,6 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, maxMessageSize int, s
 		EnableConsistentQuery:                 dc.GetBoolProperty(dynamicconfig.EnableConsistentQuery),
 		EnableConsistentQueryByDomain:         dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableConsistentQueryByDomain),
 		EnableContextHeaderInVisibility:       dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableContextHeaderInVisibility),
-		EnableCrossClusterEngine:              dc.GetBoolProperty(dynamicconfig.EnableCrossClusterEngine),
 		EnableCrossClusterOperationsForDomain: dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableCrossClusterOperationsForDomain),
 		MaxBufferedQueryCount:                 dc.GetIntProperty(dynamicconfig.MaxBufferedQueryCount),
 		MutableStateChecksumGenProbability:    dc.GetIntPropertyFilteredByDomain(dynamicconfig.MutableStateChecksumGenProbability),
@@ -669,7 +616,7 @@ func NewForTestByShardNumber(shardNumber int) *Config {
 	panicIfErr(inMem.UpdateValue(dynamicconfig.EnableStrongIdempotency, true))
 
 	dc := dynamicconfig.NewCollection(inMem, log.NewNoop())
-	config := New(dc, shardNumber, 1024*1024, config.StoreTypeCassandra, false, "")
+	config := New(dc, shardNumber, 1024*1024, false, "")
 	// reduce the duration of long poll to increase test speed
 	config.LongPollExpirationInterval = dc.GetDurationPropertyFilteredByDomain(dynamicconfig.HistoryLongPollExpirationInterval)
 	config.EnableConsistentQueryByDomain = dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableConsistentQueryByDomain)

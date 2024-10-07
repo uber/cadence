@@ -1034,72 +1034,6 @@ const (
 	// Default value: 10000
 	// Allowed filters: N/A
 	TransferProcessorMaxRedispatchQueueSize
-	// CrossClusterTaskBatchSize is the batch size for loading cross cluster tasks from persistence in crossClusterQueueProcessor
-	// KeyName: history.crossClusterTaskBatchSize
-	// Value type: Int
-	// Default value: 100
-	// Allowed filters: N/A
-	CrossClusterTaskBatchSize
-	// CrossClusterTaskDeleteBatchSize is the batch size for deleting cross cluster tasks from persistence in crossClusterQueueProcessor
-	// KeyName: history.crossClusterTaskDeleteBatchSize
-	// Value type: Int
-	// Default value: 4000
-	// Allowed filters: N/A
-	CrossClusterTaskDeleteBatchSize
-	// CrossClusterTaskFetchBatchSize is batch size for dispatching cross cluster tasks to target cluster in crossClusterQueueProcessor
-	// KeyName: history.crossClusterTaskFetchBatchSize
-	// Value type: Int
-	// Default value: 100
-	// Allowed filters: ShardID
-	CrossClusterTaskFetchBatchSize
-	// CrossClusterSourceProcessorMaxPollRPS is max poll rate per second for crossClusterQueueProcessor
-	// KeyName: history.crossClusterProcessorMaxPollRPS
-	// Value type: Int
-	// Default value: 20
-	// Allowed filters: N/A
-	CrossClusterSourceProcessorMaxPollRPS
-	// CrossClusterSourceProcessorCompleteTaskFailureRetryCount is times of retry for failure
-	// KeyName: history.crossClusterProcessorCompleteTaskFailureRetryCount
-	// Value type: Int
-	// Default value: 10
-	// Allowed filters: N/A
-	CrossClusterSourceProcessorCompleteTaskFailureRetryCount // TODO
-	// CrossClusterSourceProcessorMaxRedispatchQueueSize is the threshold of the number of tasks in the redispatch queue for crossClusterQueueProcessor
-	// KeyName: history.crossClusterProcessorMaxRedispatchQueueSize
-	// Value type: Int
-	// Default value: 10000
-	// Allowed filters: N/A
-	CrossClusterSourceProcessorMaxRedispatchQueueSize
-	// CrossClusterSourceProcessorMaxPendingTaskSize is the threshold of the number of ready for polling tasks in crossClusterQueueProcessor,
-	// task loading will be stopped when the number is reached
-	// KeyName: history.crossClusterSourceProcessorMaxPendingTaskSize
-	// Value type: Int
-	// Default value: 500
-	// Allowed filters: N/A
-	CrossClusterSourceProcessorMaxPendingTaskSize
-
-	// CrossClusterTargetProcessorMaxPendingTasks is the max number of pending tasks in cross cluster task processor
-	// note there's one cross cluster task processor per shard per source cluster
-	// KeyName: history.crossClusterTargetProcessorMaxPendingTasks
-	// Value type: Int
-	// Default value: 200
-	// Allowed filters: N/A
-	CrossClusterTargetProcessorMaxPendingTasks
-	// CrossClusterTargetProcessorMaxRetryCount is the max number of retries when executing a cross-cluster task in target cluster
-	// KeyName: history.crossClusterTargetProcessorMaxRetryCount
-	// Value type: Int
-	// Default value: 20
-	// Allowed filters: N/A
-	CrossClusterTargetProcessorMaxRetryCount
-
-	// CrossClusterFetcherParallelism is the number of go routines each cross cluster fetcher use
-	// note there's one cross cluster task fetcher per host per source cluster
-	// KeyName: history.crossClusterFetcherParallelism
-	// Value type: Int
-	// Default value: 1
-	// Allowed filters: N/A
-	CrossClusterFetcherParallelism
-
 	// ReplicatorTaskBatchSize is batch size for ReplicatorProcessor
 	// KeyName: history.replicatorTaskBatchSize
 	// Value type: Int
@@ -1802,13 +1736,6 @@ const (
 	// Default value: false
 	// Allowed filters: DomainName
 	EnableContextHeaderInVisibility
-	// EnableCrossClusterEngine is used as an overall switch for the cross-cluster feature, a feature which, if not enabled
-	// can be quite expensive in terms of resources
-	// KeyName: history.enableCrossClusterEngine
-	// Value type: Bool
-	// Default value: false
-	// Allowed filters: DomainName
-	EnableCrossClusterEngine
 	// EnableCrossClusterOperationsForDomain indicates if cross cluster operations can be scheduled for a domain
 	// KeyName: history.enableCrossClusterOperations
 	// Value type: Bool
@@ -2236,30 +2163,6 @@ const (
 	// Default value: 0.15
 	// Allowed filters: N/A
 	TransferProcessorUpdateAckIntervalJitterCoefficient
-	// CrossClusterSourceProcessorMaxPollIntervalJitterCoefficient is the max poll interval jitter coefficient
-	// KeyName: history.crossClusterProcessorMaxPollIntervalJitterCoefficient
-	// Value type: Float64
-	// Default value: 0.15
-	// Allowed filters: N/A
-	CrossClusterSourceProcessorMaxPollIntervalJitterCoefficient
-	// CrossClusterSourceProcessorUpdateAckIntervalJitterCoefficient is the update interval jitter coefficient
-	// KeyName: history.crossClusterProcessorUpdateAckIntervalJitterCoefficient
-	// Value type: Float64
-	// Default value: 0.15
-	// Allowed filters: N/A
-	CrossClusterSourceProcessorUpdateAckIntervalJitterCoefficient
-	// CrossClusterTargetProcessorJitterCoefficient is the jitter coefficient used in cross cluster task processor
-	// KeyName: history.crossClusterTargetProcessorJitterCoefficient
-	// Value type: Float64
-	// Default value: 0.15
-	// Allowed filters: N/A
-	CrossClusterTargetProcessorJitterCoefficient
-	// CrossClusterFetcherJitterCoefficient is the jitter coefficient used in cross cluster task fetcher
-	// KeyName: history.crossClusterFetcherJitterCoefficient
-	// Value type: Float64
-	// Default value: 0.15
-	// Allowed filters: N/A
-	CrossClusterFetcherJitterCoefficient
 	// ReplicationTaskProcessorCleanupJitterCoefficient is the jitter for cleanup timer
 	// KeyName: history.ReplicationTaskProcessorCleanupJitterCoefficient
 	// Value type: Float64
@@ -2676,51 +2579,6 @@ const (
 	// Default value: 400ms (400*time.Millisecond)
 	// Allowed filters: N/A
 	TransferProcessorVisibilityArchivalTimeLimit
-	// CrossClusterSourceProcessorMaxPollInterval is max poll interval for crossClusterQueueProcessor
-	// KeyName: history.crossClusterProcessorMaxPollInterval
-	// Value type: Duration
-	// Default value: 1m (1*time.Minute)
-	// Allowed filters: N/A
-	CrossClusterSourceProcessorMaxPollInterval
-	// CrossClusterSourceProcessorUpdateAckInterval is update interval for crossClusterQueueProcessor
-	// KeyName: history.crossClusterProcessorUpdateAckInterval
-	// Value type: Duration
-	// Default value: 30s (30*time.Second)
-	// Allowed filters: N/A
-	CrossClusterSourceProcessorUpdateAckInterval
-	// CrossClusterTargetProcessorTaskWaitInterval is the duration for waiting a cross-cluster task response before responding to source
-	// KeyName: history.crossClusterTargetProcessorTaskWaitInterval
-	// Value type: Duration
-	// Default value: 3s (3*time.Second)
-	// Allowed filters: N/A
-	CrossClusterTargetProcessorTaskWaitInterval
-	// CrossClusterTargetProcessorServiceBusyBackoffInterval is the backoff duration for cross cluster task processor when getting
-	// a service busy error when calling source cluster
-	// KeyName: history.crossClusterTargetProcessorServiceBusyBackoffInterval
-	// Value type: Duration
-	// Default value: 5s (5*time.Second)
-	// Allowed filters: N/A
-	CrossClusterTargetProcessorServiceBusyBackoffInterval
-	// CrossClusterFetcherAggregationInterval determines how frequently the fetch requests are sent
-	// KeyName: history.crossClusterFetcherAggregationInterval
-	// Value type: Duration
-	// Default value: 2s (2*time.Second)
-	// Allowed filters: N/A
-	CrossClusterFetcherAggregationInterval
-	// CrossClusterFetcherServiceBusyBackoffInterval is the backoff duration for cross cluster task fetcher when getting
-	// a service busy error when calling source cluster
-	// KeyName: history.crossClusterFetcherServiceBusyBackoffInterval
-	// Value type: Duration
-	// Default value: 5s (5*time.Second)
-	// Allowed filters: N/A
-	CrossClusterFetcherServiceBusyBackoffInterval
-	// CrossClusterFetcherServiceBusyBackoffInterval is the backoff duration for cross cluster task fetcher when getting
-	// a non-service busy error when calling source cluster
-	// KeyName: history.crossClusterFetcherErrorBackoffInterval
-	// Value type: Duration
-	// Default value: 1s (time.Second)
-	// Allowed filters: N/A
-	CrossClusterFetcherErrorBackoffInterval
 	// ReplicatorUpperLatency indicates the max allowed replication latency between clusters
 	// KeyName: history.replicatorUpperLatency
 	// Value type: Duration
@@ -3593,57 +3451,6 @@ var IntKeys = map[IntKey]DynamicInt{
 		Description:  "TransferProcessorMaxRedispatchQueueSize is the threshold of the number of tasks in the redispatch queue for transferQueueProcessor",
 		DefaultValue: 10000,
 	},
-	CrossClusterTaskBatchSize: {
-		KeyName:      "history.crossClusterTaskBatchSize",
-		Description:  "CrossClusterTaskBatchSize is the batch size for loading cross cluster tasks from persistence in crossClusterQueueProcessor",
-		DefaultValue: 100,
-	},
-	CrossClusterTaskDeleteBatchSize: {
-		KeyName:      "history.crossClusterTaskDeleteBatchSize",
-		Description:  "CrossClusterTaskDeleteBatchSize is the batch size for deleting cross cluster tasks from persistence in crossClusterQueueProcessor",
-		DefaultValue: 4000,
-	},
-	CrossClusterTaskFetchBatchSize: {
-		KeyName:      "history.crossClusterTaskFetchBatchSize",
-		Filters:      []Filter{ShardID},
-		Description:  "CrossClusterTaskFetchBatchSize is batch size for dispatching cross cluster tasks to target cluster in crossClusterQueueProcessor",
-		DefaultValue: 100,
-	},
-	CrossClusterSourceProcessorMaxPollRPS: {
-		KeyName:      "history.crossClusterSourceProcessorMaxPollRPS",
-		Description:  "CrossClusterSourceProcessorMaxPollRPS is max poll rate per second for crossClusterQueueProcessor",
-		DefaultValue: 20,
-	},
-	CrossClusterSourceProcessorCompleteTaskFailureRetryCount: {
-		KeyName:      "history.crossClusterSourceProcessorCompleteTaskFailureRetryCount",
-		Description:  "CrossClusterSourceProcessorCompleteTaskFailureRetryCount is times of retry for failure",
-		DefaultValue: 10,
-	},
-	CrossClusterSourceProcessorMaxRedispatchQueueSize: {
-		KeyName:      "history.crossClusterSourceProcessorMaxRedispatchQueueSize",
-		Description:  "CrossClusterSourceProcessorMaxRedispatchQueueSize is the threshold of the number of tasks in the redispatch queue for crossClusterQueueProcessor",
-		DefaultValue: 10000,
-	},
-	CrossClusterSourceProcessorMaxPendingTaskSize: {
-		KeyName:      "history.crossClusterSourceProcessorMaxPendingTaskSize",
-		Description:  "CrossClusterSourceProcessorMaxPendingTaskSize is the threshold of the number of ready for polling tasks in crossClusterQueueProcessor, task loading will be stopped when the number is reached",
-		DefaultValue: 500,
-	},
-	CrossClusterTargetProcessorMaxPendingTasks: {
-		KeyName:      "history.crossClusterTargetProcessorMaxPendingTasks",
-		Description:  "CrossClusterTargetProcessorMaxPendingTasks is the max number of pending tasks in cross cluster task processor",
-		DefaultValue: 200,
-	},
-	CrossClusterTargetProcessorMaxRetryCount: {
-		KeyName:      "history.crossClusterTargetProcessorMaxRetryCount",
-		Description:  "CrossClusterTargetProcessorMaxRetryCount is the max number of retries when executing a cross-cluster task in target cluster",
-		DefaultValue: 20,
-	},
-	CrossClusterFetcherParallelism: {
-		KeyName:      "history.crossClusterFetcherParallelism",
-		Description:  "CrossClusterFetcherParallelism is the number of go routines each cross cluster fetcher use, note there's one cross cluster task fetcher per host per source cluster",
-		DefaultValue: 1,
-	},
 	ReplicatorTaskBatchSize: {
 		KeyName:      "history.replicatorTaskBatchSize",
 		Description:  "ReplicatorTaskBatchSize is batch size for ReplicatorProcessor",
@@ -4269,11 +4076,6 @@ var BoolKeys = map[BoolKey]DynamicBool{
 		Description:  "EnableContextHeaderInVisibility is key for enable context header in visibility",
 		DefaultValue: false,
 	},
-	EnableCrossClusterEngine: {
-		KeyName:      "history.enableCrossClusterEngine",
-		Description:  "an overall toggle for the cross-cluster domain feature",
-		DefaultValue: false,
-	},
 	EnableCrossClusterOperationsForDomain: {
 		KeyName:      "history.enableCrossClusterOperations",
 		Filters:      []Filter{DomainName},
@@ -4638,26 +4440,6 @@ var FloatKeys = map[FloatKey]DynamicFloat{
 	TransferProcessorUpdateAckIntervalJitterCoefficient: {
 		KeyName:      "history.transferProcessorUpdateAckIntervalJitterCoefficient",
 		Description:  "TransferProcessorUpdateAckIntervalJitterCoefficient is the update interval jitter coefficient",
-		DefaultValue: 0.15,
-	},
-	CrossClusterSourceProcessorMaxPollIntervalJitterCoefficient: {
-		KeyName:      "history.crossClusterSourceProcessorMaxPollIntervalJitterCoefficient",
-		Description:  "CrossClusterSourceProcessorMaxPollIntervalJitterCoefficient is the max poll interval jitter coefficient",
-		DefaultValue: 0.15,
-	},
-	CrossClusterSourceProcessorUpdateAckIntervalJitterCoefficient: {
-		KeyName:      "history.crossClusterSourceProcessorUpdateAckIntervalJitterCoefficient",
-		Description:  "CrossClusterSourceProcessorUpdateAckIntervalJitterCoefficient is the update interval jitter coefficient",
-		DefaultValue: 0.15,
-	},
-	CrossClusterTargetProcessorJitterCoefficient: {
-		KeyName:      "history.crossClusterTargetProcessorJitterCoefficient",
-		Description:  "CrossClusterTargetProcessorJitterCoefficient is the jitter coefficient used in cross cluster task processor",
-		DefaultValue: 0.15,
-	},
-	CrossClusterFetcherJitterCoefficient: {
-		KeyName:      "history.crossClusterFetcherJitterCoefficient",
-		Description:  "CrossClusterFetcherJitterCoefficient is the jitter coefficient used in cross cluster task fetcher",
 		DefaultValue: 0.15,
 	},
 	ReplicationTaskProcessorCleanupJitterCoefficient: {
@@ -5033,41 +4815,6 @@ var DurationKeys = map[DurationKey]DynamicDuration{
 		KeyName:      "history.transferProcessorVisibilityArchivalTimeLimit",
 		Description:  "TransferProcessorVisibilityArchivalTimeLimit is the upper time limit for archiving visibility records",
 		DefaultValue: time.Millisecond * 400,
-	},
-	CrossClusterSourceProcessorMaxPollInterval: {
-		KeyName:      "history.crossClusterSourceProcessorMaxPollInterval",
-		Description:  "CrossClusterSourceProcessorMaxPollInterval is max poll interval for crossClusterQueueProcessor",
-		DefaultValue: time.Minute,
-	},
-	CrossClusterSourceProcessorUpdateAckInterval: {
-		KeyName:      "history.crossClusterSourceProcessorUpdateAckInterval",
-		Description:  "CrossClusterSourceProcessorUpdateAckInterval is update interval for crossClusterQueueProcessor",
-		DefaultValue: time.Second * 30,
-	},
-	CrossClusterTargetProcessorTaskWaitInterval: {
-		KeyName:      "history.crossClusterTargetProcessorTaskWaitInterval",
-		Description:  "CrossClusterTargetProcessorTaskWaitInterval is the duration for waiting a cross-cluster task response before responding to source",
-		DefaultValue: time.Second * 3,
-	},
-	CrossClusterTargetProcessorServiceBusyBackoffInterval: {
-		KeyName:      "history.crossClusterTargetProcessorServiceBusyBackoffInterval",
-		Description:  "CrossClusterTargetProcessorServiceBusyBackoffInterval is the backoff duration for cross cluster task processor when getting a service busy error when calling source cluster",
-		DefaultValue: time.Second * 5,
-	},
-	CrossClusterFetcherAggregationInterval: {
-		KeyName:      "history.crossClusterFetcherAggregationInterval",
-		Description:  "CrossClusterFetcherAggregationInterval determines how frequently the fetch requests are sent",
-		DefaultValue: time.Second * 2,
-	},
-	CrossClusterFetcherServiceBusyBackoffInterval: {
-		KeyName:      "history.crossClusterFetcherServiceBusyBackoffInterval",
-		Description:  "CrossClusterFetcherServiceBusyBackoffInterval is the backoff duration for cross cluster task fetcher when getting",
-		DefaultValue: time.Second * 5,
-	},
-	CrossClusterFetcherErrorBackoffInterval: {
-		KeyName:      "history.crossClusterFetcherErrorBackoffInterval",
-		Description:  "",
-		DefaultValue: time.Second,
 	},
 	ReplicatorUpperLatency: {
 		KeyName:      "history.replicatorUpperLatency",
