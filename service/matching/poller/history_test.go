@@ -127,6 +127,8 @@ func TestGetPollerInfo(t *testing.T) {
 		mockIter := cache.NewMockIterator(mockCtrl)
 		mockEntry := cache.NewMockEntry(mockCtrl)
 
+		mockCache.EXPECT().Size().Return(2)
+
 		mockCache.EXPECT().Iterator().Return(mockIter)
 		gomock.InOrder(
 			mockIter.EXPECT().HasNext().Return(true),
