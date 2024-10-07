@@ -25,7 +25,6 @@ package timeouts
 import (
 	"context"
 	"encoding/json"
-	"github.com/uber/cadence/service/worker/diagnostics/invariants"
 	"testing"
 	"time"
 
@@ -36,6 +35,7 @@ import (
 	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/service/worker/diagnostics/invariants"
 )
 
 const (

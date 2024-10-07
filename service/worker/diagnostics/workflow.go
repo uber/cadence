@@ -25,7 +25,6 @@ package diagnostics
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/uber/cadence/service/worker/diagnostics/invariants/timeouts"
 	"time"
 
 	"go.uber.org/cadence/workflow"
@@ -33,6 +32,7 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/worker/diagnostics/invariants"
+	"github.com/uber/cadence/service/worker/diagnostics/invariants/timeouts"
 )
 
 const (

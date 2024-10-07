@@ -26,11 +26,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/uber/cadence/service/worker/diagnostics/invariants"
 	"time"
 
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/service/worker/diagnostics/invariants"
 )
 
 type Timeout invariants.Invariant

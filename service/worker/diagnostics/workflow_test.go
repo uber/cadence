@@ -26,7 +26,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/uber/cadence/service/worker/diagnostics/invariants/timeouts"
 	"testing"
 	"time"
 
@@ -42,6 +41,7 @@ import (
 	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/worker/diagnostics/invariants"
+	"github.com/uber/cadence/service/worker/diagnostics/invariants/timeouts"
 )
 
 type diagnosticsWorkflowTestSuite struct {

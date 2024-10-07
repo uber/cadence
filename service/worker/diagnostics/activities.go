@@ -24,13 +24,13 @@ package diagnostics
 
 import (
 	"context"
-	"github.com/uber/cadence/service/worker/diagnostics/invariants/timeouts"
 
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/messaging/kafka"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/worker/diagnostics/analytics"
 	"github.com/uber/cadence/service/worker/diagnostics/invariants"
+	"github.com/uber/cadence/service/worker/diagnostics/invariants/timeouts"
 )
 
 const (
