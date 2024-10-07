@@ -25,6 +25,7 @@ package diagnostics
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/uber/cadence/service/worker/diagnostics/invariants/timeouts"
 	"time"
 
 	"go.uber.org/cadence/workflow"
@@ -62,16 +63,16 @@ type timeoutDiagnostics struct {
 type timeoutIssuesResult struct {
 	InvariantType    string
 	Reason           string
-	ExecutionTimeout *invariants.ExecutionTimeoutMetadata
-	ActivityTimeout  *invariants.ActivityTimeoutMetadata
-	ChildWfTimeout   *invariants.ChildWfTimeoutMetadata
-	DecisionTimeout  *invariants.DecisionTimeoutMetadata
+	ExecutionTimeout *timeouts.ExecutionTimeoutMetadata
+	ActivityTimeout  *timeouts.ActivityTimeoutMetadata
+	ChildWfTimeout   *timeouts.ChildWfTimeoutMetadata
+	DecisionTimeout  *timeouts.DecisionTimeoutMetadata
 }
 
 type timeoutRootCauseResult struct {
 	RootCauseType        string
-	PollersMetadata      *invariants.PollersMetadata
-	HeartBeatingMetadata *invariants.HeartbeatingMetadata
+	PollersMetadata      *timeouts.PollersMetadata
+	HeartBeatingMetadata *timeouts.HeartbeatingMetadata
 }
 
 func (w *dw) DiagnosticsWorkflow(ctx workflow.Context, params DiagnosticsWorkflowInput) (*DiagnosticsWorkflowResult, error) {
@@ -140,8 +141,8 @@ func retrieveTimeoutIssues(issues []invariants.InvariantCheckResult) ([]*timeout
 	result := make([]*timeoutIssuesResult, 0)
 	for _, issue := range issues {
 		switch issue.InvariantType {
-		case invariants.TimeoutTypeExecution.String():
-			var metadata invariants.ExecutionTimeoutMetadata
+		case timeouts.TimeoutTypeExecution.String():
+			var metadata timeouts.ExecutionTimeoutMetadata
 			err := json.Unmarshal(issue.Metadata, &metadata)
 			if err != nil {
 				return nil, err
@@ -151,8 +152,8 @@ func retrieveTimeoutIssues(issues []invariants.InvariantCheckResult) ([]*timeout
 				Reason:           issue.Reason,
 				ExecutionTimeout: &metadata,
 			})
-		case invariants.TimeoutTypeActivity.String():
-			var metadata invariants.ActivityTimeoutMetadata
+		case timeouts.TimeoutTypeActivity.String():
+			var metadata timeouts.ActivityTimeoutMetadata
 			err := json.Unmarshal(issue.Metadata, &metadata)
 			if err != nil {
 				return nil, err
@@ -162,8 +163,8 @@ func retrieveTimeoutIssues(issues []invariants.InvariantCheckResult) ([]*timeout
 				Reason:          issue.Reason,
 				ActivityTimeout: &metadata,
 			})
-		case invariants.TimeoutTypeChildWorkflow.String():
-			var metadata invariants.ChildWfTimeoutMetadata
+		case timeouts.TimeoutTypeChildWorkflow.String():
+			var metadata timeouts.ChildWfTimeoutMetadata
 			err := json.Unmarshal(issue.Metadata, &metadata)
 			if err != nil {
 				return nil, err
@@ -173,8 +174,8 @@ func retrieveTimeoutIssues(issues []invariants.InvariantCheckResult) ([]*timeout
 				Reason:         issue.Reason,
 				ChildWfTimeout: &metadata,
 			})
-		case invariants.TimeoutTypeDecision.String():
-			var metadata invariants.DecisionTimeoutMetadata
+		case timeouts.TimeoutTypeDecision.String():
+			var metadata timeouts.DecisionTimeoutMetadata
 			err := json.Unmarshal(issue.Metadata, &metadata)
 			if err != nil {
 				return nil, err
@@ -194,7 +195,7 @@ func retrieveTimeoutRootCause(rootCause []invariants.InvariantRootCauseResult) (
 	for _, rc := range rootCause {
 		switch rc.RootCause {
 		case invariants.RootCauseTypePollersStatus, invariants.RootCauseTypeMissingPollers:
-			var metadata invariants.PollersMetadata
+			var metadata timeouts.PollersMetadata
 			err := json.Unmarshal(rc.Metadata, &metadata)
 			if err != nil {
 				return nil, err
@@ -204,7 +205,7 @@ func retrieveTimeoutRootCause(rootCause []invariants.InvariantRootCauseResult) (
 				PollersMetadata: &metadata,
 			})
 		case invariants.RootCauseTypeHeartBeatingNotEnabled, invariants.RootCauseTypeHeartBeatingEnabledMissingHeartbeat:
-			var metadata invariants.HeartbeatingMetadata
+			var metadata timeouts.HeartbeatingMetadata
 			err := json.Unmarshal(rc.Metadata, &metadata)
 			if err != nil {
 				return nil, err

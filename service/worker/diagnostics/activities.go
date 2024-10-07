@@ -24,6 +24,7 @@ package diagnostics
 
 import (
 	"context"
+	"github.com/uber/cadence/service/worker/diagnostics/invariants/timeouts"
 
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/messaging/kafka"
@@ -56,7 +57,7 @@ type identifyTimeoutsInputParams struct {
 }
 
 func (w *dw) identifyTimeouts(ctx context.Context, info identifyTimeoutsInputParams) ([]invariants.InvariantCheckResult, error) {
-	timeoutInvariant := invariants.NewTimeout(invariants.NewTimeoutParams{
+	timeoutInvariant := timeouts.NewTimeout(timeouts.NewTimeoutParams{
 		WorkflowExecutionHistory: info.History,
 		Domain:                   info.Domain,
 		ClientBean:               w.clientBean,
@@ -71,7 +72,7 @@ type rootCauseTimeoutsParams struct {
 }
 
 func (w *dw) rootCauseTimeouts(ctx context.Context, info rootCauseTimeoutsParams) ([]invariants.InvariantRootCauseResult, error) {
-	timeoutInvariant := invariants.NewTimeout(invariants.NewTimeoutParams{
+	timeoutInvariant := timeouts.NewTimeout(timeouts.NewTimeoutParams{
 		WorkflowExecutionHistory: info.History,
 		ClientBean:               w.clientBean,
 		Domain:                   info.Domain,

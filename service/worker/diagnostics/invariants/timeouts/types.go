@@ -20,7 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package invariants
+package timeouts
 
 import (
 	"time"
@@ -37,21 +37,8 @@ const (
 	TimeoutTypeChildWorkflow TimeoutType = "Child Workflow Execution has timed out"
 )
 
-type RootCause string
-
-const (
-	RootCauseTypeMissingPollers                      RootCause = "There are no pollers for the tasklist"
-	RootCauseTypePollersStatus                       RootCause = "There are pollers for the tasklist. Check backlog status"
-	RootCauseTypeHeartBeatingNotEnabled              RootCause = "HeartBeating not enabled for activity"
-	RootCauseTypeHeartBeatingEnabledMissingHeartbeat RootCause = "HeartBeating enabled for activity but timed out due to missing heartbeat"
-)
-
 func (tt TimeoutType) String() string {
 	return string(tt)
-}
-
-func (r RootCause) String() string {
-	return string(r)
 }
 
 type ExecutionTimeoutMetadata struct {

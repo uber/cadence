@@ -20,11 +20,12 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package invariants
+package timeouts
 
 import (
 	"context"
 	"encoding/json"
+	"github.com/uber/cadence/service/worker/diagnostics/invariants"
 	"testing"
 	"time"
 
@@ -54,13 +55,13 @@ func Test__Check(t *testing.T) {
 	testCases := []struct {
 		name           string
 		testData       *types.GetWorkflowExecutionHistoryResponse
-		expectedResult []InvariantCheckResult
+		expectedResult []invariants.InvariantCheckResult
 		err            error
 	}{
 		{
 			name:     "workflow execution timeout",
 			testData: wfTimeoutHistory(),
-			expectedResult: []InvariantCheckResult{
+			expectedResult: []invariants.InvariantCheckResult{
 				{
 					InvariantType: TimeoutTypeExecution.String(),
 					Reason:        "START_TO_CLOSE",
@@ -72,7 +73,7 @@ func Test__Check(t *testing.T) {
 		{
 			name:     "child workflow execution timeout",
 			testData: childWfTimeoutHistory(),
-			expectedResult: []InvariantCheckResult{
+			expectedResult: []invariants.InvariantCheckResult{
 				{
 					InvariantType: TimeoutTypeChildWorkflow.String(),
 					Reason:        "START_TO_CLOSE",
@@ -84,7 +85,7 @@ func Test__Check(t *testing.T) {
 		{
 			name:     "activity timeout",
 			testData: activityTimeoutHistory(),
-			expectedResult: []InvariantCheckResult{
+			expectedResult: []invariants.InvariantCheckResult{
 				{
 					InvariantType: TimeoutTypeActivity.String(),
 					Reason:        "SCHEDULE_TO_START",
@@ -101,7 +102,7 @@ func Test__Check(t *testing.T) {
 		{
 			name:     "decision timeout",
 			testData: decisionTimeoutHistory(),
-			expectedResult: []InvariantCheckResult{
+			expectedResult: []invariants.InvariantCheckResult{
 				{
 					InvariantType: TimeoutTypeDecision.String(),
 					Reason:        "START_TO_CLOSE",
@@ -383,14 +384,14 @@ func Test__RootCause(t *testing.T) {
 	require.NoError(t, err)
 	testCases := []struct {
 		name           string
-		input          []InvariantCheckResult
+		input          []invariants.InvariantCheckResult
 		clientExpects  func(*frontend.MockClient)
-		expectedResult []InvariantRootCauseResult
+		expectedResult []invariants.InvariantRootCauseResult
 		err            error
 	}{
 		{
 			name: "workflow execution timeout without pollers",
-			input: []InvariantCheckResult{
+			input: []invariants.InvariantCheckResult{
 				{
 					InvariantType: TimeoutTypeExecution.String(),
 					Reason:        "START_TO_CLOSE",
@@ -405,9 +406,9 @@ func Test__RootCause(t *testing.T) {
 					},
 				}, nil)
 			},
-			expectedResult: []InvariantRootCauseResult{
+			expectedResult: []invariants.InvariantRootCauseResult{
 				{
-					RootCause: RootCauseTypeMissingPollers,
+					RootCause: invariants.RootCauseTypeMissingPollers,
 					Metadata:  pollersMetadataInBytes,
 				},
 			},
@@ -415,7 +416,7 @@ func Test__RootCause(t *testing.T) {
 		},
 		{
 			name: "workflow execution timeout with pollers",
-			input: []InvariantCheckResult{
+			input: []invariants.InvariantCheckResult{
 				{
 					InvariantType: TimeoutTypeExecution.String(),
 					Reason:        "START_TO_CLOSE",
@@ -434,9 +435,9 @@ func Test__RootCause(t *testing.T) {
 					},
 				}, nil)
 			},
-			expectedResult: []InvariantRootCauseResult{
+			expectedResult: []invariants.InvariantRootCauseResult{
 				{
-					RootCause: RootCauseTypePollersStatus,
+					RootCause: invariants.RootCauseTypePollersStatus,
 					Metadata:  pollersMetadataInBytes,
 				},
 			},
@@ -444,7 +445,7 @@ func Test__RootCause(t *testing.T) {
 		},
 		{
 			name: "activity timeout and heart beating not enabled",
-			input: []InvariantCheckResult{
+			input: []invariants.InvariantCheckResult{
 				{
 					InvariantType: TimeoutTypeActivity.String(),
 					Reason:        "START_TO_CLOSE",
@@ -463,13 +464,13 @@ func Test__RootCause(t *testing.T) {
 					},
 				}, nil)
 			},
-			expectedResult: []InvariantRootCauseResult{
+			expectedResult: []invariants.InvariantRootCauseResult{
 				{
-					RootCause: RootCauseTypePollersStatus,
+					RootCause: invariants.RootCauseTypePollersStatus,
 					Metadata:  pollersMetadataInBytes,
 				},
 				{
-					RootCause: RootCauseTypeHeartBeatingNotEnabled,
+					RootCause: invariants.RootCauseTypeHeartBeatingNotEnabled,
 					Metadata:  heartBeatingMetadataInBytes,
 				},
 			},
@@ -477,7 +478,7 @@ func Test__RootCause(t *testing.T) {
 		},
 		{
 			name: "activity schedule to start timeout",
-			input: []InvariantCheckResult{
+			input: []invariants.InvariantCheckResult{
 				{
 					InvariantType: TimeoutTypeActivity.String(),
 					Reason:        "SCHEDULE_TO_START",
@@ -496,9 +497,9 @@ func Test__RootCause(t *testing.T) {
 					},
 				}, nil)
 			},
-			expectedResult: []InvariantRootCauseResult{
+			expectedResult: []invariants.InvariantRootCauseResult{
 				{
-					RootCause: RootCauseTypePollersStatus,
+					RootCause: invariants.RootCauseTypePollersStatus,
 					Metadata:  pollersMetadataInBytes,
 				},
 			},
@@ -506,7 +507,7 @@ func Test__RootCause(t *testing.T) {
 		},
 		{
 			name: "activity timeout and heart beating enabled",
-			input: []InvariantCheckResult{
+			input: []invariants.InvariantCheckResult{
 				{
 					InvariantType: TimeoutTypeActivity.String(),
 					Reason:        "START_TO_CLOSE",
@@ -525,13 +526,13 @@ func Test__RootCause(t *testing.T) {
 					},
 				}, nil)
 			},
-			expectedResult: []InvariantRootCauseResult{
+			expectedResult: []invariants.InvariantRootCauseResult{
 				{
-					RootCause: RootCauseTypePollersStatus,
+					RootCause: invariants.RootCauseTypePollersStatus,
 					Metadata:  pollersMetadataInBytes,
 				},
 				{
-					RootCause: RootCauseTypeHeartBeatingEnabledMissingHeartbeat,
+					RootCause: invariants.RootCauseTypeHeartBeatingEnabledMissingHeartbeat,
 					Metadata:  heartBeatingMetadataInBytes,
 				},
 			},

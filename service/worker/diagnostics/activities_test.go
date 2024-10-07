@@ -25,6 +25,7 @@ package diagnostics
 import (
 	"context"
 	"encoding/json"
+	"github.com/uber/cadence/service/worker/diagnostics/invariants/timeouts"
 	"testing"
 	"time"
 
@@ -61,7 +62,7 @@ func Test__retrieveExecutionHistory(t *testing.T) {
 
 func Test__identifyTimeouts(t *testing.T) {
 	dwtest := testDiagnosticWorkflow(t)
-	workflowTimeoutData := invariants.ExecutionTimeoutMetadata{
+	workflowTimeoutData := timeouts.ExecutionTimeoutMetadata{
 		ExecutionTime:     110 * time.Second,
 		ConfiguredTimeout: 110 * time.Second,
 		LastOngoingEvent: &types.HistoryEvent{
@@ -76,7 +77,7 @@ func Test__identifyTimeouts(t *testing.T) {
 	require.NoError(t, err)
 	expectedResult := []invariants.InvariantCheckResult{
 		{
-			InvariantType: invariants.TimeoutTypeExecution.String(),
+			InvariantType: timeouts.TimeoutTypeExecution.String(),
 			Reason:        "START_TO_CLOSE",
 			Metadata:      workflowTimeoutDataInBytes,
 		},
@@ -88,7 +89,7 @@ func Test__identifyTimeouts(t *testing.T) {
 
 func Test__rootCauseTimeouts(t *testing.T) {
 	dwtest := testDiagnosticWorkflow(t)
-	workflowTimeoutData := invariants.ExecutionTimeoutMetadata{
+	workflowTimeoutData := timeouts.ExecutionTimeoutMetadata{
 		ExecutionTime:     110 * time.Second,
 		ConfiguredTimeout: 110 * time.Second,
 		LastOngoingEvent: &types.HistoryEvent{
@@ -107,13 +108,13 @@ func Test__rootCauseTimeouts(t *testing.T) {
 	require.NoError(t, err)
 	issues := []invariants.InvariantCheckResult{
 		{
-			InvariantType: invariants.TimeoutTypeExecution.String(),
+			InvariantType: timeouts.TimeoutTypeExecution.String(),
 			Reason:        "START_TO_CLOSE",
 			Metadata:      workflowTimeoutDataInBytes,
 		},
 	}
 	taskListBacklog := int64(10)
-	taskListBacklogInBytes, err := json.Marshal(invariants.PollersMetadata{TaskListBacklog: taskListBacklog})
+	taskListBacklogInBytes, err := json.Marshal(timeouts.PollersMetadata{TaskListBacklog: taskListBacklog})
 	require.NoError(t, err)
 	expectedRootCause := []invariants.InvariantRootCauseResult{
 		{

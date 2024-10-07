@@ -26,6 +26,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/uber/cadence/service/worker/diagnostics/invariants/timeouts"
 	"testing"
 	"time"
 
@@ -87,7 +88,7 @@ func (s *diagnosticsWorkflowTestSuite) TestWorkflow() {
 		WorkflowID: "123",
 		RunID:      "abc",
 	}
-	workflowTimeoutData := invariants.ExecutionTimeoutMetadata{
+	workflowTimeoutData := timeouts.ExecutionTimeoutMetadata{
 		ExecutionTime:     110 * time.Second,
 		ConfiguredTimeout: 110 * time.Second,
 		LastOngoingEvent: &types.HistoryEvent{
@@ -102,20 +103,20 @@ func (s *diagnosticsWorkflowTestSuite) TestWorkflow() {
 	s.NoError(err)
 	issues := []invariants.InvariantCheckResult{
 		{
-			InvariantType: invariants.TimeoutTypeExecution.String(),
+			InvariantType: timeouts.TimeoutTypeExecution.String(),
 			Reason:        "START_TO_CLOSE",
 			Metadata:      workflowTimeoutDataInBytes,
 		},
 	}
 	timeoutIssues := []*timeoutIssuesResult{
 		{
-			InvariantType:    invariants.TimeoutTypeExecution.String(),
+			InvariantType:    timeouts.TimeoutTypeExecution.String(),
 			Reason:           "START_TO_CLOSE",
 			ExecutionTimeout: &workflowTimeoutData,
 		},
 	}
 	taskListBacklog := int64(10)
-	pollersMetadataInBytes, err := json.Marshal(invariants.PollersMetadata{TaskListBacklog: taskListBacklog})
+	pollersMetadataInBytes, err := json.Marshal(timeouts.PollersMetadata{TaskListBacklog: taskListBacklog})
 	s.NoError(err)
 	rootCause := []invariants.InvariantRootCauseResult{
 		{
@@ -126,7 +127,7 @@ func (s *diagnosticsWorkflowTestSuite) TestWorkflow() {
 	timeoutRootCause := []*timeoutRootCauseResult{
 		{
 			RootCauseType:   invariants.RootCauseTypePollersStatus.String(),
-			PollersMetadata: &invariants.PollersMetadata{TaskListBacklog: taskListBacklog},
+			PollersMetadata: &timeouts.PollersMetadata{TaskListBacklog: taskListBacklog},
 		},
 	}
 	s.workflowEnv.OnActivity(retrieveWfExecutionHistoryActivity, mock.Anything, mock.Anything).Return(nil, nil)
@@ -172,7 +173,7 @@ func (s *diagnosticsWorkflowTestSuite) queryDiagnostics() DiagnosticsStarterWork
 }
 
 func (s *diagnosticsWorkflowTestSuite) Test__retrieveTimeoutIssues() {
-	workflowTimeoutData := invariants.ExecutionTimeoutMetadata{
+	workflowTimeoutData := timeouts.ExecutionTimeoutMetadata{
 		ExecutionTime:     110 * time.Second,
 		ConfiguredTimeout: 110 * time.Second,
 		LastOngoingEvent: &types.HistoryEvent{
@@ -185,13 +186,13 @@ func (s *diagnosticsWorkflowTestSuite) Test__retrieveTimeoutIssues() {
 	}
 	workflowTimeoutDataInBytes, err := json.Marshal(workflowTimeoutData)
 	s.NoError(err)
-	childWorkflowTimeoutData := invariants.ChildWfTimeoutMetadata{
+	childWorkflowTimeoutData := timeouts.ChildWfTimeoutMetadata{
 		ExecutionTime:     110 * time.Second,
 		ConfiguredTimeout: 110 * time.Second,
 	}
 	childWorkflowTimeoutDataInBytes, err := json.Marshal(childWorkflowTimeoutData)
 	s.NoError(err)
-	activityTimeoutData := invariants.ActivityTimeoutMetadata{
+	activityTimeoutData := timeouts.ActivityTimeoutMetadata{
 		TimeoutType:       types.TimeoutTypeStartToClose.Ptr(),
 		ConfiguredTimeout: 5 * time.Second,
 		TimeElapsed:       5 * time.Second,
@@ -199,51 +200,51 @@ func (s *diagnosticsWorkflowTestSuite) Test__retrieveTimeoutIssues() {
 	}
 	activityTimeoutDataInBytes, err := json.Marshal(activityTimeoutData)
 	s.NoError(err)
-	descTimeoutData := invariants.DecisionTimeoutMetadata{
+	descTimeoutData := timeouts.DecisionTimeoutMetadata{
 		ConfiguredTimeout: 5 * time.Second,
 	}
 	descTimeoutDataInBytes, err := json.Marshal(activityTimeoutData)
 	s.NoError(err)
 	issues := []invariants.InvariantCheckResult{
 		{
-			InvariantType: invariants.TimeoutTypeExecution.String(),
+			InvariantType: timeouts.TimeoutTypeExecution.String(),
 			Reason:        "START_TO_CLOSE",
 			Metadata:      workflowTimeoutDataInBytes,
 		},
 		{
-			InvariantType: invariants.TimeoutTypeActivity.String(),
+			InvariantType: timeouts.TimeoutTypeActivity.String(),
 			Reason:        "START_TO_CLOSE",
 			Metadata:      activityTimeoutDataInBytes,
 		},
 		{
-			InvariantType: invariants.TimeoutTypeDecision.String(),
+			InvariantType: timeouts.TimeoutTypeDecision.String(),
 			Reason:        "START_TO_CLOSE",
 			Metadata:      descTimeoutDataInBytes,
 		},
 		{
-			InvariantType: invariants.TimeoutTypeChildWorkflow.String(),
+			InvariantType: timeouts.TimeoutTypeChildWorkflow.String(),
 			Reason:        "START_TO_CLOSE",
 			Metadata:      childWorkflowTimeoutDataInBytes,
 		},
 	}
 	timeoutIssues := []*timeoutIssuesResult{
 		{
-			InvariantType:    invariants.TimeoutTypeExecution.String(),
+			InvariantType:    timeouts.TimeoutTypeExecution.String(),
 			Reason:           "START_TO_CLOSE",
 			ExecutionTimeout: &workflowTimeoutData,
 		},
 		{
-			InvariantType:   invariants.TimeoutTypeActivity.String(),
+			InvariantType:   timeouts.TimeoutTypeActivity.String(),
 			Reason:          "START_TO_CLOSE",
 			ActivityTimeout: &activityTimeoutData,
 		},
 		{
-			InvariantType:   invariants.TimeoutTypeDecision.String(),
+			InvariantType:   timeouts.TimeoutTypeDecision.String(),
 			Reason:          "START_TO_CLOSE",
 			DecisionTimeout: &descTimeoutData,
 		},
 		{
-			InvariantType:  invariants.TimeoutTypeChildWorkflow.String(),
+			InvariantType:  timeouts.TimeoutTypeChildWorkflow.String(),
 			Reason:         "START_TO_CLOSE",
 			ChildWfTimeout: &childWorkflowTimeoutData,
 		},
@@ -255,9 +256,9 @@ func (s *diagnosticsWorkflowTestSuite) Test__retrieveTimeoutIssues() {
 
 func (s *diagnosticsWorkflowTestSuite) Test__retrieveTimeoutRootCause() {
 	taskListBacklog := int64(10)
-	pollersMetadataInBytes, err := json.Marshal(invariants.PollersMetadata{TaskListBacklog: taskListBacklog})
+	pollersMetadataInBytes, err := json.Marshal(timeouts.PollersMetadata{TaskListBacklog: taskListBacklog})
 	s.NoError(err)
-	heartBeatingMetadataInBytes, err := json.Marshal(invariants.HeartbeatingMetadata{TimeElapsed: 5 * time.Second})
+	heartBeatingMetadataInBytes, err := json.Marshal(timeouts.HeartbeatingMetadata{TimeElapsed: 5 * time.Second})
 	s.NoError(err)
 	rootCause := []invariants.InvariantRootCauseResult{
 		{
@@ -272,11 +273,11 @@ func (s *diagnosticsWorkflowTestSuite) Test__retrieveTimeoutRootCause() {
 	timeoutRootCause := []*timeoutRootCauseResult{
 		{
 			RootCauseType:   invariants.RootCauseTypePollersStatus.String(),
-			PollersMetadata: &invariants.PollersMetadata{TaskListBacklog: taskListBacklog},
+			PollersMetadata: &timeouts.PollersMetadata{TaskListBacklog: taskListBacklog},
 		},
 		{
 			RootCauseType:        invariants.RootCauseTypeHeartBeatingNotEnabled.String(),
-			HeartBeatingMetadata: &invariants.HeartbeatingMetadata{TimeElapsed: 5 * time.Second},
+			HeartBeatingMetadata: &timeouts.HeartbeatingMetadata{TimeElapsed: 5 * time.Second},
 		},
 	}
 	result, err := retrieveTimeoutRootCause(rootCause)
