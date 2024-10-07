@@ -23,10 +23,13 @@
 package cli
 
 import (
+	"context"
 	"flag"
 	"testing"
 	"time"
 
+	"github.com/opentracing/opentracing-go"
+	"github.com/opentracing/opentracing-go/mocktracer"
 	"github.com/stretchr/testify/assert"
 	"github.com/urfave/cli/v2"
 )
@@ -52,6 +55,12 @@ func TestConstructStartWorkflowRequest(t *testing.T) {
 	set.String("first_run_at_time", "2024-07-24T12:00:00Z", "first-run-at-time")
 
 	c := cli.NewContext(nil, set, nil)
+	// inject context with span
+	tracer := mocktracer.New()
+	span, ctx := opentracing.StartSpanFromContextWithTracer(context.Background(), tracer, "test-span")
+	span.SetBaggageItem("tracer-test-key", "tracer-test-value")
+	defer span.Finish()
+	c.Context = ctx
 
 	assert.NoError(t, c.Set(FlagDomain, "test-domain"))
 	assert.NoError(t, c.Set(FlagTaskList, "test-task-list"))
@@ -83,6 +92,7 @@ func TestConstructStartWorkflowRequest(t *testing.T) {
 	assert.NotNil(t, request.WorkflowIDReusePolicy)
 	assert.Equal(t, int32(5), *request.DelayStartSeconds)
 	assert.Equal(t, int32(2), *request.JitterStartSeconds)
+	assert.Equal(t, map[string][]byte{"tracer-test-key": []byte("tracer-test-value")}, request.Header.Fields)
 
 	firstRunAt, err := time.Parse(time.RFC3339, "2024-07-24T12:00:00Z")
 	assert.NoError(t, err)

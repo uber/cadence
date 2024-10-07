@@ -38,6 +38,7 @@ import (
 	"time"
 
 	"github.com/olekukonko/tablewriter"
+	"github.com/opentracing/opentracing-go"
 	"github.com/pborman/uuid"
 	"github.com/urfave/cli/v2"
 
@@ -434,6 +435,7 @@ func processSearchAttr(c *cli.Context) map[string][]byte {
 }
 
 func processHeader(c *cli.Context) (map[string][]byte, error) {
+	// CLI flag input headers
 	headerKeys := processMultipleKeys(c.String(FlagHeaderKey), " ")
 	headerValues := processMultipleJSONValues(processJSONInputHelper(c, jsonTypeHeader))
 
@@ -441,7 +443,17 @@ func processHeader(c *cli.Context) (map[string][]byte, error) {
 		return nil, commoncli.Problem("Number of header keys and values are not equal.", nil)
 	}
 
-	return mapFromKeysValues(headerKeys, headerValues), nil
+	headers := mapFromKeysValues(headerKeys, headerValues)
+	// append context headers if exist
+	if span := opentracing.SpanFromContext(c.Context); span != nil && span.Context() != nil {
+		span.Context().ForeachBaggageItem(func(k, v string) bool {
+			if _, exist := headers[k]; !exist { // append only if not exist
+				headers[k] = []byte(v)
+			}
+			return true
+		})
+	}
+	return headers, nil
 }
 
 func processMemo(c *cli.Context) map[string][]byte {
