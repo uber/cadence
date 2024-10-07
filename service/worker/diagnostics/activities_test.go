@@ -37,7 +37,8 @@ import (
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/worker/diagnostics/analytics"
-	"github.com/uber/cadence/service/worker/diagnostics/invariants"
+	"github.com/uber/cadence/service/worker/diagnostics/invariant"
+	"github.com/uber/cadence/service/worker/diagnostics/invariant/timeout"
 )
 
 const (
@@ -61,7 +62,7 @@ func Test__retrieveExecutionHistory(t *testing.T) {
 
 func Test__identifyTimeouts(t *testing.T) {
 	dwtest := testDiagnosticWorkflow(t)
-	workflowTimeoutData := invariants.ExecutionTimeoutMetadata{
+	workflowTimeoutData := timeout.ExecutionTimeoutMetadata{
 		ExecutionTime:     110 * time.Second,
 		ConfiguredTimeout: 110 * time.Second,
 		LastOngoingEvent: &types.HistoryEvent{
@@ -74,9 +75,9 @@ func Test__identifyTimeouts(t *testing.T) {
 	}
 	workflowTimeoutDataInBytes, err := json.Marshal(workflowTimeoutData)
 	require.NoError(t, err)
-	expectedResult := []invariants.InvariantCheckResult{
+	expectedResult := []invariant.InvariantCheckResult{
 		{
-			InvariantType: invariants.TimeoutTypeExecution.String(),
+			InvariantType: timeout.TimeoutTypeExecution.String(),
 			Reason:        "START_TO_CLOSE",
 			Metadata:      workflowTimeoutDataInBytes,
 		},
@@ -88,7 +89,7 @@ func Test__identifyTimeouts(t *testing.T) {
 
 func Test__rootCauseTimeouts(t *testing.T) {
 	dwtest := testDiagnosticWorkflow(t)
-	workflowTimeoutData := invariants.ExecutionTimeoutMetadata{
+	workflowTimeoutData := timeout.ExecutionTimeoutMetadata{
 		ExecutionTime:     110 * time.Second,
 		ConfiguredTimeout: 110 * time.Second,
 		LastOngoingEvent: &types.HistoryEvent{
@@ -105,19 +106,19 @@ func Test__rootCauseTimeouts(t *testing.T) {
 	}
 	workflowTimeoutDataInBytes, err := json.Marshal(workflowTimeoutData)
 	require.NoError(t, err)
-	issues := []invariants.InvariantCheckResult{
+	issues := []invariant.InvariantCheckResult{
 		{
-			InvariantType: invariants.TimeoutTypeExecution.String(),
+			InvariantType: timeout.TimeoutTypeExecution.String(),
 			Reason:        "START_TO_CLOSE",
 			Metadata:      workflowTimeoutDataInBytes,
 		},
 	}
 	taskListBacklog := int64(10)
-	taskListBacklogInBytes, err := json.Marshal(invariants.PollersMetadata{TaskListBacklog: taskListBacklog})
+	taskListBacklogInBytes, err := json.Marshal(timeout.PollersMetadata{TaskListBacklog: taskListBacklog})
 	require.NoError(t, err)
-	expectedRootCause := []invariants.InvariantRootCauseResult{
+	expectedRootCause := []invariant.InvariantRootCauseResult{
 		{
-			RootCause: invariants.RootCauseTypePollersStatus,
+			RootCause: invariant.RootCauseTypePollersStatus,
 			Metadata:  taskListBacklogInBytes,
 		},
 	}

@@ -31,7 +31,8 @@ import (
 
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/types"
-	"github.com/uber/cadence/service/worker/diagnostics/invariants"
+	"github.com/uber/cadence/service/worker/diagnostics/invariant"
+	"github.com/uber/cadence/service/worker/diagnostics/invariant/timeout"
 )
 
 const (
@@ -62,16 +63,16 @@ type timeoutDiagnostics struct {
 type timeoutIssuesResult struct {
 	InvariantType    string
 	Reason           string
-	ExecutionTimeout *invariants.ExecutionTimeoutMetadata
-	ActivityTimeout  *invariants.ActivityTimeoutMetadata
-	ChildWfTimeout   *invariants.ChildWfTimeoutMetadata
-	DecisionTimeout  *invariants.DecisionTimeoutMetadata
+	ExecutionTimeout *timeout.ExecutionTimeoutMetadata
+	ActivityTimeout  *timeout.ActivityTimeoutMetadata
+	ChildWfTimeout   *timeout.ChildWfTimeoutMetadata
+	DecisionTimeout  *timeout.DecisionTimeoutMetadata
 }
 
 type timeoutRootCauseResult struct {
 	RootCauseType        string
-	PollersMetadata      *invariants.PollersMetadata
-	HeartBeatingMetadata *invariants.HeartbeatingMetadata
+	PollersMetadata      *timeout.PollersMetadata
+	HeartBeatingMetadata *timeout.HeartbeatingMetadata
 }
 
 func (w *dw) DiagnosticsWorkflow(ctx workflow.Context, params DiagnosticsWorkflowInput) (*DiagnosticsWorkflowResult, error) {
@@ -101,7 +102,7 @@ func (w *dw) DiagnosticsWorkflow(ctx workflow.Context, params DiagnosticsWorkflo
 
 	timeoutsResult.Runbooks = []string{linkToTimeoutsRunbook}
 
-	var checkResult []invariants.InvariantCheckResult
+	var checkResult []invariant.InvariantCheckResult
 	err = workflow.ExecuteActivity(activityCtx, w.identifyTimeouts, identifyTimeoutsInputParams{
 		History: wfExecutionHistory,
 		Domain:  params.Domain,
@@ -116,7 +117,7 @@ func (w *dw) DiagnosticsWorkflow(ctx workflow.Context, params DiagnosticsWorkflo
 	}
 	timeoutsResult.Issues = timeoutIssues
 
-	var rootCauseResult []invariants.InvariantRootCauseResult
+	var rootCauseResult []invariant.InvariantRootCauseResult
 	err = workflow.ExecuteActivity(activityCtx, w.rootCauseTimeouts, rootCauseTimeoutsParams{
 		History: wfExecutionHistory,
 		Domain:  params.Domain,
@@ -136,12 +137,12 @@ func (w *dw) DiagnosticsWorkflow(ctx workflow.Context, params DiagnosticsWorkflo
 	return &DiagnosticsWorkflowResult{Timeouts: &timeoutsResult}, nil
 }
 
-func retrieveTimeoutIssues(issues []invariants.InvariantCheckResult) ([]*timeoutIssuesResult, error) {
+func retrieveTimeoutIssues(issues []invariant.InvariantCheckResult) ([]*timeoutIssuesResult, error) {
 	result := make([]*timeoutIssuesResult, 0)
 	for _, issue := range issues {
 		switch issue.InvariantType {
-		case invariants.TimeoutTypeExecution.String():
-			var metadata invariants.ExecutionTimeoutMetadata
+		case timeout.TimeoutTypeExecution.String():
+			var metadata timeout.ExecutionTimeoutMetadata
 			err := json.Unmarshal(issue.Metadata, &metadata)
 			if err != nil {
 				return nil, err
@@ -151,8 +152,8 @@ func retrieveTimeoutIssues(issues []invariants.InvariantCheckResult) ([]*timeout
 				Reason:           issue.Reason,
 				ExecutionTimeout: &metadata,
 			})
-		case invariants.TimeoutTypeActivity.String():
-			var metadata invariants.ActivityTimeoutMetadata
+		case timeout.TimeoutTypeActivity.String():
+			var metadata timeout.ActivityTimeoutMetadata
 			err := json.Unmarshal(issue.Metadata, &metadata)
 			if err != nil {
 				return nil, err
@@ -162,8 +163,8 @@ func retrieveTimeoutIssues(issues []invariants.InvariantCheckResult) ([]*timeout
 				Reason:          issue.Reason,
 				ActivityTimeout: &metadata,
 			})
-		case invariants.TimeoutTypeChildWorkflow.String():
-			var metadata invariants.ChildWfTimeoutMetadata
+		case timeout.TimeoutTypeChildWorkflow.String():
+			var metadata timeout.ChildWfTimeoutMetadata
 			err := json.Unmarshal(issue.Metadata, &metadata)
 			if err != nil {
 				return nil, err
@@ -173,8 +174,8 @@ func retrieveTimeoutIssues(issues []invariants.InvariantCheckResult) ([]*timeout
 				Reason:         issue.Reason,
 				ChildWfTimeout: &metadata,
 			})
-		case invariants.TimeoutTypeDecision.String():
-			var metadata invariants.DecisionTimeoutMetadata
+		case timeout.TimeoutTypeDecision.String():
+			var metadata timeout.DecisionTimeoutMetadata
 			err := json.Unmarshal(issue.Metadata, &metadata)
 			if err != nil {
 				return nil, err
@@ -189,12 +190,12 @@ func retrieveTimeoutIssues(issues []invariants.InvariantCheckResult) ([]*timeout
 	return result, nil
 }
 
-func retrieveTimeoutRootCause(rootCause []invariants.InvariantRootCauseResult) ([]*timeoutRootCauseResult, error) {
+func retrieveTimeoutRootCause(rootCause []invariant.InvariantRootCauseResult) ([]*timeoutRootCauseResult, error) {
 	result := make([]*timeoutRootCauseResult, 0)
 	for _, rc := range rootCause {
 		switch rc.RootCause {
-		case invariants.RootCauseTypePollersStatus, invariants.RootCauseTypeMissingPollers:
-			var metadata invariants.PollersMetadata
+		case invariant.RootCauseTypePollersStatus, invariant.RootCauseTypeMissingPollers:
+			var metadata timeout.PollersMetadata
 			err := json.Unmarshal(rc.Metadata, &metadata)
 			if err != nil {
 				return nil, err
@@ -203,8 +204,8 @@ func retrieveTimeoutRootCause(rootCause []invariants.InvariantRootCauseResult) (
 				RootCauseType:   rc.RootCause.String(),
 				PollersMetadata: &metadata,
 			})
-		case invariants.RootCauseTypeHeartBeatingNotEnabled, invariants.RootCauseTypeHeartBeatingEnabledMissingHeartbeat:
-			var metadata invariants.HeartbeatingMetadata
+		case invariant.RootCauseTypeHeartBeatingNotEnabled, invariant.RootCauseTypeHeartBeatingEnabledMissingHeartbeat:
+			var metadata timeout.HeartbeatingMetadata
 			err := json.Unmarshal(rc.Metadata, &metadata)
 			if err != nil {
 				return nil, err

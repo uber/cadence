@@ -20,7 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package invariants
+package timeout
 
 import (
 	"context"
@@ -30,9 +30,10 @@ import (
 
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/service/worker/diagnostics/invariant"
 )
 
-type Timeout Invariant
+type Timeout invariant.Invariant
 
 type timeout struct {
 	workflowExecutionHistory *types.GetWorkflowExecutionHistoryResponse
@@ -46,7 +47,7 @@ type NewTimeoutParams struct {
 	ClientBean               client.Bean
 }
 
-func NewTimeout(p NewTimeoutParams) Invariant {
+func NewInvariant(p NewTimeoutParams) invariant.Invariant {
 	return &timeout{
 		workflowExecutionHistory: p.WorkflowExecutionHistory,
 		domain:                   p.Domain,
@@ -54,8 +55,8 @@ func NewTimeout(p NewTimeoutParams) Invariant {
 	}
 }
 
-func (t *timeout) Check(context.Context) ([]InvariantCheckResult, error) {
-	result := make([]InvariantCheckResult, 0)
+func (t *timeout) Check(context.Context) ([]invariant.InvariantCheckResult, error) {
+	result := make([]invariant.InvariantCheckResult, 0)
 	events := t.workflowExecutionHistory.GetHistory().GetEvents()
 	for _, event := range events {
 		if event.WorkflowExecutionTimedOutEventAttributes != nil {
@@ -66,7 +67,7 @@ func (t *timeout) Check(context.Context) ([]InvariantCheckResult, error) {
 				LastOngoingEvent:  events[len(events)-2],
 				Tasklist:          getWorkflowExecutionTasklist(events),
 			}
-			result = append(result, InvariantCheckResult{
+			result = append(result, invariant.InvariantCheckResult{
 				InvariantType: TimeoutTypeExecution.String(),
 				Reason:        event.GetWorkflowExecutionTimedOutEventAttributes().GetTimeoutType().String(),
 				Metadata:      marshalData(data),
@@ -77,7 +78,7 @@ func (t *timeout) Check(context.Context) ([]InvariantCheckResult, error) {
 			if err != nil {
 				return nil, err
 			}
-			result = append(result, InvariantCheckResult{
+			result = append(result, invariant.InvariantCheckResult{
 				InvariantType: TimeoutTypeActivity.String(),
 				Reason:        event.GetActivityTaskTimedOutEventAttributes().GetTimeoutType().String(),
 				Metadata:      marshalData(metadata),
@@ -85,7 +86,7 @@ func (t *timeout) Check(context.Context) ([]InvariantCheckResult, error) {
 		}
 		if event.DecisionTaskTimedOutEventAttributes != nil {
 			reason, metadata := reasonForDecisionTaskTimeouts(event, events)
-			result = append(result, InvariantCheckResult{
+			result = append(result, invariant.InvariantCheckResult{
 				InvariantType: TimeoutTypeDecision.String(),
 				Reason:        reason,
 				Metadata:      marshalData(metadata),
@@ -98,7 +99,7 @@ func (t *timeout) Check(context.Context) ([]InvariantCheckResult, error) {
 				ConfiguredTimeout: time.Duration(timeoutLimit) * time.Second,
 				Execution:         event.GetChildWorkflowExecutionTimedOutEventAttributes().WorkflowExecution,
 			}
-			result = append(result, InvariantCheckResult{
+			result = append(result, invariant.InvariantCheckResult{
 				InvariantType: TimeoutTypeChildWorkflow.String(),
 				Reason:        event.GetChildWorkflowExecutionTimedOutEventAttributes().TimeoutType.String(),
 				Metadata:      marshalData(data),
@@ -108,8 +109,8 @@ func (t *timeout) Check(context.Context) ([]InvariantCheckResult, error) {
 	return result, nil
 }
 
-func (t *timeout) RootCause(ctx context.Context, issues []InvariantCheckResult) ([]InvariantRootCauseResult, error) {
-	result := make([]InvariantRootCauseResult, 0)
+func (t *timeout) RootCause(ctx context.Context, issues []invariant.InvariantCheckResult) ([]invariant.InvariantRootCauseResult, error) {
+	result := make([]invariant.InvariantRootCauseResult, 0)
 	for _, issue := range issues {
 		pollerStatus, err := t.checkTasklist(ctx, issue)
 		if err != nil {
@@ -129,7 +130,7 @@ func (t *timeout) RootCause(ctx context.Context, issues []InvariantCheckResult) 
 	return result, nil
 }
 
-func (t *timeout) checkTasklist(ctx context.Context, issue InvariantCheckResult) (InvariantRootCauseResult, error) {
+func (t *timeout) checkTasklist(ctx context.Context, issue invariant.InvariantCheckResult) (invariant.InvariantRootCauseResult, error) {
 	var taskList *types.TaskList
 	var tasklistType *types.TaskListType
 	switch issue.InvariantType {
@@ -137,7 +138,7 @@ func (t *timeout) checkTasklist(ctx context.Context, issue InvariantCheckResult)
 		var metadata ExecutionTimeoutMetadata
 		err := json.Unmarshal(issue.Metadata, &metadata)
 		if err != nil {
-			return InvariantRootCauseResult{}, err
+			return invariant.InvariantRootCauseResult{}, err
 		}
 		taskList = metadata.Tasklist
 		tasklistType = types.TaskListTypeDecision.Ptr()
@@ -145,13 +146,13 @@ func (t *timeout) checkTasklist(ctx context.Context, issue InvariantCheckResult)
 		var metadata ActivityTimeoutMetadata
 		err := json.Unmarshal(issue.Metadata, &metadata)
 		if err != nil {
-			return InvariantRootCauseResult{}, err
+			return invariant.InvariantRootCauseResult{}, err
 		}
 		taskList = metadata.Tasklist
 		tasklistType = types.TaskListTypeActivity.Ptr()
 	}
 	if taskList == nil {
-		return InvariantRootCauseResult{}, fmt.Errorf("tasklist not set")
+		return invariant.InvariantRootCauseResult{}, fmt.Errorf("tasklist not set")
 	}
 
 	frontendClient := t.clientBean.GetFrontendClient()
@@ -161,25 +162,25 @@ func (t *timeout) checkTasklist(ctx context.Context, issue InvariantCheckResult)
 		TaskListType: tasklistType,
 	})
 	if err != nil {
-		return InvariantRootCauseResult{}, err
+		return invariant.InvariantRootCauseResult{}, err
 	}
 
 	tasklistBacklog := resp.GetTaskListStatus().GetBacklogCountHint()
 	polllersMetadataInBytes := marshalData(PollersMetadata{TaskListBacklog: tasklistBacklog})
 	if len(resp.GetPollers()) == 0 {
-		return InvariantRootCauseResult{
-			RootCause: RootCauseTypeMissingPollers,
+		return invariant.InvariantRootCauseResult{
+			RootCause: invariant.RootCauseTypeMissingPollers,
 			Metadata:  polllersMetadataInBytes,
 		}, nil
 	}
-	return InvariantRootCauseResult{
-		RootCause: RootCauseTypePollersStatus,
+	return invariant.InvariantRootCauseResult{
+		RootCause: invariant.RootCauseTypePollersStatus,
 		Metadata:  polllersMetadataInBytes,
 	}, nil
 
 }
 
-func checkHeartbeatStatus(issue InvariantCheckResult) ([]InvariantRootCauseResult, error) {
+func checkHeartbeatStatus(issue invariant.InvariantCheckResult) ([]invariant.InvariantRootCauseResult, error) {
 	var metadata ActivityTimeoutMetadata
 	err := json.Unmarshal(issue.Metadata, &metadata)
 	if err != nil {
@@ -189,18 +190,18 @@ func checkHeartbeatStatus(issue InvariantCheckResult) ([]InvariantRootCauseResul
 	heartbeatingMetadataInBytes := marshalData(HeartbeatingMetadata{TimeElapsed: metadata.TimeElapsed})
 
 	if metadata.HeartBeatTimeout == 0 && activityStarted(metadata) {
-		return []InvariantRootCauseResult{
+		return []invariant.InvariantRootCauseResult{
 			{
-				RootCause: RootCauseTypeHeartBeatingNotEnabled,
+				RootCause: invariant.RootCauseTypeHeartBeatingNotEnabled,
 				Metadata:  heartbeatingMetadataInBytes,
 			},
 		}, nil
 	}
 
 	if metadata.HeartBeatTimeout > 0 && metadata.TimeoutType.String() == types.TimeoutTypeHeartbeat.String() {
-		return []InvariantRootCauseResult{
+		return []invariant.InvariantRootCauseResult{
 			{
-				RootCause: RootCauseTypeHeartBeatingEnabledMissingHeartbeat,
+				RootCause: invariant.RootCauseTypeHeartBeatingEnabledMissingHeartbeat,
 				Metadata:  heartbeatingMetadataInBytes,
 			},
 		}, nil
