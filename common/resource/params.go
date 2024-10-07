@@ -49,11 +49,12 @@ import (
 type (
 	// Params holds the set of parameters needed to initialize common service resources
 	Params struct {
-		Name            string
-		InstanceID      string
-		Logger          log.Logger
-		ThrottledLogger log.Logger
-		HostName        string
+		Name               string
+		InstanceID         string
+		Logger             log.Logger
+		ThrottledLogger    log.Logger
+		HostName           string
+		GetIsolationGroups func() []string
 
 		MetricScope        tally.Scope
 		MembershipResolver membership.Resolver

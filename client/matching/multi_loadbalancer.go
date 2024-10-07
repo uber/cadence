@@ -24,29 +24,34 @@ package matching
 
 import (
 	"github.com/uber/cadence/common/dynamicconfig"
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/types"
 )
 
 type (
 	multiLoadBalancer struct {
-		random               LoadBalancer
-		roundRobin           LoadBalancer
+		defaultLoadBalancer  LoadBalancer
+		loadBalancers        map[string]LoadBalancer
 		domainIDToName       func(string) (string, error)
 		loadbalancerStrategy dynamicconfig.StringPropertyFnWithTaskListInfoFilters
+		logger               log.Logger
 	}
 )
 
 func NewMultiLoadBalancer(
-	random LoadBalancer,
-	roundRobin LoadBalancer,
+	defaultLoadBalancer LoadBalancer,
+	loadBalancers map[string]LoadBalancer,
 	domainIDToName func(string) (string, error),
 	dc *dynamicconfig.Collection,
+	logger log.Logger,
 ) LoadBalancer {
 	return &multiLoadBalancer{
-		random:               random,
-		roundRobin:           roundRobin,
+		defaultLoadBalancer:  defaultLoadBalancer,
+		loadBalancers:        loadBalancers,
 		domainIDToName:       domainIDToName,
 		loadbalancerStrategy: dc.GetStringPropertyFilteredByTaskListInfo(dynamicconfig.TasklistLoadBalancerStrategy),
+		logger:               logger,
 	}
 }
 
@@ -58,12 +63,15 @@ func (lb *multiLoadBalancer) PickWritePartition(
 ) string {
 	domainName, err := lb.domainIDToName(domainID)
 	if err != nil {
-		return lb.random.PickWritePartition(domainID, taskList, taskListType, forwardedFrom)
+		return lb.defaultLoadBalancer.PickWritePartition(domainID, taskList, taskListType, forwardedFrom)
 	}
-	if lb.loadbalancerStrategy(domainName, taskList.GetName(), taskListType) == "round-robin" {
-		return lb.roundRobin.PickWritePartition(domainID, taskList, taskListType, forwardedFrom)
+	strategy := lb.loadbalancerStrategy(domainName, taskList.GetName(), taskListType)
+	loadBalancer, ok := lb.loadBalancers[strategy]
+	if !ok {
+		lb.logger.Warn("unsupported load balancer strategy", tag.Value(strategy))
+		return lb.defaultLoadBalancer.PickWritePartition(domainID, taskList, taskListType, forwardedFrom)
 	}
-	return lb.random.PickWritePartition(domainID, taskList, taskListType, forwardedFrom)
+	return loadBalancer.PickWritePartition(domainID, taskList, taskListType, forwardedFrom)
 }
 
 func (lb *multiLoadBalancer) PickReadPartition(
@@ -74,10 +82,34 @@ func (lb *multiLoadBalancer) PickReadPartition(
 ) string {
 	domainName, err := lb.domainIDToName(domainID)
 	if err != nil {
-		return lb.random.PickReadPartition(domainID, taskList, taskListType, forwardedFrom)
+		return lb.defaultLoadBalancer.PickReadPartition(domainID, taskList, taskListType, forwardedFrom)
 	}
-	if lb.loadbalancerStrategy(domainName, taskList.GetName(), taskListType) == "round-robin" {
-		return lb.roundRobin.PickReadPartition(domainID, taskList, taskListType, forwardedFrom)
+	strategy := lb.loadbalancerStrategy(domainName, taskList.GetName(), taskListType)
+	loadBalancer, ok := lb.loadBalancers[strategy]
+	if !ok {
+		lb.logger.Warn("unsupported load balancer strategy", tag.Value(strategy))
+		return lb.defaultLoadBalancer.PickReadPartition(domainID, taskList, taskListType, forwardedFrom)
 	}
-	return lb.random.PickReadPartition(domainID, taskList, taskListType, forwardedFrom)
+	return loadBalancer.PickReadPartition(domainID, taskList, taskListType, forwardedFrom)
+}
+
+func (lb *multiLoadBalancer) UpdateWeight(
+	domainID string,
+	taskList types.TaskList,
+	taskListType int,
+	forwardedFrom string,
+	partition string,
+	weight int64,
+) {
+	domainName, err := lb.domainIDToName(domainID)
+	if err != nil {
+		return
+	}
+	strategy := lb.loadbalancerStrategy(domainName, taskList.GetName(), taskListType)
+	loadBalancer, ok := lb.loadBalancers[strategy]
+	if !ok {
+		lb.logger.Warn("unsupported load balancer strategy", tag.Value(strategy))
+		return
+	}
+	loadBalancer.UpdateWeight(domainID, taskList, taskListType, forwardedFrom, partition, weight)
 }

@@ -27,6 +27,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"sort"
 	"sync"
 	"sync/atomic"
@@ -194,7 +195,7 @@ func NewManager(
 	tlMgr.qpsTracker = stats.NewEmaFixedWindowQPSTracker(timeSource, 0.5, 10*time.Second)
 	var isolationGroups []string
 	if tlMgr.isIsolationMatcherEnabled() {
-		isolationGroups = config.AllIsolationGroups
+		isolationGroups = config.AllIsolationGroups()
 	}
 	var fwdr *Forwarder
 	if tlMgr.isFowardingAllowed(taskList, *taskListKind) {
@@ -365,12 +366,23 @@ func (c *taskListManagerImpl) GetTask(
 		return nil, ErrNoTasks
 	}
 	c.liveness.MarkAlive()
+	// TODO: consider return early if QPS and backlog count are both 0,
+	// since there is no task to be returned
 	task, err := c.getTask(ctx, maxDispatchPerSecond)
 	if err != nil {
 		return nil, fmt.Errorf("couldn't get task: %w", err)
 	}
 	task.domainName = c.domainName
-	task.BacklogCountHint = c.taskAckManager.GetBacklogCount()
+	// according to Little's Law, the average number of tasks in the queue L = λW
+	// where λ is the average arrival rate and W is the average wait time a task spends in the queue
+	// here λ is the QPS and W is the average match latency which is 10ms
+	// so the backlog hint should be backlog count + L.
+	smoothingNumber := int64(0)
+	qps := c.qpsTracker.QPS()
+	if qps > 0.01 {
+		smoothingNumber = int64(math.Ceil(qps * 0.01))
+	}
+	task.BacklogCountHint = c.taskAckManager.GetBacklogCount() + smoothingNumber
 	return task, nil
 }
 
@@ -604,7 +616,7 @@ func (c *taskListManagerImpl) getIsolationGroupForTask(ctx context.Context, task
 			partitionConfig[k] = v
 		}
 		partitionConfig[partition.WorkflowIDKey] = taskInfo.WorkflowID
-		pollerIsolationGroups := c.config.AllIsolationGroups
+		pollerIsolationGroups := c.config.AllIsolationGroups()
 		// Not all poller information are available at the time of task list manager creation,
 		// because we don't persist poller information in database, so in the first minute, we always assume
 		// pollers are available in all isolation groups to avoid the risk of leaking a task to another isolation group.
@@ -613,7 +625,7 @@ func (c *taskListManagerImpl) getIsolationGroupForTask(ctx context.Context, task
 			pollerIsolationGroups = c.getPollerIsolationGroups()
 			if len(pollerIsolationGroups) == 0 {
 				// we don't have any pollers, use all isolation groups and wait for pollers' arriving
-				pollerIsolationGroups = c.config.AllIsolationGroups
+				pollerIsolationGroups = c.config.AllIsolationGroups()
 			}
 		}
 		group, err := c.partitioner.GetIsolationGroupByDomainID(ctx, taskInfo.DomainID, partitionConfig, pollerIsolationGroups)

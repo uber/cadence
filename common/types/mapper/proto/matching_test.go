@@ -84,7 +84,7 @@ func TestMatchingPollForActivityTaskRequest(t *testing.T) {
 }
 
 func TestMatchingPollForActivityTaskResponse(t *testing.T) {
-	for _, item := range []*types.PollForActivityTaskResponse{nil, {}, &testdata.MatchingPollForActivityTaskResponse} {
+	for _, item := range []*types.MatchingPollForActivityTaskResponse{nil, {}, &testdata.MatchingPollForActivityTaskResponse} {
 		assert.Equal(t, item, ToMatchingPollForActivityTaskResponse(FromMatchingPollForActivityTaskResponse(item)))
 	}
 }

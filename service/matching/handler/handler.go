@@ -194,7 +194,7 @@ func (h *handlerImpl) AddDecisionTask(
 func (h *handlerImpl) PollForActivityTask(
 	ctx context.Context,
 	request *types.MatchingPollForActivityTaskRequest,
-) (resp *types.PollForActivityTaskResponse, retError error) {
+) (resp *types.MatchingPollForActivityTaskResponse, retError error) {
 	defer func() { log.CapturePanic(recover(), h.logger, &retError) }()
 
 	domainName := h.domainName(request.GetDomainUUID())

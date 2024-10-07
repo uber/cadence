@@ -187,7 +187,7 @@ func listExecutionsByShardID(
 	defer client.Close()
 
 	paginationFunc := func(paginationToken []byte) ([]interface{}, []byte, error) {
-		ctx, cancel := context.WithTimeout(context.Background(), listContextTimeout)
+		ctx, cancel := context.WithTimeout(c.Context, listContextTimeout)
 		defer cancel()
 
 		resp, err := client.ListConcreteExecutions(

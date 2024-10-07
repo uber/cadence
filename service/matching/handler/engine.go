@@ -111,7 +111,7 @@ var (
 	// EmptyPollForDecisionTaskResponse is the response when there are no decision tasks to hand out
 	emptyPollForDecisionTaskResponse = &types.MatchingPollForDecisionTaskResponse{}
 	// EmptyPollForActivityTaskResponse is the response when there are no activity tasks to hand out
-	emptyPollForActivityTaskResponse   = &types.PollForActivityTaskResponse{}
+	emptyPollForActivityTaskResponse   = &types.MatchingPollForActivityTaskResponse{}
 	historyServiceOperationRetryPolicy = common.CreateHistoryServiceRetryPolicy()
 
 	errPumpClosed = errors.New("task list pump closed its channel")
@@ -548,7 +548,10 @@ pollLoop:
 				EventName:    "PollForDecisionTask returning already started task",
 				Host:         e.config.HostName,
 			})
-			return task.PollForDecisionResponse(), nil
+			resp := task.PollForDecisionResponse()
+			// set the backlog count to the current partition's backlog count
+			resp.BacklogCountHint = task.BacklogCountHint
+			return resp, nil
 			// TODO: Maybe add history expose here?
 		}
 
@@ -648,7 +651,7 @@ pollLoop:
 func (e *matchingEngineImpl) PollForActivityTask(
 	hCtx *handlerContext,
 	req *types.MatchingPollForActivityTaskRequest,
-) (*types.PollForActivityTaskResponse, error) {
+) (*types.MatchingPollForActivityTaskResponse, error) {
 	domainID := req.GetDomainUUID()
 	pollerID := req.GetPollerID()
 	request := req.PollRequest
@@ -741,11 +744,11 @@ pollLoop:
 func (e *matchingEngineImpl) createSyncMatchPollForActivityTaskResponse(
 	task *tasklist.InternalTask,
 	activityTaskDispatchInfo *types.ActivityTaskDispatchInfo,
-) *types.PollForActivityTaskResponse {
+) *types.MatchingPollForActivityTaskResponse {
 
 	scheduledEvent := activityTaskDispatchInfo.ScheduledEvent
 	attributes := scheduledEvent.ActivityTaskScheduledEventAttributes
-	response := &types.PollForActivityTaskResponse{}
+	response := &types.MatchingPollForActivityTaskResponse{}
 	response.ActivityID = attributes.ActivityID
 	response.ActivityType = attributes.ActivityType
 	response.Header = attributes.Header
@@ -1072,7 +1075,7 @@ func (e *matchingEngineImpl) createPollForActivityTaskResponse(
 	task *tasklist.InternalTask,
 	historyResponse *types.RecordActivityTaskStartedResponse,
 	scope metrics.Scope,
-) *types.PollForActivityTaskResponse {
+) *types.MatchingPollForActivityTaskResponse {
 
 	scheduledEvent := historyResponse.ScheduledEvent
 	if scheduledEvent.ActivityTaskScheduledEventAttributes == nil {
@@ -1086,7 +1089,7 @@ func (e *matchingEngineImpl) createPollForActivityTaskResponse(
 		scope.RecordTimer(metrics.AsyncMatchLatencyPerTaskList, time.Since(task.Event.CreatedTime))
 	}
 
-	response := &types.PollForActivityTaskResponse{}
+	response := &types.MatchingPollForActivityTaskResponse{}
 	response.ActivityID = attributes.ActivityID
 	response.ActivityType = attributes.ActivityType
 	response.Header = attributes.Header

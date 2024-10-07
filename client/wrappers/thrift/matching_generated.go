@@ -65,7 +65,7 @@ func (g matchingClient) ListTaskListPartitions(ctx context.Context, mp1 *types.M
 	return thrift.ToMatchingListTaskListPartitionsResponse(response), thrift.ToError(err)
 }
 
-func (g matchingClient) PollForActivityTask(ctx context.Context, mp1 *types.MatchingPollForActivityTaskRequest, p1 ...yarpc.CallOption) (pp1 *types.PollForActivityTaskResponse, err error) {
+func (g matchingClient) PollForActivityTask(ctx context.Context, mp1 *types.MatchingPollForActivityTaskRequest, p1 ...yarpc.CallOption) (mp2 *types.MatchingPollForActivityTaskResponse, err error) {
 	response, err := g.c.PollForActivityTask(ctx, thrift.FromMatchingPollForActivityTaskRequest(mp1), p1...)
 	return thrift.ToMatchingPollForActivityTaskResponse(response), thrift.ToError(err)
 }

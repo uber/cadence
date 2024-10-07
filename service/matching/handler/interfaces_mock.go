@@ -148,10 +148,10 @@ func (mr *MockEngineMockRecorder) ListTaskListPartitions(hCtx, request interface
 }
 
 // PollForActivityTask mocks base method.
-func (m *MockEngine) PollForActivityTask(hCtx *handlerContext, request *types.MatchingPollForActivityTaskRequest) (*types.PollForActivityTaskResponse, error) {
+func (m *MockEngine) PollForActivityTask(hCtx *handlerContext, request *types.MatchingPollForActivityTaskRequest) (*types.MatchingPollForActivityTaskResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "PollForActivityTask", hCtx, request)
-	ret0, _ := ret[0].(*types.PollForActivityTaskResponse)
+	ret0, _ := ret[0].(*types.MatchingPollForActivityTaskResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -356,10 +356,10 @@ func (mr *MockHandlerMockRecorder) ListTaskListPartitions(arg0, arg1 interface{}
 }
 
 // PollForActivityTask mocks base method.
-func (m *MockHandler) PollForActivityTask(arg0 context.Context, arg1 *types.MatchingPollForActivityTaskRequest) (*types.PollForActivityTaskResponse, error) {
+func (m *MockHandler) PollForActivityTask(arg0 context.Context, arg1 *types.MatchingPollForActivityTaskRequest) (*types.MatchingPollForActivityTaskResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "PollForActivityTask", arg0, arg1)
-	ret0, _ := ret[0].(*types.PollForActivityTaskResponse)
+	ret0, _ := ret[0].(*types.MatchingPollForActivityTaskResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

@@ -755,14 +755,14 @@ func newIndefiniteContext(c *cli.Context) (context.Context, context.CancelFunc) 
 		return newTimedContext(c, time.Duration(c.Int(FlagContextTimeout))*time.Second)
 	}
 
-	return context.WithCancel(populateContextFromCLIContext(context.Background(), c))
+	return context.WithCancel(populateContextFromCLIContext(c.Context, c))
 }
 
 func newTimedContext(c *cli.Context, timeout time.Duration) (context.Context, context.CancelFunc) {
 	if overrideTimeout := c.Int(FlagContextTimeout); overrideTimeout > 0 {
 		timeout = time.Duration(overrideTimeout) * time.Second
 	}
-	ctx := populateContextFromCLIContext(context.Background(), c)
+	ctx := populateContextFromCLIContext(c.Context, c)
 	return context.WithTimeout(ctx, timeout)
 }
 

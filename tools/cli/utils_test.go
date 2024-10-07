@@ -25,6 +25,9 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+
+	"github.com/uber/cadence/common/testing/testdatagen/idlfuzzedtestdata"
+	"github.com/uber/cadence/common/types"
 )
 
 func Test_ParseIntMultiRange(t *testing.T) {
@@ -123,4 +126,16 @@ func Test_anyToString(t *testing.T) {
 
 	res := anyToString(info, false, 100)
 	assert.Equal(t, "{Name:Joel, Number:1234, Time:2019-01-15 14:30:45 +0000 UTC}", res)
+}
+
+func TestJSONHistorySerializer_Serialize(t *testing.T) {
+	gen := idlfuzzedtestdata.NewFuzzerWithIDLTypes(t)
+	h := types.History{}
+	gen.Fuzz(&h)
+	serializer := JSONHistorySerializer{}
+	data, err := serializer.Serialize(&h)
+	assert.NoError(t, err)
+	roundTrip, err := serializer.Deserialize(data)
+	assert.NoError(t, err)
+	assert.Equal(t, h, *roundTrip)
 }

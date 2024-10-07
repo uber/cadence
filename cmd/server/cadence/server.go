@@ -39,6 +39,7 @@ import (
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/dynamicconfig/configstore"
 	"github.com/uber/cadence/common/elasticsearch"
+	"github.com/uber/cadence/common/isolationgroup/isolationgroupapi"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/membership"
@@ -194,6 +195,8 @@ func (s *server) startService() common.Daemon {
 	params.PProfInitializer = svcCfg.PProf.NewInitializer(params.Logger)
 
 	params.ClusterRedirectionPolicy = s.cfg.ClusterGroupMetadata.ClusterRedirectionPolicy
+
+	params.GetIsolationGroups = getFromDynamicConfig(params, dc)
 
 	params.ClusterMetadata = cluster.NewMetadata(
 		clusterGroupMetadata.FailoverVersionIncrement,
@@ -371,5 +374,16 @@ func validateIndex(config *config.ElasticSearchConfig) {
 	indexName, ok := config.Indices[common.VisibilityAppName]
 	if !ok || len(indexName) == 0 {
 		log.Fatalf("Visibility index is missing in config")
+	}
+}
+
+func getFromDynamicConfig(params resource.Params, dc *dynamicconfig.Collection) func() []string {
+	return func() []string {
+		res, err := isolationgroupapi.MapAllIsolationGroupsResponse(dc.GetListProperty(dynamicconfig.AllIsolationGroups)())
+		if err != nil {
+			params.Logger.Error("failed to get isolation groups from config", tag.Error(err))
+			return nil
+		}
+		return res
 	}
 }

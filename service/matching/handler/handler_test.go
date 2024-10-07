@@ -111,7 +111,7 @@ func (s *handlerSuite) getHandler(config *config.Config) Handler {
 }
 
 func (s *handlerSuite) TestNewHandler() {
-	cfg := config.NewConfig(dynamicconfig.NewCollection(dynamicconfig.NewInMemoryClient(), s.mockResource.Logger), "matching-test")
+	cfg := config.NewConfig(dynamicconfig.NewCollection(dynamicconfig.NewInMemoryClient(), s.mockResource.Logger), "matching-test", getIsolationGroupsHelper)
 	handler := s.getHandler(cfg)
 	s.NotNil(handler)
 }
@@ -119,7 +119,7 @@ func (s *handlerSuite) TestNewHandler() {
 func (s *handlerSuite) TestStart() {
 	defer goleak.VerifyNone(s.T())
 
-	cfg := config.NewConfig(dynamicconfig.NewCollection(dynamicconfig.NewInMemoryClient(), s.mockResource.Logger), "matching-test")
+	cfg := config.NewConfig(dynamicconfig.NewCollection(dynamicconfig.NewInMemoryClient(), s.mockResource.Logger), "matching-test", getIsolationGroupsHelper)
 	handler := s.getHandler(cfg)
 
 	handler.Start()
@@ -131,7 +131,7 @@ func (s *handlerSuite) TestStart() {
 func (s *handlerSuite) TestStop() {
 	defer goleak.VerifyNone(s.T())
 
-	cfg := config.NewConfig(dynamicconfig.NewCollection(dynamicconfig.NewInMemoryClient(), s.mockResource.Logger), "matching-test")
+	cfg := config.NewConfig(dynamicconfig.NewCollection(dynamicconfig.NewInMemoryClient(), s.mockResource.Logger), "matching-test", getIsolationGroupsHelper)
 	handler := s.getHandler(cfg)
 
 	s.mockEngine.EXPECT().Stop().Times(1)
@@ -277,7 +277,7 @@ func (s *handlerSuite) TestPollForActivityTask() {
 			setupMocks: func() {
 				s.mockLimiter.EXPECT().Allow().Return(true).Times(1)
 				s.mockEngine.EXPECT().PollForActivityTask(gomock.Any(), &request).
-					Return(&types.PollForActivityTaskResponse{TaskToken: []byte("task-token")}, nil).Times(1)
+					Return(&types.MatchingPollForActivityTaskResponse{TaskToken: []byte("task-token")}, nil).Times(1)
 			},
 			getCtx: func() (context.Context, context.CancelFunc) {
 				ctx, cancel := context.WithDeadline(context.Background(), time.Now())
@@ -331,7 +331,7 @@ func (s *handlerSuite) TestPollForActivityTask() {
 				s.Equal(tc.err, err)
 			} else {
 				s.NoError(err)
-				s.Equal(&types.PollForActivityTaskResponse{TaskToken: []byte("task-token")}, resp)
+				s.Equal(&types.MatchingPollForActivityTaskResponse{TaskToken: []byte("task-token")}, resp)
 			}
 		})
 	}

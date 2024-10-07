@@ -2962,6 +2962,13 @@ const (
 	UnknownListKey ListKey = iota
 	TestGetListPropertyKey
 
+	// AllIsolationGroups is the list of all possible isolation groups in a service
+	// KeyName: system.allIsolationGroups
+	// Value type: []string
+	// Default value: N/A
+	// Allowed filters: N/A
+	AllIsolationGroups
+
 	// HeaderForwardingRules defines which headers are forwarded from inbound calls to outbound.
 	// This value is only loaded at startup.
 	//
@@ -2971,12 +2978,6 @@ const (
 	// Value type: []rpc.HeaderRule or an []interface{} containing `map[string]interface{}{"Add":bool,"Match":string}` values.
 	// Default value: forward all headers.  (this is a problematic value, and it will be changing as we reduce to a list of known values)
 	HeaderForwardingRules
-	// AllIsolationGroups is the list of all possible isolation groups in a service
-	// KeyName: system.allIsolationGroups
-	// Value type: []string
-	// Default value: N/A
-	// Allowed filters: N/A
-	AllIsolationGroups
 
 	LastListKey
 )

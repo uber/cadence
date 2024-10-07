@@ -63,7 +63,7 @@ func (c *clientImpl) AddActivityTask(
 		request.GetForwardedFrom(),
 	)
 	request.TaskList.Name = partition
-	peer, err := c.peerResolver.FromTaskList(partition)
+	peer, err := c.peerResolver.FromTaskList(request.TaskList.GetName())
 	if err != nil {
 		return err
 	}
@@ -93,7 +93,7 @@ func (c *clientImpl) PollForActivityTask(
 	ctx context.Context,
 	request *types.MatchingPollForActivityTaskRequest,
 	opts ...yarpc.CallOption,
-) (*types.PollForActivityTaskResponse, error) {
+) (*types.MatchingPollForActivityTaskResponse, error) {
 	partition := c.loadBalancer.PickReadPartition(
 		request.GetDomainUUID(),
 		*request.PollRequest.GetTaskList(),
@@ -105,6 +105,7 @@ func (c *clientImpl) PollForActivityTask(
 	if err != nil {
 		return nil, err
 	}
+	// TODO: update activity response to include backlog count hint and update the weight for partitions
 	return c.client.PollForActivityTask(ctx, request, append(opts, yarpc.WithShardKey(peer))...)
 }
 
@@ -119,12 +120,26 @@ func (c *clientImpl) PollForDecisionTask(
 		persistence.TaskListTypeDecision,
 		request.GetForwardedFrom(),
 	)
+	originalTaskListName := request.PollRequest.GetTaskList().GetName()
 	request.PollRequest.TaskList.Name = partition
 	peer, err := c.peerResolver.FromTaskList(request.PollRequest.TaskList.GetName())
 	if err != nil {
 		return nil, err
 	}
-	return c.client.PollForDecisionTask(ctx, request, append(opts, yarpc.WithShardKey(peer))...)
+	resp, err := c.client.PollForDecisionTask(ctx, request, append(opts, yarpc.WithShardKey(peer))...)
+	if err != nil {
+		return nil, err
+	}
+	request.PollRequest.TaskList.Name = originalTaskListName
+	c.loadBalancer.UpdateWeight(
+		request.GetDomainUUID(),
+		*request.PollRequest.GetTaskList(),
+		persistence.TaskListTypeDecision,
+		request.GetForwardedFrom(),
+		partition,
+		resp.BacklogCountHint,
+	)
+	return resp, nil
 }
 
 func (c *clientImpl) QueryWorkflow(

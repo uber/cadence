@@ -18,6 +18,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+//go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination loadbalancer_mock.go -package matching github.com/uber/cadence/client/matching LoadBalancer
+
 package matching
 
 import (
@@ -57,6 +59,18 @@ type (
 			taskListType int,
 			forwardedFrom string,
 		) string
+
+		// UpdateWeight updates the weight of a task list partition.
+		// Input is name of the original task list as specified by caller. When
+		// the original task list is a partition, no update should be done.
+		UpdateWeight(
+			domainID string,
+			taskList types.TaskList,
+			taskListType int,
+			forwardedFrom string,
+			partition string,
+			weight int64,
+		)
 	}
 
 	defaultLoadBalancer struct {
@@ -134,9 +148,22 @@ func (lb *defaultLoadBalancer) pickPartition(
 	}
 
 	p := rand.Intn(nPartitions)
-	if p == 0 {
-		return taskList.GetName()
-	}
+	return getPartitionTaskListName(taskList.GetName(), p)
+}
 
-	return fmt.Sprintf("%v%v/%v", common.ReservedTaskListPrefix, taskList.GetName(), p)
+func (lb *defaultLoadBalancer) UpdateWeight(
+	domainID string,
+	taskList types.TaskList,
+	taskListType int,
+	forwardedFrom string,
+	partition string,
+	weight int64,
+) {
+}
+
+func getPartitionTaskListName(root string, partition int) string {
+	if partition <= 0 {
+		return root
+	}
+	return fmt.Sprintf("%v%v/%v", common.ReservedTaskListPrefix, root, partition)
 }

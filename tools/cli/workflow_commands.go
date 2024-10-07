@@ -1473,7 +1473,7 @@ func listArchivedWorkflows(c *cli.Context) (getWorkflowPageFn, error) {
 			NextPageToken: nextPageToken,
 		}
 
-		ctx, cancel := context.WithTimeout(context.Background(), contextTimeout)
+		ctx, cancel := context.WithTimeout(c.Context, contextTimeout)
 		defer cancel()
 
 		result, err := wfClient.ListArchivedWorkflowExecutions(ctx, request)

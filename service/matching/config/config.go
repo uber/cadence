@@ -73,7 +73,7 @@ type (
 
 		// isolation configuration
 		EnableTasklistIsolation dynamicconfig.BoolPropertyFnWithDomainFilter
-		AllIsolationGroups      []string
+		AllIsolationGroups      func() []string
 		// hostname info
 		HostName string
 		// rate limiter configuration
@@ -115,7 +115,8 @@ type (
 		NumReadPartitions               func() int
 		// isolation configuration
 		EnableTasklistIsolation func() bool
-		AllIsolationGroups      []string
+		// A function which returns all the isolation groups
+		AllIsolationGroups func() []string
 		// hostname
 		HostName string
 		// rate limiter configuration
@@ -127,7 +128,7 @@ type (
 )
 
 // NewConfig returns new service config with default values
-func NewConfig(dc *dynamicconfig.Collection, hostName string) *Config {
+func NewConfig(dc *dynamicconfig.Collection, hostName string, getIsolationGroups func() []string) *Config {
 	return &Config{
 		PersistenceMaxQPS:               dc.GetIntProperty(dynamicconfig.MatchingPersistenceMaxQPS),
 		PersistenceGlobalMaxQPS:         dc.GetIntProperty(dynamicconfig.MatchingPersistenceGlobalMaxQPS),
@@ -158,7 +159,6 @@ func NewConfig(dc *dynamicconfig.Collection, hostName string) *Config {
 		EnableTaskInfoLogByDomainID:     dc.GetBoolPropertyFilteredByDomainID(dynamicconfig.MatchingEnableTaskInfoLogByDomainID),
 		ActivityTaskSyncMatchWaitTime:   dc.GetDurationPropertyFilteredByDomain(dynamicconfig.MatchingActivityTaskSyncMatchWaitTime),
 		EnableTasklistIsolation:         dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableTasklistIsolation),
-		AllIsolationGroups:              mapIGs(dc.GetListProperty(dynamicconfig.AllIsolationGroups)()),
 		AsyncTaskDispatchTimeout:        dc.GetDurationPropertyFilteredByTaskListInfo(dynamicconfig.AsyncTaskDispatchTimeout),
 		EnableTasklistOwnershipGuard:    dc.GetBoolProperty(dynamicconfig.MatchingEnableTasklistGuardAgainstOwnershipShardLoss),
 		LocalPollWaitTime:               dc.GetDurationPropertyFilteredByTaskListInfo(dynamicconfig.LocalPollWaitTime),
@@ -167,16 +167,6 @@ func NewConfig(dc *dynamicconfig.Collection, hostName string) *Config {
 		TaskDispatchRPS:                 100000.0,
 		TaskDispatchRPSTTL:              time.Minute,
 		MaxTimeBetweenTaskDeletes:       time.Second,
+		AllIsolationGroups:              getIsolationGroups,
 	}
-}
-
-func mapIGs(in []interface{}) []string {
-	var allIsolationGroups []string
-	for k := range in {
-		v, ok := in[k].(string)
-		if ok {
-			allIsolationGroups = append(allIsolationGroups, v)
-		}
-	}
-	return allIsolationGroups
 }
