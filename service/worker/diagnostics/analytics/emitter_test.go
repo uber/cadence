@@ -42,7 +42,7 @@ func Test__EmitUsageData(t *testing.T) {
 		WorkflowID:            "wid",
 		RunID:                 "rid",
 		Identity:              "test@uber.com",
-		IssueType:             "timeouts",
+		IssueType:             "timeout",
 		DiagnosticsWorkflowID: "diagnostics-wid",
 		DiagnosticsRunID:      "diagnostics-rid",
 		Environment:           "test-env",

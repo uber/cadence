@@ -29,8 +29,8 @@ import (
 	"github.com/uber/cadence/common/messaging/kafka"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/worker/diagnostics/analytics"
-	"github.com/uber/cadence/service/worker/diagnostics/invariants"
-	"github.com/uber/cadence/service/worker/diagnostics/invariants/timeouts"
+	"github.com/uber/cadence/service/worker/diagnostics/invariant"
+	"github.com/uber/cadence/service/worker/diagnostics/invariant/timeout"
 )
 
 const (
@@ -56,8 +56,8 @@ type identifyTimeoutsInputParams struct {
 	Domain  string
 }
 
-func (w *dw) identifyTimeouts(ctx context.Context, info identifyTimeoutsInputParams) ([]invariants.InvariantCheckResult, error) {
-	timeoutInvariant := timeouts.NewTimeout(timeouts.NewTimeoutParams{
+func (w *dw) identifyTimeouts(ctx context.Context, info identifyTimeoutsInputParams) ([]invariant.InvariantCheckResult, error) {
+	timeoutInvariant := timeout.NewInvariant(timeout.NewTimeoutParams{
 		WorkflowExecutionHistory: info.History,
 		Domain:                   info.Domain,
 		ClientBean:               w.clientBean,
@@ -68,11 +68,11 @@ func (w *dw) identifyTimeouts(ctx context.Context, info identifyTimeoutsInputPar
 type rootCauseTimeoutsParams struct {
 	History *types.GetWorkflowExecutionHistoryResponse
 	Domain  string
-	Issues  []invariants.InvariantCheckResult
+	Issues  []invariant.InvariantCheckResult
 }
 
-func (w *dw) rootCauseTimeouts(ctx context.Context, info rootCauseTimeoutsParams) ([]invariants.InvariantRootCauseResult, error) {
-	timeoutInvariant := timeouts.NewTimeout(timeouts.NewTimeoutParams{
+func (w *dw) rootCauseTimeouts(ctx context.Context, info rootCauseTimeoutsParams) ([]invariant.InvariantRootCauseResult, error) {
+	timeoutInvariant := timeout.NewInvariant(timeout.NewTimeoutParams{
 		WorkflowExecutionHistory: info.History,
 		ClientBean:               w.clientBean,
 		Domain:                   info.Domain,
