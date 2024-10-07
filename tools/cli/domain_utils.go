@@ -270,31 +270,25 @@ var (
 	)
 )
 
-func initializeFrontendClient(
-	context *cli.Context,
-) frontend.Client {
-	return cFactory.ServerFrontendClient(context)
+func initializeFrontendClient(c *cli.Context) (frontend.Client, error) {
+	return getDeps(c).ServerFrontendClient(c)
 }
 
-func initializeFrontendAdminClient(
-	context *cli.Context,
-) admin.Client {
-	return cFactory.ServerAdminClient(context)
+func initializeFrontendAdminClient(c *cli.Context) (admin.Client, error) {
+	return getDeps(c).ServerAdminClient(c)
 }
 
-func initializeAdminDomainHandler(
-	context *cli.Context,
-) domain.Handler {
+func initializeAdminDomainHandler(c *cli.Context) (domain.Handler, error) {
 
-	configuration, err := cFactory.ServerConfig(context)
+	configuration, err := getDeps(c).ServerConfig(c)
 	if err != nil {
-		ErrorAndExit("Unable to load config.", err)
+		return nil, err
 	}
 
 	metricsClient := initializeMetricsClient()
 	logger := initializeLogger(configuration)
 	clusterMetadata := initializeClusterMetadata(configuration, metricsClient, logger)
-	metadataMgr := initializeDomainManager(context)
+	metadataMgr := initializeDomainManager(c)
 	dynamicConfig := initializeDynamicConfig(configuration, logger)
 	return initializeDomainHandler(
 		logger,
@@ -302,15 +296,13 @@ func initializeAdminDomainHandler(
 		clusterMetadata,
 		initializeArchivalMetadata(configuration, dynamicConfig),
 		initializeArchivalProvider(configuration, clusterMetadata, metricsClient, logger),
-	)
+	), nil
 }
 
-func loadConfig(
-	context *cli.Context,
-) *config.Config {
-	env := getEnvironment(context)
-	zone := getZone(context)
-	configDir := getConfigDir(context)
+func loadConfig(c *cli.Context) *config.Config {
+	env := getEnvironment(c)
+	zone := getZone(c)
+	configDir := getConfigDir(c)
 	var cfg config.Config
 	err := config.Load(env, configDir, zone, &cfg)
 	if err != nil {
@@ -344,9 +336,7 @@ func initializeDomainHandler(
 	)
 }
 
-func initializeLogger(
-	serviceConfig *config.Config,
-) log.Logger {
+func initializeLogger(serviceConfig *config.Config) log.Logger {
 	zapLogger, err := serviceConfig.Log.NewZapLogger()
 	if err != nil {
 		ErrorAndExit("failed to create zap logger, err: ", err)

@@ -49,7 +49,10 @@ type (
 
 // AdminDescribeTaskList displays poller and status information of task list.
 func AdminDescribeTaskList(c *cli.Context) error {
-	frontendClient := cFactory.ServerFrontendClient(c)
+	frontendClient, err := getDeps(c).ServerFrontendClient(c)
+	if err != nil {
+		return err
+	}
 	domain := getRequiredOption(c, FlagDomain)
 	taskList := getRequiredOption(c, FlagTaskList)
 	taskListType := types.TaskListTypeDecision
@@ -89,7 +92,10 @@ func AdminDescribeTaskList(c *cli.Context) error {
 
 // AdminListTaskList displays all task lists under a domain.
 func AdminListTaskList(c *cli.Context) error {
-	frontendClient := cFactory.ServerFrontendClient(c)
+	frontendClient, err := getDeps(c).ServerFrontendClient(c)
+	if err != nil {
+		return err
+	}
 	domain := getRequiredOption(c, FlagDomain)
 
 	ctx, cancel := newContext(c)

@@ -196,7 +196,7 @@ func getPersistenceFactory(c *cli.Context) client.Factory {
 }
 
 func initPersistenceFactory(c *cli.Context) client.Factory {
-	cfg, err := cFactory.ServerConfig(c)
+	cfg, err := getDeps(c).ServerConfig(c)
 
 	if err != nil {
 		cfg = &config.Config{

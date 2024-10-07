@@ -47,28 +47,30 @@ type cliAppSuite struct {
 	serverAdminClient    *admin.MockClient
 }
 
+var _ ClientFactory = (*clientFactoryMock)(nil)
+
 type clientFactoryMock struct {
 	serverFrontendClient frontend.Client
 	serverAdminClient    admin.Client
 }
 
-func (m *clientFactoryMock) ServerFrontendClient(c *cli.Context) frontend.Client {
-	return m.serverFrontendClient
+func (m *clientFactoryMock) ServerFrontendClient(c *cli.Context) (frontend.Client, error) {
+	return m.serverFrontendClient, nil
 }
 
-func (m *clientFactoryMock) ServerAdminClient(c *cli.Context) admin.Client {
-	return m.serverAdminClient
+func (m *clientFactoryMock) ServerAdminClient(c *cli.Context) (admin.Client, error) {
+	return m.serverAdminClient, nil
 }
 
-func (m *clientFactoryMock) ServerFrontendClientForMigration(c *cli.Context) frontend.Client {
+func (m *clientFactoryMock) ServerFrontendClientForMigration(c *cli.Context) (frontend.Client, error) {
 	panic("not implemented")
 }
 
-func (m *clientFactoryMock) ServerAdminClientForMigration(c *cli.Context) admin.Client {
+func (m *clientFactoryMock) ServerAdminClientForMigration(c *cli.Context) (admin.Client, error) {
 	panic("not implemented")
 }
 
-func (m *clientFactoryMock) ElasticSearchClient(c *cli.Context) *elastic.Client {
+func (m *clientFactoryMock) ElasticSearchClient(c *cli.Context) (*elastic.Client, error) {
 	panic("not implemented")
 }
 
@@ -89,16 +91,11 @@ func TestCLIAppSuite(t *testing.T) {
 	suite.Run(t, s)
 }
 
-func (s *cliAppSuite) SetupSuite() {
-	s.app = NewCliApp()
-}
-
 func (s *cliAppSuite) SetupTest() {
 	s.mockCtrl = gomock.NewController(s.T())
-
 	s.serverFrontendClient = frontend.NewMockClient(s.mockCtrl)
 	s.serverAdminClient = admin.NewMockClient(s.mockCtrl)
-	SetFactory(&clientFactoryMock{
+	s.app = NewCliApp(&clientFactoryMock{
 		serverFrontendClient: s.serverFrontendClient,
 		serverAdminClient:    s.serverAdminClient,
 	})

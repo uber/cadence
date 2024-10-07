@@ -165,7 +165,10 @@ func AdminDescribeWorkflow(c *cli.Context) error {
 }
 
 func describeMutableState(c *cli.Context) (*types.AdminDescribeWorkflowExecutionResponse, error) {
-	adminClient := cFactory.ServerAdminClient(c)
+	adminClient, err := getDeps(c).ServerAdminClient(c)
+	if err != nil {
+		return nil, err
+	}
 
 	domain := getRequiredOption(c, FlagDomain)
 	wid := getRequiredOption(c, FlagWorkflowID)
@@ -196,7 +199,10 @@ func AdminMaintainCorruptWorkflow(c *cli.Context) error {
 	workflowID := c.String(FlagWorkflowID)
 	runID := c.String(FlagRunID)
 	skipErrors := c.Bool(FlagSkipErrorMode)
-	adminClient := cFactory.ServerAdminClient(c)
+	adminClient, err := getDeps(c).ServerAdminClient(c)
+	if err != nil {
+		return err
+	}
 
 	request := &types.AdminMaintainWorkflowRequest{
 		Domain: domainName,
@@ -209,7 +215,7 @@ func AdminMaintainCorruptWorkflow(c *cli.Context) error {
 
 	ctx, cancel := newContext(c)
 	defer cancel()
-	_, err := adminClient.MaintainCorruptWorkflow(ctx, request)
+	_, err = adminClient.MaintainCorruptWorkflow(ctx, request)
 	if err != nil {
 		return commoncli.Problem("Operation AdminMaintainCorruptWorkflow failed.", err)
 	}
@@ -233,7 +239,10 @@ func AdminDeleteWorkflow(c *cli.Context) error {
 	// useful if server is down somehow. However, we only support couple DB clients
 	// currently. If the server side hosts working, remote is a cleaner approach
 	if remote {
-		adminClient := cFactory.ServerAdminClient(c)
+		adminClient, err := getDeps(c).ServerAdminClient(c)
+		if err != nil {
+			return err
+		}
 		request := &types.AdminDeleteWorkflowRequest{
 			Domain: domain,
 			Execution: &types.WorkflowExecution{
@@ -242,7 +251,7 @@ func AdminDeleteWorkflow(c *cli.Context) error {
 			},
 			SkipErrors: skipError,
 		}
-		_, err := adminClient.DeleteWorkflow(ctx, request)
+		_, err = adminClient.DeleteWorkflow(ctx, request)
 		if err != nil {
 			return commoncli.Problem("Operation AdminMaintainCorruptWorkflow failed.", err)
 		}
@@ -380,7 +389,10 @@ func AdminGetShardID(c *cli.Context) error {
 
 // AdminRemoveTask describes history host
 func AdminRemoveTask(c *cli.Context) error {
-	adminClient := cFactory.ServerAdminClient(c)
+	adminClient, err := getDeps(c).ServerAdminClient(c)
+	if err != nil {
+		return err
+	}
 
 	shardID := getRequiredIntOption(c, FlagShardID)
 	taskID := getRequiredInt64Option(c, FlagTaskID)
@@ -402,7 +414,7 @@ func AdminRemoveTask(c *cli.Context) error {
 		ClusterName:         clusterName,
 	}
 
-	err := adminClient.RemoveTask(ctx, req)
+	err = adminClient.RemoveTask(ctx, req)
 	if err != nil {
 		return commoncli.Problem("Remove task has failed", err)
 	}
@@ -461,7 +473,10 @@ func AdminSetShardRangeID(c *cli.Context) error {
 
 // AdminCloseShard closes shard by shard id
 func AdminCloseShard(c *cli.Context) error {
-	adminClient := cFactory.ServerAdminClient(c)
+	adminClient, err := getDeps(c).ServerAdminClient(c)
+	if err != nil {
+		return err
+	}
 	sid := getRequiredIntOption(c, FlagShardID)
 
 	ctx, cancel := newContext(c)
@@ -470,7 +485,7 @@ func AdminCloseShard(c *cli.Context) error {
 	req := &types.CloseShardRequest{}
 	req.ShardID = int32(sid)
 
-	err := adminClient.CloseShard(ctx, req)
+	err = adminClient.CloseShard(ctx, req)
 	if err != nil {
 		return commoncli.Problem("Close shard task has failed", err)
 	}
@@ -484,7 +499,10 @@ type ShardRow struct {
 
 // AdminDescribeShardDistribution describes shard distribution
 func AdminDescribeShardDistribution(c *cli.Context) error {
-	adminClient := cFactory.ServerAdminClient(c)
+	adminClient, err := getDeps(c).ServerAdminClient(c)
+	if err != nil {
+		return err
+	}
 
 	ctx, cancel := newContext(c)
 	defer cancel()
@@ -529,7 +547,10 @@ func AdminDescribeShardDistribution(c *cli.Context) error {
 
 // AdminDescribeHistoryHost describes history host
 func AdminDescribeHistoryHost(c *cli.Context) error {
-	adminClient := cFactory.ServerAdminClient(c)
+	adminClient, err := getDeps(c).ServerAdminClient(c)
+	if err != nil {
+		return err
+	}
 
 	wid := c.String(FlagWorkflowID)
 	sid := c.Int(FlagShardID)
@@ -568,7 +589,10 @@ func AdminDescribeHistoryHost(c *cli.Context) error {
 
 // AdminRefreshWorkflowTasks refreshes all the tasks of a workflow
 func AdminRefreshWorkflowTasks(c *cli.Context) error {
-	adminClient := cFactory.ServerAdminClient(c)
+	adminClient, err := getDeps(c).ServerAdminClient(c)
+	if err != nil {
+		return err
+	}
 
 	domain := getRequiredOption(c, FlagDomain)
 	wid := getRequiredOption(c, FlagWorkflowID)
@@ -577,7 +601,7 @@ func AdminRefreshWorkflowTasks(c *cli.Context) error {
 	ctx, cancel := newContext(c)
 	defer cancel()
 
-	err := adminClient.RefreshWorkflowTasks(ctx, &types.RefreshWorkflowTasksRequest{
+	err = adminClient.RefreshWorkflowTasks(ctx, &types.RefreshWorkflowTasksRequest{
 		Domain: domain,
 		Execution: &types.WorkflowExecution{
 			WorkflowID: wid,
@@ -593,7 +617,10 @@ func AdminRefreshWorkflowTasks(c *cli.Context) error {
 
 // AdminResetQueue resets task processing queue states
 func AdminResetQueue(c *cli.Context) error {
-	adminClient := cFactory.ServerAdminClient(c)
+	adminClient, err := getDeps(c).ServerAdminClient(c)
+	if err != nil {
+		return err
+	}
 
 	shardID := getRequiredIntOption(c, FlagShardID)
 	clusterName := getRequiredOption(c, FlagCluster)
@@ -608,7 +635,7 @@ func AdminResetQueue(c *cli.Context) error {
 		Type:        common.Int32Ptr(int32(typeID)),
 	}
 
-	err := adminClient.ResetQueue(ctx, req)
+	err = adminClient.ResetQueue(ctx, req)
 	if err != nil {
 		return commoncli.Problem("Failed to reset queue", err)
 	}
@@ -618,7 +645,10 @@ func AdminResetQueue(c *cli.Context) error {
 
 // AdminDescribeQueue describes task processing queue states
 func AdminDescribeQueue(c *cli.Context) error {
-	adminClient := cFactory.ServerAdminClient(c)
+	adminClient, err := getDeps(c).ServerAdminClient(c)
+	if err != nil {
+		return err
+	}
 
 	shardID := getRequiredIntOption(c, FlagShardID)
 	clusterName := getRequiredOption(c, FlagCluster)

@@ -45,7 +45,10 @@ type (
 
 // DescribeTaskList show pollers info of a given tasklist
 func DescribeTaskList(c *cli.Context) error {
-	wfClient := getWorkflowClient(c)
+	wfClient, err := getWorkflowClient(c)
+	if err != nil {
+		return err
+	}
 	domain := getRequiredOption(c, FlagDomain)
 	taskList := getRequiredOption(c, FlagTaskList)
 	taskListType := strToTaskListType(c.String(FlagTaskListType)) // default type is decision
@@ -75,7 +78,10 @@ func DescribeTaskList(c *cli.Context) error {
 
 // ListTaskListPartitions gets all the tasklist partition and host information.
 func ListTaskListPartitions(c *cli.Context) error {
-	frontendClient := cFactory.ServerFrontendClient(c)
+	frontendClient, err := getDeps(c).ServerFrontendClient(c)
+	if err != nil {
+		return err
+	}
 	domain := getRequiredOption(c, FlagDomain)
 	taskList := getRequiredOption(c, FlagTaskList)
 

@@ -27,7 +27,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"math"
 	"math/rand"
 	"os"
@@ -51,7 +50,10 @@ import (
 
 // RestartWorkflow restarts a workflow execution
 func RestartWorkflow(c *cli.Context) error {
-	wfClient := getWorkflowClient(c)
+	wfClient, err := getWorkflowClient(c)
+	if err != nil {
+		return err
+	}
 
 	domain := getRequiredOption(c, FlagDomain)
 	wid := getRequiredOption(c, FlagWorkflowID)
@@ -79,7 +81,10 @@ func RestartWorkflow(c *cli.Context) error {
 
 // DiagnoseWorkflow diagnoses a workflow execution
 func DiagnoseWorkflow(c *cli.Context) error {
-	wfClient := getWorkflowClient(c)
+	wfClient, err := getWorkflowClient(c)
+	if err != nil {
+		return err
+	}
 
 	domain := getRequiredOption(c, FlagDomain)
 	wid := getRequiredOption(c, FlagWorkflowID)
@@ -129,7 +134,10 @@ func ShowHistoryWithWID(c *cli.Context) error {
 }
 
 func showHistoryHelper(c *cli.Context, wid, rid string) error {
-	wfClient := getWorkflowClient(c)
+	wfClient, err := getWorkflowClient(c)
+	if err != nil {
+		return err
+	}
 
 	domain := getRequiredOption(c, FlagDomain)
 	printDateTime := c.Bool(FlagPrintDateTime)
@@ -206,13 +214,16 @@ func showHistoryHelper(c *cli.Context, wid, rid string) error {
 		if err != nil {
 			return commoncli.Problem("Failed to serialize history data.", err)
 		}
-		if err := ioutil.WriteFile(outputFileName, data, 0666); err != nil {
+		if err := os.WriteFile(outputFileName, data, 0666); err != nil {
 			return commoncli.Problem("Failed to export history data file.", err)
 		}
 	}
 
 	// finally append activities with retry
-	frontendClient := cFactory.ServerFrontendClient(c)
+	frontendClient, err := getDeps(c).ServerFrontendClient(c)
+	if err != nil {
+		return err
+	}
 	resp, err := frontendClient.DescribeWorkflowExecution(ctx, &types.DescribeWorkflowExecutionRequest{
 		Domain: domain,
 		Execution: &types.WorkflowExecution{
@@ -248,7 +259,10 @@ func RunWorkflow(c *cli.Context) error {
 }
 
 func startWorkflowHelper(c *cli.Context, shouldPrintProgress bool) error {
-	serviceClient := cFactory.ServerFrontendClient(c)
+	serviceClient, err := getDeps(c).ServerFrontendClient(c)
+	if err != nil {
+		return err
+	}
 
 	startRequest, err := constructStartWorkflowRequest(c)
 	if err != nil {
@@ -456,10 +470,13 @@ func processMemo(c *cli.Context) map[string][]byte {
 }
 
 // helper function to print workflow progress with time refresh every second
-func printWorkflowProgress(c *cli.Context, domain, wid, rid string) {
+func printWorkflowProgress(c *cli.Context, domain, wid, rid string) error {
 	fmt.Println(colorMagenta("Progress:"))
 
-	wfClient := getWorkflowClient(c)
+	wfClient, err := getWorkflowClient(c)
+	if err != nil {
+		return err
+	}
 	timeElapse := 1
 	isTimeElapseExist := false
 	doneChan := make(chan bool)
@@ -513,14 +530,17 @@ func printWorkflowProgress(c *cli.Context, domain, wid, rid string) {
 			fmt.Println(colorMagenta("\nResult:"))
 			fmt.Printf("  Run Time: %d seconds\n", timeElapse)
 			printRunStatus(lastEvent)
-			return
+			return nil
 		}
 	}
 }
 
 // TerminateWorkflow terminates a workflow execution
 func TerminateWorkflow(c *cli.Context) error {
-	wfClient := getWorkflowClient(c)
+	wfClient, err := getWorkflowClient(c)
+	if err != nil {
+		return err
+	}
 
 	domain := getRequiredOption(c, FlagDomain)
 	wid := getRequiredOption(c, FlagWorkflowID)
@@ -529,7 +549,7 @@ func TerminateWorkflow(c *cli.Context) error {
 
 	ctx, cancel := newContext(c)
 	defer cancel()
-	err := wfClient.TerminateWorkflowExecution(
+	err = wfClient.TerminateWorkflowExecution(
 		ctx,
 		&types.TerminateWorkflowExecutionRequest{
 			Domain: domain,
@@ -551,7 +571,10 @@ func TerminateWorkflow(c *cli.Context) error {
 
 // CancelWorkflow cancels a workflow execution
 func CancelWorkflow(c *cli.Context) error {
-	wfClient := getWorkflowClient(c)
+	wfClient, err := getWorkflowClient(c)
+	if err != nil {
+		return err
+	}
 
 	domain := getRequiredOption(c, FlagDomain)
 	wid := getRequiredOption(c, FlagWorkflowID)
@@ -561,7 +584,7 @@ func CancelWorkflow(c *cli.Context) error {
 	ctx, cancel := newContext(c)
 	defer cancel()
 
-	err := wfClient.RequestCancelWorkflowExecution(
+	err = wfClient.RequestCancelWorkflowExecution(
 		ctx,
 		&types.RequestCancelWorkflowExecutionRequest{
 			Domain: domain,
@@ -583,7 +606,10 @@ func CancelWorkflow(c *cli.Context) error {
 
 // SignalWorkflow signals a workflow execution
 func SignalWorkflow(c *cli.Context) error {
-	serviceClient := cFactory.ServerFrontendClient(c)
+	serviceClient, err := getDeps(c).ServerFrontendClient(c)
+	if err != nil {
+		return err
+	}
 
 	domain := getRequiredOption(c, FlagDomain)
 	wid := getRequiredOption(c, FlagWorkflowID)
@@ -593,7 +619,7 @@ func SignalWorkflow(c *cli.Context) error {
 
 	tcCtx, cancel := newContext(c)
 	defer cancel()
-	err := serviceClient.SignalWorkflowExecution(
+	err = serviceClient.SignalWorkflowExecution(
 		tcCtx,
 		&types.SignalWorkflowExecutionRequest{
 			Domain: domain,
@@ -617,7 +643,10 @@ func SignalWorkflow(c *cli.Context) error {
 
 // SignalWithStartWorkflowExecution starts a workflow execution if not already exists and signals it
 func SignalWithStartWorkflowExecution(c *cli.Context) error {
-	serviceClient := cFactory.ServerFrontendClient(c)
+	serviceClient, err := getDeps(c).ServerFrontendClient(c)
+	if err != nil {
+		return err
+	}
 
 	signalWithStartRequest, err := constructSignalWithStartWorkflowRequest(c)
 	if err != nil {
@@ -689,7 +718,10 @@ func QueryWorkflowUsingQueryTypes(c *cli.Context) error {
 }
 
 func queryWorkflowHelper(c *cli.Context, queryType string) error {
-	serviceClient := cFactory.ServerFrontendClient(c)
+	serviceClient, err := getDeps(c).ServerFrontendClient(c)
+	if err != nil {
+		return err
+	}
 
 	domain := getRequiredOption(c, FlagDomain)
 	wid := getRequiredOption(c, FlagWorkflowID)
@@ -779,7 +811,11 @@ func ListAllWorkflow(c *cli.Context) error {
 // ScanAllWorkflow list all workflow executions using Scan API.
 // It should be faster than ListAllWorkflow, but result are not sorted.
 func ScanAllWorkflow(c *cli.Context) error {
-	return displayAllWorkflows(c, scanWorkflows(c))
+	pagefn, err := scanWorkflows(c)
+	if err != nil {
+		return err
+	}
+	return displayAllWorkflows(c, pagefn)
 }
 
 func isQueryOpen(query string) bool {
@@ -789,7 +825,10 @@ func isQueryOpen(query string) bool {
 
 // CountWorkflow count number of workflows
 func CountWorkflow(c *cli.Context) error {
-	wfClient := getWorkflowClient(c)
+	wfClient, err := getWorkflowClient(c)
+	if err != nil {
+		return err
+	}
 
 	domain := getRequiredOption(c, FlagDomain)
 	query := c.String(FlagListQuery)
@@ -812,10 +851,14 @@ func CountWorkflow(c *cli.Context) error {
 // ListArchivedWorkflow lists archived workflow executions based on filters
 func ListArchivedWorkflow(c *cli.Context) error {
 	printAll := c.Bool(FlagAll)
-	if printAll {
-		return displayAllWorkflows(c, listArchivedWorkflows(c))
+	pagefn, err := listArchivedWorkflows(c)
+	if err != nil {
+		return err
 	}
-	return displayPagedWorkflows(c, listArchivedWorkflows(c), false)
+	if printAll {
+		return displayAllWorkflows(c, pagefn)
+	}
+	return displayPagedWorkflows(c, pagefn, false)
 }
 
 // DescribeWorkflow show information about the specified workflow execution
@@ -841,7 +884,10 @@ func DescribeWorkflowWithID(c *cli.Context) error {
 }
 
 func describeWorkflowHelper(c *cli.Context, wid, rid string) error {
-	frontendClient := cFactory.ServerFrontendClient(c)
+	frontendClient, err := getDeps(c).ServerFrontendClient(c)
+	if err != nil {
+		return err
+	}
 	domain := getRequiredOption(c, FlagDomain)
 	printRaw := c.Bool(FlagPrintRaw) // printRaw is false by default,
 	// and will show datetime and decoded search attributes instead of raw timestamp and byte arrays
@@ -1053,7 +1099,10 @@ func convertSearchAttributesToMapOfInterface(searchAttributes *types.SearchAttri
 }
 
 func getAllWorkflowIDsByQuery(c *cli.Context, query string) (map[string]bool, error) {
-	wfClient := getWorkflowClient(c)
+	wfClient, err := getWorkflowClient(c)
+	if err != nil {
+		return nil, err
+	}
 	pageSize := 1000
 	var nextPageToken []byte
 	result := map[string]bool{}
@@ -1339,7 +1388,10 @@ func listClosedWorkflow(client frontend.Client, pageSize int, earliestTime, late
 }
 
 func listWorkflows(c *cli.Context) (getWorkflowPageFn, error) {
-	wfClient := getWorkflowClient(c)
+	wfClient, err := getWorkflowClient(c)
+	if err != nil {
+		return nil, err
+	}
 
 	domain := getRequiredOption(c, FlagDomain)
 	earliestTime := parseTime(c.String(FlagEarliestTime), 0)
@@ -1353,7 +1405,6 @@ func listWorkflows(c *cli.Context) (getWorkflowPageFn, error) {
 	}
 
 	var workflowStatus types.WorkflowExecutionCloseStatus
-	var err error
 	if c.IsSet(FlagWorkflowStatus) {
 		if queryOpen {
 			return nil, commoncli.Problem(optionErr, errors.New("you can only filter on status for closed workflow, not open workflow"))
@@ -1396,8 +1447,11 @@ func listWorkflows(c *cli.Context) (getWorkflowPageFn, error) {
 	}
 }
 
-func listArchivedWorkflows(c *cli.Context) getWorkflowPageFn {
-	wfClient := getWorkflowClient(c)
+func listArchivedWorkflows(c *cli.Context) (getWorkflowPageFn, error) {
+	wfClient, err := getWorkflowClient(c)
+	if err != nil {
+		return nil, err
+	}
 
 	domain := getRequiredOption(c, FlagDomain)
 	pageSize := c.Int(FlagPageSize)
@@ -1428,11 +1482,14 @@ func listArchivedWorkflows(c *cli.Context) getWorkflowPageFn {
 			return nil, nil, commoncli.Problem("Failed to list archived workflow.", err)
 		}
 		return result.Executions, result.NextPageToken, nil
-	}
+	}, nil
 }
 
-func scanWorkflows(c *cli.Context) getWorkflowPageFn {
-	wfClient := getWorkflowClient(c)
+func scanWorkflows(c *cli.Context) (getWorkflowPageFn, error) {
+	wfClient, err := getWorkflowClient(c)
+	if err != nil {
+		return nil, err
+	}
 	listQuery := c.String(FlagListQuery)
 	pageSize := c.Int(FlagPageSize)
 	if pageSize <= 0 {
@@ -1441,7 +1498,7 @@ func scanWorkflows(c *cli.Context) getWorkflowPageFn {
 
 	return func(nextPageToken []byte) ([]*types.WorkflowExecutionInfo, []byte, error) {
 		return scanWorkflowExecutions(wfClient, pageSize, nextPageToken, listQuery, c)
-	}
+	}, nil
 }
 
 func scanWorkflowExecutions(client frontend.Client, pageSize int, nextPageToken []byte, query string, c *cli.Context) ([]*types.WorkflowExecutionInfo, []byte, error) {
@@ -1535,9 +1592,11 @@ func ResetWorkflow(c *cli.Context) error {
 	ctx, cancel := newContext(c)
 	defer cancel()
 
-	frontendClient := cFactory.ServerFrontendClient(c)
+	frontendClient, err := getDeps(c).ServerFrontendClient(c)
+	if err != nil {
+		return err
+	}
 	rid := c.String(FlagRunID)
-	var err error
 	if rid == "" {
 		rid, err = getCurrentRunID(ctx, domain, wid, frontendClient)
 		if err != nil {
@@ -1720,11 +1779,13 @@ func ResetInBatch(c *cli.Context) error {
 			}
 		}
 	} else {
-		wfClient := getWorkflowClient(c)
+		wfClient, err := getWorkflowClient(c)
+		if err != nil {
+			return err
+		}
 		pageSize := 1000
 		var nextPageToken []byte
 		var result []*types.WorkflowExecutionInfo
-		var err error
 		for {
 			result, nextPageToken, err = scanWorkflowExecutions(wfClient, pageSize, nextPageToken, query, c)
 			if err != nil {
@@ -1795,7 +1856,10 @@ func doReset(c *cli.Context, domain, wid, rid string, params batchResetParamsTyp
 	ctx, cancel := newContext(c)
 	defer cancel()
 
-	frontendClient := cFactory.ServerFrontendClient(c)
+	frontendClient, err := getDeps(c).ServerFrontendClient(c)
+	if err != nil {
+		return err
+	}
 	resp, err := frontendClient.DescribeWorkflowExecution(ctx, &types.DescribeWorkflowExecutionRequest{
 		Domain: domain,
 		Execution: &types.WorkflowExecution{
@@ -2178,8 +2242,11 @@ func CompleteActivity(c *cli.Context) error {
 	ctx, cancel := newContext(c)
 	defer cancel()
 
-	frontendClient := cFactory.ServerFrontendClient(c)
-	err := frontendClient.RespondActivityTaskCompletedByID(ctx, &types.RespondActivityTaskCompletedByIDRequest{
+	frontendClient, err := getDeps(c).ServerFrontendClient(c)
+	if err != nil {
+		return err
+	}
+	err = frontendClient.RespondActivityTaskCompletedByID(ctx, &types.RespondActivityTaskCompletedByIDRequest{
 		Domain:     domain,
 		WorkflowID: wid,
 		RunID:      rid,
@@ -2209,8 +2276,11 @@ func FailActivity(c *cli.Context) error {
 	ctx, cancel := newContext(c)
 	defer cancel()
 
-	frontendClient := cFactory.ServerFrontendClient(c)
-	err := frontendClient.RespondActivityTaskFailedByID(ctx, &types.RespondActivityTaskFailedByIDRequest{
+	frontendClient, err := getDeps(c).ServerFrontendClient(c)
+	if err != nil {
+		return err
+	}
+	err = frontendClient.RespondActivityTaskFailedByID(ctx, &types.RespondActivityTaskFailedByIDRequest{
 		Domain:     domain,
 		WorkflowID: wid,
 		RunID:      rid,

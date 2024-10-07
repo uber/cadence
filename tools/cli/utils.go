@@ -530,8 +530,8 @@ func ErrorAndExit(msg string, err error) {
 	osExit(1)
 }
 
-func getWorkflowClient(c *cli.Context) frontend.Client {
-	return cFactory.ServerFrontendClient(c)
+func getWorkflowClient(c *cli.Context) (frontend.Client, error) {
+	return getDeps(c).ServerFrontendClient(c)
 }
 
 func getRequiredOption(c *cli.Context, optionName string) string {

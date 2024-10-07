@@ -49,7 +49,10 @@ func (s SearchAttributesTable) Less(i, j int) bool {
 
 // GetSearchAttributes get valid search attributes
 func GetSearchAttributes(c *cli.Context) error {
-	wfClient := getWorkflowClient(c)
+	wfClient, err := getWorkflowClient(c)
+	if err != nil {
+		return err
+	}
 	ctx, cancel := newContext(c)
 	defer cancel()
 

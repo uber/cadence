@@ -77,7 +77,10 @@ func AdminCountDLQMessages(c *cli.Context) error {
 	ctx, cancel := newContext(c)
 	defer cancel()
 
-	adminClient := cFactory.ServerAdminClient(c)
+	adminClient, err := getDeps(c).ServerAdminClient(c)
+	if err != nil {
+		return err
+	}
 	response, err := adminClient.CountDLQMessages(ctx, &types.CountDLQMessagesRequest{ForceFetch: force})
 	if err != nil {
 		return fmt.Errorf("Error occurred while getting DLQ count, results may be partial: %w", err)
@@ -126,8 +129,14 @@ func AdminGetDLQMessages(c *cli.Context) error {
 	ctx, cancel := newContext(c)
 	defer cancel()
 
-	client := cFactory.ServerFrontendClient(c)
-	adminClient := cFactory.ServerAdminClient(c)
+	client, err := getDeps(c).ServerFrontendClient(c)
+	if err != nil {
+		return err
+	}
+	adminClient, err := getDeps(c).ServerAdminClient(c)
+	if err != nil {
+		return err
+	}
 
 	dlqType := toQueueType(getRequiredOption(c, FlagDLQType))
 	sourceCluster := getRequiredOption(c, FlagSourceCluster)
@@ -250,7 +259,10 @@ func AdminPurgeDLQMessages(c *cli.Context) error {
 		lastMessageID = common.Int64Ptr(c.Int64(FlagLastMessageID))
 	}
 
-	adminClient := cFactory.ServerAdminClient(c)
+	adminClient, err := getDeps(c).ServerAdminClient(c)
+	if err != nil {
+		return err
+	}
 	for shardID := range getShards(c) {
 		ctx, cancel := newContext(c)
 		err := adminClient.PurgeDLQMessages(ctx, &types.PurgeDLQMessagesRequest{
@@ -279,7 +291,10 @@ func AdminMergeDLQMessages(c *cli.Context) error {
 		lastMessageID = common.Int64Ptr(c.Int64(FlagLastMessageID))
 	}
 
-	adminClient := cFactory.ServerAdminClient(c)
+	adminClient, err := getDeps(c).ServerAdminClient(c)
+	if err != nil {
+		return err
+	}
 ShardIDLoop:
 	for shardID := range getShards(c) {
 		request := &types.MergeDLQMessagesRequest{

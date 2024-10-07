@@ -60,14 +60,24 @@ type (
 func newDomainCLI(
 	c *cli.Context,
 	isAdminMode bool,
-) *domainCLIImpl {
+) (*domainCLIImpl, error) {
 	d := &domainCLIImpl{}
-	d.frontendClient = initializeFrontendClient(c)
-	if isAdminMode {
-		d.frontendAdminClient = initializeFrontendAdminClient(c)
-		d.domainHandler = initializeAdminDomainHandler(c)
+	var err error
+	d.frontendClient, err = initializeFrontendClient(c)
+	if err != nil {
+		return nil, err
 	}
-	return d
+	if isAdminMode {
+		d.frontendAdminClient, err = initializeFrontendAdminClient(c)
+		if err != nil {
+			return nil, err
+		}
+		d.domainHandler, err = initializeAdminDomainHandler(c)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return d, nil
 }
 
 // RegisterDomain register a domain
@@ -295,15 +305,19 @@ func (d *domainCLIImpl) DeprecateDomain(c *cli.Context) error {
 	defer cancel()
 
 	if !force {
+		wfc, err := getWorkflowClient(c)
+		if err != nil {
+			return err
+		}
 		// check if there is any workflow in this domain, if exists, do not deprecate
-		wfs, _, err := listClosedWorkflow(getWorkflowClient(c), 1, 0, time.Now().UnixNano(), domainName, "", "", workflowStatusNotSet, c)(nil)
+		wfs, _, err := listClosedWorkflow(wfc, 1, 0, time.Now().UnixNano(), domainName, "", "", workflowStatusNotSet, c)(nil)
 		if err != nil {
 			return commoncli.Problem("Operation DeprecateDomain failed: fail to list closed workflows: ", err)
 		}
 		if len(wfs) > 0 {
 			return commoncli.Problem("Operation DeprecateDomain failed.", errors.New("workflow history not cleared in this domain"))
 		}
-		wfs, _, err = listOpenWorkflow(getWorkflowClient(c), 1, 0, time.Now().UnixNano(), domainName, "", "", c)(nil)
+		wfs, _, err = listOpenWorkflow(wfc, 1, 0, time.Now().UnixNano(), domainName, "", "", c)(nil)
 		if err != nil {
 			return commoncli.Problem("Operation DeprecateDomain failed: fail to list open workflows: ", err)
 		}

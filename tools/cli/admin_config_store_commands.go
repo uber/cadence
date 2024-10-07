@@ -51,7 +51,10 @@ type cliFilter struct {
 
 // AdminGetDynamicConfig gets value of specified dynamic config parameter matching specified filter
 func AdminGetDynamicConfig(c *cli.Context) error {
-	adminClient := cFactory.ServerAdminClient(c)
+	adminClient, err := getDeps(c).ServerAdminClient(c)
+	if err != nil {
+		return err
+	}
 
 	dcName := getRequiredOption(c, FlagDynamicConfigName)
 	filters := c.StringSlice(FlagDynamicConfigFilter)
@@ -115,7 +118,10 @@ func AdminGetDynamicConfig(c *cli.Context) error {
 
 // AdminUpdateDynamicConfig updates specified dynamic config parameter with specified values
 func AdminUpdateDynamicConfig(c *cli.Context) error {
-	adminClient := cFactory.ServerAdminClient(c)
+	adminClient, err := getDeps(c).ServerAdminClient(c)
+	if err != nil {
+		return err
+	}
 
 	dcName := getRequiredOption(c, FlagDynamicConfigName)
 	dcValues := c.StringSlice(FlagDynamicConfigValue)
@@ -149,7 +155,7 @@ func AdminUpdateDynamicConfig(c *cli.Context) error {
 		ConfigValues: parsedValues,
 	}
 
-	err := adminClient.UpdateDynamicConfig(ctx, req)
+	err = adminClient.UpdateDynamicConfig(ctx, req)
 	if err != nil {
 		return commoncli.Problem("Failed to update dynamic config value", err)
 	}
@@ -159,7 +165,10 @@ func AdminUpdateDynamicConfig(c *cli.Context) error {
 
 // AdminRestoreDynamicConfig removes values of specified dynamic config parameter matching specified filter
 func AdminRestoreDynamicConfig(c *cli.Context) error {
-	adminClient := cFactory.ServerAdminClient(c)
+	adminClient, err := getDeps(c).ServerAdminClient(c)
+	if err != nil {
+		return err
+	}
 
 	dcName := getRequiredOption(c, FlagDynamicConfigName)
 	filters := c.StringSlice(FlagDynamicConfigFilter)
@@ -187,7 +196,10 @@ func AdminRestoreDynamicConfig(c *cli.Context) error {
 
 // AdminListDynamicConfig lists all values associated with specified dynamic config parameter or all values for all dc parameter if none is specified.
 func AdminListDynamicConfig(c *cli.Context) error {
-	adminClient := cFactory.ServerAdminClient(c)
+	adminClient, err := getDeps(c).ServerAdminClient(c)
+	if err != nil {
+		return err
+	}
 
 	ctx, cancel := newContext(c)
 	defer cancel()

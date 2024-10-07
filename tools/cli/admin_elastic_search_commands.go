@@ -85,7 +85,10 @@ type ESIndexRow struct {
 
 // AdminCatIndices cat indices for ES cluster
 func AdminCatIndices(c *cli.Context) error {
-	esClient := cFactory.ElasticSearchClient(c)
+	esClient, err := getDeps(c).ElasticSearchClient(c)
+	if err != nil {
+		return err
+	}
 
 	ctx := context.Background()
 	resp, err := esClient.CatIndices().Do(ctx)
@@ -112,7 +115,10 @@ func AdminCatIndices(c *cli.Context) error {
 
 // AdminIndex used to bulk insert message from kafka parse
 func AdminIndex(c *cli.Context) error {
-	esClient := cFactory.ElasticSearchClient(c)
+	esClient, err := getDeps(c).ElasticSearchClient(c)
+	if err != nil {
+		return err
+	}
 	indexName := getRequiredOption(c, FlagIndex)
 	inputFileName := getRequiredOption(c, FlagInputFile)
 	batchSize := c.Int(FlagBatchSize)
@@ -181,7 +187,10 @@ func AdminIndex(c *cli.Context) error {
 
 // AdminDelete used to delete documents from ElasticSearch with input of list result
 func AdminDelete(c *cli.Context) error {
-	esClient := cFactory.ElasticSearchClient(c)
+	esClient, err := getDeps(c).ElasticSearchClient(c)
+	if err != nil {
+		return err
+	}
 	indexName := getRequiredOption(c, FlagIndex)
 	inputFileName := getRequiredOption(c, FlagInputFile)
 	batchSize := c.Int(FlagBatchSize)
@@ -329,7 +338,10 @@ func GenerateReport(c *cli.Context) error {
 	} else {
 		reportFilePath = "./report." + reportFormat
 	}
-	esClient := cFactory.ElasticSearchClient(c)
+	esClient, err := getDeps(c).ElasticSearchClient(c)
+	if err != nil {
+		return err
+	}
 	ctx := context.Background()
 
 	// convert sql to dsl
