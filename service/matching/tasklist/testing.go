@@ -100,6 +100,13 @@ func (m *TestTaskManager) LeaseTaskList(
 	}, nil
 }
 
+func (m *TestTaskManager) GetTaskList(
+	_ context.Context,
+	request *persistence.GetTaskListRequest,
+) (*persistence.GetTaskListResponse, error) {
+	return nil, fmt.Errorf("not implemented")
+}
+
 // UpdateTaskList provides a mock function with given fields: ctx, request
 func (m *TestTaskManager) UpdateTaskList(
 	_ context.Context,

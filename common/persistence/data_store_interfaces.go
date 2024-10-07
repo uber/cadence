@@ -57,6 +57,7 @@ type (
 		Closeable
 		GetName() string
 		LeaseTaskList(ctx context.Context, request *LeaseTaskListRequest) (*LeaseTaskListResponse, error)
+		GetTaskList(ctx context.Context, request *GetTaskListRequest) (*GetTaskListResponse, error)
 		UpdateTaskList(ctx context.Context, request *UpdateTaskListRequest) (*UpdateTaskListResponse, error)
 		ListTaskList(ctx context.Context, request *ListTaskListRequest) (*ListTaskListResponse, error)
 		DeleteTaskList(ctx context.Context, request *DeleteTaskListRequest) error
