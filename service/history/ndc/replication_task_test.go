@@ -23,7 +23,6 @@
 package ndc
 
 import (
-	"github.com/uber/cadence/common/log"
 	"testing"
 	"time"
 
@@ -33,6 +32,7 @@ import (
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cluster"
+	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/testlogger"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
