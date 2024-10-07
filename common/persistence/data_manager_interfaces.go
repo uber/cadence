@@ -448,14 +448,22 @@ type (
 
 	// TaskListInfo describes a state of a task list implementation.
 	TaskListInfo struct {
-		DomainID    string
-		Name        string
-		TaskType    int
-		RangeID     int64
-		AckLevel    int64
-		Kind        int
-		Expiry      time.Time
-		LastUpdated time.Time
+		DomainID                string
+		Name                    string
+		TaskType                int
+		RangeID                 int64
+		AckLevel                int64
+		Kind                    int
+		Expiry                  time.Time
+		LastUpdated             time.Time
+		AdaptivePartitionConfig *TaskListPartitionConfig
+	}
+
+	// TaskListPartitionConfig represents the configuration for task list partitions.
+	TaskListPartitionConfig struct {
+		Version            int64
+		NumReadPartitions  int
+		NumWritePartitions int
 	}
 
 	// TaskInfo describes either activity or decision task
@@ -1018,6 +1026,17 @@ type (
 		TaskListInfo *TaskListInfo
 	}
 
+	GetTaskListRequest struct {
+		DomainID   string
+		DomainName string
+		TaskList   string
+		TaskType   int
+	}
+
+	GetTaskListResponse struct {
+		TaskListInfo *TaskListInfo
+	}
+
 	// UpdateTaskListRequest is used to update task list implementation information
 	UpdateTaskListRequest struct {
 		TaskListInfo *TaskListInfo
@@ -1577,6 +1596,7 @@ type (
 		GetName() string
 		LeaseTaskList(ctx context.Context, request *LeaseTaskListRequest) (*LeaseTaskListResponse, error)
 		UpdateTaskList(ctx context.Context, request *UpdateTaskListRequest) (*UpdateTaskListResponse, error)
+		GetTaskList(ctx context.Context, request *GetTaskListRequest) (*GetTaskListResponse, error)
 		ListTaskList(ctx context.Context, request *ListTaskListRequest) (*ListTaskListResponse, error)
 		DeleteTaskList(ctx context.Context, request *DeleteTaskListRequest) error
 		GetTaskListSize(ctx context.Context, request *GetTaskListSizeRequest) (*GetTaskListSizeResponse, error)

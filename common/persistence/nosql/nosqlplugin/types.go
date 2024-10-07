@@ -185,10 +185,11 @@ type (
 		TaskListName string
 		TaskListType int
 
-		RangeID         int64
-		TaskListKind    int
-		AckLevel        int64
-		LastUpdatedTime time.Time
+		RangeID                 int64
+		TaskListKind            int
+		AckLevel                int64
+		LastUpdatedTime         time.Time
+		AdaptivePartitionConfig *persistence.TaskListPartitionConfig
 	}
 
 	// ListTaskListResult is the result of list tasklists
