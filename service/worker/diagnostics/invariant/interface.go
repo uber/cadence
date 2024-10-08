@@ -24,6 +24,7 @@ package invariant
 
 import (
 	"context"
+	"encoding/json"
 )
 
 // InvariantCheckResult is the result from the invariant check
@@ -56,4 +57,9 @@ func (r RootCause) String() string {
 type Invariant interface {
 	Check(context.Context) ([]InvariantCheckResult, error)
 	RootCause(context.Context, []InvariantCheckResult) ([]InvariantRootCauseResult, error)
+}
+
+func MarshalData(rc any) []byte {
+	data, _ := json.Marshal(rc)
+	return data
 }
