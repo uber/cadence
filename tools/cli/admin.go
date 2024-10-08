@@ -27,7 +27,6 @@ import (
 	"time"
 
 	"github.com/urfave/cli/v2"
-
 	"github.com/uber/cadence/common/reconciliation/invariant"
 	"github.com/uber/cadence/service/worker/scanner/executions"
 )

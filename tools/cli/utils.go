@@ -525,35 +525,35 @@ func printError(msg string, err error) {
 }
 
 // ErrorAndExit print easy to understand error msg first then error detail in a new line
-func ErrorAndExit(msg string, err error) {
-	printError(msg, err)
-	osExit(1)
-}
+// func ErrorAndExit(msg string, err error) {
+// 	printError(msg, err)
+// 	osExit(1)
+// }
 
 func getWorkflowClient(c *cli.Context) (frontend.Client, error) {
 	return getDeps(c).ServerFrontendClient(c)
 }
 
-func getRequiredOption(c *cli.Context, optionName string) string {
+func getRequiredOption(c *cli.Context, optionName string) (string, error) {
 	value := c.String(optionName)
 	if len(value) == 0 {
-		ErrorAndExit(fmt.Sprintf("Option %s is required", optionName), nil)
+		return "", fmt.Errorf("Option %s is required", optionName)
 	}
-	return value
+	return value, nil
 }
 
-func getRequiredInt64Option(c *cli.Context, optionName string) int64 {
+func getRequiredInt64Option(c *cli.Context, optionName string) (int64, error) {
 	if !c.IsSet(optionName) {
-		ErrorAndExit(fmt.Sprintf("Option %s is required", optionName), nil)
+		return 0, fmt.Errorf("Option %s is required", optionName)
 	}
-	return c.Int64(optionName)
+	return c.Int64(optionName), nil
 }
 
-func getRequiredIntOption(c *cli.Context, optionName string) int {
+func getRequiredIntOption(c *cli.Context, optionName string) (int, error) {
 	if !c.IsSet(optionName) {
-		ErrorAndExit(fmt.Sprintf("Option %s is required", optionName), nil)
+		return 0, fmt.Errorf("Option %s is required", optionName)
 	}
-	return c.Int(optionName)
+	return c.Int(optionName), nil
 }
 
 func timestampPtrToStringPtr(unixNanoPtr *int64, onlyTime bool) *string {
@@ -574,30 +574,30 @@ func convertTime(unixNano int64, onlyTime bool) string {
 	return result
 }
 
-func parseTime(timeStr string, defaultValue int64) int64 {
+func parseTime(timeStr string, defaultValue int64) (int64, error) {
 	if len(timeStr) == 0 {
-		return defaultValue
+		return defaultValue, nil
 	}
 
 	// try to parse
 	parsedTime, err := time.Parse(defaultDateTimeFormat, timeStr)
 	if err == nil {
-		return parsedTime.UnixNano()
+		return parsedTime.UnixNano(), nil
 	}
 
 	// treat as raw time
 	resultValue, err := strconv.ParseInt(timeStr, 10, 64)
 	if err == nil {
-		return resultValue
+		return resultValue, nil
 	}
 
 	// treat as time range format
 	parsedTime, err = parseTimeRange(timeStr)
 	if err != nil {
-		ErrorAndExit(fmt.Sprintf("Cannot parse time '%s', use UTC format '2006-01-02T15:04:05Z', "+
-			"time range or raw UnixNano directly. See help for more details.", timeStr), err)
+		return 0, fmt.Errorf("Cannot parse time '%s', use UTC format '2006-01-02T15:04:05Z', "+
+			"time range or raw UnixNano directly. See help for more details: %v", timeStr, err)
 	}
-	return parsedTime.UnixNano()
+	return parsedTime.UnixNano(), nil
 }
 
 // parseTimeRange parses a given time duration string (in format X<time-duration>) and
@@ -719,7 +719,7 @@ func getHostName() string {
 	return hostName
 }
 
-func processJWTFlags(ctx context.Context, cliCtx *cli.Context) context.Context {
+func processJWTFlags(ctx context.Context, cliCtx *cli.Context) (context.Context, error) {
 	path := getJWTPrivateKey(cliCtx)
 	t := getJWT(cliCtx)
 	var token string
@@ -730,49 +730,69 @@ func processJWTFlags(ctx context.Context, cliCtx *cli.Context) context.Context {
 	} else if path != "" {
 		token, err = createJWT(path)
 		if err != nil {
-			ErrorAndExit("Error creating JWT token", err)
+			return nil, fmt.Errorf("error creating JWT token: %v", err)
 		}
 	}
 
-	return context.WithValue(ctx, CtxKeyJWT, token)
+	return context.WithValue(ctx, CtxKeyJWT, token), nil
 }
 
-func populateContextFromCLIContext(ctx context.Context, cliCtx *cli.Context) context.Context {
-	ctx = processJWTFlags(ctx, cliCtx)
-	return ctx
+func populateContextFromCLIContext(ctx context.Context, cliCtx *cli.Context) (context.Context, error) {
+	ctx, err := processJWTFlags(ctx, cliCtx)
+	if err != nil {
+		return nil, fmt.Errorf("error while populating context from CLI: %v", err)
+	}
+	return ctx, nil
 }
 
-func newContext(c *cli.Context) (context.Context, context.CancelFunc) {
+func newContext(c *cli.Context) (context.Context, context.CancelFunc, error) {
 	return newTimedContext(c, defaultContextTimeout)
 }
 
-func newContextForLongPoll(c *cli.Context) (context.Context, context.CancelFunc) {
+func newContextForLongPoll(c *cli.Context) (context.Context, context.CancelFunc, error) {
 	return newTimedContext(c, defaultContextTimeoutForLongPoll)
 }
 
-func newIndefiniteContext(c *cli.Context) (context.Context, context.CancelFunc) {
+func newIndefiniteContext(c *cli.Context) (context.Context, context.CancelFunc, error) {
 	if c.IsSet(FlagContextTimeout) {
-		return newTimedContext(c, time.Duration(c.Int(FlagContextTimeout))*time.Second)
+		ctx, cancel, err := newTimedContext(c, time.Duration(c.Int(FlagContextTimeout))*time.Second)
+		defer cancel()
+		if err != nil {
+			return nil, nil, fmt.Errorf("Error in new indifinite context: %v", err)
+		}
+		return ctx, cancel, nil
 	}
+	ctx, err := populateContextFromCLIContext(c.Context, c)
+	if err != nil {
+		return nil, nil, fmt.Errorf("error in newIndefiniteContext: %v", err)
+	}
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
 
-	return context.WithCancel(populateContextFromCLIContext(c.Context, c))
+	return ctx, cancel, nil
 }
 
-func newTimedContext(c *cli.Context, timeout time.Duration) (context.Context, context.CancelFunc) {
+func newTimedContext(c *cli.Context, timeout time.Duration) (context.Context, context.CancelFunc, error) {
 	if overrideTimeout := c.Int(FlagContextTimeout); overrideTimeout > 0 {
 		timeout = time.Duration(overrideTimeout) * time.Second
 	}
-	ctx := populateContextFromCLIContext(c.Context, c)
-	return context.WithTimeout(ctx, timeout)
+
+	ctx, err := populateContextFromCLIContext(c.Context, c)
+	if err != nil {
+		return nil, nil, fmt.Errorf("%v", err)
+	}
+	ctx, time_out := context.WithTimeout(ctx, timeout)
+
+	return ctx, time_out, nil
 }
 
 // process and validate input provided through cmd or file
-func processJSONInput(c *cli.Context) string {
+func processJSONInput(c *cli.Context) (string, error) {
 	return processJSONInputHelper(c, jsonTypeInput)
 }
 
 // process and validate json
-func processJSONInputHelper(c *cli.Context, jType jsonType) string {
+func processJSONInputHelper(c *cli.Context, jType jsonType) (string, error) {
 	var flagNameOfRawInput string
 	var flagNameOfInputFileName string
 
@@ -790,7 +810,7 @@ func processJSONInputHelper(c *cli.Context, jType jsonType) string {
 		flagNameOfRawInput = FlagSignalInput
 		flagNameOfInputFileName = FlagSignalInputFile
 	default:
-		return ""
+		return "", nil
 	}
 
 	var input string
@@ -802,16 +822,16 @@ func processJSONInputHelper(c *cli.Context, jType jsonType) string {
 		// #nosec
 		data, err := ioutil.ReadFile(inputFile)
 		if err != nil {
-			ErrorAndExit("Error reading input file", err)
+			return "", fmt.Errorf("Error reading input file: %v", err)
 		}
 		input = string(data)
 	}
 	if input != "" {
 		if err := validateJSONs(input); err != nil {
-			ErrorAndExit("Input is not valid JSON, or JSONs concatenated with spaces/newlines.", err)
+			return "", fmt.Errorf("Input is not valid JSON, or JSONs concatenated with spaces/newlines.", err)
 		}
 	}
-	return input
+	return input, nil
 }
 
 func processMultipleKeys(rawKey, separator string) []string {
@@ -822,7 +842,7 @@ func processMultipleKeys(rawKey, separator string) []string {
 	return keys
 }
 
-func processMultipleJSONValues(rawValue string) []string {
+func processMultipleJSONValues(rawValue string) ([]string, error) {
 	var values []string
 	var sc fastjson.Scanner
 	sc.Init(rawValue)
@@ -830,9 +850,9 @@ func processMultipleJSONValues(rawValue string) []string {
 		values = append(values, sc.Value().String())
 	}
 	if err := sc.Error(); err != nil {
-		ErrorAndExit("Parse json error.", err)
+		return nil, fmt.Errorf("Parse json error.", err)
 	}
-	return values
+	return values, nil
 }
 
 func mapFromKeysValues(keys, values []string) map[string][]byte {
@@ -959,25 +979,25 @@ func prompt(msg string) {
 		os.Exit(0)
 	}
 }
-func getInputFile(inputFile string) *os.File {
+func getInputFile(inputFile string) (*os.File, error) {
 	if len(inputFile) == 0 {
 		info, err := os.Stdin.Stat()
 		if err != nil {
-			ErrorAndExit("Failed to stat stdin file handle", err)
+			return nil, fmt.Errorf("Failed to stat stdin file handle", err)
 		}
 		if info.Mode()&os.ModeCharDevice != 0 || info.Size() <= 0 {
 			fmt.Fprintln(os.Stderr, "Provide a filename or pass data to STDIN")
 			os.Exit(1)
 		}
-		return os.Stdin
+		return os.Stdin, nil
 	}
 	// This code is executed from the CLI. All user input is from a CLI user.
 	// #nosec
 	f, err := os.Open(inputFile)
 	if err != nil {
-		ErrorAndExit(fmt.Sprintf("Failed to open input file for reading: %v", inputFile), err)
+		return nil, fmt.Errorf(fmt.Sprintf("Failed to open input file for reading: %v", inputFile), err)
 	}
-	return f
+	return f, nil
 }
 
 // createJWT defines the logic to create a JWT

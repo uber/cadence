@@ -39,14 +39,23 @@ import (
 
 // TerminateBatchJob stops abatch job
 func TerminateBatchJob(c *cli.Context) error {
-	jobID := getRequiredOption(c, FlagJobID)
-	reason := getRequiredOption(c, FlagReason)
+	jobID, err := getRequiredOption(c, FlagJobID)
+	if err != nil {
+		return err
+	}
+	reason, err := getRequiredOption(c, FlagReason)
+	if err != nil {
+		return err
+	}
 	svcClient, err := getDeps(c).ServerFrontendClient(c)
 	if err != nil {
 		return err
 	}
-	tcCtx, cancel := newContext(c)
+	tcCtx, cancel, err := newContext(c)
 	defer cancel()
+	if err != nil {
+		return commoncli.Problem("Error in creating context:", err)
+	}
 
 	err = svcClient.TerminateWorkflowExecution(
 		tcCtx,
@@ -72,14 +81,17 @@ func TerminateBatchJob(c *cli.Context) error {
 
 // DescribeBatchJob describe the status of the batch job
 func DescribeBatchJob(c *cli.Context) error {
-	jobID := getRequiredOption(c, FlagJobID)
+	jobID, err := getRequiredOption(c, FlagJobID)
 
 	svcClient, err := getDeps(c).ServerFrontendClient(c)
 	if err != nil {
 		return err
 	}
-	tcCtx, cancel := newContext(c)
+	tcCtx, cancel, err := newContext(c)
 	defer cancel()
+	if err != nil {
+		return commoncli.Problem("Error in creating context:", err)
+	}
 
 	wf, err := svcClient.DescribeWorkflowExecution(
 		tcCtx,
@@ -120,15 +132,21 @@ func DescribeBatchJob(c *cli.Context) error {
 
 // ListBatchJobs list the started batch jobs
 func ListBatchJobs(c *cli.Context) error {
-	domain := getRequiredOption(c, FlagDomain)
+	domain, err := getRequiredOption(c, FlagDomain)
+	if err != nil {
+		return commoncli.Problem("Required flag not found: ", err)
+	}
 	pageSize := c.Int(FlagPageSize)
 	svcClient, err := getDeps(c).ServerFrontendClient(c)
 	if err != nil {
 		return err
 	}
 
-	tcCtx, cancel := newContext(c)
+	tcCtx, cancel, err := newContext(c)
 	defer cancel()
+	if err != nil {
+		return commoncli.Problem("Error in creating context:", err)
+	}
 
 	resp, err := svcClient.ListWorkflowExecutions(
 		tcCtx,
@@ -165,24 +183,47 @@ func ListBatchJobs(c *cli.Context) error {
 
 // StartBatchJob starts a batch job
 func StartBatchJob(c *cli.Context) error {
-	domain := getRequiredOption(c, FlagDomain)
-	query := getRequiredOption(c, FlagListQuery)
-	reason := getRequiredOption(c, FlagReason)
-	batchType := getRequiredOption(c, FlagBatchType)
-
+	domain, err := getRequiredOption(c, FlagDomain)
+	if err != nil {
+		return commoncli.Problem("Required flag not found: ", err)
+	}
+	query, err := getRequiredOption(c, FlagListQuery)
+	if err != nil {
+		return commoncli.Problem("Required flag not found: ", err)
+	}
+	reason, err := getRequiredOption(c, FlagReason)
+	if err != nil {
+		return commoncli.Problem("Required flag not found: ", err)
+	}
+	batchType, err := getRequiredOption(c, FlagBatchType)
+	if err != nil {
+		return commoncli.Problem("Required flag not found: ", err)
+	}
 	if !validateBatchType(batchType) {
 		return commoncli.Problem("batchType is not valid, supported:"+strings.Join(batcher.AllBatchTypes, ","), nil)
 	}
 	operator := getCurrentUserFromEnv()
 	var sigName, sigVal string
 	if batchType == batcher.BatchTypeSignal {
-		sigName = getRequiredOption(c, FlagSignalName)
-		sigVal = getRequiredOption(c, FlagInput)
+		sigName, err = getRequiredOption(c, FlagSignalName)
+		if err != nil {
+			return commoncli.Problem("Required flag not found: ", err)
+		}
+		sigVal, err = getRequiredOption(c, FlagInput)
+		if err != nil {
+			return commoncli.Problem("Required flag not found: ", err)
+		}
 	}
 	var sourceCluster, targetCluster string
 	if batchType == batcher.BatchTypeReplicate {
-		sourceCluster = getRequiredOption(c, FlagSourceCluster)
-		targetCluster = getRequiredOption(c, FlagTargetCluster)
+		sourceCluster, err = getRequiredOption(c, FlagSourceCluster)
+		if err != nil {
+			return commoncli.Problem("Required flag not found: ", err)
+		}
+		targetCluster, err = getRequiredOption(c, FlagTargetCluster)
+		if err != nil {
+			return commoncli.Problem("Required flag not found: ", err)
+		}
 	}
 	rps := c.Int(FlagRPS)
 	pageSize := c.Int(FlagPageSize)
@@ -194,8 +235,11 @@ func StartBatchJob(c *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	tcCtx, cancel := newContext(c)
+	tcCtx, cancel, err := newContext(c)
 	defer cancel()
+	if err != nil {
+		return commoncli.Problem("Error in creating context:", err)
+	}
 
 	resp, err := svcClient.CountWorkflowExecutions(
 		tcCtx,
@@ -225,8 +269,11 @@ func StartBatchJob(c *cli.Context) error {
 		}
 
 	}
-	tcCtx, cancel = newContext(c)
+	tcCtx, cancel, err = newContext(c)
 	defer cancel()
+	if err != nil {
+		return commoncli.Problem("Error in creating context:", err)
+	}
 
 	params := batcher.BatchParams{
 		DomainName: domain,

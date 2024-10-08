@@ -657,9 +657,12 @@ func (s *cliAppSuite) TestObserveWorkflowWithID() {
 
 // TestParseTime tests the parsing of date argument in UTC and UnixNano formats
 func (s *cliAppSuite) TestParseTime() {
-	s.Equal(int64(100), parseTime("", 100))
-	s.Equal(int64(1528383845000000000), parseTime("2018-06-07T15:04:05+00:00", 0))
-	s.Equal(int64(1528383845000000000), parseTime("1528383845000000000", 0))
+	pt, err :=  parseTime("", 100)
+	s.Equal(int64(100),pt)
+	pt, err = parseTime("2018-06-07T15:04:05+00:00", 0)
+	s.Equal(int64(1528383845000000000), pt)
+	pt, err = parseTime("1528383845000000000", 0)
+	s.Equal(int64(1528383845000000000), pt)
 }
 
 // TestParseTimeDateRange tests the parsing of date argument in time range format, N<duration>
@@ -748,8 +751,10 @@ func (s *cliAppSuite) TestParseTimeDateRange() {
 	}
 	delta := int64(50 * time.Millisecond)
 	for _, te := range tests {
-		s.True(te.expected <= parseTime(te.timeStr, te.defVal))
-		s.True(te.expected+delta >= parseTime(te.timeStr, te.defVal))
+		pt, err := parseTime(te.timeStr, te.defVal)
+		s.True(te.expected <= pt)
+		pt, err = parseTime(te.timeStr, te.defVal)
+		s.True(te.expected+delta >= pt)
 	}
 }
 
@@ -805,7 +810,7 @@ func (s *cliAppSuite) TestIsAttributeName() {
 }
 
 func (s *cliAppSuite) TestGetWorkflowIdReusePolicy() {
-	res := getWorkflowIDReusePolicy(2)
+	res, err := getWorkflowIDReusePolicy(2)
 	s.Equal(res.String(), types.WorkflowIDReusePolicyRejectDuplicate.String())
 }
 

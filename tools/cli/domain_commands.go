@@ -82,8 +82,10 @@ func newDomainCLI(
 
 // RegisterDomain register a domain
 func (d *domainCLIImpl) RegisterDomain(c *cli.Context) error {
-	domainName := getRequiredOption(c, FlagDomain)
-
+	domainName, err := getRequiredOption(c, FlagDomain)
+	if err != nil {
+		return commoncli.Problem("Required flag not found: ", err)
+	}
 	description := c.String(FlagDescription)
 	ownerEmail := c.String(FlagOwnerEmail)
 	retentionDays := defaultDomainRetentionDays
@@ -92,7 +94,6 @@ func (d *domainCLIImpl) RegisterDomain(c *cli.Context) error {
 		retentionDays = c.Int(FlagRetentionDays)
 	}
 	securityToken := c.String(FlagSecurityToken)
-	var err error
 
 	isGlobalDomain := true
 	if c.IsSet(FlagIsGlobalDomain) {
@@ -156,8 +157,11 @@ func (d *domainCLIImpl) RegisterDomain(c *cli.Context) error {
 		IsGlobalDomain:                         isGlobalDomain,
 	}
 
-	ctx, cancel := newContext(c)
+	ctx, cancel, err := newContext(c)
 	defer cancel()
+	if err != nil {
+		return commoncli.Problem("Error in creating context:", err)
+	}
 	err = d.registerDomain(ctx, request)
 	if err != nil {
 		if _, ok := err.(*types.DomainAlreadyExistsError); !ok {
@@ -171,12 +175,16 @@ func (d *domainCLIImpl) RegisterDomain(c *cli.Context) error {
 
 // UpdateDomain updates a domain
 func (d *domainCLIImpl) UpdateDomain(c *cli.Context) error {
-	domainName := getRequiredOption(c, FlagDomain)
-
+	domainName, err := getRequiredOption(c, FlagDomain)
+	if err != nil {
+		return commoncli.Problem("Required flag not found: ", err)
+	}
 	var updateRequest *types.UpdateDomainRequest
-	ctx, cancel := newContext(c)
+	ctx, cancel, err := newContext(c)
 	defer cancel()
-
+	if err != nil {
+		return commoncli.Problem("Error in creating context: %v", err)
+	}
 	if c.IsSet(FlagActiveClusterName) {
 		activeCluster := c.String(FlagActiveClusterName)
 		fmt.Printf("Will set active cluster name to: %s, other flag will be omitted.\n", activeCluster)
@@ -285,7 +293,7 @@ func (d *domainCLIImpl) UpdateDomain(c *cli.Context) error {
 
 	securityToken := c.String(FlagSecurityToken)
 	updateRequest.SecurityToken = securityToken
-	_, err := d.updateDomain(ctx, updateRequest)
+	_, err = d.updateDomain(ctx, updateRequest)
 	if err != nil {
 		if _, ok := err.(*types.EntityNotExistsError); ok {
 			return commoncli.Problem(fmt.Sprintf("Domain %s does not exist.", domainName), err)
@@ -297,13 +305,18 @@ func (d *domainCLIImpl) UpdateDomain(c *cli.Context) error {
 }
 
 func (d *domainCLIImpl) DeprecateDomain(c *cli.Context) error {
-	domainName := getRequiredOption(c, FlagDomain)
+	domainName, err := getRequiredOption(c, FlagDomain)
+	if err != nil {
+		return commoncli.Problem("Required flag not found: ", err)
+	}
 	securityToken := c.String(FlagSecurityToken)
 	force := c.Bool(FlagForce)
 
-	ctx, cancel := newContext(c)
+	ctx, cancel, err := newContext(c)
 	defer cancel()
-
+	if err != nil {
+		return commoncli.Problem("Error in creating context: %v", err)
+	}
 	if !force {
 		wfc, err := getWorkflowClient(c)
 		if err != nil {
@@ -325,7 +338,7 @@ func (d *domainCLIImpl) DeprecateDomain(c *cli.Context) error {
 			return commoncli.Problem("Operation DeprecateDomain failed.", errors.New("workflow still running in this domain"))
 		}
 	}
-	err := d.deprecateDomain(ctx, &types.DeprecateDomainRequest{
+	err = d.deprecateDomain(ctx, &types.DeprecateDomainRequest{
 		Name:          domainName,
 		SecurityToken: securityToken,
 	})
@@ -349,7 +362,10 @@ func (d *domainCLIImpl) FailoverDomains(c *cli.Context) error {
 
 // return succeed and failed domains for testing purpose
 func (d *domainCLIImpl) failoverDomains(c *cli.Context) ([]string, []string, error) {
-	targetCluster := getRequiredOption(c, FlagActiveClusterName)
+	targetCluster, err := getRequiredOption(c, FlagActiveClusterName)
+	if err != nil {
+		return nil, nil, commoncli.Problem("Required flag not found: ", err)
+	}
 	domains, err := d.getAllDomains(c)
 	if err != nil {
 		return nil, nil, fmt.Errorf("Failed to list domains: %w", err)
@@ -382,8 +398,11 @@ func (d *domainCLIImpl) getAllDomains(c *cli.Context) ([]*types.DescribeDomainRe
 	var res []*types.DescribeDomainResponse
 	pagesize := int32(200)
 	var token []byte
-	ctx, cancel := newContext(c)
+	ctx, cancel, err := newContext(c)
 	defer cancel()
+	if err != nil {
+		return nil, commoncli.Problem("Error in creating context: %v", err)
+	}
 	for more := true; more; more = len(token) > 0 {
 		listRequest := &types.ListDomainsRequest{
 			PageSize:      pagesize,
@@ -409,9 +428,12 @@ func (d *domainCLIImpl) failover(c *cli.Context, domainName string, targetCluste
 		Name:              domainName,
 		ActiveClusterName: common.StringPtr(targetCluster),
 	}
-	ctx, cancel := newContext(c)
+	ctx, cancel, err := newContext(c)
 	defer cancel()
-	_, err := d.updateDomain(ctx, updateRequest)
+	if err != nil {
+		return commoncli.Problem("Error in creating context: %v", err)
+	}
+	_, err = d.updateDomain(ctx, updateRequest)
 	return err
 }
 
@@ -452,8 +474,11 @@ func (d *domainCLIImpl) DescribeDomain(c *cli.Context) error {
 		return commoncli.Problem("At least domainID or domainName must be provided.", nil)
 	}
 
-	ctx, cancel := newContext(c)
+	ctx, cancel, err := newContext(c)
 	defer cancel()
+	if err != nil {
+		return commoncli.Problem("Error in creating context: ", err)
+	}
 	resp, err := d.describeDomain(ctx, &request)
 	if err != nil {
 		if _, ok := err.(*types.EntityNotExistsError); !ok {
@@ -516,8 +541,8 @@ type DomainRow struct {
 }
 
 type DomainMigrationRow struct {
-	ValidationCheck   string `header: "Validation Checker"`
-	ValidationResult  bool   `header: "Validation Result"`
+	ValidationCheck   string `header:"Validation Checker"`
+	ValidationResult  bool   `header:"Validation Result"`
 	ValidationDetails ValidationDetails
 }
 

@@ -53,15 +53,24 @@ func AdminDescribeTaskList(c *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	domain := getRequiredOption(c, FlagDomain)
-	taskList := getRequiredOption(c, FlagTaskList)
+	domain, err := getRequiredOption(c, FlagDomain)
+	if err != nil {
+		return commoncli.Problem("Required flag not found: ", err)
+	}
+	taskList, err := getRequiredOption(c, FlagTaskList)
+	if err != nil {
+		return commoncli.Problem("Required flag not found: ", err)
+	}
 	taskListType := types.TaskListTypeDecision
 	if strings.ToLower(c.String(FlagTaskListType)) == "activity" {
 		taskListType = types.TaskListTypeActivity
 	}
 
-	ctx, cancel := newContext(c)
+	ctx, cancel, err := newContext(c)
 	defer cancel()
+	if err != nil {
+		return commoncli.Problem("Error in creating context:", err)
+	}
 	request := &types.DescribeTaskListRequest{
 		Domain:                domain,
 		TaskList:              &types.TaskList{Name: taskList},
@@ -96,10 +105,15 @@ func AdminListTaskList(c *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	domain := getRequiredOption(c, FlagDomain)
-
-	ctx, cancel := newContext(c)
+	domain, err := getRequiredOption(c, FlagDomain)
+	if err != nil {
+		return commoncli.Problem("Required flag not found: ", err)
+	}
+	ctx, cancel, err := newContext(c)
 	defer cancel()
+	if err != nil {
+		return commoncli.Problem("Error in creating context: ", err)
+	}
 	request := &types.GetTaskListsByDomainRequest{
 		Domain: domain,
 	}

@@ -88,6 +88,7 @@ type clientFactory struct {
 }
 
 // NewClientFactory creates a new ClientFactory
+
 func NewClientFactory(logger *zap.Logger) ClientFactory {
 	return &clientFactory{
 		logger: logger,
@@ -179,7 +180,12 @@ func (b *clientFactory) ServerAdminClientForMigration(c *cli.Context) (admin.Cli
 
 // ElasticSearchClient builds an ElasticSearch client
 func (b *clientFactory) ElasticSearchClient(c *cli.Context) (*elastic.Client, error) {
-	url := getRequiredOption(c, FlagURL)
+
+	url, err := getRequiredOption(c, FlagURL)
+	if err != nil {
+		return nil, fmt.Errorf("Required flag not present %v", err)
+	}
+
 	retrier := elastic.NewBackoffRetrier(elastic.NewExponentialBackoff(128*time.Millisecond, 513*time.Millisecond))
 
 	client, err := elastic.NewClient(

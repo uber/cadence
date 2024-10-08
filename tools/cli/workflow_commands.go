@@ -56,12 +56,21 @@ func RestartWorkflow(c *cli.Context) error {
 		return err
 	}
 
-	domain := getRequiredOption(c, FlagDomain)
-	wid := getRequiredOption(c, FlagWorkflowID)
+	domain, err := getRequiredOption(c, FlagDomain)
+	if err != nil {
+		return commoncli.Problem("Required flag not found: ", err)
+	}
+	wid, err := getRequiredOption(c, FlagWorkflowID)
+	if err != nil {
+		return commoncli.Problem("Required flag not found: ", err)
+	}
 	rid := c.String(FlagRunID)
 
-	ctx, cancel := newContext(c)
+	ctx, cancel, err := newContext(c)
 	defer cancel()
+	if err != nil {
+		return commoncli.Problem("Error creating context: ", err)
+	}
 	resp, err := wfClient.RestartWorkflowExecution(
 		ctx,
 		&types.RestartWorkflowExecutionRequest{
@@ -87,12 +96,23 @@ func DiagnoseWorkflow(c *cli.Context) error {
 		return err
 	}
 
-	domain := getRequiredOption(c, FlagDomain)
-	wid := getRequiredOption(c, FlagWorkflowID)
-	rid := getRequiredOption(c, FlagRunID)
-
-	ctx, cancel := newContext(c)
+	domain, err := getRequiredOption(c, FlagDomain)
+	if err != nil {
+		return commoncli.Problem("Required flag not found: ", err)
+	}
+	wid, err := getRequiredOption(c, FlagWorkflowID)
+	if err != nil {
+		return commoncli.Problem("Required flag not found: ", err)
+	}
+	rid, err := getRequiredOption(c, FlagRunID)
+	if err != nil {
+		return commoncli.Problem("Required flag not found: ", err)
+	}
+	ctx, cancel, err := newContext(c)
 	defer cancel()
+	if err != nil {
+		return commoncli.Problem("Error creating context: ", err)
+	}
 	resp, err := wfClient.DiagnoseWorkflowExecution(
 		ctx,
 		&types.DiagnoseWorkflowExecutionRequest{
@@ -116,7 +136,10 @@ func DiagnoseWorkflow(c *cli.Context) error {
 
 // ShowHistory shows the history of given workflow execution based on workflowID and runID.
 func ShowHistory(c *cli.Context) error {
-	wid := getRequiredOption(c, FlagWorkflowID)
+	wid, err := getRequiredOption(c, FlagWorkflowID)
+	if err != nil {
+		return commoncli.Problem("Required flag not found: ", err)
+	}
 	rid := c.String(FlagRunID)
 	return showHistoryHelper(c, wid, rid)
 }
@@ -140,7 +163,10 @@ func showHistoryHelper(c *cli.Context, wid, rid string) error {
 		return err
 	}
 
-	domain := getRequiredOption(c, FlagDomain)
+	domain, err := getRequiredOption(c, FlagDomain)
+	if err != nil {
+		return commoncli.Problem("Required flag not found: ", err)
+	}
 	printDateTime := c.Bool(FlagPrintDateTime)
 	printRawTime := c.Bool(FlagPrintRawTime)
 	printFully := c.Bool(FlagPrintFullyDetail)
@@ -152,8 +178,11 @@ func showHistoryHelper(c *cli.Context, wid, rid string) error {
 	}
 	resetPointsOnly := c.Bool(FlagResetPointsOnly)
 
-	ctx, cancel := newContext(c)
+	ctx, cancel, err := newContext(c)
 	defer cancel()
+	if err != nil {
+		return commoncli.Problem("Error creating context: ", err)
+	}
 	history, err := GetHistory(ctx, wfClient, domain, wid, rid)
 	if err != nil {
 		return commoncli.Problem(fmt.Sprintf("Failed to get history on workflow id: %s, run id: %s.", wid, rid), err)
@@ -240,7 +269,10 @@ func showHistoryHelper(c *cli.Context, wid, rid string) error {
 	}
 	fmt.Println("History Source: Default Storage")
 
-	descOutput := convertDescribeWorkflowExecutionResponse(resp, frontendClient, c)
+	descOutput, err := convertDescribeWorkflowExecutionResponse(resp, frontendClient, c)
+	if err != nil {
+		return commoncli.Problem("Error in convert describe wf: ", err)
+	}
 	if len(descOutput.PendingActivities) > 0 {
 		fmt.Println("============Workflow Pending activities============")
 		prettyPrintJSONObject(descOutput.PendingActivities)
@@ -276,8 +308,11 @@ func startWorkflowHelper(c *cli.Context, shouldPrintProgress bool) error {
 	input := string(startRequest.Input)
 
 	startFn := func() error {
-		tcCtx, cancel := newContext(c)
+		tcCtx, cancel, err := newContext(c)
 		defer cancel()
+		if err != nil {
+			return commoncli.Problem("Error creating context: ", err)
+		}
 		resp, err := serviceClient.StartWorkflowExecution(tcCtx, startRequest)
 
 		if err != nil {
@@ -288,8 +323,11 @@ func startWorkflowHelper(c *cli.Context, shouldPrintProgress bool) error {
 	}
 
 	runFn := func() error {
-		tcCtx, cancel := newContextForLongPoll(c)
+		tcCtx, cancel, err := newContextForLongPoll(c)
 		defer cancel()
+		if err != nil {
+			return commoncli.Problem("Error creating context: ", err)
+		}
 		resp, err := serviceClient.StartWorkflowExecution(tcCtx, startRequest)
 
 		if err != nil {
@@ -323,9 +361,18 @@ func startWorkflowHelper(c *cli.Context, shouldPrintProgress bool) error {
 }
 
 func constructStartWorkflowRequest(c *cli.Context) (*types.StartWorkflowExecutionRequest, error) {
-	domain := getRequiredOption(c, FlagDomain)
-	taskList := getRequiredOption(c, FlagTaskList)
-	workflowType := getRequiredOption(c, FlagWorkflowType)
+	domain, err := getRequiredOption(c, FlagDomain)
+	if err != nil {
+		return nil, commoncli.Problem("Required flag not found: ", err)
+	}
+	taskList, err := getRequiredOption(c, FlagTaskList)
+	if err != nil {
+		return nil, commoncli.Problem("Required flag not found: ", err)
+	}
+	workflowType, err := getRequiredOption(c, FlagWorkflowType)
+	if err != nil {
+		return nil, commoncli.Problem("Required flag not found: ", err)
+	}
 	et := c.Int(FlagExecutionTimeout)
 	if et == 0 {
 		return nil, commoncli.Problem(fmt.Sprintf("Option %s format is invalid.", FlagExecutionTimeout), nil)
@@ -336,11 +383,18 @@ func constructStartWorkflowRequest(c *cli.Context) (*types.StartWorkflowExecutio
 		wid = uuid.New()
 	}
 	reusePolicy := defaultWorkflowIDReusePolicy.Ptr()
+	wfidreusepolicy, err := getWorkflowIDReusePolicy(c.Int(FlagWorkflowIDReusePolicy))
+	if err != nil {
+		return nil, commoncli.Problem("Error getting wf reuse policy: %v", err)
+	}
 	if c.IsSet(FlagWorkflowIDReusePolicy) {
-		reusePolicy = getWorkflowIDReusePolicy(c.Int(FlagWorkflowIDReusePolicy))
+		reusePolicy = wfidreusepolicy
 	}
 
-	input := processJSONInput(c)
+	input, err := processJSONInput(c)
+	if err != nil {
+		return nil, commoncli.Problem("Error in starting wf request: ", err)
+	}
 	startRequest := &types.StartWorkflowExecutionRequest{
 		RequestID:  uuid.New(),
 		Domain:     domain,
@@ -402,12 +456,18 @@ func constructStartWorkflowRequest(c *cli.Context) (*types.StartWorkflowExecutio
 		startRequest.Header = &types.Header{Fields: headerFields}
 	}
 
-	memoFields := processMemo(c)
+	memoFields, err := processMemo(c)
+	if err != nil {
+		return nil, commoncli.Problem("Error processing memo: %v", err)
+	}
 	if len(memoFields) != 0 {
 		startRequest.Memo = &types.Memo{Fields: memoFields}
 	}
 
-	searchAttrFields := processSearchAttr(c)
+	searchAttrFields, err := processSearchAttr(c)
+	if err != nil {
+		return nil, commoncli.Problem("error processing search attributes: %v", err)
+	}
 	if len(searchAttrFields) != 0 {
 		startRequest.SearchAttributes = &types.SearchAttributes{IndexedFields: searchAttrFields}
 	}
@@ -415,7 +475,7 @@ func constructStartWorkflowRequest(c *cli.Context) (*types.StartWorkflowExecutio
 	return startRequest, nil
 }
 
-func processSearchAttr(c *cli.Context) map[string][]byte {
+func processSearchAttr(c *cli.Context) (map[string][]byte, error) {
 	rawSearchAttrKey := c.String(FlagSearchAttributesKey)
 	var searchAttrKeys []string
 	if strings.TrimSpace(rawSearchAttrKey) != "" {
@@ -433,26 +493,32 @@ func processSearchAttr(c *cli.Context) map[string][]byte {
 	}
 
 	if len(searchAttrKeys) != len(searchAttrVals) {
-		ErrorAndExit("Number of search attributes keys and values are not equal.", nil)
+		return nil, fmt.Errorf("Number of search attributes keys and values are not equal. %v", nil)
 	}
 
 	fields := map[string][]byte{}
 	for i, key := range searchAttrKeys {
 		val, err := json.Marshal(searchAttrVals[i])
 		if err != nil {
-			ErrorAndExit(fmt.Sprintf("Encode value %v error", val), err)
+			return nil, fmt.Errorf("Encode value %v error. Error %v", val, err)
 		}
 		fields[key] = val
 	}
 
-	return fields
+	return fields, nil
 }
 
 func processHeader(c *cli.Context) (map[string][]byte, error) {
 	// CLI flag input headers
 	headerKeys := processMultipleKeys(c.String(FlagHeaderKey), " ")
-	headerValues := processMultipleJSONValues(processJSONInputHelper(c, jsonTypeHeader))
-
+	jsoninputhandler, err := processJSONInputHelper(c, jsonTypeHeader)
+	if err != nil {
+		return nil, fmt.Errorf("Error in process header: %v", err)
+	}
+	headerValues, err := processMultipleJSONValues(jsoninputhandler)
+	if err != nil {
+		return nil, fmt.Errorf("Error in process header: %v", err)
+	}
 	if len(headerKeys) != len(headerValues) {
 		return nil, commoncli.Problem("Number of header keys and values are not equal.", nil)
 	}
@@ -470,15 +536,21 @@ func processHeader(c *cli.Context) (map[string][]byte, error) {
 	return headers, nil
 }
 
-func processMemo(c *cli.Context) map[string][]byte {
+func processMemo(c *cli.Context) (map[string][]byte, error) {
 	memoKeys := processMultipleKeys(c.String(FlagMemoKey), " ")
-	memoValues := processMultipleJSONValues(processJSONInputHelper(c, jsonTypeMemo))
-
+	jsoninputhandler, err := processJSONInputHelper(c, jsonTypeMemo)
+	if err != nil {
+		return nil, fmt.Errorf("Error in process header: %v", err)
+	}
+	memoValues, err := processMultipleJSONValues(jsoninputhandler)
+	if err != nil {
+		return nil, fmt.Errorf("Error in process header: %v", err)
+	}
 	if len(memoKeys) != len(memoValues) {
-		ErrorAndExit("Number of memo keys and values are not equal.", nil)
+		return nil, fmt.Errorf("Number of memo keys and values are not equal.", nil)
 	}
 
-	return mapFromKeysValues(memoKeys, memoValues)
+	return mapFromKeysValues(memoKeys, memoValues), nil
 }
 
 // helper function to print workflow progress with time refresh every second
@@ -491,12 +563,16 @@ func printWorkflowProgress(c *cli.Context, domain, wid, rid string) error {
 	}
 	timeElapse := 1
 	isTimeElapseExist := false
-	doneChan := make(chan bool)
-	var lastEvent *types.HistoryEvent // used for print result of this run
+	doneChan := make(chan bool) // Channel to signal completion
+	errChan := make(chan error)  // Separate channel for errors
+	var lastEvent *types.HistoryEvent // Used to print result of this run
 	ticker := time.NewTicker(time.Second).C
 
-	tcCtx, cancel := newIndefiniteContext(c)
+	tcCtx, cancel, err := newIndefiniteContext(c)
 	defer cancel()
+	if err != nil {
+		return fmt.Errorf("error creating context: %w", err)
+	}
 
 	showDetails := c.Bool(FlagShowDetail)
 	var maxFieldLength int
@@ -507,14 +583,17 @@ func printWorkflowProgress(c *cli.Context, domain, wid, rid string) error {
 	go func() {
 		iterator, err := GetWorkflowHistoryIterator(tcCtx, wfClient, domain, wid, rid, true, types.HistoryEventFilterTypeAllEvent.Ptr())
 		if err != nil {
-			ErrorAndExit("Unable to get history events.", err)
+			errChan <- fmt.Errorf("unable to get history events: %w", err)
+			return
 		}
 		for iterator.HasNext() {
 			entity, err := iterator.Next()
-			event := entity.(*types.HistoryEvent)
 			if err != nil {
-				ErrorAndExit("Unable to read event.", err)
+				errChan <- fmt.Errorf("unable to read event: %w", err)
+				return
 			}
+			event := entity.(*types.HistoryEvent)
+
 			if isTimeElapseExist {
 				removePrevious2LinesFromTerminal()
 				isTimeElapseExist = false
@@ -526,7 +605,7 @@ func printWorkflowProgress(c *cli.Context, domain, wid, rid string) error {
 			}
 			lastEvent = event
 		}
-		doneChan <- true
+		doneChan <- true // Signal completion
 	}()
 
 	for {
@@ -538,7 +617,9 @@ func printWorkflowProgress(c *cli.Context, domain, wid, rid string) error {
 			fmt.Printf("\nTime elapse: %ds\n", timeElapse)
 			isTimeElapseExist = true
 			timeElapse++
-		case <-doneChan: // print result of this run
+		case err := <-errChan: // Check for errors
+			return err
+		case <-doneChan: // Print result of this run
 			fmt.Println(colorMagenta("\nResult:"))
 			fmt.Printf("  Run Time: %d seconds\n", timeElapse)
 			printRunStatus(lastEvent)
@@ -554,13 +635,22 @@ func TerminateWorkflow(c *cli.Context) error {
 		return err
 	}
 
-	domain := getRequiredOption(c, FlagDomain)
-	wid := getRequiredOption(c, FlagWorkflowID)
+	domain, err := getRequiredOption(c, FlagDomain)
+	if err != nil {
+		return commoncli.Problem("Required flag not found: ", err)
+	}
+	wid, err := getRequiredOption(c, FlagWorkflowID)
+	if err != nil {
+		return commoncli.Problem("Required flag not found: ", err)
+	}
 	rid := c.String(FlagRunID)
 	reason := c.String(FlagReason)
 
-	ctx, cancel := newContext(c)
+	ctx, cancel, err := newContext(c)
 	defer cancel()
+	if err != nil {
+		return commoncli.Problem("Error creating context: ", err)
+	}
 	err = wfClient.TerminateWorkflowExecution(
 		ctx,
 		&types.TerminateWorkflowExecutionRequest{
@@ -587,14 +677,22 @@ func CancelWorkflow(c *cli.Context) error {
 	if err != nil {
 		return err
 	}
-
-	domain := getRequiredOption(c, FlagDomain)
-	wid := getRequiredOption(c, FlagWorkflowID)
+	domain, err := getRequiredOption(c, FlagDomain)
+	if err != nil {
+		return commoncli.Problem("Required flag not found: ", err)
+	}
+	wid, err := getRequiredOption(c, FlagWorkflowID)
+	if err != nil {
+		return commoncli.Problem("Required flag not found: ", err)
+	}
 	rid := c.String(FlagRunID)
 	reason := c.String(FlagReason)
 
-	ctx, cancel := newContext(c)
+	ctx, cancel, err := newContext(c)
 	defer cancel()
+	if err != nil {
+		return commoncli.Problem("Error creating context: ", err)
+	}
 
 	err = wfClient.RequestCancelWorkflowExecution(
 		ctx,
@@ -623,14 +721,28 @@ func SignalWorkflow(c *cli.Context) error {
 		return err
 	}
 
-	domain := getRequiredOption(c, FlagDomain)
-	wid := getRequiredOption(c, FlagWorkflowID)
+	domain, err := getRequiredOption(c, FlagDomain)
+	if err != nil {
+		return commoncli.Problem("Required flag not found: ", err)
+	}
+	wid, err := getRequiredOption(c, FlagWorkflowID)
+	if err != nil {
+		return commoncli.Problem("Required flag not found: ", err)
+	}
 	rid := c.String(FlagRunID)
-	name := getRequiredOption(c, FlagName)
-	input := processJSONInput(c)
-
-	tcCtx, cancel := newContext(c)
+	name, err := getRequiredOption(c, FlagName)
+	if err != nil {
+		return commoncli.Problem("Required flag not found: ", err)
+	}
+	input, err := processJSONInput(c)
+	if err != nil {
+		return commoncli.Problem("Error proccessing JSON input: ", err)
+	}
+	tcCtx, cancel, err := newContext(c)
 	defer cancel()
+	if err != nil {
+		return commoncli.Problem("Error creating context: ", err)
+	}
 	err = serviceClient.SignalWorkflowExecution(
 		tcCtx,
 		&types.SignalWorkflowExecutionRequest{
@@ -665,8 +777,11 @@ func SignalWithStartWorkflowExecution(c *cli.Context) error {
 		return err
 	}
 
-	tcCtx, cancel := newContext(c)
+	tcCtx, cancel, err := newContext(c)
 	defer cancel()
+	if err != nil {
+		return commoncli.Problem("Error creating context: ", err)
+	}
 
 	resp, err := serviceClient.SignalWithStartWorkflowExecution(tcCtx, signalWithStartRequest)
 	if err != nil {
@@ -681,7 +796,14 @@ func constructSignalWithStartWorkflowRequest(c *cli.Context) (*types.SignalWithS
 	if err != nil {
 		return nil, err
 	}
-
+	signalname, err := getRequiredOption(c, FlagName)
+	if err != nil {
+		return nil, fmt.Errorf("Required flag not present %v", err)
+	}
+	jsoninputsignal, err := processJSONInputSignal(c)
+	if err != nil {
+		return nil, fmt.Errorf("Error processing json input signal: ", err)
+	}
 	return &types.SignalWithStartWorkflowExecutionRequest{
 		Domain:                              startRequest.Domain,
 		WorkflowID:                          startRequest.WorkflowID,
@@ -698,24 +820,32 @@ func constructSignalWithStartWorkflowRequest(c *cli.Context) (*types.SignalWithS
 		Memo:                                startRequest.Memo,
 		SearchAttributes:                    startRequest.SearchAttributes,
 		Header:                              startRequest.Header,
-		SignalName:                          getRequiredOption(c, FlagName),
-		SignalInput:                         []byte(processJSONInputSignal(c)),
+		SignalName:                      	 signalname,
+		SignalInput:                         []byte(jsoninputsignal),
 		DelayStartSeconds:                   startRequest.DelayStartSeconds,
 		JitterStartSeconds:                  startRequest.JitterStartSeconds,
 		FirstRunAtTimestamp:                 startRequest.FirstRunAtTimeStamp,
 	}, nil
 }
 
-func processJSONInputSignal(c *cli.Context) string {
+func processJSONInputSignal(c *cli.Context) (string, error) {
 	return processJSONInputHelper(c, jsonTypeSignal)
 }
 
 // QueryWorkflow query workflow execution
 func QueryWorkflow(c *cli.Context) error {
-	getRequiredOption(c, FlagDomain) // for pre-check and alert if not provided
-	getRequiredOption(c, FlagWorkflowID)
-	queryType := getRequiredOption(c, FlagQueryType)
-
+	domain, err := getRequiredOption(c, FlagDomain)
+	if err != nil {
+		return commoncli.Problem("Required flag not found for domain: ", err)
+	}
+	workflowID, err := getRequiredOption(c, FlagWorkflowID)
+	if err != nil {
+		return commoncli.Problem("Required flag not found for workflow ID: ", err)
+	}
+	queryType, err := getRequiredOption(c, FlagQueryType)
+	if err != nil {
+		return commoncli.Problem("Required flag not found for query type: ", err)
+	}
 	return queryWorkflowHelper(c, queryType)
 }
 
@@ -735,13 +865,24 @@ func queryWorkflowHelper(c *cli.Context, queryType string) error {
 		return err
 	}
 
-	domain := getRequiredOption(c, FlagDomain)
-	wid := getRequiredOption(c, FlagWorkflowID)
+	domain, err := getRequiredOption(c, FlagDomain)
+	if err != nil {
+		return commoncli.Problem("Required flag not found: ", err)
+	}
+	wid, err := getRequiredOption(c, FlagWorkflowID)
+	if err != nil {
+		return commoncli.Problem("Required flag not found: ", err)
+	}
 	rid := c.String(FlagRunID)
-	input := processJSONInput(c)
-
-	tcCtx, cancel := newContext(c)
+	input, err := processJSONInput(c)
+	if err != nil {
+		return commoncli.Problem("Error processing json ", err)
+	}
+	tcCtx, cancel, err := newContext(c)
 	defer cancel()
+	if err != nil {
+		return commoncli.Problem("Error creating context: ", err)
+	}
 	queryRequest := &types.QueryWorkflowRequest{
 		Domain: domain,
 		Execution: &types.WorkflowExecution{
@@ -842,15 +983,21 @@ func CountWorkflow(c *cli.Context) error {
 		return err
 	}
 
-	domain := getRequiredOption(c, FlagDomain)
+	domain, err := getRequiredOption(c, FlagDomain)
+	if err != nil {
+		return commoncli.Problem("Required flag not found: ", err)
+	}
 	query := c.String(FlagListQuery)
 	request := &types.CountWorkflowExecutionsRequest{
 		Domain: domain,
 		Query:  query,
 	}
 
-	ctx, cancel := newContextForLongPoll(c)
+	ctx, cancel, err := newContextForLongPoll(c)
 	defer cancel()
+	if err != nil {
+		return commoncli.Problem("Error creating context: ", err)
+	}
 	response, err := wfClient.CountWorkflowExecutions(ctx, request)
 	if err != nil {
 		return commoncli.Problem("Failed to count workflow.", err)
@@ -875,7 +1022,10 @@ func ListArchivedWorkflow(c *cli.Context) error {
 
 // DescribeWorkflow show information about the specified workflow execution
 func DescribeWorkflow(c *cli.Context) error {
-	wid := getRequiredOption(c, FlagWorkflowID)
+	wid, err := getRequiredOption(c, FlagWorkflowID)
+	if err != nil {
+		return commoncli.Problem("Required flag not found: ", err)
+	}
 	rid := c.String(FlagRunID)
 
 	return describeWorkflowHelper(c, wid, rid)
@@ -900,13 +1050,19 @@ func describeWorkflowHelper(c *cli.Context, wid, rid string) error {
 	if err != nil {
 		return err
 	}
-	domain := getRequiredOption(c, FlagDomain)
+	domain, err := getRequiredOption(c, FlagDomain)
+	if err != nil {
+		return commoncli.Problem("Required flag not found: ", err)
+	}
 	printRaw := c.Bool(FlagPrintRaw) // printRaw is false by default,
 	// and will show datetime and decoded search attributes instead of raw timestamp and byte arrays
 	printResetPointsOnly := c.Bool(FlagResetPointsOnly)
 
-	ctx, cancel := newContext(c)
+	ctx, cancel, err := newContext(c)
 	defer cancel()
+	if err != nil {
+		return commoncli.Problem("Error creating context: ", err)
+	}
 
 	resp, err := frontendClient.DescribeWorkflowExecution(ctx, &types.DescribeWorkflowExecutionRequest{
 		Domain: domain,
@@ -927,7 +1083,8 @@ func describeWorkflowHelper(c *cli.Context, wid, rid string) error {
 	if printRaw {
 		o = resp
 	} else {
-		o = convertDescribeWorkflowExecutionResponse(resp, frontendClient, c)
+		o , err= convertDescribeWorkflowExecutionResponse(resp, frontendClient, c)
+		return commoncli.Problem("WF helper describe failed: ", err)
 	}
 
 	prettyPrintJSONObject(o)
@@ -1009,9 +1166,13 @@ type pendingDecisionInfo struct {
 }
 
 func convertDescribeWorkflowExecutionResponse(resp *types.DescribeWorkflowExecutionResponse,
-	wfClient frontend.Client, c *cli.Context) *describeWorkflowExecutionResponse {
+	wfClient frontend.Client, c *cli.Context) (*describeWorkflowExecutionResponse, error) {
 
 	info := resp.WorkflowExecutionInfo
+	searchattributes, err := convertSearchAttributesToMapOfInterface(info.SearchAttributes, wfClient, c)
+	if err != nil {
+		return nil, fmt.Errorf("Error converting search attributes: ", err)
+	}
 	executionInfo := workflowExecutionInfo{
 		Execution:        info.Execution,
 		Type:             info.Type,
@@ -1022,7 +1183,7 @@ func convertDescribeWorkflowExecutionResponse(resp *types.DescribeWorkflowExecut
 		ParentDomainID:   info.ParentDomainID,
 		ParentExecution:  info.ParentExecution,
 		Memo:             info.Memo,
-		SearchAttributes: convertSearchAttributesToMapOfInterface(info.SearchAttributes, wfClient, c),
+		SearchAttributes: searchattributes,
 		AutoResetPoints:  info.AutoResetPoints,
 		PartitionConfig:  info.PartitionConfig,
 	}
@@ -1078,22 +1239,25 @@ func convertDescribeWorkflowExecutionResponse(resp *types.DescribeWorkflowExecut
 		PendingActivities:      pendingActs,
 		PendingChildren:        resp.PendingChildren,
 		PendingDecision:        pendingDecision,
-	}
+	}, nil 
 }
 
 func convertSearchAttributesToMapOfInterface(searchAttributes *types.SearchAttributes,
-	wfClient frontend.Client, c *cli.Context) map[string]interface{} {
+	wfClient frontend.Client, c *cli.Context) (map[string]interface{}, error) {
 
 	if searchAttributes == nil || len(searchAttributes.GetIndexedFields()) == 0 {
-		return nil
+		return nil, nil
 	}
 
 	result := make(map[string]interface{})
-	ctx, cancel := newContext(c)
+	ctx, cancel, err := newContext(c)
 	defer cancel()
+	if err != nil {
+		return nil, commoncli.Problem("Error creating context: ", err)
+	}
 	validSearchAttributes, err := wfClient.GetSearchAttributes(ctx)
 	if err != nil {
-		ErrorAndExit("Error when get search attributes", err)
+		return nil, commoncli.Problem("Error when get search attributes", err)
 	}
 	validKeys := validSearchAttributes.GetKeys()
 
@@ -1102,12 +1266,12 @@ func convertSearchAttributesToMapOfInterface(searchAttributes *types.SearchAttri
 		valueType := validKeys[k]
 		deserializedValue, err := common.DeserializeSearchAttributeValue(v, valueType)
 		if err != nil {
-			ErrorAndExit("Error deserializing search attribute value", err)
+			return nil, commoncli.Problem("Error deserializing search attribute value", err)
 		}
 		result[k] = deserializedValue
 	}
 
-	return result
+	return result, nil
 }
 
 func getAllWorkflowIDsByQuery(c *cli.Context, query string) (map[string]bool, error) {
@@ -1321,7 +1485,7 @@ func displayWorkflows(c *cli.Context, workflows []*types.WorkflowExecutionInfo) 
 	return Render(c, table, tableOptions)
 }
 
-func listWorkflowExecutions(client frontend.Client, pageSize int, domain, query string, c *cli.Context) getWorkflowPageFn {
+func listWorkflowExecutions(client frontend.Client, pageSize int, domain, query string, c *cli.Context) (getWorkflowPageFn) {
 	return func(nextPageToken []byte) ([]*types.WorkflowExecutionInfo, []byte, error) {
 		request := &types.ListWorkflowExecutionsRequest{
 			Domain:        domain,
@@ -1330,8 +1494,11 @@ func listWorkflowExecutions(client frontend.Client, pageSize int, domain, query 
 			Query:         query,
 		}
 
-		ctx, cancel := newContextForLongPoll(c)
+		ctx, cancel, err := newContextForLongPoll(c)
 		defer cancel()
+		if err != nil {
+			return nil, nil, commoncli.Problem("Error creating context: ", err)
+		}
 		response, err := client.ListWorkflowExecutions(ctx, request)
 		if err != nil {
 			return nil, nil, commoncli.Problem("Failed to list workflow.", err)
@@ -1358,8 +1525,11 @@ func listOpenWorkflow(client frontend.Client, pageSize int, earliestTime, latest
 			request.TypeFilter = &types.WorkflowTypeFilter{Name: workflowType}
 		}
 
-		ctx, cancel := newContextForLongPoll(c)
+		ctx, cancel, err := newContextForLongPoll(c)
 		defer cancel()
+		if err != nil {
+			return nil, nil, commoncli.Problem("Failed to list open workflow.", err)
+		}
 		response, err := client.ListOpenWorkflowExecutions(ctx, request)
 		if err != nil {
 			return nil, nil, commoncli.Problem("Failed to list open workflow.", err)
@@ -1368,7 +1538,7 @@ func listOpenWorkflow(client frontend.Client, pageSize int, earliestTime, latest
 	}
 }
 
-func listClosedWorkflow(client frontend.Client, pageSize int, earliestTime, latestTime int64, domain, workflowID, workflowType string, workflowStatus types.WorkflowExecutionCloseStatus, c *cli.Context) getWorkflowPageFn {
+func listClosedWorkflow(client frontend.Client, pageSize int, earliestTime, latestTime int64, domain, workflowID, workflowType string, workflowStatus types.WorkflowExecutionCloseStatus, c *cli.Context) (getWorkflowPageFn) {
 	return func(nextPageToken []byte) ([]*types.WorkflowExecutionInfo, []byte, error) {
 		request := &types.ListClosedWorkflowExecutionsRequest{
 			Domain:          domain,
@@ -1389,8 +1559,11 @@ func listClosedWorkflow(client frontend.Client, pageSize int, earliestTime, late
 			request.StatusFilter = &workflowStatus
 		}
 
-		ctx, cancel := newContextForLongPoll(c)
+		ctx, cancel, err := newContextForLongPoll(c)
 		defer cancel()
+		if err != nil {
+			return nil, nil, commoncli.Problem("Failed to list closed workflow.", err)
+		}
 		response, err := client.ListClosedWorkflowExecutions(ctx, request)
 		if err != nil {
 			return nil, nil, commoncli.Problem("Failed to list closed workflow.", err)
@@ -1405,9 +1578,18 @@ func listWorkflows(c *cli.Context) (getWorkflowPageFn, error) {
 		return nil, err
 	}
 
-	domain := getRequiredOption(c, FlagDomain)
-	earliestTime := parseTime(c.String(FlagEarliestTime), 0)
-	latestTime := parseTime(c.String(FlagLatestTime), time.Now().UnixNano())
+	domain, err := getRequiredOption(c, FlagDomain)
+	if err != nil {
+		return nil, commoncli.Problem("Required flag not found: ", err)
+	}
+	earliestTime, err := parseTime(c.String(FlagEarliestTime), 0)
+	if err != nil {
+		return nil, fmt.Errorf("Error in listing workflows: %v", err)
+	}
+	latestTime, err := parseTime(c.String(FlagLatestTime), time.Now().UnixNano())
+	if err != nil {
+		return nil, fmt.Errorf("Error in listing workflows: %v", err)
+	}
 	workflowID := c.String(FlagWorkflowID)
 	workflowType := c.String(FlagWorkflowType)
 	queryOpen := c.Bool(FlagOpen)
@@ -1433,8 +1615,11 @@ func listWorkflows(c *cli.Context) (getWorkflowPageFn, error) {
 		return nil, commoncli.Problem(optionErr, errors.New("you can filter on workflow_id or workflow_type, but not on both"))
 	}
 
-	ctx, cancel := newContextForLongPoll(c)
+	ctx, cancel, err := newContext(c)
 	defer cancel()
+	if err != nil {
+		return nil, commoncli.Problem("Error creating context: ", err)
+	}
 	resp, err := wfClient.CountWorkflowExecutions(
 		ctx,
 		&types.CountWorkflowExecutionsRequest{
@@ -1465,9 +1650,15 @@ func listArchivedWorkflows(c *cli.Context) (getWorkflowPageFn, error) {
 		return nil, err
 	}
 
-	domain := getRequiredOption(c, FlagDomain)
+	domain, err := getRequiredOption(c, FlagDomain)
+	if err != nil {
+		return nil, commoncli.Problem("Required flag not found: ", err)
+	}
 	pageSize := c.Int(FlagPageSize)
-	listQuery := getRequiredOption(c, FlagListQuery)
+	listQuery, err := getRequiredOption(c, FlagListQuery)
+	if err != nil {
+		return nil, commoncli.Problem("Required flag not found: ", err)
+	}
 	if pageSize <= 0 {
 		pageSize = defaultPageSizeForList
 	}
@@ -1514,16 +1705,21 @@ func scanWorkflows(c *cli.Context) (getWorkflowPageFn, error) {
 }
 
 func scanWorkflowExecutions(client frontend.Client, pageSize int, nextPageToken []byte, query string, c *cli.Context) ([]*types.WorkflowExecutionInfo, []byte, error) {
-	domain := getRequiredOption(c, FlagDomain)
-
+	domain, err := getRequiredOption(c, FlagDomain)
+	if err != nil {
+		return nil, nil, commoncli.Problem("Required flag not found: ", err)
+	}
 	request := &types.ListWorkflowExecutionsRequest{
 		Domain:        domain,
 		PageSize:      int32(pageSize),
 		NextPageToken: nextPageToken,
 		Query:         query,
 	}
-	ctx, cancel := newContextForLongPoll(c)
+	ctx, cancel, err := newContextForLongPoll(c)
 	defer cancel()
+	if err != nil {
+		return nil, nil, commoncli.Problem("Error creating context: ", err)
+	}
 	response, err := client.ScanWorkflowExecutions(ctx, request)
 	if err != nil {
 		return nil, nil, commoncli.Problem("Failed to list workflow.", err)
@@ -1539,13 +1735,12 @@ func getWorkflowStatus(statusStr string) (types.WorkflowExecutionCloseStatus, er
 		"[completed, failed, canceled, terminated, continued_as_new, timed_out]"))
 }
 
-func getWorkflowIDReusePolicy(value int) *types.WorkflowIDReusePolicy {
+func getWorkflowIDReusePolicy(value int) (*types.WorkflowIDReusePolicy, error) {
 	if value >= 0 && types.WorkflowIDReusePolicy(value) <= types.WorkflowIDReusePolicyTerminateIfRunning {
-		return types.WorkflowIDReusePolicy(value).Ptr()
+		return types.WorkflowIDReusePolicy(value).Ptr(), nil
 	}
 	// At this point, the policy should return if the value is valid
-	ErrorAndExit(fmt.Sprintf("Option %v value is not in supported range.", FlagWorkflowIDReusePolicy), nil)
-	return nil
+	return nil, fmt.Errorf("Option %v value is not in supported range. %v", FlagWorkflowIDReusePolicy, nil)
 }
 
 // default will print decoded raw
@@ -1570,9 +1765,12 @@ func printListResults(executions []*types.WorkflowExecutionInfo, inJSON bool, mo
 
 // ObserveHistory show the process of running workflow
 func ObserveHistory(c *cli.Context) error {
-	wid := getRequiredOption(c, FlagWorkflowID)
+	wid, err := getRequiredOption(c, FlagWorkflowID)
+	if err != nil {
+		return commoncli.Problem("Required flag not found: ", err)
+	}
 	rid := c.String(FlagRunID)
-	domain := getRequiredOption(c, FlagDomain)
+	domain, err := getRequiredOption(c, FlagDomain)
 
 	printWorkflowProgress(c, domain, wid, rid)
 	return nil
@@ -1580,9 +1778,18 @@ func ObserveHistory(c *cli.Context) error {
 
 // ResetWorkflow reset workflow
 func ResetWorkflow(c *cli.Context) error {
-	domain := getRequiredOption(c, FlagDomain)
-	wid := getRequiredOption(c, FlagWorkflowID)
-	reason := getRequiredOption(c, FlagReason)
+	domain, err := getRequiredOption(c, FlagDomain)
+	if err != nil {
+		return commoncli.Problem("Required flag not found: ", err)
+	}
+	wid, err := getRequiredOption(c, FlagWorkflowID)
+	if err != nil {
+		return commoncli.Problem("Required flag not found: ", err)
+	}
+	reason, err := getRequiredOption(c, FlagReason)
+	if err != nil {
+		return commoncli.Problem("Required flag not found: ", err)
+	}
 	if len(reason) == 0 {
 		return commoncli.Problem("wrong reason", fmt.Errorf("reason cannot be empty"))
 	}
@@ -1601,8 +1808,11 @@ func ResetWorkflow(c *cli.Context) error {
 		getRequiredOption(c, extraForResetType)
 	}
 
-	ctx, cancel := newContext(c)
+	ctx, cancel, err := newContext(c)
 	defer cancel()
+	if err != nil {
+		return commoncli.Problem("Error creating context: ", err)
+	}
 
 	frontendClient, err := getDeps(c).ServerFrontendClient(c)
 	if err != nil {
@@ -1686,8 +1896,11 @@ type batchResetParamsType struct {
 
 // ResetInBatch resets workflow in batch
 func ResetInBatch(c *cli.Context) error {
-	domain := getRequiredOption(c, FlagDomain)
-	resetType := getRequiredOption(c, FlagResetType)
+	domain, err := getRequiredOption(c, FlagDomain)
+	if err != nil {
+		return commoncli.Problem("Required flag not found: ", err)
+	}
+	resetType, err := getRequiredOption(c, FlagResetType)
 	decisionOffset := c.Int(FlagDecisionOffset)
 	if decisionOffset > 0 {
 		return commoncli.Problem("Only decision offset <=0 is supported", nil)
@@ -1713,9 +1926,12 @@ func ResetInBatch(c *cli.Context) error {
 	if excludeFileName != "" && excludeQuery != "" {
 		return commoncli.Problem("Only one of the excluding option is allowed", nil)
 	}
-
+	rsn, err := getRequiredOption(c, FlagReason)
+	if err != nil {
+		return commoncli.Problem("Required flag not found: ", err)
+	}
 	batchResetParams := batchResetParamsType{
-		reason:               getRequiredOption(c, FlagReason),
+		reason:           	  rsn,
 		skipCurrentOpen:      c.Bool(FlagSkipCurrentOpen),
 		skipCurrentCompleted: c.Bool(FlagSkipCurrentCompleted),
 		nonDeterministicOnly: c.Bool(FlagNonDeterministicOnly),
@@ -1742,7 +1958,10 @@ func ResetInBatch(c *cli.Context) error {
 	// read excluded workflowIDs
 	excludeWIDs := map[string]bool{}
 	if excludeFileName != "" {
-		excludeWIDs = loadWorkflowIDsFromFile(excludeFileName, separator)
+		excludeWIDs, err = loadWorkflowIDsFromFile(excludeFileName, separator)
+		if err != nil {
+			return commoncli.Problem("Error loading WF Ids from file: ", err)
+		}
 	}
 	if excludeQuery != "" {
 		var err error
@@ -1829,14 +2048,14 @@ func ResetInBatch(c *cli.Context) error {
 	return nil
 }
 
-func loadWorkflowIDsFromFile(excludeFileName, separator string) map[string]bool {
+func loadWorkflowIDsFromFile(excludeFileName, separator string) (map[string]bool, error) {
 	excludeWIDs := map[string]bool{}
 	if len(excludeFileName) > 0 {
 		// This code is only used in the CLI. The input provided is from a trusted user.
 		// #nosec
 		excFile, err := os.Open(excludeFileName)
 		if err != nil {
-			ErrorAndExit("Open failed2", err)
+			return nil, fmt.Errorf("Open failed2 %v", err)
 		}
 		defer excFile.Close()
 		scanner := bufio.NewScanner(excFile)
@@ -1850,13 +2069,13 @@ func loadWorkflowIDsFromFile(excludeFileName, separator string) map[string]bool 
 			}
 			cols := strings.Split(line, separator)
 			if len(cols) < 1 {
-				ErrorAndExit("Split failed", fmt.Errorf("line %v has less than 1 cols separated by comma, only %v ", idx, len(cols)))
+				return nil, fmt.Errorf("Split failed %w", fmt.Errorf("line %v has less than 1 cols separated by comma, only %v ", idx, len(cols)))
 			}
 			wid := strings.TrimSpace(cols[0])
 			excludeWIDs[wid] = true
 		}
 	}
-	return excludeWIDs
+	return excludeWIDs, nil 
 }
 
 func printErrorAndReturn(msg string, err error) error {
@@ -1865,8 +2084,11 @@ func printErrorAndReturn(msg string, err error) error {
 }
 
 func doReset(c *cli.Context, domain, wid, rid string, params batchResetParamsType) error {
-	ctx, cancel := newContext(c)
+	ctx, cancel, err := newContext(c)
 	defer cancel()
+	if err != nil {
+		return commoncli.Problem("Error creating context: ", err)
+	}
 
 	frontendClient, err := getDeps(c).ServerFrontendClient(c)
 	if err != nil {
@@ -2027,10 +2249,13 @@ func getResetEventIDByType(
 			return
 		}
 	case resetTypeDecisionCompletedTime:
-		earliestTime := parseTime(c.String(FlagEarliestTime), 0)
+		earliestTime, err := parseTime(c.String(FlagEarliestTime), 0)
+		if err != nil {
+			return "", 0, fmt.Errorf("Get reset event id by type failed: %v", err)
+		}
 		decisionFinishID, err = getEarliestDecisionID(ctx, domain, wid, rid, earliestTime, frontendClient)
 		if err != nil {
-			return
+			return "", 0, fmt.Errorf("Get reset event id by type failed: %v", err)
 		}
 	case resetTypeFirstDecisionScheduled:
 		decisionFinishID, err = getFirstDecisionTaskByType(ctx, domain, wid, rid, frontendClient, types.EventTypeDecisionTaskScheduled)
@@ -2242,17 +2467,38 @@ func getLastContinueAsNewID(ctx context.Context, domain, wid, rid string, fronte
 
 // CompleteActivity completes an activity
 func CompleteActivity(c *cli.Context) error {
-	domain := getRequiredOption(c, FlagDomain)
-	wid := getRequiredOption(c, FlagWorkflowID)
-	rid := getRequiredOption(c, FlagRunID)
-	activityID := getRequiredOption(c, FlagActivityID)
+	domain, err := getRequiredOption(c, FlagDomain)
+	if err != nil {
+		return commoncli.Problem("Required flag not found: ", err)
+	}
+	wid, err := getRequiredOption(c, FlagWorkflowID)
+	if err != nil {
+		return commoncli.Problem("Required flag not found: ", err)
+	}
+	rid, err := getRequiredOption(c, FlagRunID)
+	if err != nil {
+		return commoncli.Problem("Required flag not found: ", err)
+	}
+	activityID, err := getRequiredOption(c, FlagActivityID)
+	if err != nil {
+		return commoncli.Problem("Required flag not found: ", err)
+	}
 	if len(activityID) == 0 {
 		return commoncli.Problem("Invalid activityID", fmt.Errorf("activityID cannot be empty"))
 	}
-	result := getRequiredOption(c, FlagResult)
-	identity := getRequiredOption(c, FlagIdentity)
-	ctx, cancel := newContext(c)
+	result, err := getRequiredOption(c, FlagResult)
+	if err != nil {
+		return commoncli.Problem("Required flag not found: ", err)
+	}
+	identity, err := getRequiredOption(c, FlagIdentity)
+	if err != nil {
+		return commoncli.Problem("Required flag not found: ", err)
+	}
+	ctx, cancel, err := newContext(c)
 	defer cancel()
+	if err != nil {
+		return commoncli.Problem("Error creating context: ", err)
+	}
 
 	frontendClient, err := getDeps(c).ServerFrontendClient(c)
 	if err != nil {
@@ -2275,19 +2521,39 @@ func CompleteActivity(c *cli.Context) error {
 
 // FailActivity fails an activity
 func FailActivity(c *cli.Context) error {
-	domain := getRequiredOption(c, FlagDomain)
-	wid := getRequiredOption(c, FlagWorkflowID)
-	rid := getRequiredOption(c, FlagRunID)
-	activityID := getRequiredOption(c, FlagActivityID)
+	domain, err := getRequiredOption(c, FlagDomain)
+	if err != nil {
+		return commoncli.Problem("Required flag not found: ", err)
+	}
+	wid, err := getRequiredOption(c, FlagWorkflowID)
+	if err != nil {
+		return commoncli.Problem("Required flag not found: ", err)
+	}
+	rid, err := getRequiredOption(c, FlagRunID)
+	if err != nil {
+		return commoncli.Problem("Required flag not found: ", err)
+	}
+	activityID, err := getRequiredOption(c, FlagActivityID)
 	if len(activityID) == 0 {
 		return commoncli.Problem("Invalid activityID", fmt.Errorf("activityID cannot be empty"))
 	}
-	reason := getRequiredOption(c, FlagReason)
-	detail := getRequiredOption(c, FlagDetail)
-	identity := getRequiredOption(c, FlagIdentity)
-	ctx, cancel := newContext(c)
+	reason, err := getRequiredOption(c, FlagReason)
+	if err != nil {
+		return commoncli.Problem("Required flag not found: ", err)
+	}
+	detail, err := getRequiredOption(c, FlagDetail)
+	if err != nil {
+		return commoncli.Problem("Required flag not found: ", err)
+	}
+	identity, err := getRequiredOption(c, FlagIdentity)
+	if err != nil {
+		return commoncli.Problem("Required flag not found: ", err)
+	}
+	ctx, cancel, err := newContext(c)
 	defer cancel()
-
+	if err != nil {
+		return commoncli.Problem("Error creating context: ", err)
+	}
 	frontendClient, err := getDeps(c).ServerFrontendClient(c)
 	if err != nil {
 		return err
@@ -2310,7 +2576,10 @@ func FailActivity(c *cli.Context) error {
 
 // ObserveHistoryWithID show the process of running workflow
 func ObserveHistoryWithID(c *cli.Context) error {
-	domain := getRequiredOption(c, FlagDomain)
+	domain, err := getRequiredOption(c, FlagDomain)
+	if err != nil {
+		return commoncli.Problem("Required flag not found: ", err)
+	}
 	if !c.Args().Present() {
 		return commoncli.Problem("Argument workflow_id is required.", nil)
 	}

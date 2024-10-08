@@ -23,6 +23,7 @@ package cli
 import (
 	"fmt"
 
+	"github.com/uber/cadence/tools/common/commoncli"
 	"github.com/urfave/cli/v2"
 )
 
@@ -99,7 +100,10 @@ func newDomainCommands() []*cli.Command {
 			Action: func(c *cli.Context) error {
 				// exit on error already handled in the command
 				// TODO best practice is to return error if validation fails
-				NewDomainMigrationCommand(c).Validation(c)
+				err := NewDomainMigrationCommand(c).Validation(c)
+				if err != nil {
+					return commoncli.Problem("Failed validation: ", err)
+				}
 				return nil
 			},
 		},

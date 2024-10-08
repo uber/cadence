@@ -58,9 +58,17 @@ type startParams struct {
 
 // AdminFailoverStart start failover workflow
 func AdminFailoverStart(c *cli.Context) error {
+	tc, err := getRequiredOption(c, FlagTargetCluster)
+	if err != nil {
+		return commoncli.Problem("Required flag not found: ", err)
+	}
+	sc, err := getRequiredOption(c, FlagSourceCluster)
+	if err != nil {
+		return commoncli.Problem("Required flag not found: ", err)
+	}
 	params := &startParams{
-		targetCluster:                  getRequiredOption(c, FlagTargetCluster),
-		sourceCluster:                  getRequiredOption(c, FlagSourceCluster),
+		targetCluster:                  tc,
+		sourceCluster:                  sc,
 		batchFailoverSize:              c.Int(FlagFailoverBatchSize),
 		batchFailoverWaitTimeInSeconds: c.Int(FlagFailoverWaitTime),
 		failoverTimeout:                c.Int(FlagFailoverTimeout),
@@ -98,8 +106,11 @@ func AdminFailoverQuery(c *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	tcCtx, cancel := newContext(c)
+	tcCtx, cancel, err := newContext(c)
 	defer cancel()
+	if err != nil {
+		return commoncli.Problem("Error in creating context: %v", err)
+	}
 	workflowID := getFailoverWorkflowID(c)
 	runID := getRunID(c)
 	result, err := query(tcCtx, client, workflowID, runID)
@@ -131,9 +142,11 @@ func AdminFailoverAbort(c *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	tcCtx, cancel := newContext(c)
+	tcCtx, cancel, err := newContext(c)
 	defer cancel()
-
+	if err != nil {
+		return commoncli.Problem("Error in creating context: ", err)
+	}
 	reason := c.String(FlagReason)
 	if len(reason) == 0 {
 		reason = defaultAbortReason
@@ -164,9 +177,11 @@ func AdminFailoverRollback(c *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	tcCtx, cancel := newContext(c)
+	tcCtx, cancel, err := newContext(c)
 	defer cancel()
-
+	if err != nil {
+		return commoncli.Problem("Error in creating context: %v", err)
+	}
 	runID := getRunID(c)
 
 	queryResult, err := query(tcCtx, client, failovermanager.FailoverWorkflowID, runID)
@@ -294,10 +309,17 @@ func failoverStart(c *cli.Context, params *startParams) error {
 	if err != nil {
 		return err
 	}
-	tcCtx, cancel := newContext(c)
+	tcCtx, cancel, err := newContext(c)
 	defer cancel()
+	if err != nil {
+		return commoncli.Problem("Error in creating context: %v", err)
+	}
+	op, err := getOperator()
+	if err != nil {
+		return commoncli.Problem("Error in getting operator: %v", err)
+	}
 	memo, err := getWorkflowMemo(map[string]interface{}{
-		common.MemoKeyForOperator: getOperator(),
+		common.MemoKeyForOperator: op,
 	})
 	if err != nil {
 		return commoncli.Problem("Failed to serialize memo", err)
@@ -367,13 +389,13 @@ func getFailoverWorkflowID(c *cli.Context) string {
 	return failovermanager.FailoverWorkflowID
 }
 
-func getOperator() string {
+func getOperator() (string, error) {
 	user, err := user.Current()
 	if err != nil {
-		ErrorAndExit("Unable to get operator info", err)
+		return "", fmt.Errorf("Unable to get operator info %v", err)
 	}
 
-	return fmt.Sprintf("%s (username: %s)", user.Name, user.Username)
+	return fmt.Sprintf("%s (username: %s)", user.Name, user.Username), nil
 }
 
 func isWorkflowTerminated(descResp *types.DescribeWorkflowExecutionResponse) bool {
@@ -385,9 +407,11 @@ func executePauseOrResume(c *cli.Context, workflowID string, isPause bool) error
 	if err != nil {
 		return err
 	}
-	tcCtx, cancel := newContext(c)
+	tcCtx, cancel, err := newContext(c)
 	defer cancel()
-
+	if err != nil {
+		return commoncli.Problem("Error in creating context: %v", err)
+	}
 	runID := getRunID(c)
 	var signalName string
 	if isPause {
@@ -409,15 +433,15 @@ func executePauseOrResume(c *cli.Context, workflowID string, isPause bool) error
 	return client.SignalWorkflowExecution(tcCtx, request)
 }
 
-func validateStartParams(params *startParams) {
+func validateStartParams(params *startParams) error {
 	if len(params.targetCluster) == 0 {
-		ErrorAndExit("targetCluster is not provided", nil)
+		return fmt.Errorf("targetCluster is not provided: %v", nil)
 	}
 	if len(params.sourceCluster) == 0 {
-		ErrorAndExit("sourceCluster is not provided", nil)
+		return fmt.Errorf("sourceCluster is not provided: %v", nil)
 	}
 	if params.targetCluster == params.sourceCluster {
-		ErrorAndExit("targetCluster is same as sourceCluster", nil)
+		return fmt.Errorf("targetCluster is same as sourceCluster: %v", nil)
 	}
 	if params.batchFailoverSize <= 0 {
 		params.batchFailoverSize = defaultBatchFailoverSize
@@ -428,4 +452,5 @@ func validateStartParams(params *startParams) {
 	if params.failoverWorkflowTimeout <= 0 {
 		params.failoverWorkflowTimeout = defaultFailoverWorkflowTimeoutInSeconds
 	}
+	return nil
 }

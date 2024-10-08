@@ -77,7 +77,7 @@ type RenderOptions struct {
 func Render(c *cli.Context, data interface{}, opts RenderOptions) (err error) {
 	defer func() {
 		if err != nil {
-			ErrorAndExit("failed to render", err)
+			fmt.Errorf("failed to render: %v", err)
 		}
 	}()
 
