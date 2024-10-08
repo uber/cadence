@@ -35,6 +35,7 @@ import (
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/clock"
+	"github.com/uber/cadence/common/debounce"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
@@ -47,8 +48,8 @@ import (
 var ErrInsufficientHosts = &types.InternalServiceError{Message: "Not enough hosts to serve the request"}
 
 const (
-	minRefreshInternal     = time.Second * 4
 	defaultRefreshInterval = time.Second * 10
+	debounceInterval       = time.Second
 	replicaPoints          = 100
 )
 
@@ -63,10 +64,11 @@ type PeerProvider interface {
 }
 
 type ring struct {
+	debounce *debounce.DebouncedChannel
+
 	status       int32
 	service      string
 	peerProvider PeerProvider
-	refreshChan  chan struct{}
 	shutdownCh   chan struct{}
 	shutdownWG   sync.WaitGroup
 	timeSource   clock.TimeSource
@@ -99,10 +101,10 @@ func newHashring(
 		service:      service,
 		peerProvider: provider,
 		shutdownCh:   make(chan struct{}),
-		refreshChan:  make(chan struct{}, 1),
 		timeSource:   timeSource,
 		logger:       logger,
 		scope:        scope,
+		debounce:     debounce.NewDebouncedChannel(timeSource, debounceInterval),
 	}
 
 	r.members.keys = make(map[string]HostInfo)
@@ -125,10 +127,12 @@ func (r *ring) Start() {
 	) {
 		return
 	}
+
 	if err := r.peerProvider.Subscribe(r.service, r.handleUpdates); err != nil {
 		r.logger.Fatal("subscribing to peer provider", tag.Error(err))
 	}
 
+	r.debounce.Start()
 	if err := r.refresh(); err != nil {
 		r.logger.Fatal("failed to start service resolver", tag.Error(err))
 	}
@@ -147,6 +151,7 @@ func (r *ring) Stop() {
 		return
 	}
 
+	r.debounce.Stop()
 	r.peerProvider.Stop()
 	r.value.Store(emptyHashring())
 
@@ -166,7 +171,7 @@ func (r *ring) Lookup(
 ) (HostInfo, error) {
 	addr, found := r.ring().Lookup(key)
 	if !found {
-		r.signalSelf()
+		r.debounce.Handler()
 		return HostInfo{}, ErrInsufficientHosts
 	}
 
@@ -194,15 +199,8 @@ func (r *ring) Subscribe(watcher string, notifyChannel chan<- *ChangedEvent) err
 }
 
 func (r *ring) handleUpdates(event ChangedEvent) {
-	r.signalSelf()
-}
-
-func (r *ring) signalSelf() {
-	var event struct{}
-	select {
-	case r.refreshChan <- event:
-	default: // channel already has an event, don't block
-	}
+	r.logger.Debug("received membership updates", tag.MembershipChangeEvent(event))
+	r.debounce.Handler()
 }
 
 func (r *ring) notifySubscribers(msg ChangedEvent) {
@@ -252,11 +250,6 @@ func (r *ring) Members() []HostInfo {
 }
 
 func (r *ring) refresh() error {
-	if r.members.refreshed.After(r.timeSource.Now().Add(-minRefreshInternal)) {
-		// refreshed too frequently
-		return nil
-	}
-
 	members, err := r.peerProvider.GetMembers(r.service)
 	if err != nil {
 		return fmt.Errorf("getting members from peer provider: %w", err)
@@ -296,16 +289,20 @@ func (r *ring) refreshRingWorker() {
 	refreshTicker := r.timeSource.NewTicker(defaultRefreshInterval)
 	defer refreshTicker.Stop()
 
+	callRefresh := func() {
+		if err := r.refresh(); err != nil {
+			r.logger.Error("failed to refresh ring", tag.Error(err))
+		}
+	}
+
 	for {
 		select {
 		case <-r.shutdownCh:
 			return
-		case <-r.refreshChan: // local signal or signal from provider
-			if err := r.refresh(); err != nil {
-				r.logger.Error("failed to refresh ring", tag.Error(err))
-			}
-		case <-refreshTicker.Chan(): // periodically force refreshing membership
-			r.signalSelf()
+		case <-r.debounce.Chan():
+			callRefresh()
+		case <-refreshTicker.Chan():
+			callRefresh()
 		}
 	}
 }

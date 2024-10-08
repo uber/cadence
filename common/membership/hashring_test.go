@@ -159,10 +159,6 @@ func (td *hashringTestData) startHashRing() {
 	td.hashRing.Start()
 }
 
-func (td *hashringTestData) bypassRefreshRatelimiter() {
-	td.hashRing.members.refreshed = time.Now().AddDate(0, 0, -1)
-}
-
 func TestFailedLookupWillAskProvider(t *testing.T) {
 	td := newHashringTestData(t)
 
@@ -246,7 +242,6 @@ func TestHandlerSchedulesUpdates(t *testing.T) {
 	require.True(t, common.AwaitWaitGroup(&wg, maxTestDuration), "GetMembers must be called")
 
 	wg.Add(1) // another call to GetMembers should happen because of handleUpdate
-	td.bypassRefreshRatelimiter()
 	td.hashRing.handleUpdates(ChangedEvent{})
 
 	require.True(t, common.AwaitWaitGroup(&wg, maxTestDuration), "GetMembers must be called again")
@@ -273,7 +268,6 @@ func TestFailedRefreshLogsError(t *testing.T) {
 	}).Times(1)
 
 	wg.Add(1) // another call to GetMembers should happen because of handleUpdate
-	td.bypassRefreshRatelimiter()
 	td.hashRing.handleUpdates(ChangedEvent{})
 
 	require.True(t, common.AwaitWaitGroup(&wg, maxTestDuration), "GetMembers must be called again (and fail)")
@@ -281,19 +275,34 @@ func TestFailedRefreshLogsError(t *testing.T) {
 	assert.Equal(t, 1, td.observedLogs.FilterMessageSnippet("failed to refresh ring").Len())
 }
 
-func TestRefreshUpdatesRingOnlyWhenRingHasChanged(t *testing.T) {
+func TestRefreshUpdatesSubscribersOnlyWhenMembershipHasChanged(t *testing.T) {
+	membership := randomHostInfo(3)
 	td := newHashringTestData(t)
+	changeCh := make(chan *ChangedEvent, 2)
 
-	td.mockPeerProvider.EXPECT().Subscribe(gomock.Any(), gomock.Any()).Times(1)
-	td.mockPeerProvider.EXPECT().GetMembers("test-service").Times(1).Return(randomHostInfo(3), nil)
+	var updateHandler func(event ChangedEvent)
+	td.mockPeerProvider.EXPECT().Subscribe("test-service", gomock.Any()).Do(
+		func(name string, fn func(event ChangedEvent)) {
+			updateHandler = fn
+		}).Times(1)
+
+	td.mockPeerProvider.EXPECT().GetMembers("test-service").Return(membership, nil).Times(2)
 	td.mockPeerProvider.EXPECT().WhoAmI().AnyTimes()
 
-	// Start will also call .refresh()
+	require.NoError(t, td.hashRing.Subscribe("subscriber1", changeCh))
 	td.startHashRing()
-	updatedAt := td.hashRing.members.refreshed
 
-	assert.NoError(t, td.hashRing.refresh())
-	assert.Equal(t, updatedAt, td.hashRing.members.refreshed)
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		<-changeCh
+	}()
+	assert.True(t, common.AwaitWaitGroup(&wg, maxTestDuration), "first notification has to be there")
+
+	updateHandler(ChangedEvent{}) // we call updateHandler, but .GetMembers provides the same set of hosts
+	time.Sleep(100 * time.Millisecond)
+	assert.True(t, len(changeCh) == 0, "should not be notified again since membership remained the same")
 }
 
 func TestRefreshWillNotifySubscribers(t *testing.T) {
@@ -324,8 +333,7 @@ func TestRefreshWillNotifySubscribers(t *testing.T) {
 		assert.NotEmpty(t, changedEvent2, "changed event should never be empty")
 	}()
 
-	td.bypassRefreshRatelimiter()
-	td.hashRing.signalSelf()
+	td.hashRing.handleUpdates(ChangedEvent{})
 
 	// wait until both subscribers will get notification
 	require.True(t, common.AwaitWaitGroup(&wg, maxTestDuration))
@@ -360,9 +368,9 @@ func TestSubscribersAreNotifiedPeriodically(t *testing.T) {
 		assert.NotEmpty(t, event, "changed event should never be empty")
 	}()
 
-	td.mockTimeSource.BlockUntil(1)                   // we should wait until ticker(defaultRefreshInterval) is created
-	td.mockTimeSource.Advance(defaultRefreshInterval) // and only then to advance time
+	td.mockTimeSource.BlockUntil(2) // we should wait until ticker(defaultRefreshInterval) and debounce are waiting
 
+	td.mockTimeSource.Advance(defaultRefreshInterval)            // and only then to advance time
 	require.True(t, common.AwaitWaitGroup(&wg, maxTestDuration)) // wait until subscriber will get notification
 
 	// Test if internal members are updated
@@ -451,7 +459,6 @@ func TestLookupAndRefreshRaceCondition(t *testing.T) {
 	}()
 	go func() {
 		for i := 0; i < 50; i++ {
-			td.bypassRefreshRatelimiter()
 			assert.NoError(t, td.hashRing.refresh())
 		}
 		wg.Done()
