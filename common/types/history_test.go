@@ -42,6 +42,22 @@ var (
 	clientFeatureVersion   = "v1.0"
 	clientImpl             = "test-client"
 	currentBranchToken     = []byte("branch-token")
+	requestID              = "test-requestID"
+	scheduleID             = int64(100)
+	taskID                 = int64(200)
+	startedTimestamp       = int64(123456789)
+	attempt                = int64(3)
+	attempt32              = int32(3)
+	expirationTimestamp    = int64(1234567890)
+	firstDecisionBackoff   = int32(60)
+	partitionConfig        = map[string]string{"partition1": "value1"}
+	scheduledTime          = int64(1617181920)
+	startedTime            = int64(1617182920)
+	lastHeartbeatTime      = int64(1617183920)
+	lastFailureReason      = "test-failure"
+	lastWorkerIdentity     = "test-worker"
+	details                = []byte("test-details")
+	lastFailureDetails     = []byte("failure-details")
 )
 
 func TestDescribeMutableStateRequest(t *testing.T) {
@@ -590,4 +606,707 @@ func TestHistoryReapplyEventsRequest_GetRequest(t *testing.T) {
 	var nilStruct *HistoryReapplyEventsRequest
 	res = nilStruct.GetRequest()
 	assert.Nil(t, res)
+}
+
+func TestHistoryRecordActivityTaskHeartbeatRequest_GetDomainUUID(t *testing.T) {
+	testStruct := HistoryRecordActivityTaskHeartbeatRequest{
+		DomainUUID: domainUUID,
+	}
+
+	// Non-nil struct test
+	res := testStruct.GetDomainUUID()
+	assert.Equal(t, domainUUID, res)
+
+	// Nil struct test
+	var nilStruct *HistoryRecordActivityTaskHeartbeatRequest
+	res = nilStruct.GetDomainUUID()
+	assert.Equal(t, "", res)
+}
+
+func TestRecordActivityTaskStartedRequest_GetDomainUUID(t *testing.T) {
+	testStruct := RecordActivityTaskStartedRequest{
+		DomainUUID: domainUUID,
+	}
+
+	// Non-nil struct test
+	res := testStruct.GetDomainUUID()
+	assert.Equal(t, domainUUID, res)
+
+	// Nil struct test
+	var nilStruct *RecordActivityTaskStartedRequest
+	res = nilStruct.GetDomainUUID()
+	assert.Equal(t, "", res)
+}
+
+func TestRecordActivityTaskStartedRequest_GetScheduleID(t *testing.T) {
+	testStruct := RecordActivityTaskStartedRequest{
+		ScheduleID: scheduleID,
+	}
+
+	// Non-nil struct test
+	res := testStruct.GetScheduleID()
+	assert.Equal(t, scheduleID, res)
+
+	// Nil struct test
+	var nilStruct *RecordActivityTaskStartedRequest
+	res = nilStruct.GetScheduleID()
+	assert.Equal(t, int64(0), res)
+}
+
+func TestRecordActivityTaskStartedRequest_GetTaskID(t *testing.T) {
+	testStruct := RecordActivityTaskStartedRequest{
+		TaskID: taskID,
+	}
+
+	// Non-nil struct test
+	res := testStruct.GetTaskID()
+	assert.Equal(t, taskID, res)
+
+	// Nil struct test
+	var nilStruct *RecordActivityTaskStartedRequest
+	res = nilStruct.GetTaskID()
+	assert.Equal(t, int64(0), res)
+}
+
+func TestRecordActivityTaskStartedRequest_GetRequestID(t *testing.T) {
+	testStruct := RecordActivityTaskStartedRequest{
+		RequestID: requestID,
+	}
+
+	// Non-nil struct test
+	res := testStruct.GetRequestID()
+	assert.Equal(t, requestID, res)
+
+	// Nil struct test
+	var nilStruct *RecordActivityTaskStartedRequest
+	res = nilStruct.GetRequestID()
+	assert.Equal(t, "", res)
+}
+
+func TestRecordActivityTaskStartedResponse_GetAttempt(t *testing.T) {
+	testStruct := RecordActivityTaskStartedResponse{
+		Attempt: attempt,
+	}
+
+	// Non-nil struct test
+	res := testStruct.GetAttempt()
+	assert.Equal(t, attempt, res)
+
+	// Nil struct test
+	var nilStruct *RecordActivityTaskStartedResponse
+	res = nilStruct.GetAttempt()
+	assert.Equal(t, int64(0), res)
+}
+
+func TestRecordActivityTaskStartedResponse_GetScheduledTimestampOfThisAttempt(t *testing.T) {
+	testStruct := RecordActivityTaskStartedResponse{
+		ScheduledTimestampOfThisAttempt: &startedTimestamp,
+	}
+
+	// Non-nil struct test
+	res := testStruct.GetScheduledTimestampOfThisAttempt()
+	assert.Equal(t, startedTimestamp, res)
+
+	// Nil struct test
+	var nilStruct *RecordActivityTaskStartedResponse
+	res = nilStruct.GetScheduledTimestampOfThisAttempt()
+	assert.Equal(t, int64(0), res)
+}
+
+func TestRecordChildExecutionCompletedRequest_GetDomainUUID(t *testing.T) {
+	testStruct := RecordChildExecutionCompletedRequest{
+		DomainUUID: domainUUID,
+	}
+
+	// Non-nil struct test
+	res := testStruct.GetDomainUUID()
+	assert.Equal(t, domainUUID, res)
+
+	// Nil struct test
+	var nilStruct *RecordChildExecutionCompletedRequest
+	res = nilStruct.GetDomainUUID()
+	assert.Equal(t, "", res)
+}
+
+func TestRecordDecisionTaskStartedRequest_GetDomainUUID(t *testing.T) {
+	testStruct := RecordDecisionTaskStartedRequest{
+		DomainUUID: domainUUID,
+	}
+
+	// Non-nil struct test
+	res := testStruct.GetDomainUUID()
+	assert.Equal(t, domainUUID, res)
+
+	// Nil struct test
+	var nilStruct *RecordDecisionTaskStartedRequest
+	res = nilStruct.GetDomainUUID()
+	assert.Equal(t, "", res)
+}
+
+func TestRecordDecisionTaskStartedRequest_GetScheduleID(t *testing.T) {
+	testStruct := RecordDecisionTaskStartedRequest{
+		ScheduleID: scheduleID,
+	}
+
+	// Non-nil struct test
+	res := testStruct.GetScheduleID()
+	assert.Equal(t, scheduleID, res)
+
+	// Nil struct test
+	var nilStruct *RecordDecisionTaskStartedRequest
+	res = nilStruct.GetScheduleID()
+	assert.Equal(t, int64(0), res)
+}
+
+func TestRecordDecisionTaskStartedRequest_GetRequestID(t *testing.T) {
+	testStruct := RecordDecisionTaskStartedRequest{
+		RequestID: requestID,
+	}
+
+	// Non-nil struct test
+	res := testStruct.GetRequestID()
+	assert.Equal(t, requestID, res)
+
+	// Nil struct test
+	var nilStruct *RecordDecisionTaskStartedRequest
+	res = nilStruct.GetRequestID()
+	assert.Equal(t, "", res)
+}
+
+func TestRecordDecisionTaskStartedResponse_GetPreviousStartedEventID(t *testing.T) {
+	testStruct := RecordDecisionTaskStartedResponse{
+		PreviousStartedEventID: &previousStartedEventID,
+	}
+
+	// Non-nil struct test
+	res := testStruct.GetPreviousStartedEventID()
+	assert.Equal(t, previousStartedEventID, res)
+
+	// Nil struct test
+	var nilStruct *RecordDecisionTaskStartedResponse
+	res = nilStruct.GetPreviousStartedEventID()
+	assert.Equal(t, int64(0), res)
+}
+
+func TestRecordDecisionTaskStartedResponse_GetScheduledEventID(t *testing.T) {
+	scheduledEventID := int64(1001)
+	testStruct := RecordDecisionTaskStartedResponse{
+		ScheduledEventID: scheduledEventID,
+	}
+
+	// Non-nil struct test
+	res := testStruct.GetScheduledEventID()
+	assert.Equal(t, scheduledEventID, res)
+
+	// Nil struct test
+	var nilStruct *RecordDecisionTaskStartedResponse
+	res = nilStruct.GetScheduledEventID()
+	assert.Equal(t, int64(0), res)
+}
+
+func TestRecordDecisionTaskStartedResponse_GetAttempt(t *testing.T) {
+	testStruct := RecordDecisionTaskStartedResponse{
+		Attempt: attempt,
+	}
+
+	// Non-nil struct test
+	res := testStruct.GetAttempt()
+	assert.Equal(t, attempt, res)
+
+	// Nil struct test
+	var nilStruct *RecordDecisionTaskStartedResponse
+	res = nilStruct.GetAttempt()
+	assert.Equal(t, int64(0), res)
+}
+
+func TestRemoveSignalMutableStateRequest_GetDomainUUID(t *testing.T) {
+	testStruct := RemoveSignalMutableStateRequest{
+		DomainUUID: domainUUID,
+	}
+
+	// Non-nil struct test
+	res := testStruct.GetDomainUUID()
+	assert.Equal(t, domainUUID, res)
+
+	// Nil struct test
+	var nilStruct *RemoveSignalMutableStateRequest
+	res = nilStruct.GetDomainUUID()
+	assert.Equal(t, "", res)
+}
+
+func TestRemoveSignalMutableStateRequest_GetRequestID(t *testing.T) {
+	testStruct := RemoveSignalMutableStateRequest{
+		RequestID: requestID,
+	}
+
+	// Non-nil struct test
+	res := testStruct.GetRequestID()
+	assert.Equal(t, requestID, res)
+
+	// Nil struct test
+	var nilStruct *RemoveSignalMutableStateRequest
+	res = nilStruct.GetRequestID()
+	assert.Equal(t, "", res)
+}
+
+func TestReplicateEventsV2Request_GetDomainUUID(t *testing.T) {
+	testStruct := ReplicateEventsV2Request{
+		DomainUUID: domainUUID,
+	}
+
+	// Non-nil struct test
+	res := testStruct.GetDomainUUID()
+	assert.Equal(t, domainUUID, res)
+
+	// Nil struct test
+	var nilStruct *ReplicateEventsV2Request
+	res = nilStruct.GetDomainUUID()
+	assert.Equal(t, "", res)
+}
+
+func TestHistoryRefreshWorkflowTasksRequest_GetRequest(t *testing.T) {
+	// Define a sample RefreshWorkflowTasksRequest
+	sampleRequest := &RefreshWorkflowTasksRequest{}
+
+	// Test when the struct is non-nil and Request is non-nil
+	testStruct := HistoryRefreshWorkflowTasksRequest{
+		Request: sampleRequest,
+	}
+
+	res := testStruct.GetRequest()
+	assert.Equal(t, sampleRequest, res)
+
+	// Test when the struct is non-nil but Request is nil
+	testStructWithNilRequest := HistoryRefreshWorkflowTasksRequest{
+		Request: nil,
+	}
+
+	res = testStructWithNilRequest.GetRequest()
+	assert.Nil(t, res)
+
+	// Test when the struct itself is nil
+	var nilStruct *HistoryRefreshWorkflowTasksRequest
+	res = nilStruct.GetRequest()
+	assert.Nil(t, res)
+}
+
+func TestHistoryRequestCancelWorkflowExecutionRequest_GetDomainUUID(t *testing.T) {
+	testStruct := HistoryRequestCancelWorkflowExecutionRequest{
+		DomainUUID: domainUUID,
+	}
+
+	res := testStruct.GetDomainUUID()
+	assert.Equal(t, domainUUID, res)
+
+	var nilStruct *HistoryRequestCancelWorkflowExecutionRequest
+	res = nilStruct.GetDomainUUID()
+	assert.Equal(t, "", res)
+}
+
+func TestHistoryRequestCancelWorkflowExecutionRequest_GetCancelRequest(t *testing.T) {
+	cancelRequest := &RequestCancelWorkflowExecutionRequest{}
+	testStruct := HistoryRequestCancelWorkflowExecutionRequest{
+		CancelRequest: cancelRequest,
+	}
+
+	res := testStruct.GetCancelRequest()
+	assert.Equal(t, cancelRequest, res)
+
+	var nilStruct *HistoryRequestCancelWorkflowExecutionRequest
+	res = nilStruct.GetCancelRequest()
+	assert.Nil(t, res)
+}
+
+func TestHistoryRequestCancelWorkflowExecutionRequest_GetExternalWorkflowExecution(t *testing.T) {
+	externalWorkflowExecution := &WorkflowExecution{}
+	testStruct := HistoryRequestCancelWorkflowExecutionRequest{
+		ExternalWorkflowExecution: externalWorkflowExecution,
+	}
+
+	res := testStruct.GetExternalWorkflowExecution()
+	assert.Equal(t, externalWorkflowExecution, res)
+
+	var nilStruct *HistoryRequestCancelWorkflowExecutionRequest
+	res = nilStruct.GetExternalWorkflowExecution()
+	assert.Nil(t, res)
+}
+
+func TestHistoryRequestCancelWorkflowExecutionRequest_GetChildWorkflowOnly(t *testing.T) {
+	testStruct := HistoryRequestCancelWorkflowExecutionRequest{
+		ChildWorkflowOnly: true,
+	}
+
+	res := testStruct.GetChildWorkflowOnly()
+	assert.True(t, res)
+
+	var nilStruct *HistoryRequestCancelWorkflowExecutionRequest
+	res = nilStruct.GetChildWorkflowOnly()
+	assert.False(t, res)
+}
+
+func TestHistoryResetStickyTaskListRequest_GetDomainUUID(t *testing.T) {
+	testStruct := HistoryResetStickyTaskListRequest{
+		DomainUUID: domainUUID,
+	}
+
+	res := testStruct.GetDomainUUID()
+	assert.Equal(t, domainUUID, res)
+
+	var nilStruct *HistoryResetStickyTaskListRequest
+	res = nilStruct.GetDomainUUID()
+	assert.Equal(t, "", res)
+}
+
+func TestHistoryResetWorkflowExecutionRequest_GetDomainUUID(t *testing.T) {
+	testStruct := HistoryResetWorkflowExecutionRequest{
+		DomainUUID: domainUUID,
+	}
+
+	res := testStruct.GetDomainUUID()
+	assert.Equal(t, domainUUID, res)
+
+	var nilStruct *HistoryResetWorkflowExecutionRequest
+	res = nilStruct.GetDomainUUID()
+	assert.Equal(t, "", res)
+}
+
+func TestHistoryRespondActivityTaskCanceledRequest_GetDomainUUID(t *testing.T) {
+	testStruct := HistoryRespondActivityTaskCanceledRequest{
+		DomainUUID: domainUUID,
+	}
+
+	res := testStruct.GetDomainUUID()
+	assert.Equal(t, domainUUID, res)
+
+	var nilStruct *HistoryRespondActivityTaskCanceledRequest
+	res = nilStruct.GetDomainUUID()
+	assert.Equal(t, "", res)
+}
+
+func TestHistoryRespondActivityTaskCompletedRequest_GetDomainUUID(t *testing.T) {
+	testStruct := HistoryRespondActivityTaskCompletedRequest{
+		DomainUUID: domainUUID,
+	}
+
+	res := testStruct.GetDomainUUID()
+	assert.Equal(t, domainUUID, res)
+
+	var nilStruct *HistoryRespondActivityTaskCompletedRequest
+	res = nilStruct.GetDomainUUID()
+	assert.Equal(t, "", res)
+}
+
+func TestHistoryRespondActivityTaskFailedRequest_GetDomainUUID(t *testing.T) {
+	testStruct := HistoryRespondActivityTaskFailedRequest{
+		DomainUUID: domainUUID,
+	}
+
+	res := testStruct.GetDomainUUID()
+	assert.Equal(t, domainUUID, res)
+
+	var nilStruct *HistoryRespondActivityTaskFailedRequest
+	res = nilStruct.GetDomainUUID()
+	assert.Equal(t, "", res)
+}
+
+func TestHistoryRespondDecisionTaskCompletedRequest_GetDomainUUID(t *testing.T) {
+	testStruct := HistoryRespondDecisionTaskCompletedRequest{
+		DomainUUID: domainUUID,
+	}
+
+	res := testStruct.GetDomainUUID()
+	assert.Equal(t, domainUUID, res)
+
+	var nilStruct *HistoryRespondDecisionTaskCompletedRequest
+	res = nilStruct.GetDomainUUID()
+	assert.Equal(t, "", res)
+}
+
+func TestHistoryRespondDecisionTaskCompletedRequest_GetCompleteRequest(t *testing.T) {
+	completeRequest := &RespondDecisionTaskCompletedRequest{}
+	testStruct := HistoryRespondDecisionTaskCompletedRequest{
+		CompleteRequest: completeRequest,
+	}
+
+	res := testStruct.GetCompleteRequest()
+	assert.Equal(t, completeRequest, res)
+
+	var nilStruct *HistoryRespondDecisionTaskCompletedRequest
+	res = nilStruct.GetCompleteRequest()
+	assert.Nil(t, res)
+}
+
+func TestHistoryRespondDecisionTaskFailedRequest_GetDomainUUID(t *testing.T) {
+	testStruct := HistoryRespondDecisionTaskFailedRequest{
+		DomainUUID: domainUUID,
+	}
+
+	res := testStruct.GetDomainUUID()
+	assert.Equal(t, domainUUID, res)
+
+	var nilStruct *HistoryRespondDecisionTaskFailedRequest
+	res = nilStruct.GetDomainUUID()
+	assert.Equal(t, "", res)
+}
+
+func TestScheduleDecisionTaskRequest_GetDomainUUID(t *testing.T) {
+	testStruct := ScheduleDecisionTaskRequest{
+		DomainUUID: domainUUID,
+	}
+
+	res := testStruct.GetDomainUUID()
+	assert.Equal(t, domainUUID, res)
+
+	var nilStruct *ScheduleDecisionTaskRequest
+	res = nilStruct.GetDomainUUID()
+	assert.Equal(t, "", res)
+}
+
+func TestShardOwnershipLostError_GetOwner(t *testing.T) {
+	owner := "test-owner"
+	testStruct := ShardOwnershipLostError{
+		Owner: owner,
+	}
+
+	res := testStruct.GetOwner()
+	assert.Equal(t, owner, res)
+
+	var nilStruct *ShardOwnershipLostError
+	res = nilStruct.GetOwner()
+	assert.Equal(t, "", res)
+}
+
+func TestHistorySignalWithStartWorkflowExecutionRequest_GetDomainUUID(t *testing.T) {
+	testStruct := HistorySignalWithStartWorkflowExecutionRequest{
+		DomainUUID: domainUUID,
+	}
+
+	res := testStruct.GetDomainUUID()
+	assert.Equal(t, domainUUID, res)
+
+	var nilStruct *HistorySignalWithStartWorkflowExecutionRequest
+	res = nilStruct.GetDomainUUID()
+	assert.Equal(t, "", res)
+}
+
+func TestHistorySignalWithStartWorkflowExecutionRequest_GetPartitionConfig(t *testing.T) {
+	partitionConfig := map[string]string{"partition1": "value1"}
+	testStruct := HistorySignalWithStartWorkflowExecutionRequest{
+		PartitionConfig: partitionConfig,
+	}
+
+	res := testStruct.GetPartitionConfig()
+	assert.Equal(t, partitionConfig, res)
+
+	var nilStruct *HistorySignalWithStartWorkflowExecutionRequest
+	res = nilStruct.GetPartitionConfig()
+	assert.Nil(t, res)
+}
+
+func TestHistorySignalWorkflowExecutionRequest_GetDomainUUID(t *testing.T) {
+	testStruct := HistorySignalWorkflowExecutionRequest{
+		DomainUUID: domainUUID,
+	}
+
+	res := testStruct.GetDomainUUID()
+	assert.Equal(t, domainUUID, res)
+
+	var nilStruct *HistorySignalWorkflowExecutionRequest
+	res = nilStruct.GetDomainUUID()
+	assert.Equal(t, "", res)
+}
+
+func TestHistorySignalWorkflowExecutionRequest_GetChildWorkflowOnly(t *testing.T) {
+	testStruct := HistorySignalWorkflowExecutionRequest{
+		ChildWorkflowOnly: true,
+	}
+
+	res := testStruct.GetChildWorkflowOnly()
+	assert.True(t, res)
+
+	var nilStruct *HistorySignalWorkflowExecutionRequest
+	res = nilStruct.GetChildWorkflowOnly()
+	assert.False(t, res)
+}
+
+func TestHistoryStartWorkflowExecutionRequest_GetDomainUUID(t *testing.T) {
+	testStruct := HistoryStartWorkflowExecutionRequest{
+		DomainUUID: domainUUID,
+	}
+
+	res := testStruct.GetDomainUUID()
+	assert.Equal(t, domainUUID, res)
+
+	var nilStruct *HistoryStartWorkflowExecutionRequest
+	res = nilStruct.GetDomainUUID()
+	assert.Equal(t, "", res)
+}
+
+func TestHistoryStartWorkflowExecutionRequest_GetAttempt(t *testing.T) {
+	testStruct := HistoryStartWorkflowExecutionRequest{
+		Attempt: attempt32,
+	}
+
+	res := testStruct.GetAttempt()
+	assert.Equal(t, attempt32, res)
+
+	var nilStruct *HistoryStartWorkflowExecutionRequest
+	res = nilStruct.GetAttempt()
+	assert.Equal(t, int32(0), res)
+}
+
+func TestHistoryStartWorkflowExecutionRequest_GetExpirationTimestamp(t *testing.T) {
+	testStruct := HistoryStartWorkflowExecutionRequest{
+		ExpirationTimestamp: &expirationTimestamp,
+	}
+
+	res := testStruct.GetExpirationTimestamp()
+	assert.Equal(t, expirationTimestamp, res)
+
+	var nilStruct *HistoryStartWorkflowExecutionRequest
+	res = nilStruct.GetExpirationTimestamp()
+	assert.Equal(t, int64(0), res)
+}
+
+func TestHistoryStartWorkflowExecutionRequest_GetFirstDecisionTaskBackoffSeconds(t *testing.T) {
+	testStruct := HistoryStartWorkflowExecutionRequest{
+		FirstDecisionTaskBackoffSeconds: &firstDecisionBackoff,
+	}
+
+	res := testStruct.GetFirstDecisionTaskBackoffSeconds()
+	assert.Equal(t, firstDecisionBackoff, res)
+
+	var nilStruct *HistoryStartWorkflowExecutionRequest
+	res = nilStruct.GetFirstDecisionTaskBackoffSeconds()
+	assert.Equal(t, int32(0), res)
+}
+
+func TestHistoryStartWorkflowExecutionRequest_GetPartitionConfig(t *testing.T) {
+	testStruct := HistoryStartWorkflowExecutionRequest{
+		PartitionConfig: partitionConfig,
+	}
+
+	res := testStruct.GetPartitionConfig()
+	assert.Equal(t, partitionConfig, res)
+
+	var nilStruct *HistoryStartWorkflowExecutionRequest
+	res = nilStruct.GetPartitionConfig()
+	assert.Nil(t, res)
+}
+
+func TestSyncActivityRequest_GetDomainID(t *testing.T) {
+	testStruct := SyncActivityRequest{
+		DomainID: domainUUID,
+	}
+
+	res := testStruct.GetDomainID()
+	assert.Equal(t, domainUUID, res)
+
+	var nilStruct *SyncActivityRequest
+	res = nilStruct.GetDomainID()
+	assert.Equal(t, "", res)
+}
+
+func TestSyncActivityRequest_GetScheduledTime(t *testing.T) {
+	testStruct := SyncActivityRequest{
+		ScheduledTime: &scheduledTime,
+	}
+
+	res := testStruct.GetScheduledTime()
+	assert.Equal(t, scheduledTime, res)
+
+	var nilStruct *SyncActivityRequest
+	res = nilStruct.GetScheduledTime()
+	assert.Equal(t, int64(0), res)
+}
+
+func TestSyncActivityRequest_GetStartedTime(t *testing.T) {
+	testStruct := SyncActivityRequest{
+		StartedTime: &startedTime,
+	}
+
+	res := testStruct.GetStartedTime()
+	assert.Equal(t, startedTime, res)
+
+	var nilStruct *SyncActivityRequest
+	res = nilStruct.GetStartedTime()
+	assert.Equal(t, int64(0), res)
+}
+
+func TestSyncActivityRequest_GetLastHeartbeatTime(t *testing.T) {
+	testStruct := SyncActivityRequest{
+		LastHeartbeatTime: &lastHeartbeatTime,
+	}
+
+	res := testStruct.GetLastHeartbeatTime()
+	assert.Equal(t, lastHeartbeatTime, res)
+
+	var nilStruct *SyncActivityRequest
+	res = nilStruct.GetLastHeartbeatTime()
+	assert.Equal(t, int64(0), res)
+}
+
+func TestSyncActivityRequest_GetDetails(t *testing.T) {
+	testStruct := SyncActivityRequest{
+		Details: details,
+	}
+
+	res := testStruct.GetDetails()
+	assert.Equal(t, details, res)
+
+	var nilStruct *SyncActivityRequest
+	res = nilStruct.GetDetails()
+	assert.Nil(t, res)
+}
+
+func TestSyncActivityRequest_GetLastFailureReason(t *testing.T) {
+	testStruct := SyncActivityRequest{
+		LastFailureReason: &lastFailureReason,
+	}
+
+	res := testStruct.GetLastFailureReason()
+	assert.Equal(t, lastFailureReason, res)
+
+	var nilStruct *SyncActivityRequest
+	res = nilStruct.GetLastFailureReason()
+	assert.Equal(t, "", res)
+}
+
+func TestSyncActivityRequest_GetLastWorkerIdentity(t *testing.T) {
+	testStruct := SyncActivityRequest{
+		LastWorkerIdentity: lastWorkerIdentity,
+	}
+
+	res := testStruct.GetLastWorkerIdentity()
+	assert.Equal(t, lastWorkerIdentity, res)
+
+	var nilStruct *SyncActivityRequest
+	res = nilStruct.GetLastWorkerIdentity()
+	assert.Equal(t, "", res)
+}
+
+func TestSyncActivityRequest_GetLastFailureDetails(t *testing.T) {
+	testStruct := SyncActivityRequest{
+		LastFailureDetails: lastFailureDetails,
+	}
+
+	res := testStruct.GetLastFailureDetails()
+	assert.Equal(t, lastFailureDetails, res)
+
+	var nilStruct *SyncActivityRequest
+	res = nilStruct.GetLastFailureDetails()
+	assert.Nil(t, res)
+}
+
+func TestSyncActivityRequest_GetAttempt(t *testing.T) {
+	testStruct := SyncActivityRequest{
+		Attempt: attempt32,
+	}
+
+	res := testStruct.GetAttempt()
+	assert.Equal(t, attempt32, res)
+
+	var nilStruct *SyncActivityRequest
+	res = nilStruct.GetAttempt()
+	assert.Equal(t, int32(0), res)
 }
