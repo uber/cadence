@@ -98,7 +98,11 @@ func NewResolver(
 	logger log.Logger,
 	metrics metrics.Client,
 ) (*MultiringResolver, error) {
-	return NewMultiringResolver(service.List, provider, logger.WithTags(tag.ComponentServiceResolver), metrics), nil
+	return NewMultiringResolver([]string{
+		// these are the sharded services
+		service.Matching,
+		service.History,
+	}, provider, logger.WithTags(tag.ComponentServiceResolver), metrics), nil
 }
 
 // NewMultiringResolver creates hashrings for all services
