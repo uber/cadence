@@ -99,7 +99,8 @@ func NewResolver(
 	metrics metrics.Client,
 ) (*MultiringResolver, error) {
 	return NewMultiringResolver([]string{
-		// these are the sharded services
+		service.Frontend,
+		service.Worker,
 		service.Matching,
 		service.History,
 	}, provider, logger.WithTags(tag.ComponentServiceResolver), metrics), nil
