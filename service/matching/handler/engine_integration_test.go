@@ -389,6 +389,99 @@ func (s *matchingEngineSuite) PollForTasksEmptyResultTest(callContext context.Co
 	s.EqualValues(1, s.taskManager.GetRangeID(tlID))
 }
 
+func (s *matchingEngineSuite) TestQueryWorkflow() {
+	domainID := "domainId"
+	tl := "makeToast"
+	tlKind := types.TaskListKindNormal
+	stickyTl := "makeStickyToast"
+	stickyTlKind := types.TaskListKindSticky
+	identity := "selfDrivingToaster"
+	taskList := &types.TaskList{
+		Name: tl,
+		Kind: &tlKind,
+	}
+	stickyTaskList := &types.TaskList{}
+	stickyTaskList.Name = stickyTl
+	stickyTaskList.Kind = &stickyTlKind
+
+	s.matchingEngine.config.RangeSize = 2 // to test that range is not updated without tasks
+
+	runID := "run1"
+	workflowID := "workflow1"
+	workflowType := types.WorkflowType{
+		Name: "workflow",
+	}
+	execution := types.WorkflowExecution{RunID: runID, WorkflowID: workflowID}
+
+	// History service is using mock
+	s.mockHistoryClient.EXPECT().GetMutableState(gomock.Any(), &types.GetMutableStateRequest{
+		DomainUUID: domainID,
+		Execution:  &execution,
+	}).Return(&types.GetMutableStateResponse{
+		PreviousStartedEventID: common.Int64Ptr(123),
+		NextEventID:            345,
+		WorkflowType:           &workflowType,
+		TaskList:               taskList,
+		CurrentBranchToken:     []byte(`branch token`),
+		HistorySize:            999,
+		ClientImpl:             "uber-go",
+		ClientFeatureVersion:   "1.0.0",
+		StickyTaskList:         stickyTaskList,
+	}, nil)
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		resp, err := s.matchingEngine.PollForDecisionTask(s.handlerContext, &types.MatchingPollForDecisionTaskRequest{
+			DomainUUID: domainID,
+			PollRequest: &types.PollForDecisionTaskRequest{
+				TaskList: taskList,
+				Identity: identity,
+			},
+		})
+		s.NoError(err)
+		s.NotNil(resp.TaskToken)
+		token, err := s.matchingEngine.tokenSerializer.DeserializeQueryTaskToken(resp.TaskToken)
+		s.NoError(err)
+		s.Equal(domainID, token.DomainID)
+		s.Equal(workflowID, token.WorkflowID)
+		s.Equal(runID, token.RunID)
+		s.Equal(tl, token.TaskList)
+		s.True(resp.StickyExecutionEnabled)
+		err = s.matchingEngine.RespondQueryTaskCompleted(s.handlerContext, &types.MatchingRespondQueryTaskCompletedRequest{
+			DomainUUID: domainID,
+			TaskList:   taskList,
+			TaskID:     token.TaskID,
+			CompletedRequest: &types.RespondQueryTaskCompletedRequest{
+				TaskToken:     []byte(``),
+				CompletedType: types.QueryTaskCompletedTypeCompleted.Ptr(),
+				QueryResult:   []byte(`result`),
+				WorkerVersionInfo: &types.WorkerVersionInfo{
+					Impl:           "uber-go",
+					FeatureVersion: "1.5.0",
+				},
+			},
+		})
+		s.NoError(err)
+	}()
+	time.Sleep(10 * time.Millisecond) // wait for poller to start
+	resp, err := s.matchingEngine.QueryWorkflow(s.handlerContext, &types.MatchingQueryWorkflowRequest{
+		DomainUUID: domainID,
+		TaskList:   taskList,
+		QueryRequest: &types.QueryWorkflowRequest{
+			Domain:                "domain",
+			Execution:             &execution,
+			QueryConsistencyLevel: types.QueryConsistencyLevelStrong.Ptr(),
+		},
+	})
+	wg.Wait()
+	s.NoError(err)
+	s.Equal(&types.QueryWorkflowResponse{
+		QueryResult: []byte(`result`),
+	}, resp)
+}
+
 func (s *matchingEngineSuite) TestAddActivityTasks() {
 	s.AddTasksTest(persistence.TaskListTypeActivity, false)
 }
