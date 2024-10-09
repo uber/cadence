@@ -438,6 +438,11 @@ func Name(k string) Tag {
 	return newStringTag("name", k)
 }
 
+// Mode returns tag for Mode
+func Mode(mode string) Tag {
+	return newStringTag("mode", mode)
+}
+
 // Value returns tag for Value
 func Value(v interface{}) Tag {
 	return newObjectTag("value", v)

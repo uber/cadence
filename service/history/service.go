@@ -110,6 +110,8 @@ func (s *Service) Start() {
 		DomainCache:                    s.Resource.GetDomainCache(),
 		Logger:                         s.Resource.GetLogger(),
 		MetricsClient:                  s.Resource.GetMetricsClient(),
+		RatelimitExternalPerWorkflowID: s.config.WorkflowIDCacheExternalEnabled,
+		RatelimitInternalPerWorkflowID: s.config.WorkflowIDCacheInternalEnabled,
 	})
 
 	rawHandler := handler.NewHandler(s.Resource, s.config, wfIDCache, s.config.WorkflowIDInternalRateLimitEnabled)
