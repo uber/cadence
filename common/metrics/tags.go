@@ -64,6 +64,7 @@ const (
 	workflowCloseStatus       = "workflow_close_status"
 	isolationEnabled          = "isolation_enabled"
 	topic                     = "topic"
+	mode                      = "mode"
 
 	// limiter-side tags
 	globalRatelimitKey            = "global_ratelimit_key"
@@ -322,4 +323,8 @@ func IsolationEnabledTag(enabled bool) Tag {
 
 func TopicTag(value string) Tag {
 	return metricWithUnknown(topic, value)
+}
+
+func ModeTag(value string) Tag {
+	return metricWithUnknown(mode, value)
 }
