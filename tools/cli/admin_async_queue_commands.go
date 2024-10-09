@@ -45,7 +45,7 @@ func AdminGetAsyncWFConfig(c *cli.Context) error {
 	ctx, cancel, err := newContext(c)
 	defer cancel()
 	if err != nil {
-		return commoncli.Problem("Error in creating context: %v", err)
+		return commoncli.Problem("Error in creating context: ", err)
 	}
 
 	req := &types.GetDomainAsyncWorkflowConfiguratonRequest{
@@ -91,7 +91,7 @@ func AdminUpdateAsyncWFConfig(c *cli.Context) error {
 	ctx, cancel, err := newContext(c)
 	defer cancel()
 	if err != nil {
-		return commoncli.Problem("Error in creating context: %v", err)
+		return commoncli.Problem("Error in creating context: ", err)
 	}
 
 	req := &types.UpdateDomainAsyncWorkflowConfiguratonRequest{

@@ -109,7 +109,7 @@ func AdminFailoverQuery(c *cli.Context) error {
 	tcCtx, cancel, err := newContext(c)
 	defer cancel()
 	if err != nil {
-		return commoncli.Problem("Error in creating context: %v", err)
+		return commoncli.Problem("Error in creating context: ", err)
 	}
 	workflowID := getFailoverWorkflowID(c)
 	runID := getRunID(c)
@@ -180,7 +180,7 @@ func AdminFailoverRollback(c *cli.Context) error {
 	tcCtx, cancel, err := newContext(c)
 	defer cancel()
 	if err != nil {
-		return commoncli.Problem("Error in creating context: %v", err)
+		return commoncli.Problem("Error in creating context: ", err)
 	}
 	runID := getRunID(c)
 
@@ -312,11 +312,11 @@ func failoverStart(c *cli.Context, params *startParams) error {
 	tcCtx, cancel, err := newContext(c)
 	defer cancel()
 	if err != nil {
-		return commoncli.Problem("Error in creating context: %v", err)
+		return commoncli.Problem("Error in creating context: ", err)
 	}
 	op, err := getOperator()
 	if err != nil {
-		return commoncli.Problem("Error in getting operator: %v", err)
+		return commoncli.Problem("Error in getting operator: ", err)
 	}
 	memo, err := getWorkflowMemo(map[string]interface{}{
 		common.MemoKeyForOperator: op,
@@ -410,7 +410,7 @@ func executePauseOrResume(c *cli.Context, workflowID string, isPause bool) error
 	tcCtx, cancel, err := newContext(c)
 	defer cancel()
 	if err != nil {
-		return commoncli.Problem("Error in creating context: %v", err)
+		return commoncli.Problem("Error in creating context: ", err)
 	}
 	runID := getRunID(c)
 	var signalName string

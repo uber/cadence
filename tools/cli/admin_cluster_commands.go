@@ -67,7 +67,7 @@ func AdminAddSearchAttribute(c *cli.Context) error {
 	}
 	ctx, cancel, err := newContext(c)
 	if err != nil {
-		return commoncli.Problem("Error in creating context: %v", err)
+		return commoncli.Problem("Error in creating context: ", err)
 	}
 	defer cancel()
 	request := &types.AddSearchAttributeRequest{
@@ -95,7 +95,7 @@ func AdminDescribeCluster(c *cli.Context) error {
 	ctx, cancel, err := newContext(c)
 	defer cancel()
 	if err != nil {
-		return commoncli.Problem("Error in creating :", err)
+		return commoncli.Problem("Error in creating context: ", err)
 	}
 	response, err := adminClient.DescribeCluster(ctx)
 	if err != nil {

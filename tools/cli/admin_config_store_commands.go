@@ -65,7 +65,7 @@ func AdminGetDynamicConfig(c *cli.Context) error {
 	ctx, cancel, err := newContext(c)
 	defer cancel()
 	if err != nil {
-		return commoncli.Problem("Error in creating context: %v", err)
+		return commoncli.Problem("Error in creating context: ", err)
 	}
 	if len(filters) == 0 {
 		req := &types.ListDynamicConfigRequest{
@@ -137,7 +137,7 @@ func AdminUpdateDynamicConfig(c *cli.Context) error {
 	ctx, cancel, err := newContext(c)
 	defer cancel()
 	if err != nil {
-		return commoncli.Problem("Error in creating context: %v", err)
+		return commoncli.Problem("Error in creating context: ", err)
 	}
 	var parsedValues []*types.DynamicConfigValue
 
@@ -189,7 +189,7 @@ func AdminRestoreDynamicConfig(c *cli.Context) error {
 	ctx, cancel, err := newContext(c)
 	defer cancel()
 	if err != nil {
-		return commoncli.Problem("Error in creating context: %v", err)
+		return commoncli.Problem("Error in creating context: ", err)
 	}
 	parsedFilters, err := parseInputFilterArray(filters)
 	if err != nil {
@@ -219,7 +219,7 @@ func AdminListDynamicConfig(c *cli.Context) error {
 	ctx, cancel, err := newContext(c)
 	defer cancel()
 	if err != nil {
-		return commoncli.Problem("Error in creating context: %v", err)
+		return commoncli.Problem("Error in creating context: ", err)
 	}
 	req := &types.ListDynamicConfigRequest{
 		ConfigName: "", // empty string means all config values

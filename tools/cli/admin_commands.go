@@ -55,7 +55,7 @@ func AdminShowWorkflow(c *cli.Context) error {
 	ctx, cancel, err := newContext(c)
 	defer cancel()
 	if err != nil {
-		return commoncli.Problem("Error in creating context: %v", err)
+		return commoncli.Problem("Error in creating context: ", err)
 	}
 	serializer := persistence.NewPayloadSerializer()
 	var history []*persistence.DataBlob
@@ -189,7 +189,7 @@ func describeMutableState(c *cli.Context) (*types.AdminDescribeWorkflowExecution
 	ctx, cancel, err := newContext(c)
 	defer cancel()
 	if err != nil {
-		return nil, commoncli.Problem("Error in creating context: %v", err)
+		return nil, commoncli.Problem("Error in creating context: ", err)
 	}
 	resp, err := adminClient.DescribeWorkflowExecution(
 		ctx,
@@ -233,7 +233,7 @@ func AdminMaintainCorruptWorkflow(c *cli.Context) error {
 	ctx, cancel, err := newContext(c)
 	defer cancel()
 	if err != nil {
-		return commoncli.Problem("Error in creating context: %v", err)
+		return commoncli.Problem("Error in creating context: ", err)
 	}
 	_, err = adminClient.MaintainCorruptWorkflow(ctx, request)
 	if err != nil {
@@ -260,7 +260,7 @@ func AdminDeleteWorkflow(c *cli.Context) error {
 	ctx, cancel, err := newContext(c)
 	defer cancel()
 	if err != nil {
-		return commoncli.Problem("Error in creating context: %v", err)
+		return commoncli.Problem("Error in creating context: ", err)
 	}
 	// With remote flag, we run the command on the server side using existing APIs
 	// Without remote, commands are run directly through some DB clients. This is
@@ -394,7 +394,7 @@ func AdminGetDomainIDOrName(c *cli.Context) error {
 	ctx, cancel, err := newContext(c)
 	defer cancel()
 	if err != nil {
-		return commoncli.Problem("Error in creating context: %v", err)
+		return commoncli.Problem("Error in creating context: ", err)
 	}
 	if len(domainID) > 0 {
 		domain, err := domainManager.GetDomain(ctx, &persistence.GetDomainRequest{ID: domainID})
@@ -459,7 +459,7 @@ func AdminRemoveTask(c *cli.Context) error {
 	ctx, cancel, err := newContext(c)
 	defer cancel()
 	if err != nil {
-		return commoncli.Problem("Error in creating context: %v", err)
+		return commoncli.Problem("Error in creating context: ", err)
 	}
 	req := &types.RemoveTaskRequest{
 		ShardID:             int32(shardID),
@@ -485,7 +485,7 @@ func AdminDescribeShard(c *cli.Context) error {
 	ctx, cancel, err := newContext(c)
 	defer cancel()
 	if err != nil {
-		return commoncli.Problem("Error in creating context: %v", err)
+		return commoncli.Problem("Error in creating context: ", err)
 	}
 	shardManager, err := initializeShardManager(c)
 	if err != nil {
@@ -514,7 +514,7 @@ func AdminSetShardRangeID(c *cli.Context) error {
 	ctx, cancel, err := newContext(c)
 	defer cancel()
 	if err != nil {
-		return commoncli.Problem("Error in creating context: %v", err)
+		return commoncli.Problem("Error in creating context: ", err)
 	}
 	shardManager, err := initializeShardManager(c)
 	if err != nil {
@@ -687,7 +687,7 @@ func AdminRefreshWorkflowTasks(c *cli.Context) error {
 	ctx, cancel, err := newContext(c)
 	defer cancel()
 	if err != nil {
-		return commoncli.Problem("Error in creating context: %v", err)
+		return commoncli.Problem("Error in creating context: ", err)
 	}
 	err = adminClient.RefreshWorkflowTasks(ctx, &types.RefreshWorkflowTasksRequest{
 		Domain: domain,
@@ -725,7 +725,7 @@ func AdminResetQueue(c *cli.Context) error {
 	ctx, cancel, err := newContext(c)
 	defer cancel()
 	if err != nil {
-		return commoncli.Problem("Error in creating context: %v", err)
+		return commoncli.Problem("Error in creating context: ", err)
 	}
 	req := &types.ResetQueueRequest{
 		ShardID:     int32(shardID),
@@ -764,7 +764,7 @@ func AdminDescribeQueue(c *cli.Context) error {
 	ctx, cancel, err := newContext(c)
 	defer cancel()
 	if err != nil {
-		return commoncli.Problem("Error in creating context: %v", err)
+		return commoncli.Problem("Error in creating context: ", err)
 	}
 	req := &types.DescribeQueueRequest{
 		ShardID:     int32(shardID),

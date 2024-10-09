@@ -385,7 +385,7 @@ func constructStartWorkflowRequest(c *cli.Context) (*types.StartWorkflowExecutio
 	reusePolicy := defaultWorkflowIDReusePolicy.Ptr()
 	wfidreusepolicy, err := getWorkflowIDReusePolicy(c.Int(FlagWorkflowIDReusePolicy))
 	if err != nil {
-		return nil, commoncli.Problem("Error getting wf reuse policy: %v", err)
+		return nil, commoncli.Problem("Error getting wf reuse policy: ", err)
 	}
 	if c.IsSet(FlagWorkflowIDReusePolicy) {
 		reusePolicy = wfidreusepolicy
@@ -458,7 +458,7 @@ func constructStartWorkflowRequest(c *cli.Context) (*types.StartWorkflowExecutio
 
 	memoFields, err := processMemo(c)
 	if err != nil {
-		return nil, commoncli.Problem("Error processing memo: %v", err)
+		return nil, commoncli.Problem("Error processing memo: ", err)
 	}
 	if len(memoFields) != 0 {
 		startRequest.Memo = &types.Memo{Fields: memoFields}

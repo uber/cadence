@@ -293,7 +293,7 @@ func AdminPurgeDLQMessages(c *cli.Context) error {
 	for shardID := range getShards(c) {
 		ctx, cancel, err := newContext(c)
 		if err != nil {
-			return commoncli.Problem("Error in creating context: %v", err)
+			return commoncli.Problem("Error in creating context: ", err)
 		}
 		err = adminClient.PurgeDLQMessages(ctx, &types.PurgeDLQMessagesRequest{
 			Type:                  dlqType,
