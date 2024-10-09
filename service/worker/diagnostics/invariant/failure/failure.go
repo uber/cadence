@@ -30,6 +30,7 @@ import (
 	"github.com/uber/cadence/service/worker/diagnostics/invariant"
 )
 
+// Failure is an invariant that will be used to identify the different failures in the workflow execution history
 type Failure invariant.Invariant
 
 type failure struct {
@@ -42,7 +43,7 @@ type Params struct {
 	Domain                   string
 }
 
-func NewInvariant(p Params) invariant.Invariant {
+func NewInvariant(p Params) Failure {
 	return &failure{
 		workflowExecutionHistory: p.WorkflowExecutionHistory,
 		domain:                   p.Domain,
@@ -53,7 +54,7 @@ func (f *failure) Check(context.Context) ([]invariant.InvariantCheckResult, erro
 	result := make([]invariant.InvariantCheckResult, 0)
 	events := f.workflowExecutionHistory.GetHistory().GetEvents()
 	for _, event := range events {
-		if event.WorkflowExecutionFailedEventAttributes != nil && event.GetWorkflowExecutionFailedEventAttributes().Reason != nil {
+		if event.WorkflowExecutionFailedEventAttributes != nil && event.WorkflowExecutionFailedEventAttributes.Reason != nil {
 			attr := event.GetWorkflowExecutionFailedEventAttributes()
 			reason := attr.Reason
 			identity := fetchIdentity(attr, events)
@@ -63,7 +64,7 @@ func (f *failure) Check(context.Context) ([]invariant.InvariantCheckResult, erro
 				Metadata:      invariant.MarshalData(failureMetadata{Identity: identity}),
 			})
 		}
-		if event.ActivityTaskFailedEventAttributes != nil && event.GetActivityTaskFailedEventAttributes().Reason != nil {
+		if event.ActivityTaskFailedEventAttributes != nil && event.ActivityTaskFailedEventAttributes.Reason != nil {
 			attr := event.GetActivityTaskFailedEventAttributes()
 			reason := attr.Reason
 			result = append(result, invariant.InvariantCheckResult{
