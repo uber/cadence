@@ -23,6 +23,7 @@
 package debounce
 
 import (
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -42,7 +43,7 @@ const (
 type callbackTestData struct {
 	mockedTimeSource  clock.MockedTimeSource
 	debouncedCallback *DebouncedCallback
-	calls             int
+	calls             atomic.Int32
 }
 
 func waitCondition(fn func() bool, duration time.Duration) bool {
@@ -69,7 +70,7 @@ func newCallbackTestData(t *testing.T) *callbackTestData {
 
 	td.mockedTimeSource = clock.NewMockedTimeSourceAt(time.Now())
 	callback := func() {
-		td.calls++
+		td.calls.Add(1)
 	}
 
 	td.debouncedCallback = NewDebouncedCallback(td.mockedTimeSource, testDebounceInterval, callback)
@@ -85,10 +86,10 @@ func TestDebouncedCallbackWorks(t *testing.T) {
 	td.debouncedCallback.Handler()
 	require.True(
 		t,
-		waitCondition(func() bool { return td.calls > 0 }, testTimeout),
+		waitCondition(func() bool { return td.calls.Load() > 0 }, testTimeout),
 		"first callback is expected to be issued immediately after handler",
 	)
-	assert.Equal(t, 1, td.calls, "should be just once call since handler() called once")
+	assert.Equal(t, 1, int(td.calls.Load()), "should be just once call since handler() called once")
 
 	// issue more calls to handler(); they all should be postponed to testDebounceInterval
 	for i := 0; i < 10; i++ {
@@ -97,7 +98,7 @@ func TestDebouncedCallbackWorks(t *testing.T) {
 
 	td.mockedTimeSource.Advance(testDebounceInterval)
 	time.Sleep(testSleepAmount)
-	assert.Equal(t, 2, td.calls)
+	assert.Equal(t, 2, int(td.calls.Load()))
 
 	// now call handler again, but advance time only by little - no callbacks are expected
 	for i := 0; i < 10; i++ {
@@ -106,7 +107,7 @@ func TestDebouncedCallbackWorks(t *testing.T) {
 
 	td.mockedTimeSource.Advance(testDebounceInterval / 2)
 	time.Sleep(testSleepAmount)
-	assert.Equal(t, 2, td.calls, "should not have new callbacks")
+	assert.Equal(t, 2, int(td.calls.Load()), "should not have new callbacks")
 }
 
 func TestDebouncedCallbackDoesntCallHandlerIfThereWereNoUpdates(t *testing.T) {
@@ -114,7 +115,7 @@ func TestDebouncedCallbackDoesntCallHandlerIfThereWereNoUpdates(t *testing.T) {
 
 	td.mockedTimeSource.Advance(2 * testDebounceInterval)
 	time.Sleep(testSleepAmount)
-	assert.Equal(t, 0, td.calls)
+	assert.Equal(t, 0, int(td.calls.Load()))
 }
 
 func TestDebouncedCallbackDoubleStopIsOK(t *testing.T) {

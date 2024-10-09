@@ -66,7 +66,7 @@ type PeerProvider interface {
 type ring struct {
 	debounce *debounce.DebouncedChannel
 
-	status       int32
+	status       common.DaemonStatusManager
 	service      string
 	peerProvider PeerProvider
 	shutdownCh   chan struct{}
@@ -97,7 +97,6 @@ func newHashring(
 	scope metrics.Scope,
 ) *ring {
 	r := &ring{
-		status:       common.DaemonStatusInitialized,
 		service:      service,
 		peerProvider: provider,
 		shutdownCh:   make(chan struct{}),
@@ -120,11 +119,7 @@ func emptyHashring() *hashring.HashRing {
 
 // Start starts the hashring
 func (r *ring) Start() {
-	if !atomic.CompareAndSwapInt32(
-		&r.status,
-		common.DaemonStatusInitialized,
-		common.DaemonStatusStarted,
-	) {
+	if !r.status.TransitionToStart() {
 		return
 	}
 
@@ -143,11 +138,7 @@ func (r *ring) Start() {
 
 // Stop stops the resolver
 func (r *ring) Stop() {
-	if !atomic.CompareAndSwapInt32(
-		&r.status,
-		common.DaemonStatusStarted,
-		common.DaemonStatusStopped,
-	) {
+	if !r.status.TransitionToStop() {
 		return
 	}
 

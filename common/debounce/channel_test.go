@@ -25,6 +25,7 @@ package debounce
 import (
 	"context"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -62,9 +63,9 @@ func newChannelTestData(t *testing.T) *channelTestData {
 	return &td
 }
 
-func (td *channelTestData) countCalls(t *testing.T, calls *int) {
+func (td *channelTestData) countCalls(t *testing.T, calls *atomic.Int32) {
 	// create a reader from channel which will save calls:
-	//   this way it should be easier to write tests by just evaluating td.calls
+	//   this way it should be easier to write tests by just evaluating `calls`
 	var wg sync.WaitGroup
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -75,7 +76,7 @@ func (td *channelTestData) countCalls(t *testing.T, calls *int) {
 		for {
 			select {
 			case <-td.debouncedChannel.Chan():
-				*calls++
+				calls.Add(1)
 			case <-ctx.Done():
 				return
 			}
@@ -97,16 +98,16 @@ func (td *channelTestData) countCalls(t *testing.T, calls *int) {
 func TestDebouncedSignalWorks(t *testing.T) {
 	td := newChannelTestData(t)
 
-	var calls int
+	var calls atomic.Int32
 	td.countCalls(t, &calls)
 
 	td.debouncedChannel.Handler()
 	require.True(
 		t,
-		waitCondition(func() bool { return calls > 0 }, testTimeout),
+		waitCondition(func() bool { return calls.Load() > 0 }, testTimeout),
 		"first callback is expected to be issued immediately after handler",
 	)
-	assert.Equal(t, 1, calls, 1)
+	assert.Equal(t, 1, int(calls.Load()), 1)
 
 	// we call handler multiple times. There should be just one message in channel
 	for i := 0; i < 10; i++ {
@@ -115,7 +116,7 @@ func TestDebouncedSignalWorks(t *testing.T) {
 
 	td.mockedTimeSource.Advance(testDebounceInterval)
 	time.Sleep(testSleepAmount)
-	assert.Equal(t, 2, calls)
+	assert.Equal(t, 2, int(calls.Load()))
 
 	// now call handler again, but advance time only by little - no messages in channel are expected
 	for i := 0; i < 10; i++ {
@@ -124,7 +125,7 @@ func TestDebouncedSignalWorks(t *testing.T) {
 
 	td.mockedTimeSource.Advance(testDebounceInterval / 2)
 	time.Sleep(testSleepAmount)
-	assert.Equal(t, 2, calls, "should not have new messages in channel")
+	assert.Equal(t, 2, int(calls.Load()), "should not have new messages in channel")
 }
 
 func TestDebouncedSignalDoesntDuplicateIfWeDontReadChannel(t *testing.T) {
@@ -145,9 +146,9 @@ func TestDebouncedSignalDoesntDuplicateIfWeDontReadChannel(t *testing.T) {
 	time.Sleep(testSleepAmount)
 
 	// only now we start reading messages from channel
-	var calls int
+	var calls atomic.Int32
 	td.countCalls(t, &calls)
 	time.Sleep(testSleepAmount)
 
-	assert.Equal(t, 1, calls, "Only a single message is expected")
+	assert.Equal(t, 1, int(calls.Load()), "Only a single message is expected")
 }

@@ -27,12 +27,14 @@ import (
 	"sync"
 	"time"
 
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/clock"
 )
 
 type DebouncedCallback struct {
 	sync.Mutex
 
+	status          common.DaemonStatusManager
 	lastHandlerCall time.Time
 	callback        func()
 	interval        time.Duration
@@ -61,6 +63,10 @@ func NewDebouncedCallback(timeSource clock.TimeSource, interval time.Duration, c
 }
 
 func (d *DebouncedCallback) Start() {
+	if !d.status.TransitionToStart() {
+		return
+	}
+
 	d.waitGroup.Add(1)
 	go func() {
 		defer d.waitGroup.Done()
@@ -69,6 +75,10 @@ func (d *DebouncedCallback) Start() {
 }
 
 func (d *DebouncedCallback) Stop() {
+	if !d.status.TransitionToStop() {
+		return
+	}
+
 	d.cancelLoop()
 	d.waitGroup.Wait()
 }

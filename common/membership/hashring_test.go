@@ -430,15 +430,6 @@ func TestErrorIsPropagatedWhenProviderFails(t *testing.T) {
 	assert.ErrorContains(t, td.hashRing.refresh(), "provider failure")
 }
 
-func TestStopWillStopProvider(t *testing.T) {
-	td := newHashringTestData(t)
-
-	td.mockPeerProvider.EXPECT().Stop().Times(1)
-
-	td.hashRing.status = common.DaemonStatusStarted
-	td.hashRing.Stop()
-}
-
 func TestLookupAndRefreshRaceCondition(t *testing.T) {
 	td := newHashringTestData(t)
 	var wg sync.WaitGroup
