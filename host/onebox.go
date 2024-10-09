@@ -54,6 +54,7 @@ import (
 	"github.com/uber/cadence/common/domain"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/elasticsearch"
+	"github.com/uber/cadence/common/isolationgroup/isolationgroupapi"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/membership"
@@ -577,6 +578,7 @@ func (c *cadenceImpl) startFrontend(hosts map[string][]membership.HostInfo, star
 	params.ESClient = c.esClient
 	params.PinotConfig = c.pinotConfig
 	params.PinotClient = c.pinotClient
+	params.GetIsolationGroups = getFromDynamicConfig(params)
 	var err error
 	authorizer, err := authorization.NewAuthorizer(c.authorizationConfig, params.Logger, nil)
 	if err != nil {
@@ -661,6 +663,7 @@ func (c *cadenceImpl) startHistory(hosts map[string][]membership.HostInfo, start
 		params.ESConfig = c.esConfig
 		params.ESClient = c.esClient
 		params.PinotConfig = c.pinotConfig
+		params.GetIsolationGroups = getFromDynamicConfig(params)
 
 		var err error
 		params.PersistenceConfig, err = copyPersistenceConfig(c.persistenceConfig)
@@ -733,6 +736,7 @@ func (c *cadenceImpl) startMatching(hosts map[string][]membership.HostInfo, star
 		params.DynamicConfig = newIntegrationConfigClient(dynamicconfig.NewNopClient(), c.matchingDynCfgOverrides)
 		params.ArchivalMetadata = c.archiverMetadata
 		params.ArchiverProvider = c.archiverProvider
+		params.GetIsolationGroups = getFromDynamicConfig(params)
 
 		var err error
 		params.PersistenceConfig, err = copyPersistenceConfig(c.persistenceConfig)
@@ -793,6 +797,7 @@ func (c *cadenceImpl) startWorker(hosts map[string][]membership.HostInfo, startW
 	params.DynamicConfig = newIntegrationConfigClient(dynamicconfig.NewNopClient(), c.workerDynCfgOverrides)
 	params.ArchivalMetadata = c.archiverMetadata
 	params.ArchiverProvider = c.archiverProvider
+	params.GetIsolationGroups = getFromDynamicConfig(params)
 
 	var err error
 	params.PersistenceConfig, err = copyPersistenceConfig(c.persistenceConfig)
@@ -1095,4 +1100,20 @@ func (vm *versionMiddleware) Handle(ctx context.Context, req *transport.Request,
 		With(common.ClientImplHeaderName, cc.GoSDK)
 
 	return h.Handle(ctx, req, resw)
+}
+
+func getFromDynamicConfig(params *resource.Params) func() []string {
+	return func() []string {
+		list, err := params.DynamicConfig.GetListValue(dynamicconfig.AllIsolationGroups, nil)
+		if err != nil {
+			params.Logger.Error("failed to get isolation groups from config", tag.Error(err))
+			return nil
+		}
+		res, err := isolationgroupapi.MapAllIsolationGroupsResponse(list)
+		if err != nil {
+			params.Logger.Error("failed to map isolation groups from config", tag.Error(err))
+			return nil
+		}
+		return res
+	}
 }

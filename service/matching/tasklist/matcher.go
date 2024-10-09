@@ -535,6 +535,9 @@ func (tm *taskMatcherImpl) pollOrForward(
 			TaskListType: tm.tasklist.GetType(),
 			TaskListKind: tm.tasklistKind.Ptr(),
 			EventName:    "Attempting to Forward Poll",
+			Payload: map[string]any{
+				"IsolationGroup": isolationGroup,
+			},
 		})
 		if task, err := tm.fwdr.ForwardPoll(ctx); err == nil {
 			token.release(isolationGroup)

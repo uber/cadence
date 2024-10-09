@@ -38,8 +38,9 @@ import (
 )
 
 var (
-	outputFile = flag.String("out", "simulation_comparison.csv", "Output file")
-	mode       = flag.String("mode", "RunAndCompare", "Mode to run the tool in. Options: RunAndCompare, Compare. "+
+	scenarioFilter = flag.String("scenarios", ".*", "Regex to filter the tests to execute by name")
+	outputFile     = flag.String("out", "simulation_comparison.csv", "Output file")
+	mode           = flag.String("mode", "RunAndCompare", "Mode to run the tool in. Options: RunAndCompare, Compare. "+
 		"RunAndCompare runs the simulation and compares the results. "+
 		"Compare only compares the results of previously run results. Compare requires --ts flag to be set.")
 	timestamp = flag.String("ts", "", "Timestamp of the simulation run to compare in following format '2006-01-02-15-04-05'. Required when mode is Compare")
@@ -237,6 +238,11 @@ func mustGetSimulationScenarios(root string) []string {
 		log.Fatal(err)
 	}
 
+	scenarioFilterRegex, err := regexp.Compile(*scenarioFilter)
+	if err != nil {
+		log.Fatalf("Error parsing scenarios flag: %v", err)
+	}
+
 	var scenarios []string
 	for _, entry := range entries {
 		if entry.IsDir() {
@@ -247,8 +253,13 @@ func mustGetSimulationScenarios(root string) []string {
 		if len(matches) == 0 {
 			continue
 		}
+		scenarioName := matches[simNameRegex.SubexpIndex("name")]
+		if scenarioFilterRegex.MatchString(scenarioName) {
+			scenarios = append(scenarios, scenarioName)
+		} else {
+			log.Printf("Skipping %s due to scenario filter", scenarioName)
+		}
 
-		scenarios = append(scenarios, matches[simNameRegex.SubexpIndex("name")])
 	}
 
 	fmt.Println("Simulation scenarios found: \n  ", strings.Join(scenarios, "\n   "))
