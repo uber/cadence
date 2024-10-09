@@ -23,7 +23,6 @@
 package timeout
 
 import (
-	"encoding/json"
 	"fmt"
 	"sort"
 	"time"
@@ -133,9 +132,4 @@ func getExecutionTime(startID, timeoutID int64, events []*types.HistoryEvent) ti
 	firstEvent := events[startID-1]
 	lastEvent := events[timeoutID-1]
 	return time.Unix(0, common.Int64Default(lastEvent.Timestamp)).Sub(time.Unix(0, common.Int64Default(firstEvent.Timestamp)))
-}
-
-func marshalData(rc any) []byte {
-	data, _ := json.Marshal(rc)
-	return data
 }

@@ -70,7 +70,7 @@ func (t *timeout) Check(context.Context) ([]invariant.InvariantCheckResult, erro
 			result = append(result, invariant.InvariantCheckResult{
 				InvariantType: TimeoutTypeExecution.String(),
 				Reason:        event.GetWorkflowExecutionTimedOutEventAttributes().GetTimeoutType().String(),
-				Metadata:      marshalData(data),
+				Metadata:      invariant.MarshalData(data),
 			})
 		}
 		if event.ActivityTaskTimedOutEventAttributes != nil {
@@ -81,7 +81,7 @@ func (t *timeout) Check(context.Context) ([]invariant.InvariantCheckResult, erro
 			result = append(result, invariant.InvariantCheckResult{
 				InvariantType: TimeoutTypeActivity.String(),
 				Reason:        event.GetActivityTaskTimedOutEventAttributes().GetTimeoutType().String(),
-				Metadata:      marshalData(metadata),
+				Metadata:      invariant.MarshalData(metadata),
 			})
 		}
 		if event.DecisionTaskTimedOutEventAttributes != nil {
@@ -89,7 +89,7 @@ func (t *timeout) Check(context.Context) ([]invariant.InvariantCheckResult, erro
 			result = append(result, invariant.InvariantCheckResult{
 				InvariantType: TimeoutTypeDecision.String(),
 				Reason:        reason,
-				Metadata:      marshalData(metadata),
+				Metadata:      invariant.MarshalData(metadata),
 			})
 		}
 		if event.ChildWorkflowExecutionTimedOutEventAttributes != nil {
@@ -102,7 +102,7 @@ func (t *timeout) Check(context.Context) ([]invariant.InvariantCheckResult, erro
 			result = append(result, invariant.InvariantCheckResult{
 				InvariantType: TimeoutTypeChildWorkflow.String(),
 				Reason:        event.GetChildWorkflowExecutionTimedOutEventAttributes().TimeoutType.String(),
-				Metadata:      marshalData(data),
+				Metadata:      invariant.MarshalData(data),
 			})
 		}
 	}
@@ -166,7 +166,7 @@ func (t *timeout) checkTasklist(ctx context.Context, issue invariant.InvariantCh
 	}
 
 	tasklistBacklog := resp.GetTaskListStatus().GetBacklogCountHint()
-	polllersMetadataInBytes := marshalData(PollersMetadata{TaskListBacklog: tasklistBacklog})
+	polllersMetadataInBytes := invariant.MarshalData(PollersMetadata{TaskListBacklog: tasklistBacklog})
 	if len(resp.GetPollers()) == 0 {
 		return invariant.InvariantRootCauseResult{
 			RootCause: invariant.RootCauseTypeMissingPollers,
@@ -187,7 +187,7 @@ func checkHeartbeatStatus(issue invariant.InvariantCheckResult) ([]invariant.Inv
 		return nil, err
 	}
 
-	heartbeatingMetadataInBytes := marshalData(HeartbeatingMetadata{TimeElapsed: metadata.TimeElapsed})
+	heartbeatingMetadataInBytes := invariant.MarshalData(HeartbeatingMetadata{TimeElapsed: metadata.TimeElapsed})
 
 	if metadata.HeartBeatTimeout == 0 && activityStarted(metadata) {
 		return []invariant.InvariantRootCauseResult{
