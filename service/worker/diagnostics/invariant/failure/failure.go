@@ -54,8 +54,8 @@ func (f *failure) Check(context.Context) ([]invariant.InvariantCheckResult, erro
 	result := make([]invariant.InvariantCheckResult, 0)
 	events := f.workflowExecutionHistory.GetHistory().GetEvents()
 	for _, event := range events {
-		if event.WorkflowExecutionFailedEventAttributes != nil && event.WorkflowExecutionFailedEventAttributes.Reason != nil {
-			attr := event.GetWorkflowExecutionFailedEventAttributes()
+		if event.GetWorkflowExecutionFailedEventAttributes() != nil && event.WorkflowExecutionFailedEventAttributes.Reason != nil {
+			attr := event.WorkflowExecutionFailedEventAttributes
 			reason := attr.Reason
 			identity := fetchIdentity(attr, events)
 			result = append(result, invariant.InvariantCheckResult{
@@ -64,8 +64,8 @@ func (f *failure) Check(context.Context) ([]invariant.InvariantCheckResult, erro
 				Metadata:      invariant.MarshalData(failureMetadata{Identity: identity}),
 			})
 		}
-		if event.ActivityTaskFailedEventAttributes != nil && event.ActivityTaskFailedEventAttributes.Reason != nil {
-			attr := event.GetActivityTaskFailedEventAttributes()
+		if event.GetActivityTaskFailedEventAttributes() != nil && event.ActivityTaskFailedEventAttributes.Reason != nil {
+			attr := event.ActivityTaskFailedEventAttributes
 			reason := attr.Reason
 			result = append(result, invariant.InvariantCheckResult{
 				InvariantType: ActivityFailed.String(),
