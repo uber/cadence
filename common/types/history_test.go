@@ -29,35 +29,48 @@ import (
 )
 
 var (
-	domainUUID             = "test-domainUUID"
-	mutableStateInCache    = "test-cache"
-	mutableStateInDatabase = "test-database"
-	domainIDs              = []string{"id1", "id2", "id3"}
-	shardIDs               = []int32{1, 2, 3}
-	expectedNextEventID    = int64(123)
-	nextEventID            = int64(456)
-	previousStartedEventID = int64(789)
-	stickyTaskListTimeout  = int32(100)
-	workflowCloseState     = int32(2)
-	clientFeatureVersion   = "v1.0"
-	clientImpl             = "test-client"
-	currentBranchToken     = []byte("branch-token")
-	requestID              = "test-requestID"
-	scheduleID             = int64(100)
-	taskID                 = int64(200)
-	startedTimestamp       = int64(123456789)
-	attempt                = int64(3)
-	attempt32              = int32(3)
-	expirationTimestamp    = int64(1234567890)
-	firstDecisionBackoff   = int32(60)
-	partitionConfig        = map[string]string{"partition1": "value1"}
-	scheduledTime          = int64(1617181920)
-	startedTime            = int64(1617182920)
-	lastHeartbeatTime      = int64(1617183920)
-	lastFailureReason      = "test-failure"
-	lastWorkerIdentity     = "test-worker"
-	details                = []byte("test-details")
-	lastFailureDetails     = []byte("failure-details")
+	domainUUID                = "test-domainUUID"
+	mutableStateInCache       = "test-cache"
+	mutableStateInDatabase    = "test-database"
+	domainIDs                 = []string{"id1", "id2", "id3"}
+	shardIDs                  = []int32{1, 2, 3}
+	expectedNextEventID       = int64(123)
+	nextEventID               = int64(456)
+	previousStartedEventID    = int64(789)
+	stickyTaskListTimeout     = int32(100)
+	workflowCloseState        = int32(2)
+	clientFeatureVersion      = "v1.0"
+	clientImpl                = "test-client"
+	currentBranchToken        = []byte("branch-token")
+	requestID                 = "test-requestID"
+	scheduleID                = int64(100)
+	taskID                    = int64(200)
+	startedTimestamp          = int64(123456789)
+	attempt                   = int64(3)
+	attempt32                 = int32(3)
+	expirationTimestamp       = int64(1234567890)
+	firstDecisionBackoff      = int32(60)
+	partitionConfig           = map[string]string{"partition1": "value1"}
+	scheduledTime             = int64(1617181920)
+	startedTime               = int64(1617182920)
+	lastHeartbeatTime         = int64(1617183920)
+	lastFailureReason         = "test-failure"
+	lastWorkerIdentity        = "test-worker"
+	details                   = []byte("test-details")
+	lastFailureDetails        = []byte("failure-details")
+	versionHistory            = &VersionHistory{}
+	sourceCluster             = "source-cluster"
+	shardID                   = int64(1000)
+	terminateRequest          = &TerminateWorkflowExecutionRequest{}
+	externalWorkflowExecution = &WorkflowExecution{}
+	childWorkflowOnly         = true
+	pendingShards             = []int32{1, 2, 3}
+	completedShardCount       = int32(5)
+	workflowID                = "test-workflow-id"
+	runID                     = "test-run-id"
+	scheduledID               = int64(202)
+	startedID                 = int64(303)
+	version                   = int64(10)
 )
 
 func TestDescribeMutableStateRequest(t *testing.T) {
@@ -1309,4 +1322,212 @@ func TestSyncActivityRequest_GetAttempt(t *testing.T) {
 	var nilStruct *SyncActivityRequest
 	res = nilStruct.GetAttempt()
 	assert.Equal(t, int32(0), res)
+}
+
+func TestSyncActivityRequest_GetWorkflowID(t *testing.T) {
+	testStruct := SyncActivityRequest{
+		WorkflowID: workflowID,
+	}
+
+	res := testStruct.GetWorkflowID()
+	assert.Equal(t, workflowID, res)
+
+	var nilStruct *SyncActivityRequest
+	res = nilStruct.GetWorkflowID()
+	assert.Equal(t, "", res)
+}
+
+func TestSyncActivityRequest_GetRunID(t *testing.T) {
+	testStruct := SyncActivityRequest{
+		RunID: runID,
+	}
+
+	res := testStruct.GetRunID()
+	assert.Equal(t, runID, res)
+
+	var nilStruct *SyncActivityRequest
+	res = nilStruct.GetRunID()
+	assert.Equal(t, "", res)
+}
+
+func TestSyncActivityRequest_GetVersion(t *testing.T) {
+	testStruct := SyncActivityRequest{
+		Version: version,
+	}
+
+	res := testStruct.GetVersion()
+	assert.Equal(t, version, res)
+
+	var nilStruct *SyncActivityRequest
+	res = nilStruct.GetVersion()
+	assert.Equal(t, int64(0), res)
+}
+
+func TestSyncActivityRequest_GetScheduledID(t *testing.T) {
+	testStruct := SyncActivityRequest{
+		ScheduledID: scheduledID,
+	}
+
+	res := testStruct.GetScheduledID()
+	assert.Equal(t, scheduledID, res)
+
+	var nilStruct *SyncActivityRequest
+	res = nilStruct.GetScheduledID()
+	assert.Equal(t, int64(0), res)
+}
+
+func TestSyncActivityRequest_GetStartedID(t *testing.T) {
+	testStruct := SyncActivityRequest{
+		StartedID: startedID,
+	}
+
+	res := testStruct.GetStartedID()
+	assert.Equal(t, startedID, res)
+
+	var nilStruct *SyncActivityRequest
+	res = nilStruct.GetStartedID()
+	assert.Equal(t, int64(0), res)
+}
+
+func TestSyncActivityRequest_GetVersionHistory(t *testing.T) {
+	testStruct := SyncActivityRequest{
+		VersionHistory: versionHistory,
+	}
+
+	res := testStruct.GetVersionHistory()
+	assert.Equal(t, versionHistory, res)
+
+	var nilStruct *SyncActivityRequest
+	res = nilStruct.GetVersionHistory()
+	assert.Nil(t, res)
+}
+
+func TestSyncShardStatusRequest_GetSourceCluster(t *testing.T) {
+	testStruct := SyncShardStatusRequest{
+		SourceCluster: sourceCluster,
+	}
+
+	res := testStruct.GetSourceCluster()
+	assert.Equal(t, sourceCluster, res)
+
+	var nilStruct *SyncShardStatusRequest
+	res = nilStruct.GetSourceCluster()
+	assert.Equal(t, "", res)
+}
+
+func TestSyncShardStatusRequest_GetShardID(t *testing.T) {
+	testStruct := SyncShardStatusRequest{
+		ShardID: shardID,
+	}
+
+	res := testStruct.GetShardID()
+	assert.Equal(t, shardID, res)
+
+	var nilStruct *SyncShardStatusRequest
+	res = nilStruct.GetShardID()
+	assert.Equal(t, int64(0), res)
+}
+
+func TestSyncShardStatusRequest_GetTimestamp(t *testing.T) {
+	testStruct := SyncShardStatusRequest{
+		Timestamp: &startedTimestamp,
+	}
+
+	res := testStruct.GetTimestamp()
+	assert.Equal(t, startedTimestamp, res)
+
+	var nilStruct *SyncShardStatusRequest
+	res = nilStruct.GetTimestamp()
+	assert.Equal(t, int64(0), res)
+}
+
+func TestHistoryTerminateWorkflowExecutionRequest_GetDomainUUID(t *testing.T) {
+	testStruct := HistoryTerminateWorkflowExecutionRequest{
+		DomainUUID: domainUUID,
+	}
+
+	res := testStruct.GetDomainUUID()
+	assert.Equal(t, domainUUID, res)
+
+	var nilStruct *HistoryTerminateWorkflowExecutionRequest
+	res = nilStruct.GetDomainUUID()
+	assert.Equal(t, "", res)
+}
+
+func TestHistoryTerminateWorkflowExecutionRequest_GetTerminateRequest(t *testing.T) {
+	testStruct := HistoryTerminateWorkflowExecutionRequest{
+		TerminateRequest: terminateRequest,
+	}
+
+	res := testStruct.GetTerminateRequest()
+	assert.Equal(t, terminateRequest, res)
+
+	var nilStruct *HistoryTerminateWorkflowExecutionRequest
+	res = nilStruct.GetTerminateRequest()
+	assert.Nil(t, res)
+}
+
+func TestHistoryTerminateWorkflowExecutionRequest_GetExternalWorkflowExecution(t *testing.T) {
+	testStruct := HistoryTerminateWorkflowExecutionRequest{
+		ExternalWorkflowExecution: externalWorkflowExecution,
+	}
+
+	res := testStruct.GetExternalWorkflowExecution()
+	assert.Equal(t, externalWorkflowExecution, res)
+
+	var nilStruct *HistoryTerminateWorkflowExecutionRequest
+	res = nilStruct.GetExternalWorkflowExecution()
+	assert.Nil(t, res)
+}
+
+func TestHistoryTerminateWorkflowExecutionRequest_GetChildWorkflowOnly(t *testing.T) {
+	testStruct := HistoryTerminateWorkflowExecutionRequest{
+		ChildWorkflowOnly: childWorkflowOnly,
+	}
+
+	res := testStruct.GetChildWorkflowOnly()
+	assert.Equal(t, childWorkflowOnly, res)
+
+	var nilStruct *HistoryTerminateWorkflowExecutionRequest
+	res = nilStruct.GetChildWorkflowOnly()
+	assert.False(t, res)
+}
+
+func TestGetFailoverInfoRequest_GetDomainID(t *testing.T) {
+	testStruct := GetFailoverInfoRequest{
+		DomainID: domainUUID,
+	}
+
+	res := testStruct.GetDomainID()
+	assert.Equal(t, domainUUID, res)
+
+	var nilStruct *GetFailoverInfoRequest
+	res = nilStruct.GetDomainID()
+	assert.Equal(t, "", res)
+}
+
+func TestGetFailoverInfoResponse_GetCompletedShardCount(t *testing.T) {
+	testStruct := GetFailoverInfoResponse{
+		CompletedShardCount: completedShardCount,
+	}
+
+	res := testStruct.GetCompletedShardCount()
+	assert.Equal(t, completedShardCount, res)
+
+	var nilStruct *GetFailoverInfoResponse
+	res = nilStruct.GetCompletedShardCount()
+	assert.Equal(t, int32(0), res)
+}
+
+func TestGetFailoverInfoResponse_GetPendingShards(t *testing.T) {
+	testStruct := GetFailoverInfoResponse{
+		PendingShards: pendingShards,
+	}
+
+	res := testStruct.GetPendingShards()
+	assert.Equal(t, pendingShards, res)
+
+	var nilStruct *GetFailoverInfoResponse
+	res = nilStruct.GetPendingShards()
+	assert.Nil(t, res)
 }
