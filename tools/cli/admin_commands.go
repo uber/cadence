@@ -52,13 +52,19 @@ func AdminShowWorkflow(c *cli.Context) error {
 	maxEventID := c.Int64(FlagMaxEventID)
 	outputFileName := c.String(FlagOutputFilename)
 	domainName := c.String(FlagDomain)
-	ctx, cancel := newContext(c)
+	ctx, cancel, err := newContext(c)
 	defer cancel()
+	if err != nil {
+		return commoncli.Problem("Error in creating context: ", err)
+	}
 	serializer := persistence.NewPayloadSerializer()
 	var history []*persistence.DataBlob
 	if len(tid) != 0 {
 		thriftrwEncoder := codec.NewThriftRWEncoder()
-		histV2 := initializeHistoryManager(c)
+		histV2, err := initializeHistoryManager(c)
+		if err != nil {
+			return commoncli.Problem("Error in Admin delete WF: ", err)
+		}
 		branchToken, err := thriftrwEncoder.Encode(&shared.HistoryBranch{
 			TreeID:   &tid,
 			BranchID: &bid,
@@ -170,13 +176,21 @@ func describeMutableState(c *cli.Context) (*types.AdminDescribeWorkflowExecution
 		return nil, err
 	}
 
-	domain := getRequiredOption(c, FlagDomain)
-	wid := getRequiredOption(c, FlagWorkflowID)
+	domain, err := getRequiredOption(c, FlagDomain)
+	if err != nil {
+		return nil, commoncli.Problem("Required flag not found", err)
+	}
+	wid, err := getRequiredOption(c, FlagWorkflowID)
+	if err != nil {
+		return nil, commoncli.Problem("Required flag not found", err)
+	}
 	rid := c.String(FlagRunID)
 
-	ctx, cancel := newContext(c)
+	ctx, cancel, err := newContext(c)
 	defer cancel()
-
+	if err != nil {
+		return nil, commoncli.Problem("Error in creating context: ", err)
+	}
 	resp, err := adminClient.DescribeWorkflowExecution(
 		ctx,
 		&types.AdminDescribeWorkflowExecutionRequest{
@@ -195,7 +209,10 @@ func describeMutableState(c *cli.Context) (*types.AdminDescribeWorkflowExecution
 
 // AdminMaintainCorruptWorkflow deletes workflow from DB if it's corrupt
 func AdminMaintainCorruptWorkflow(c *cli.Context) error {
-	domainName := getRequiredOption(c, FlagDomain)
+	domainName, err := getRequiredOption(c, FlagDomain)
+	if err != nil {
+		return commoncli.Problem("Required flag not found", err)
+	}
 	workflowID := c.String(FlagWorkflowID)
 	runID := c.String(FlagRunID)
 	skipErrors := c.Bool(FlagSkipErrorMode)
@@ -213,8 +230,11 @@ func AdminMaintainCorruptWorkflow(c *cli.Context) error {
 		SkipErrors: skipErrors,
 	}
 
-	ctx, cancel := newContext(c)
+	ctx, cancel, err := newContext(c)
 	defer cancel()
+	if err != nil {
+		return commoncli.Problem("Error in creating context: ", err)
+	}
 	_, err = adminClient.MaintainCorruptWorkflow(ctx, request)
 	if err != nil {
 		return commoncli.Problem("Operation AdminMaintainCorruptWorkflow failed.", err)
@@ -225,15 +245,23 @@ func AdminMaintainCorruptWorkflow(c *cli.Context) error {
 
 // AdminDeleteWorkflow delete a workflow execution for admin
 func AdminDeleteWorkflow(c *cli.Context) error {
-	domain := getRequiredOption(c, FlagDomain)
-	wid := getRequiredOption(c, FlagWorkflowID)
+	domain, err := getRequiredOption(c, FlagDomain)
+	if err != nil {
+		return commoncli.Problem("Required flag not found", err)
+	}
+	wid, err := getRequiredOption(c, FlagWorkflowID)
+	if err != nil {
+		return commoncli.Problem("Required flag not found", err)
+	}
 	rid := c.String(FlagRunID)
 	remote := c.Bool(FlagRemote)
 	skipError := c.Bool(FlagSkipErrorMode)
 
-	ctx, cancel := newContext(c)
+	ctx, cancel, err := newContext(c)
 	defer cancel()
-
+	if err != nil {
+		return commoncli.Problem("Error in creating context: ", err)
+	}
 	// With remote flag, we run the command on the server side using existing APIs
 	// Without remote, commands are run directly through some DB clients. This is
 	// useful if server is down somehow. However, we only support couple DB clients
@@ -275,10 +303,15 @@ func AdminDeleteWorkflow(c *cli.Context) error {
 	if err != nil {
 		return commoncli.Problem("strconv.Atoi(shardID) err", err)
 	}
-	histV2 := initializeHistoryManager(c)
+	histV2, err := initializeHistoryManager(c)
 	defer histV2.Close()
-	exeStore := initializeExecutionStore(c, shardIDInt)
-
+	if err != nil {
+		return commoncli.Problem("Error in Admin delete WF: ", err)
+	}
+	exeStore, err := initializeExecutionStore(c, shardIDInt)
+	if err != nil {
+		return commoncli.Problem("Error in Admin delete WF: ", err)
+	}
 	branchInfo := shared.HistoryBranch{}
 	thriftrwEncoder := codec.NewThriftRWEncoder()
 	branchTokens := [][]byte{ms.ExecutionInfo.BranchToken}
@@ -354,10 +387,15 @@ func AdminGetDomainIDOrName(c *cli.Context) error {
 		return commoncli.Problem("Need either domainName or domainID", nil)
 	}
 
-	domainManager := initializeDomainManager(c)
-
-	ctx, cancel := newContext(c)
+	domainManager, err := initializeDomainManager(c)
+	if err != nil {
+		return commoncli.Problem("Error in Admin delete WF: ", err)
+	}
+	ctx, cancel, err := newContext(c)
 	defer cancel()
+	if err != nil {
+		return commoncli.Problem("Error in creating context: ", err)
+	}
 	if len(domainID) > 0 {
 		domain, err := domainManager.GetDomain(ctx, &persistence.GetDomainRequest{ID: domainID})
 		if err != nil {
@@ -376,7 +414,10 @@ func AdminGetDomainIDOrName(c *cli.Context) error {
 
 // AdminGetShardID get shardID
 func AdminGetShardID(c *cli.Context) error {
-	wid := getRequiredOption(c, FlagWorkflowID)
+	wid, err := getRequiredOption(c, FlagWorkflowID)
+	if err != nil {
+		return commoncli.Problem("Required flag not found", err)
+	}
 	numberOfShards := c.Int(FlagNumberOfShards)
 
 	if numberOfShards <= 0 {
@@ -394,18 +435,32 @@ func AdminRemoveTask(c *cli.Context) error {
 		return err
 	}
 
-	shardID := getRequiredIntOption(c, FlagShardID)
-	taskID := getRequiredInt64Option(c, FlagTaskID)
-	typeID := getRequiredIntOption(c, FlagTaskType)
+	shardID, err := getRequiredIntOption(c, FlagShardID)
+	if err != nil {
+		return commoncli.Problem("Required flag not found", err)
+	}
+	taskID, err := getRequiredInt64Option(c, FlagTaskID)
+	if err != nil {
+		return commoncli.Problem("Required flag not found", err)
+	}
+	typeID, err := getRequiredIntOption(c, FlagTaskType)
+	if err != nil {
+		return commoncli.Problem("Required flag not found", err)
+	}
 	var visibilityTimestamp int64
 	if common.TaskType(typeID) == common.TaskTypeTimer {
-		visibilityTimestamp = getRequiredInt64Option(c, FlagTaskVisibilityTimestamp)
+		visibilityTimestamp, err = getRequiredInt64Option(c, FlagTaskVisibilityTimestamp)
+		if err != nil {
+			return commoncli.Problem("Required flag not found", err)
+		}
 	}
 	var clusterName string
 
-	ctx, cancel := newContext(c)
+	ctx, cancel, err := newContext(c)
 	defer cancel()
-
+	if err != nil {
+		return commoncli.Problem("Error in creating context: ", err)
+	}
 	req := &types.RemoveTaskRequest{
 		ShardID:             int32(shardID),
 		Type:                common.Int32Ptr(int32(typeID)),
@@ -423,12 +478,19 @@ func AdminRemoveTask(c *cli.Context) error {
 
 // AdminDescribeShard describes shard by shard id
 func AdminDescribeShard(c *cli.Context) error {
-	sid := getRequiredIntOption(c, FlagShardID)
-
-	ctx, cancel := newContext(c)
+	sid, err := getRequiredIntOption(c, FlagShardID)
+	if err != nil {
+		return commoncli.Problem("Required flag not found", err)
+	}
+	ctx, cancel, err := newContext(c)
 	defer cancel()
-	shardManager := initializeShardManager(c)
-
+	if err != nil {
+		return commoncli.Problem("Error in creating context: ", err)
+	}
+	shardManager, err := initializeShardManager(c)
+	if err != nil {
+		return commoncli.Problem("Error in Admin delete WF: ", err)
+	}
 	getShardReq := &persistence.GetShardRequest{ShardID: sid}
 	shard, err := shardManager.GetShard(ctx, getShardReq)
 	if err != nil {
@@ -441,13 +503,23 @@ func AdminDescribeShard(c *cli.Context) error {
 
 // AdminSetShardRangeID set shard rangeID by shard id
 func AdminSetShardRangeID(c *cli.Context) error {
-	sid := getRequiredIntOption(c, FlagShardID)
-	rid := getRequiredInt64Option(c, FlagRangeID)
-
-	ctx, cancel := newContext(c)
+	sid, err := getRequiredIntOption(c, FlagShardID)
+	if err != nil {
+		return commoncli.Problem("Required flag not found", err)
+	}
+	rid, err := getRequiredInt64Option(c, FlagRangeID)
+	if err != nil {
+		return commoncli.Problem("Required flag not found", err)
+	}
+	ctx, cancel, err := newContext(c)
 	defer cancel()
-	shardManager := initializeShardManager(c)
-
+	if err != nil {
+		return commoncli.Problem("Error in creating context: ", err)
+	}
+	shardManager, err := initializeShardManager(c)
+	if err != nil {
+		return commoncli.Problem("Error in Admin delete WF: ", err)
+	}
 	getShardResp, err := shardManager.GetShard(ctx, &persistence.GetShardRequest{ShardID: sid})
 	if err != nil {
 		return commoncli.Problem("Failed to get shardInfo.", err)
@@ -477,11 +549,15 @@ func AdminCloseShard(c *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	sid := getRequiredIntOption(c, FlagShardID)
-
-	ctx, cancel := newContext(c)
+	sid, err := getRequiredIntOption(c, FlagShardID)
+	if err != nil {
+		return commoncli.Problem("Required option not found", err)
+	}
+	ctx, cancel, err := newContext(c)
 	defer cancel()
-
+	if err != nil {
+		return commoncli.Problem("Error in creating context", err)
+	}
 	req := &types.CloseShardRequest{}
 	req.ShardID = int32(sid)
 
@@ -504,9 +580,11 @@ func AdminDescribeShardDistribution(c *cli.Context) error {
 		return err
 	}
 
-	ctx, cancel := newContext(c)
+	ctx, cancel, err := newContext(c)
 	defer cancel()
-
+	if err != nil {
+		return commoncli.Problem("Error in creating context", err)
+	}
 	req := &types.DescribeShardDistributionRequest{
 		PageSize: int32(c.Int(FlagPageSize)),
 		PageID:   int32(c.Int(FlagPageID)),
@@ -561,9 +639,11 @@ func AdminDescribeHistoryHost(c *cli.Context) error {
 		return commoncli.Problem("at least one of them is required to provide to lookup host: workflowID, shardID and host address", nil)
 	}
 
-	ctx, cancel := newContext(c)
+	ctx, cancel, err := newContext(c)
 	defer cancel()
-
+	if err != nil {
+		return commoncli.Problem("Error in creating context", err)
+	}
 	req := &types.DescribeHistoryHostRequest{}
 	if len(wid) > 0 {
 		req.ExecutionForHost = &types.WorkflowExecution{WorkflowID: wid}
@@ -594,13 +674,21 @@ func AdminRefreshWorkflowTasks(c *cli.Context) error {
 		return err
 	}
 
-	domain := getRequiredOption(c, FlagDomain)
-	wid := getRequiredOption(c, FlagWorkflowID)
+	domain, err := getRequiredOption(c, FlagDomain)
+	if err != nil {
+		return commoncli.Problem("Required flag not found", err)
+	}
+	wid, err := getRequiredOption(c, FlagWorkflowID)
+	if err != nil {
+		return commoncli.Problem("Required flag not found", err)
+	}
 	rid := c.String(FlagRunID)
 
-	ctx, cancel := newContext(c)
+	ctx, cancel, err := newContext(c)
 	defer cancel()
-
+	if err != nil {
+		return commoncli.Problem("Error in creating context: ", err)
+	}
 	err = adminClient.RefreshWorkflowTasks(ctx, &types.RefreshWorkflowTasksRequest{
 		Domain: domain,
 		Execution: &types.WorkflowExecution{
@@ -622,13 +710,23 @@ func AdminResetQueue(c *cli.Context) error {
 		return err
 	}
 
-	shardID := getRequiredIntOption(c, FlagShardID)
-	clusterName := getRequiredOption(c, FlagCluster)
-	typeID := getRequiredIntOption(c, FlagQueueType)
-
-	ctx, cancel := newContext(c)
+	shardID, err := getRequiredIntOption(c, FlagShardID)
+	if err != nil {
+		return commoncli.Problem("Required flag not found", err)
+	}
+	clusterName, err := getRequiredOption(c, FlagCluster)
+	if err != nil {
+		return commoncli.Problem("Required flag not found", err)
+	}
+	typeID, err := getRequiredIntOption(c, FlagQueueType)
+	if err != nil {
+		return commoncli.Problem("Required flag not found", err)
+	}
+	ctx, cancel, err := newContext(c)
 	defer cancel()
-
+	if err != nil {
+		return commoncli.Problem("Error in creating context: ", err)
+	}
 	req := &types.ResetQueueRequest{
 		ShardID:     int32(shardID),
 		ClusterName: clusterName,
@@ -650,13 +748,24 @@ func AdminDescribeQueue(c *cli.Context) error {
 		return err
 	}
 
-	shardID := getRequiredIntOption(c, FlagShardID)
-	clusterName := getRequiredOption(c, FlagCluster)
-	typeID := getRequiredIntOption(c, FlagQueueType)
+	shardID, err := getRequiredIntOption(c, FlagShardID)
+	if err != nil {
+		return commoncli.Problem("Required flag not found", err)
+	}
+	clusterName, err := getRequiredOption(c, FlagCluster)
+	if err != nil {
+		return commoncli.Problem("Required flag not found", err)
+	}
+	typeID, err := getRequiredIntOption(c, FlagQueueType)
+	if err != nil {
+		return commoncli.Problem("Required flag not found", err)
+	}
 
-	ctx, cancel := newContext(c)
+	ctx, cancel, err := newContext(c)
 	defer cancel()
-
+	if err != nil {
+		return commoncli.Problem("Error in creating context: ", err)
+	}
 	req := &types.DescribeQueueRequest{
 		ShardID:     int32(shardID),
 		ClusterName: clusterName,

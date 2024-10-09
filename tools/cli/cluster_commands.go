@@ -53,8 +53,11 @@ func GetSearchAttributes(c *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	ctx, cancel := newContext(c)
+	ctx, cancel, err := newContext(c)
 	defer cancel()
+	if err != nil {
+		return commoncli.Problem("Error in creating context:", err)
+	}
 
 	resp, err := wfClient.GetSearchAttributes(ctx)
 	if err != nil {

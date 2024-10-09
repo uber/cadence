@@ -74,9 +74,11 @@ type HistoryDLQCountRow struct {
 // AdminCountDLQMessages returns info how many and where DLQ messages are queued
 func AdminCountDLQMessages(c *cli.Context) error {
 	force := c.Bool(FlagForce)
-	ctx, cancel := newContext(c)
+	ctx, cancel, err := newContext(c)
 	defer cancel()
-
+	if err != nil {
+		return commoncli.Problem("Error in creating context: ", err)
+	}
 	adminClient, err := getDeps(c).ServerAdminClient(c)
 	if err != nil {
 		return err
@@ -126,9 +128,11 @@ func AdminCountDLQMessages(c *cli.Context) error {
 
 // AdminGetDLQMessages gets DLQ metadata
 func AdminGetDLQMessages(c *cli.Context) error {
-	ctx, cancel := newContext(c)
+	ctx, cancel, err := newContext(c)
 	defer cancel()
-
+	if err != nil {
+		return commoncli.Problem("Error in creating context:", err)
+	}
 	client, err := getDeps(c).ServerFrontendClient(c)
 	if err != nil {
 		return err
@@ -137,10 +141,18 @@ func AdminGetDLQMessages(c *cli.Context) error {
 	if err != nil {
 		return err
 	}
-
-	dlqType := toQueueType(getRequiredOption(c, FlagDLQType))
-	sourceCluster := getRequiredOption(c, FlagSourceCluster)
-
+	fdlqtype, err := getRequiredOption(c, FlagDLQType)
+	if err != nil {
+		return commoncli.Problem("Required flag not found", err)
+	}
+	dlqType, err := toQueueType(fdlqtype)
+	if err != nil {
+		return commoncli.Problem("Failed to convert queue type", err)
+	}
+	sourceCluster, err := getRequiredOption(c, FlagSourceCluster)
+	if err != nil {
+		return commoncli.Problem("Required flag not found", err)
+	}
 	remainingMessageCount := common.EndMessageID
 	if c.IsSet(FlagMaxMessageCount) {
 		remainingMessageCount = c.Int64(FlagMaxMessageCount)
@@ -195,9 +207,14 @@ func AdminGetDLQMessages(c *cli.Context) error {
 					taskType = task.TaskType
 				}
 
-				events := deserializeBatchEvents(task.GetHistoryTaskV2Attributes().GetEvents())
-				newRunEvents := deserializeBatchEvents(task.GetHistoryTaskV2Attributes().GetNewRunEvents())
-
+				events, err := deserializeBatchEvents(task.GetHistoryTaskV2Attributes().GetEvents())
+				if err != nil {
+					return nil, fmt.Errorf("Error in deserializing batch events: %w", err)
+				}
+				newRunEvents, err := deserializeBatchEvents(task.GetHistoryTaskV2Attributes().GetNewRunEvents())
+				if err != nil {
+					return nil, fmt.Errorf("Error in deserializing new run batch events: %w", err)
+				}
 				domainName, err := getDomainName(info.DomainID)
 				if err != nil {
 					return nil, err
@@ -252,8 +269,18 @@ func AdminGetDLQMessages(c *cli.Context) error {
 
 // AdminPurgeDLQMessages deletes messages from DLQ
 func AdminPurgeDLQMessages(c *cli.Context) error {
-	dlqType := getRequiredOption(c, FlagDLQType)
-	sourceCluster := getRequiredOption(c, FlagSourceCluster)
+	fdlqtype, err := getRequiredOption(c, FlagDLQType)
+	if err != nil {
+		return commoncli.Problem("Required flag not found", err)
+	}
+	dlqType, err := toQueueType(fdlqtype)
+	if err != nil {
+		return commoncli.Problem("Failed to convert queue type", err)
+	}
+	sourceCluster, err := getRequiredOption(c, FlagSourceCluster)
+	if err != nil {
+		return commoncli.Problem("Required option not found", err)
+	}
 	var lastMessageID *int64
 	if c.IsSet(FlagLastMessageID) {
 		lastMessageID = common.Int64Ptr(c.Int64(FlagLastMessageID))
@@ -264,9 +291,12 @@ func AdminPurgeDLQMessages(c *cli.Context) error {
 		return err
 	}
 	for shardID := range getShards(c) {
-		ctx, cancel := newContext(c)
-		err := adminClient.PurgeDLQMessages(ctx, &types.PurgeDLQMessagesRequest{
-			Type:                  toQueueType(dlqType),
+		ctx, cancel, err := newContext(c)
+		if err != nil {
+			return commoncli.Problem("Error in creating context: ", err)
+		}
+		err = adminClient.PurgeDLQMessages(ctx, &types.PurgeDLQMessagesRequest{
+			Type:                  dlqType,
 			SourceCluster:         sourceCluster,
 			ShardID:               int32(shardID),
 			InclusiveEndMessageID: lastMessageID,
@@ -284,8 +314,18 @@ func AdminPurgeDLQMessages(c *cli.Context) error {
 
 // AdminMergeDLQMessages merges message from DLQ
 func AdminMergeDLQMessages(c *cli.Context) error {
-	dlqType := getRequiredOption(c, FlagDLQType)
-	sourceCluster := getRequiredOption(c, FlagSourceCluster)
+	fdlqtype, err := getRequiredOption(c, FlagDLQType)
+	if err != nil {
+		return commoncli.Problem("Required flag not found", err)
+	}
+	dlqType, err := toQueueType(fdlqtype)
+	if err != nil {
+		return commoncli.Problem("Failed to convert queue type", err)
+	}
+	sourceCluster, err := getRequiredOption(c, FlagSourceCluster)
+	if err != nil {
+		return commoncli.Problem("Required option not found", err)
+	}
 	var lastMessageID *int64
 	if c.IsSet(FlagLastMessageID) {
 		lastMessageID = common.Int64Ptr(c.Int64(FlagLastMessageID))
@@ -298,7 +338,7 @@ func AdminMergeDLQMessages(c *cli.Context) error {
 ShardIDLoop:
 	for shardID := range getShards(c) {
 		request := &types.MergeDLQMessagesRequest{
-			Type:                  toQueueType(dlqType),
+			Type:                  dlqType,
 			SourceCluster:         sourceCluster,
 			ShardID:               int32(shardID),
 			InclusiveEndMessageID: lastMessageID,
@@ -306,7 +346,10 @@ ShardIDLoop:
 		}
 
 		for {
-			ctx, cancel := newContext(c)
+			ctx, cancel, err := newContext(c)
+			if err != nil {
+				return commoncli.Problem("Error in creating context:", err)
+			}
 			response, err := adminClient.MergeDLQMessages(ctx, request)
 			cancel()
 			if err != nil {
@@ -376,28 +419,27 @@ func readShardsFromStdin() chan int {
 	return shards
 }
 
-func toQueueType(dlqType string) *types.DLQType {
+func toQueueType(dlqType string) (*types.DLQType, error) {
 	switch dlqType {
 	case "domain":
-		return types.DLQTypeDomain.Ptr()
+		return types.DLQTypeDomain.Ptr(), nil
 	case "history":
-		return types.DLQTypeReplication.Ptr()
+		return types.DLQTypeReplication.Ptr(), nil
 	default:
-		ErrorAndExit("The queue type is not supported.", fmt.Errorf("the queue type is not supported. Type: %v", dlqType))
+		return nil, fmt.Errorf("the queue type is not supported. Type: %v", dlqType)
 	}
-	return nil
 }
 
-func deserializeBatchEvents(blob *types.DataBlob) []*types.HistoryEvent {
+func deserializeBatchEvents(blob *types.DataBlob) ([]*types.HistoryEvent, error) {
 	if blob == nil {
-		return nil
+		return nil, nil
 	}
 	serializer := persistence.NewPayloadSerializer()
 	events, err := serializer.DeserializeBatchEvents(persistence.NewDataBlobFromInternal(blob))
 	if err != nil {
-		ErrorAndExit("Failed to decode DLQ history replication events", err)
+		return nil, fmt.Errorf("Failed to decode DLQ history replication events: %w", err)
 	}
-	return events
+	return events, nil
 }
 
 func collectEventIDs(events []*types.HistoryEvent) []int64 {

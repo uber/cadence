@@ -40,12 +40,18 @@ var promptFn = prompt
 
 // AdminAddSearchAttribute to whitelist search attribute
 func AdminAddSearchAttribute(c *cli.Context) error {
-	key := getRequiredOption(c, FlagSearchAttributesKey)
+	key, err := getRequiredOption(c, FlagSearchAttributesKey)
+	if err != nil {
+		return commoncli.Problem("Required flag not present:", err)
+	}
 	if err := visibility.ValidateSearchAttributeKey(key); err != nil {
 		return commoncli.Problem("Invalid search-attribute key.", err)
 	}
 
-	valType := getRequiredIntOption(c, FlagSearchAttributesType)
+	valType, err := getRequiredIntOption(c, FlagSearchAttributesType)
+	if err != nil {
+		return commoncli.Problem("Required flag not present:", err)
+	}
 	if !isValueTypeValid(valType) {
 		return commoncli.Problem("Unknown Search Attributes value type.", nil)
 	}
@@ -59,7 +65,10 @@ func AdminAddSearchAttribute(c *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	ctx, cancel := newContext(c)
+	ctx, cancel, err := newContext(c)
+	if err != nil {
+		return commoncli.Problem("Error in creating context: ", err)
+	}
 	defer cancel()
 	request := &types.AddSearchAttributeRequest{
 		SearchAttribute: map[string]types.IndexedValueType{
@@ -83,8 +92,11 @@ func AdminDescribeCluster(c *cli.Context) error {
 		return err
 	}
 
-	ctx, cancel := newContext(c)
+	ctx, cancel, err := newContext(c)
 	defer cancel()
+	if err != nil {
+		return commoncli.Problem("Error in creating context: ", err)
+	}
 	response, err := adminClient.DescribeCluster(ctx)
 	if err != nil {
 		return commoncli.Problem("Operation DescribeCluster failed.", err)
@@ -99,9 +111,11 @@ func AdminRebalanceStart(c *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	tcCtx, cancel := newContext(c)
+	tcCtx, cancel, err := newContext(c)
 	defer cancel()
-
+	if err != nil {
+		return commoncli.Problem("Context not created:", err)
+	}
 	workflowID := failovermanager.RebalanceWorkflowID
 	rbParams := &failovermanager.RebalanceParams{
 		BatchFailoverSize:              100,
@@ -111,8 +125,12 @@ func AdminRebalanceStart(c *cli.Context) error {
 	if err != nil {
 		return commoncli.Problem("Failed to serialize params for failover workflow", err)
 	}
+	op, err := getOperator()
+	if err != nil {
+		return commoncli.Problem("Failed to get operator", err)
+	}
 	memo, err := getWorkflowMemo(map[string]interface{}{
-		common.MemoKeyForOperator: getOperator(),
+		common.MemoKeyForOperator: op,
 	})
 	if err != nil {
 		return commoncli.Problem("Failed to serialize memo", err)

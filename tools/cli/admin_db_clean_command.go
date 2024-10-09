@@ -44,7 +44,11 @@ import (
 // AdminDBClean is the command to clean up unhealthy executions.
 // Input is a JSON stream provided via STDIN or a file.
 func AdminDBClean(c *cli.Context) error {
-	scanType, err := executions.ScanTypeString(getRequiredOption(c, FlagScanType))
+	flagscantype, err := getRequiredOption(c, FlagScanType)
+	if err != nil {
+		return commoncli.Problem("Required flag not found: ", err)
+	}
+	scanType, err := executions.ScanTypeString(flagscantype)
 
 	if err != nil {
 		return commoncli.Problem("unknown scan type", err)
@@ -80,8 +84,10 @@ func AdminDBClean(c *cli.Context) error {
 		)
 	}
 
-	input := getInputFile(c.String(FlagInputFile))
-
+	input, err := getInputFile(c.String(FlagInputFile))
+	if err != nil {
+		return commoncli.Problem("Required flag not found: ", err)
+	}
 	dec := json.NewDecoder(input)
 	var data []*store.ScanOutputEntity
 
@@ -100,10 +106,14 @@ func AdminDBClean(c *cli.Context) error {
 	}
 
 	for _, e := range data {
+		result, err := fixExecution(c, invariants, e)
+		if err != nil {
+			return commoncli.Problem("Error in fix execution: ", err)
+		}
 		out := store.FixOutputEntity{
 			Execution: e.Execution,
 			Input:     *e,
-			Result:    fixExecution(c, invariants, e),
+			Result:    result,
 		}
 		data, err := json.Marshal(out)
 		if err != nil {
@@ -120,13 +130,17 @@ func fixExecution(
 	c *cli.Context,
 	invariants []executions.InvariantFactory,
 	execution *store.ScanOutputEntity,
-) invariant.ManagerFixResult {
-	execManager := initializeExecutionStore(c, execution.Execution.(entity.Entity).GetShardID())
+) (invariant.ManagerFixResult, error) {
+	execManager, err := initializeExecutionStore(c, execution.Execution.(entity.Entity).GetShardID())
 	defer execManager.Close()
-
-	historyV2Mgr := initializeHistoryManager(c)
+	if err != nil {
+		return invariant.ManagerFixResult{}, fmt.Errorf("Error in fix execution: %w", err)
+	}
+	historyV2Mgr, err := initializeHistoryManager(c)
 	defer historyV2Mgr.Close()
-
+	if err != nil {
+		return invariant.ManagerFixResult{}, fmt.Errorf("Error in fix execution: %w", err)
+	}
 	pr := persistence.NewPersistenceRetryer(
 		execManager,
 		historyV2Mgr,
@@ -139,8 +153,10 @@ func fixExecution(
 		ivs = append(ivs, fn(pr, cache.NewNoOpDomainCache()))
 	}
 
-	ctx, cancel := newContext(c)
+	ctx, cancel, err := newContext(c)
 	defer cancel()
-
-	return invariant.NewInvariantManager(ivs).RunFixes(ctx, execution.Execution)
+	if err != nil {
+		return invariant.ManagerFixResult{}, fmt.Errorf("Context not created: %w", err)
+	}
+	return invariant.NewInvariantManager(ivs).RunFixes(ctx, execution.Execution), nil
 }

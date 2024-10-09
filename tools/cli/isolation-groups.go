@@ -38,9 +38,11 @@ func AdminGetGlobalIsolationGroups(c *cli.Context) error {
 		return err
 	}
 
-	ctx, cancel := newContext(c)
+	ctx, cancel, err := newContext(c)
 	defer cancel()
-
+	if err != nil {
+		return commoncli.Problem("Error creating context:", err)
+	}
 	req := &types.GetGlobalIsolationGroupsRequest{}
 	igs, err := adminClient.GetGlobalIsolationGroups(ctx, req)
 	if err != nil {
@@ -63,9 +65,11 @@ func AdminUpdateGlobalIsolationGroups(c *cli.Context) error {
 		return err
 	}
 
-	ctx, cancel := newContext(c)
+	ctx, cancel, err := newContext(c)
 	defer cancel()
-
+	if err != nil {
+		return commoncli.Problem("Error creating context:", err)
+	}
 	err = validateIsolationGroupUpdateArgs(
 		c.String(FlagDomain),
 		c.String(FlagDomain),
@@ -103,8 +107,11 @@ func AdminGetDomainIsolationGroups(c *cli.Context) error {
 	}
 	domain := c.String(FlagDomain)
 
-	ctx, cancel := newContext(c)
+	ctx, cancel, err := newContext(c)
 	defer cancel()
+	if err != nil {
+		return commoncli.Problem("Error creating context:", err)
+	}
 
 	req := &types.GetDomainIsolationGroupsRequest{
 		Domain: domain,
@@ -143,8 +150,11 @@ func AdminUpdateDomainIsolationGroups(c *cli.Context) error {
 		return commoncli.Problem("invalid args:", err)
 	}
 
-	ctx, cancel := newContext(c)
+	ctx, cancel, err := newContext(c)
 	defer cancel()
+	if err != nil {
+		return commoncli.Problem("Error creating context:", err)
+	}
 
 	cfg, err := parseIsolationGroupCliInputCfg(
 		c.StringSlice(FlagIsolationGroupSetDrains),

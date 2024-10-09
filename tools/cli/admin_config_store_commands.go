@@ -56,12 +56,17 @@ func AdminGetDynamicConfig(c *cli.Context) error {
 		return err
 	}
 
-	dcName := getRequiredOption(c, FlagDynamicConfigName)
+	dcName, err := getRequiredOption(c, FlagDynamicConfigName)
+	if err != nil {
+		return commoncli.Problem("Required flag not found", err)
+	}
 	filters := c.StringSlice(FlagDynamicConfigFilter)
 
-	ctx, cancel := newContext(c)
+	ctx, cancel, err := newContext(c)
 	defer cancel()
-
+	if err != nil {
+		return commoncli.Problem("Error in creating context: ", err)
+	}
 	if len(filters) == 0 {
 		req := &types.ListDynamicConfigRequest{
 			ConfigName: dcName,
@@ -123,12 +128,17 @@ func AdminUpdateDynamicConfig(c *cli.Context) error {
 		return err
 	}
 
-	dcName := getRequiredOption(c, FlagDynamicConfigName)
+	dcName, err := getRequiredOption(c, FlagDynamicConfigName)
+	if err != nil {
+		return commoncli.Problem("Required flag not found", err)
+	}
 	dcValues := c.StringSlice(FlagDynamicConfigValue)
 
-	ctx, cancel := newContext(c)
+	ctx, cancel, err := newContext(c)
 	defer cancel()
-
+	if err != nil {
+		return commoncli.Problem("Error in creating context: ", err)
+	}
 	var parsedValues []*types.DynamicConfigValue
 
 	if dcValues != nil {
@@ -170,12 +180,17 @@ func AdminRestoreDynamicConfig(c *cli.Context) error {
 		return err
 	}
 
-	dcName := getRequiredOption(c, FlagDynamicConfigName)
+	dcName, err := getRequiredOption(c, FlagDynamicConfigName)
+	if err != nil {
+		return commoncli.Problem("Required flag not found", err)
+	}
 	filters := c.StringSlice(FlagDynamicConfigFilter)
 
-	ctx, cancel := newContext(c)
+	ctx, cancel, err := newContext(c)
 	defer cancel()
-
+	if err != nil {
+		return commoncli.Problem("Error in creating context: ", err)
+	}
 	parsedFilters, err := parseInputFilterArray(filters)
 	if err != nil {
 		return commoncli.Problem("Failed to parse input filter array", err)
@@ -201,9 +216,11 @@ func AdminListDynamicConfig(c *cli.Context) error {
 		return err
 	}
 
-	ctx, cancel := newContext(c)
+	ctx, cancel, err := newContext(c)
 	defer cancel()
-
+	if err != nil {
+		return commoncli.Problem("Error in creating context: ", err)
+	}
 	req := &types.ListDynamicConfigRequest{
 		ConfigName: "", // empty string means all config values
 	}

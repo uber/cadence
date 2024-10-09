@@ -49,13 +49,21 @@ func DescribeTaskList(c *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	domain := getRequiredOption(c, FlagDomain)
-	taskList := getRequiredOption(c, FlagTaskList)
+	domain, err := getRequiredOption(c, FlagDomain)
+	if err != nil {
+		return commoncli.Problem("Required flag not found: ", err)
+	}
+	taskList, err := getRequiredOption(c, FlagTaskList)
+	if err != nil {
+		return commoncli.Problem("Required flag not found: ", err)
+	}
 	taskListType := strToTaskListType(c.String(FlagTaskListType)) // default type is decision
 
-	ctx, cancel := newContext(c)
+	ctx, cancel, err := newContext(c)
 	defer cancel()
-
+	if err != nil {
+		return commoncli.Problem("Error in creating context:", err)
+	}
 	request := &types.DescribeTaskListRequest{
 		Domain: domain,
 		TaskList: &types.TaskList{
@@ -82,11 +90,19 @@ func ListTaskListPartitions(c *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	domain := getRequiredOption(c, FlagDomain)
-	taskList := getRequiredOption(c, FlagTaskList)
-
-	ctx, cancel := newContext(c)
+	domain, err := getRequiredOption(c, FlagDomain)
+	if err != nil {
+		return commoncli.Problem("Required flag not found: ", err)
+	}
+	taskList, err := getRequiredOption(c, FlagTaskList)
+	if err != nil {
+		return commoncli.Problem("Required flag not found: ", err)
+	}
+	ctx, cancel, err := newContext(c)
 	defer cancel()
+	if err != nil {
+		return commoncli.Problem("Error in creating context:", err)
+	}
 	request := &types.ListTaskListPartitionsRequest{
 		Domain:   domain,
 		TaskList: &types.TaskList{Name: taskList},

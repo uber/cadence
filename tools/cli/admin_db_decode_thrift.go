@@ -77,7 +77,10 @@ type decodeError struct {
 
 // AdminDBDataDecodeThrift is the command to decode thrift binary into JSON
 func AdminDBDataDecodeThrift(c *cli.Context) error {
-	input := getRequiredOption(c, FlagInput)
+	input, err := getRequiredOption(c, FlagInput)
+	if err != nil {
+		return commoncli.Problem("Required flag not found", err)
+	}
 	encoding := c.String(FlagInputEncoding)
 	data, err := decodeUserInput(input, encoding)
 	if err != nil {

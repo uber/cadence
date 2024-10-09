@@ -38,7 +38,7 @@ import (
 
 // LoadCloser loads timer task information
 type LoadCloser interface {
-	Load() []*persistence.TimerTaskInfo
+	Load() ([]*persistence.TimerTaskInfo, error)
 	Close()
 }
 
@@ -74,24 +74,29 @@ type jsonPrinter struct {
 }
 
 // NewDBLoadCloser creates a new LoadCloser to load timer task information from database
-func NewDBLoadCloser(c *cli.Context) LoadCloser {
-	shardID := getRequiredIntOption(c, FlagShardID)
-	executionManager := initializeExecutionStore(c, shardID)
+func NewDBLoadCloser(c *cli.Context) (LoadCloser, error) {
+	shardID, err := getRequiredIntOption(c, FlagShardID)
+	if err != nil {
+		return nil, fmt.Errorf("error in NewDBLoadCloser: failed to get shard ID: %w", err)
+	}
+	executionManager, err := initializeExecutionStore(c, shardID)
+	if err != nil {
+		return nil, fmt.Errorf("error in NewDBLoadCloser: failed to initialize execution store: %w", err)
+	}
 	return &dbLoadCloser{
 		ctx:              c,
 		executionManager: executionManager,
-	}
+	}, nil
 }
 
-// NewFileLoadCloser creates a new LoadCloser to load timer task information from file
-func NewFileLoadCloser(c *cli.Context) LoadCloser {
+func NewFileLoadCloser(c *cli.Context) (LoadCloser, error) {
 	file, err := os.Open(c.String(FlagInputFile))
 	if err != nil {
-		ErrorAndExit("cannot open file", err)
+		return nil, fmt.Errorf("error in NewFileLoadCloser: cannot open file: %w", err)
 	}
 	return &fileLoadCloser{
 		file: file,
-	}
+	}, nil
 }
 
 // NewReporter creates a new Reporter
@@ -139,7 +144,11 @@ func (r *Reporter) filter(timers []*persistence.TimerTaskInfo) []*persistence.Ti
 
 // Report loads, filters and prints timer tasks
 func (r *Reporter) Report() error {
-	return r.printer.Print(r.filter(r.loader.Load()))
+	loader, err := r.loader.Load()
+	if err != nil {
+		return err
+	}
+	return r.printer.Print(r.filter(loader))
 }
 
 // AdminTimers is used to list scheduled timers.
@@ -159,10 +168,17 @@ func AdminTimers(c *cli.Context) error {
 
 	// setup loader
 	var loader LoadCloser
+	var err error
 	if !c.IsSet(FlagInputFile) {
-		loader = NewDBLoadCloser(c)
+		loader, err = NewDBLoadCloser(c)
+		if err != nil {
+			return commoncli.Problem("Error in timer: ", err)
+		}
 	} else {
-		loader = NewFileLoadCloser(c)
+		loader, err = NewFileLoadCloser(c)
+		if err != nil {
+			return commoncli.Problem("Error in timer: ", err)
+		}
 	}
 	defer loader.Close()
 
@@ -216,18 +232,18 @@ func (jp *jsonPrinter) Print(timers []*persistence.TimerTaskInfo) error {
 	return nil
 }
 
-func (cl *dbLoadCloser) Load() []*persistence.TimerTaskInfo {
+func (cl *dbLoadCloser) Load() ([]*persistence.TimerTaskInfo, error) {
 	batchSize := cl.ctx.Int(FlagBatchSize)
 	startDate := cl.ctx.String(FlagStartDate)
 	endDate := cl.ctx.String(FlagEndDate)
 
 	st, err := parseSingleTs(startDate)
 	if err != nil {
-		ErrorAndExit("wrong date format for "+FlagStartDate, err)
+		return nil, fmt.Errorf("wrong date format for "+FlagEndDate+" Error: %v", err)
 	}
 	et, err := parseSingleTs(endDate)
 	if err != nil {
-		ErrorAndExit("wrong date format for "+FlagEndDate, err)
+		return nil, fmt.Errorf("wrong date format for "+FlagEndDate+" Error: %v", err)
 	}
 
 	var timers []*persistence.TimerTaskInfo
@@ -254,10 +270,11 @@ func (cl *dbLoadCloser) Load() []*persistence.TimerTaskInfo {
 		resp := &persistence.GetTimerIndexTasksResponse{}
 
 		op := func() error {
-			ctx, cancel := newContext(cl.ctx)
+			ctx, cancel, err := newContext(cl.ctx)
 			defer cancel()
-
-			var err error
+			if err != nil {
+				return commoncli.Problem("Error in creating context:", err)
+			}
 			resp, err = cl.executionManager.GetTimerIndexTasks(ctx, &req)
 			return err
 		}
@@ -265,13 +282,13 @@ func (cl *dbLoadCloser) Load() []*persistence.TimerTaskInfo {
 		err = throttleRetry.Do(cl.ctx.Context, op)
 
 		if err != nil {
-			ErrorAndExit("cannot get timer tasks for shard", err)
+			return nil, fmt.Errorf("cannot get timer tasks for shard: %v", err)
 		}
 
 		token = resp.NextPageToken
 		timers = append(timers, resp.Timers...)
 	}
-	return timers
+	return timers, nil
 }
 
 func (cl *dbLoadCloser) Close() {
@@ -280,7 +297,7 @@ func (cl *dbLoadCloser) Close() {
 	}
 }
 
-func (fl *fileLoadCloser) Load() []*persistence.TimerTaskInfo {
+func (fl *fileLoadCloser) Load() ([]*persistence.TimerTaskInfo, error) {
 	var data []*persistence.TimerTaskInfo
 	dec := json.NewDecoder(fl.file)
 
@@ -290,10 +307,11 @@ func (fl *fileLoadCloser) Load() []*persistence.TimerTaskInfo {
 			if err == io.EOF || err == io.ErrUnexpectedEOF {
 				break
 			}
+			return nil, fmt.Errorf("error decoding timer: %w", err)
 		}
 		data = append(data, &timer)
 	}
-	return data
+	return data, nil
 }
 
 func (fl *fileLoadCloser) Close() {

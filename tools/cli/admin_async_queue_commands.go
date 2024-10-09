@@ -38,10 +38,15 @@ func AdminGetAsyncWFConfig(c *cli.Context) error {
 		return err
 	}
 
-	domainName := getRequiredOption(c, FlagDomain)
-
-	ctx, cancel := newContext(c)
+	domainName, err := getRequiredOption(c, FlagDomain)
+	if err != nil {
+		return commoncli.Problem("Required flag not present:", err)
+	}
+	ctx, cancel, err := newContext(c)
 	defer cancel()
+	if err != nil {
+		return commoncli.Problem("Error in creating context: ", err)
+	}
 
 	req := &types.GetDomainAsyncWorkflowConfiguratonRequest{
 		Domain: domainName,
@@ -68,8 +73,14 @@ func AdminUpdateAsyncWFConfig(c *cli.Context) error {
 		return err
 	}
 
-	domainName := getRequiredOption(c, FlagDomain)
-	asyncWFCfgJSON := getRequiredOption(c, FlagJSON)
+	domainName, err := getRequiredOption(c, FlagDomain)
+	if err != nil {
+		return commoncli.Problem("Required flag not present:", err)
+	}
+	asyncWFCfgJSON, err := getRequiredOption(c, FlagJSON)
+	if err != nil {
+		return commoncli.Problem("Required flag not present:", err)
+	}
 
 	var cfg types.AsyncWorkflowConfiguration
 	err = json.Unmarshal([]byte(asyncWFCfgJSON), &cfg)
@@ -77,8 +88,11 @@ func AdminUpdateAsyncWFConfig(c *cli.Context) error {
 		return commoncli.Problem("Failed to parse async workflow config", err)
 	}
 
-	ctx, cancel := newContext(c)
+	ctx, cancel, err := newContext(c)
 	defer cancel()
+	if err != nil {
+		return commoncli.Problem("Error in creating context: ", err)
+	}
 
 	req := &types.UpdateDomainAsyncWorkflowConfiguratonRequest{
 		Domain:        domainName,
