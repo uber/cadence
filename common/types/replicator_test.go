@@ -23,19 +23,20 @@
 package types
 
 import (
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestDLQType_Ptr(t *testing.T) {
-	var dlqType DLQType = DLQTypeReplication
+	dlqType := DLQTypeReplication
 	ptr := dlqType.Ptr()
 
 	assert.Equal(t, &dlqType, ptr)
 }
 
 func TestDLQType_String(t *testing.T) {
-	var dlqType DLQType = DLQTypeReplication
+	dlqType := DLQTypeReplication
 	assert.Equal(t, "Replication", dlqType.String())
 
 	dlqType = DLQTypeDomain
@@ -64,7 +65,7 @@ func TestDLQType_UnmarshalText(t *testing.T) {
 }
 
 func TestDLQType_MarshalText(t *testing.T) {
-	var dlqType DLQType = DLQTypeReplication
+	dlqType := DLQTypeReplication
 	text, err := dlqType.MarshalText()
 	assert.NoError(t, err)
 	assert.Equal(t, []byte("Replication"), text)
@@ -76,14 +77,14 @@ func TestDLQType_MarshalText(t *testing.T) {
 }
 
 func TestDomainOperation_Ptr(t *testing.T) {
-	var domainOp DomainOperation = DomainOperationCreate
+	domainOp := DomainOperationCreate
 	ptr := domainOp.Ptr()
 
 	assert.Equal(t, &domainOp, ptr)
 }
 
 func TestDomainOperation_String(t *testing.T) {
-	var domainOp DomainOperation = DomainOperationCreate
+	domainOp := DomainOperationCreate
 	assert.Equal(t, "Create", domainOp.String())
 
 	domainOp = DomainOperationUpdate
@@ -112,7 +113,7 @@ func TestDomainOperation_UnmarshalText(t *testing.T) {
 }
 
 func TestDomainOperation_MarshalText(t *testing.T) {
-	var domainOp DomainOperation = DomainOperationCreate
+	domainOp := DomainOperationCreate
 	text, err := domainOp.MarshalText()
 	assert.NoError(t, err)
 	assert.Equal(t, []byte("Create"), text)
