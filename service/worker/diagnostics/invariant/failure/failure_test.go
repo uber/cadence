@@ -71,7 +71,7 @@ func Test__Check(t *testing.T) {
 				},
 				{
 					InvariantType: WorkflowFailed.String(),
-					Reason:        CustomError.String(),
+					Reason:        TimeoutError.String(),
 					Metadata:      metadataInBytes,
 				},
 			},
@@ -123,7 +123,7 @@ func failedWfHistory() *types.GetWorkflowExecutionHistoryResponse {
 				},
 				{
 					WorkflowExecutionFailedEventAttributes: &types.WorkflowExecutionFailedEventAttributes{
-						Reason:                       common.StringPtr("custom error"),
+						Reason:                       common.StringPtr("cadenceInternal:Timeout START_TO_CLOSE"),
 						Details:                      []byte("test-activity-failure"),
 						DecisionTaskCompletedEventID: 10,
 					},

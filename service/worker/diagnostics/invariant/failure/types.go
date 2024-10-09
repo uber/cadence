@@ -28,6 +28,7 @@ const (
 	CustomError  ErrorType = "The failure is caused by a specific custom error returned from the service code"
 	GenericError ErrorType = "The failure is because of an error returned from the service code"
 	PanicError   ErrorType = "The failure is caused by a panic in the service code"
+	TimeoutError ErrorType = "The failure is caused by a timeout during the execution"
 )
 
 func (e ErrorType) String() string {

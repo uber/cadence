@@ -84,6 +84,9 @@ func errorTypeFromReason(reason string) ErrorType {
 	if strings.Contains(reason, "Panic") {
 		return PanicError
 	}
+	if strings.Contains(reason, "Timeout") {
+		return TimeoutError
+	}
 	return CustomError
 }
 
