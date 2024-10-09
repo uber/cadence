@@ -260,10 +260,9 @@ func writeReplicationTask(
 			if err != nil {
 				if !skipErrMode {
 					return fmt.Errorf("malformed message, failed to encode into json: %w", err)
-				} else {
-					atomic.AddInt32(skippedCount, 1)
-					continue
 				}
+				atomic.AddInt32(skippedCount, 1)
+				continue
 			}
 
 			var outStr string
@@ -302,10 +301,9 @@ func writeVisibilityMessage(
 			if err != nil {
 				if !skipErrMode {
 					return fmt.Errorf("malformed message: failed to encode into json, err: %w", err)
-				} else {
-					atomic.AddInt32(skippedCount, 1)
-					continue
 				}
+				atomic.AddInt32(skippedCount, 1)
+				continue
 			}
 
 			var outStr string
@@ -342,13 +340,13 @@ func splitBuffer(buffer []byte) ([]byte, []byte, error) {
 func parse(bytes []byte, skipErrors bool, skippedCount *int32, writerCh *writerChannel) error {
 	messages, skippedGetMsgCount, err := getMessages(bytes, skipErrors)
 	if err != nil {
-		return fmt.Errorf("Parsing failed: ", err)
+		return fmt.Errorf("parsing failed: %w", err)
 	}
 	switch writerCh.Type {
 	case kafkaMessageTypeReplicationTask:
 		msgs, skippedDeserializeCount, err := deserializeMessages(messages, skipErrors)
 		if err != nil {
-			return fmt.Errorf("Parsing failed: ", err)
+			return fmt.Errorf("parsing failed: %w", err)
 		}
 		atomic.AddInt32(skippedCount, skippedGetMsgCount+skippedDeserializeCount)
 		for _, msg := range msgs {
@@ -357,7 +355,7 @@ func parse(bytes []byte, skipErrors bool, skippedCount *int32, writerCh *writerC
 	case kafkaMessageTypeVisibilityMsg:
 		msgs, skippedDeserializeCount, err := deserializeVisibilityMessages(messages, skipErrors)
 		if err != nil {
-			return fmt.Errorf("Parsing failed: ", err)
+			return fmt.Errorf("parsing failed: %w", err)
 		}
 		atomic.AddInt32(skippedCount, skippedGetMsgCount+skippedDeserializeCount)
 		for _, msg := range msgs {
@@ -371,24 +369,23 @@ func getMessages(data []byte, skipErrors bool) ([][]byte, int32, error) {
 	str := string(data)
 	messagesWithHeaders := r.Split(str, -1)
 	if len(messagesWithHeaders[0]) != 0 {
-		return nil, 0, fmt.Errorf(malformedMessage + "Error: %v", errors.New("got data chunk to handle that does not start with valid header"))
+		return nil, 0, fmt.Errorf(malformedMessage+"Error: %v", errors.New("got data chunk to handle that does not start with valid header"))
 	}
 	messagesWithHeaders = messagesWithHeaders[1:]
 	var rawMessages [][]byte
 	var skipped int32
 	for _, m := range messagesWithHeaders {
 		if len(m) == 0 {
-			return nil, 0, fmt.Errorf(malformedMessage + "Error: %v", errors.New("got empty message between valid headers"))
+			return nil, 0, fmt.Errorf(malformedMessage+"Error: %v", errors.New("got empty message between valid headers"))
 		}
 		curr := []byte(m)
 		messageStart := bytes.Index(curr, []byte{preambleVersion0})
 		if messageStart == -1 {
 			if !skipErrors {
-				return nil, 0, fmt.Errorf(malformedMessage + "Error: %v", errors.New("failed to find message preamble"))
-			} else {
-				skipped++
-				continue
+				return nil, 0, fmt.Errorf(malformedMessage+"Error: %v", errors.New("failed to find message preamble"))
 			}
+			skipped++
+			continue
 		}
 		rawMessages = append(rawMessages, curr[messageStart:])
 	}
@@ -403,11 +400,10 @@ func deserializeMessages(messages [][]byte, skipErrors bool) ([]*types.Replicati
 		err := decode(m, &task)
 		if err != nil {
 			if !skipErrors {
-				return nil, 0, fmt.Errorf(malformedMessage + "Error: %v", err)
-			} else {
-				skipped++
-				continue
+				return nil, 0, fmt.Errorf(malformedMessage+"Error: %v", err)
 			}
+			skipped++
+			continue
 		}
 		replicationTasks = append(replicationTasks, thrift.ToReplicationTask(&task))
 	}
@@ -431,11 +427,10 @@ func deserializeVisibilityMessages(messages [][]byte, skipErrors bool) ([]*index
 		err := decodeVisibility(m, &msg)
 		if err != nil {
 			if !skipErrors {
-				return nil, 0, fmt.Errorf(malformedMessage + "Error: %v", err)
-			} else {
-				skipped++
-				continue
+				return nil, 0, fmt.Errorf(malformedMessage+"Error: %v", err)
 			}
+			skipped++
+			continue
 		}
 		visibilityMessages = append(visibilityMessages, &msg)
 	}

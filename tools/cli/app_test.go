@@ -657,8 +657,9 @@ func (s *cliAppSuite) TestObserveWorkflowWithID() {
 
 // TestParseTime tests the parsing of date argument in UTC and UnixNano formats
 func (s *cliAppSuite) TestParseTime() {
-	pt, err :=  parseTime("", 100)
-	s.Equal(int64(100),pt)
+	pt, err := parseTime("", 100)
+	s.NoError(err)
+	s.Equal(int64(100), pt)
 	pt, err = parseTime("2018-06-07T15:04:05+00:00", 0)
 	s.Equal(int64(1528383845000000000), pt)
 	pt, err = parseTime("1528383845000000000", 0)
@@ -752,6 +753,7 @@ func (s *cliAppSuite) TestParseTimeDateRange() {
 	delta := int64(50 * time.Millisecond)
 	for _, te := range tests {
 		pt, err := parseTime(te.timeStr, te.defVal)
+		s.NoError(err)
 		s.True(te.expected <= pt)
 		pt, err = parseTime(te.timeStr, te.defVal)
 		s.True(te.expected+delta >= pt)
@@ -811,29 +813,18 @@ func (s *cliAppSuite) TestIsAttributeName() {
 
 func (s *cliAppSuite) TestGetWorkflowIdReusePolicy() {
 	res, err := getWorkflowIDReusePolicy(2)
+	s.NoError(err)
 	s.Equal(res.String(), types.WorkflowIDReusePolicyRejectDuplicate.String())
 }
 
 func (s *cliAppSuite) TestGetWorkflowIdReusePolicy_Failed_ExceedRange() {
-	oldOsExit := osExit
-	defer func() { osExit = oldOsExit }()
-	var errorCode int
-	osExit = func(code int) {
-		errorCode = code
-	}
-	getWorkflowIDReusePolicy(2147483647)
-	s.Equal(1, errorCode)
+	_, err := getWorkflowIDReusePolicy(2147483647)
+	s.Error(err)
 }
 
 func (s *cliAppSuite) TestGetWorkflowIdReusePolicy_Failed_Negative() {
-	oldOsExit := osExit
-	defer func() { osExit = oldOsExit }()
-	var errorCode int
-	osExit = func(code int) {
-		errorCode = code
-	}
-	getWorkflowIDReusePolicy(-1)
-	s.Equal(1, errorCode)
+	_, err := getWorkflowIDReusePolicy(-1)
+	s.Error(err)
 }
 
 func (s *cliAppSuite) TestGetSearchAttributes() {

@@ -360,7 +360,7 @@ func initializeLogger(
 ) (log.Logger, error) {
 	zapLogger, err := serviceConfig.Log.NewZapLogger()
 	if err != nil {
-		return nil, fmt.Errorf("failed to create zap logger, err: ", err)
+		return nil, fmt.Errorf("failed to create zap logger, err: %w", err)
 	}
 	return loggerimpl.NewLogger(zapLogger), nil
 }

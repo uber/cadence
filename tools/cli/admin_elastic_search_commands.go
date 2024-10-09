@@ -497,7 +497,7 @@ func generateCSVReport(reportFileName string, headers []string, tableData [][]st
 	}
 	_, err = f.WriteString(csvContent)
 	if err != nil {
-		fmt.Printf("Error write to file, err: %w", err)
+		fmt.Printf("Error write to file, err: %v", err)
 	}
 	return f.Close()
 }

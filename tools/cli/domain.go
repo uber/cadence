@@ -23,8 +23,9 @@ package cli
 import (
 	"fmt"
 
-	"github.com/uber/cadence/tools/common/commoncli"
 	"github.com/urfave/cli/v2"
+
+	"github.com/uber/cadence/tools/common/commoncli"
 )
 
 // by default we don't require any domain data. But this can be overridden by calling SetRequiredDomainDataKeys()

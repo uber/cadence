@@ -347,7 +347,6 @@ ShardIDLoop:
 
 		for {
 			ctx, cancel, err := newContext(c)
-			defer cancel()
 			if err != nil {
 				return commoncli.Problem("Error in creating context:", err)
 			}
@@ -405,7 +404,7 @@ func readShardsFromStdin() chan int {
 				break
 			}
 			if err != nil {
-				fmt.Printf("Unable to read from stdin: %w", err)
+				fmt.Printf("Unable to read from stdin: %v", err)
 				continue
 			}
 			shard, err := strconv.ParseInt(strings.TrimSpace(line), 10, 64)

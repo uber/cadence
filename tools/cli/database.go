@@ -183,7 +183,7 @@ func initializeShardManager(c *cli.Context) (persistence.ShardManager, error) {
 	if err != nil {
 		return nil, fmt.Errorf("Failed to initialize shard manager %w", err)
 	}
-	return shardManager, nil 
+	return shardManager, nil
 }
 
 func initializeDomainManager(c *cli.Context) (persistence.DomainManager, error) {
@@ -284,7 +284,7 @@ func createDataStore(c *cli.Context) (config.DataStore, error) {
 		}
 	}
 	fmt.Errorf("The DB type is not supported. Options are: %s. Error %v", supportedDBs, nil)
-	return config.DataStore{}, nil 
+	return config.DataStore{}, nil
 }
 
 func overrideNoSQLDataStore(c *cli.Context, cfg *config.NoSQL) {

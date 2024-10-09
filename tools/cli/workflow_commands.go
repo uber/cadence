@@ -540,14 +540,14 @@ func processMemo(c *cli.Context) (map[string][]byte, error) {
 	memoKeys := processMultipleKeys(c.String(FlagMemoKey), " ")
 	jsoninputhandler, err := processJSONInputHelper(c, jsonTypeMemo)
 	if err != nil {
-		return nil, fmt.Errorf("Error in process header: %w", err)
+		return nil, fmt.Errorf("error in process header: %w", err)
 	}
 	memoValues, err := processMultipleJSONValues(jsoninputhandler)
 	if err != nil {
-		return nil, fmt.Errorf("Error in process header: %w", err)
+		return nil, fmt.Errorf("error in process header: %w", err)
 	}
 	if len(memoKeys) != len(memoValues) {
-		return nil, fmt.Errorf("Number of memo keys and values are not equal.", nil)
+		return nil, fmt.Errorf("number of memo keys and values are not equal")
 	}
 
 	return mapFromKeysValues(memoKeys, memoValues), nil
@@ -798,11 +798,11 @@ func constructSignalWithStartWorkflowRequest(c *cli.Context) (*types.SignalWithS
 	}
 	signalname, err := getRequiredOption(c, FlagName)
 	if err != nil {
-		return nil, fmt.Errorf("Required flag not present %w", err)
+		return nil, fmt.Errorf("required flag not present %w", err)
 	}
 	jsoninputsignal, err := processJSONInputSignal(c)
 	if err != nil {
-		return nil, fmt.Errorf("Error processing json input signal: ", err)
+		return nil, fmt.Errorf("error processing json input signal: %w", err)
 	}
 	return &types.SignalWithStartWorkflowExecutionRequest{
 		Domain:                              startRequest.Domain,
@@ -834,14 +834,6 @@ func processJSONInputSignal(c *cli.Context) (string, error) {
 
 // QueryWorkflow query workflow execution
 func QueryWorkflow(c *cli.Context) error {
-	domain, err := getRequiredOption(c, FlagDomain)
-	if err != nil {
-		return commoncli.Problem("Required flag not found for domain: ", err)
-	}
-	workflowID, err := getRequiredOption(c, FlagWorkflowID)
-	if err != nil {
-		return commoncli.Problem("Required flag not found for workflow ID: ", err)
-	}
 	queryType, err := getRequiredOption(c, FlagQueryType)
 	if err != nil {
 		return commoncli.Problem("Required flag not found for query type: ", err)
@@ -1171,7 +1163,7 @@ func convertDescribeWorkflowExecutionResponse(resp *types.DescribeWorkflowExecut
 	info := resp.WorkflowExecutionInfo
 	searchattributes, err := convertSearchAttributesToMapOfInterface(info.SearchAttributes, wfClient, c)
 	if err != nil {
-		return nil, fmt.Errorf("Error converting search attributes: ", err)
+		return nil, fmt.Errorf("error converting search attributes: %w", err)
 	}
 	executionInfo := workflowExecutionInfo{
 		Execution:        info.Execution,

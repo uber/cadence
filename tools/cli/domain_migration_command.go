@@ -161,7 +161,7 @@ func (d *domainMigrationCLIImpl) Validation(c *cli.Context) error {
 	}
 	wg := &sync.WaitGroup{}
 	errCh := make(chan error, len(checkers)) // Channel to capture errors
-	results := make([]DomainMigrationRow, len(checkers)) 
+	results := make([]DomainMigrationRow, len(checkers))
 	var err error
 	for i := range checkers {
 		go func(i int) {
@@ -171,7 +171,7 @@ func (d *domainMigrationCLIImpl) Validation(c *cli.Context) error {
 				errCh <- fmt.Errorf("Error in checkers: %w", err)
 				return
 			}
-			errCh <- nil 
+			errCh <- nil
 		}(i)
 	}
 
@@ -191,7 +191,7 @@ func (d *domainMigrationCLIImpl) Validation(c *cli.Context) error {
 	}
 
 	if err := Render(c, results, renderOpts); err != nil {
-		return fmt.Errorf("Failed to render", err)
+		return fmt.Errorf("failed to render: %w", err)
 	}
 	return nil
 }

@@ -311,7 +311,7 @@ func (fl *fileLoadCloser) Load() ([]*persistence.TimerTaskInfo, error) {
 		}
 		data = append(data, &timer)
 	}
-	return data, nil 
+	return data, nil
 }
 
 func (fl *fileLoadCloser) Close() {

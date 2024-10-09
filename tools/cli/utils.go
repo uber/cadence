@@ -773,11 +773,11 @@ func newTimedContext(c *cli.Context, timeout time.Duration) (context.Context, co
 
 	ctx, err := populateContextFromCLIContext(c.Context, c)
 	if err != nil {
-		return nil, nil, fmt.Errorf("%w", err)
+		return nil, nil, fmt.Errorf("error populate context from CLI context: %w", err)
 	}
-	ctx, time_out := context.WithTimeout(ctx, timeout)
+	ctx, timeOut := context.WithTimeout(ctx, timeout)
 
-	return ctx, time_out, nil
+	return ctx, timeOut, nil
 }
 
 // process and validate input provided through cmd or file
@@ -816,13 +816,13 @@ func processJSONInputHelper(c *cli.Context, jType jsonType) (string, error) {
 		// #nosec
 		data, err := ioutil.ReadFile(inputFile)
 		if err != nil {
-			return "", fmt.Errorf("Error reading input file: %w", err)
+			return "", fmt.Errorf("error reading input file: %w", err)
 		}
 		input = string(data)
 	}
 	if input != "" {
 		if err := validateJSONs(input); err != nil {
-			return "", fmt.Errorf("Input is not valid JSON, or JSONs concatenated with spaces/newlines.", err)
+			return "", fmt.Errorf("input is not valid JSON: %w", err)
 		}
 	}
 	return input, nil
@@ -844,7 +844,7 @@ func processMultipleJSONValues(rawValue string) ([]string, error) {
 		values = append(values, sc.Value().String())
 	}
 	if err := sc.Error(); err != nil {
-		return nil, fmt.Errorf("Parse json error.", err)
+		return nil, fmt.Errorf("parse json error: %w", err)
 	}
 	return values, nil
 }
@@ -977,7 +977,7 @@ func getInputFile(inputFile string) (*os.File, error) {
 	if len(inputFile) == 0 {
 		info, err := os.Stdin.Stat()
 		if err != nil {
-			return nil, fmt.Errorf("Failed to stat stdin file handle", err)
+			return nil, fmt.Errorf("failed to stat stdin file handle: %w", err)
 		}
 		if info.Mode()&os.ModeCharDevice != 0 || info.Size() <= 0 {
 			fmt.Fprintln(os.Stderr, "Provide a filename or pass data to STDIN")
@@ -989,7 +989,7 @@ func getInputFile(inputFile string) (*os.File, error) {
 	// #nosec
 	f, err := os.Open(inputFile)
 	if err != nil {
-		return nil, fmt.Errorf(fmt.Sprintf("Failed to open input file for reading: %v", inputFile), err)
+		return nil, fmt.Errorf("failed to open input file for reading: %v: %w", inputFile, err)
 	}
 	return f, nil
 }
@@ -1022,7 +1022,7 @@ func getWorkflowMemo(input map[string]interface{}) (*types.Memo, error) {
 	for k, v := range input {
 		memoBytes, err := json.Marshal(v)
 		if err != nil {
-			return nil, fmt.Errorf("encode workflow memo error: %w", err.Error())
+			return nil, fmt.Errorf("encode workflow memo error: %w", err)
 		}
 		memo[k] = memoBytes
 	}
