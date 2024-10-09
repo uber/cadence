@@ -42,10 +42,10 @@ func TestDNSPeerChooserFactory(t *testing.T) {
 	peerTransport := &fakePeerTransport{}
 
 	// Ensure invalid address returns error
-	_, err := factory.CreatePeerChooser(peerTransport, "invalid address")
+	_, err := factory.CreatePeerChooser(peerTransport, PeerChooserOptions{Address: "invalid address"})
 	assert.EqualError(t, err, "incorrect DNS:Port format")
 
-	chooser, err := factory.CreatePeerChooser(peerTransport, "localhost:1234")
+	chooser, err := factory.CreatePeerChooser(peerTransport, PeerChooserOptions{Address: "localhost:1234"})
 	require.NoError(t, err)
 
 	require.NoError(t, chooser.Start())

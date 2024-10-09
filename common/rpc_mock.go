@@ -83,3 +83,27 @@ func (mr *MockRPCFactoryMockRecorder) GetMaxMessageSize() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMaxMessageSize", reflect.TypeOf((*MockRPCFactory)(nil).GetMaxMessageSize))
 }
+
+// Start mocks base method.
+func (m *MockRPCFactory) Start() {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "Start")
+}
+
+// Start indicates an expected call of Start.
+func (mr *MockRPCFactoryMockRecorder) Start() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockRPCFactory)(nil).Start))
+}
+
+// Stop mocks base method.
+func (m *MockRPCFactory) Stop() {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "Stop")
+}
+
+// Stop indicates an expected call of Stop.
+func (mr *MockRPCFactoryMockRecorder) Stop() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stop", reflect.TypeOf((*MockRPCFactory)(nil).Stop))
+}

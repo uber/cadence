@@ -384,7 +384,6 @@ func New(
 
 // Start all resources
 func (h *Impl) Start() {
-
 	if !atomic.CompareAndSwapInt32(
 		&h.status,
 		common.DaemonStatusInitialized,
@@ -399,6 +398,9 @@ func (h *Impl) Start() {
 	if err := h.pprofInitializer.Start(); err != nil {
 		h.logger.WithTags(tag.Error(err)).Fatal("fail to start PProf")
 	}
+
+	h.rpcFactory.Start()
+
 	if err := h.dispatcher.Start(); err != nil {
 		h.logger.WithTags(tag.Error(err)).Fatal("fail to start dispatcher")
 	}
@@ -435,9 +437,12 @@ func (h *Impl) Stop() {
 	h.domainCache.Stop()
 	h.domainMetricsScopeCache.Stop()
 	h.membershipResolver.Stop()
+
 	if err := h.dispatcher.Stop(); err != nil {
 		h.logger.WithTags(tag.Error(err)).Error("failed to stop dispatcher")
 	}
+	h.rpcFactory.Stop()
+
 	h.runtimeMetricsReporter.Stop()
 	h.persistenceBean.Close()
 	if h.isolationGroupConfigStore != nil {
