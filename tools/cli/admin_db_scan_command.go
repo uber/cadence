@@ -142,12 +142,12 @@ func checkExecution(
 	execManager, err := initializeExecutionStore(c, common.WorkflowIDToHistoryShard(req.WorkflowID, numberOfShards))
 	defer execManager.Close()
 	if err != nil {
-		return nil, invariant.ManagerCheckResult{}, fmt.Errorf("Error in execution check: %v", err)
+		return nil, invariant.ManagerCheckResult{}, fmt.Errorf("Error in execution check: %w", err)
 	}
 	historyV2Mgr, err := initializeHistoryManager(c)
 	defer historyV2Mgr.Close()
 	if err != nil {
-		return nil, invariant.ManagerCheckResult{}, fmt.Errorf("Error in execution check: %v", err)
+		return nil, invariant.ManagerCheckResult{}, fmt.Errorf("Error in execution check: %w", err)
 	}
 	pr := persistence.NewPersistenceRetryer(
 		execManager,
@@ -158,12 +158,12 @@ func checkExecution(
 	ctx, cancel, err := newContext(c)
 	defer cancel()
 	if err != nil {
-		return nil, invariant.ManagerCheckResult{}, fmt.Errorf("Error in creating context: %v", err)
+		return nil, invariant.ManagerCheckResult{}, fmt.Errorf("Error in creating context: %w", err)
 	}
 	execution, err := fetcher(ctx, pr, req)
 
 	if err != nil {
-		return nil, invariant.ManagerCheckResult{}, fmt.Errorf("Error in check execution: %v", err)
+		return nil, invariant.ManagerCheckResult{}, fmt.Errorf("Error in check execution: %w", err)
 	}
 
 	var ivs []invariant.Invariant

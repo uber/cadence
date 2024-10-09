@@ -183,7 +183,7 @@ func (d *domainCLIImpl) UpdateDomain(c *cli.Context) error {
 	ctx, cancel, err := newContext(c)
 	defer cancel()
 	if err != nil {
-		return commoncli.Problem("Error in creating context: %v", err)
+		return commoncli.Problem("Error in creating context: ", err)
 	}
 	if c.IsSet(FlagActiveClusterName) {
 		activeCluster := c.String(FlagActiveClusterName)
@@ -315,7 +315,7 @@ func (d *domainCLIImpl) DeprecateDomain(c *cli.Context) error {
 	ctx, cancel, err := newContext(c)
 	defer cancel()
 	if err != nil {
-		return commoncli.Problem("Error in creating context: %v", err)
+		return commoncli.Problem("Error in creating context: ", err)
 	}
 	if !force {
 		wfc, err := getWorkflowClient(c)
@@ -401,7 +401,7 @@ func (d *domainCLIImpl) getAllDomains(c *cli.Context) ([]*types.DescribeDomainRe
 	ctx, cancel, err := newContext(c)
 	defer cancel()
 	if err != nil {
-		return nil, commoncli.Problem("Error in creating context: %v", err)
+		return nil, commoncli.Problem("Error in creating context: ", err)
 	}
 	for more := true; more; more = len(token) > 0 {
 		listRequest := &types.ListDomainsRequest{
@@ -431,7 +431,7 @@ func (d *domainCLIImpl) failover(c *cli.Context, domainName string, targetCluste
 	ctx, cancel, err := newContext(c)
 	defer cancel()
 	if err != nil {
-		return commoncli.Problem("Error in creating context: %v", err)
+		return commoncli.Problem("Error in creating context: ", err)
 	}
 	_, err = d.updateDomain(ctx, updateRequest)
 	return err

@@ -183,7 +183,7 @@ func (b *clientFactory) ElasticSearchClient(c *cli.Context) (*elastic.Client, er
 
 	url, err := getRequiredOption(c, FlagURL)
 	if err != nil {
-		return nil, fmt.Errorf("Required flag not present %v", err)
+		return nil, fmt.Errorf("Required flag not present %w", err)
 	}
 
 	retrier := elastic.NewBackoffRetrier(elastic.NewExponentialBackoff(128*time.Millisecond, 513*time.Millisecond))

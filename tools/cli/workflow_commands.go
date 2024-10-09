@@ -466,7 +466,7 @@ func constructStartWorkflowRequest(c *cli.Context) (*types.StartWorkflowExecutio
 
 	searchAttrFields, err := processSearchAttr(c)
 	if err != nil {
-		return nil, commoncli.Problem("error processing search attributes: %v", err)
+		return nil, commoncli.Problem("error processing search attributes: ", err)
 	}
 	if len(searchAttrFields) != 0 {
 		startRequest.SearchAttributes = &types.SearchAttributes{IndexedFields: searchAttrFields}
@@ -513,11 +513,11 @@ func processHeader(c *cli.Context) (map[string][]byte, error) {
 	headerKeys := processMultipleKeys(c.String(FlagHeaderKey), " ")
 	jsoninputhandler, err := processJSONInputHelper(c, jsonTypeHeader)
 	if err != nil {
-		return nil, fmt.Errorf("Error in process header: %v", err)
+		return nil, fmt.Errorf("Error in process header: %w", err)
 	}
 	headerValues, err := processMultipleJSONValues(jsoninputhandler)
 	if err != nil {
-		return nil, fmt.Errorf("Error in process header: %v", err)
+		return nil, fmt.Errorf("Error in process header: %w", err)
 	}
 	if len(headerKeys) != len(headerValues) {
 		return nil, commoncli.Problem("Number of header keys and values are not equal.", nil)
@@ -540,11 +540,11 @@ func processMemo(c *cli.Context) (map[string][]byte, error) {
 	memoKeys := processMultipleKeys(c.String(FlagMemoKey), " ")
 	jsoninputhandler, err := processJSONInputHelper(c, jsonTypeMemo)
 	if err != nil {
-		return nil, fmt.Errorf("Error in process header: %v", err)
+		return nil, fmt.Errorf("Error in process header: %w", err)
 	}
 	memoValues, err := processMultipleJSONValues(jsoninputhandler)
 	if err != nil {
-		return nil, fmt.Errorf("Error in process header: %v", err)
+		return nil, fmt.Errorf("Error in process header: %w", err)
 	}
 	if len(memoKeys) != len(memoValues) {
 		return nil, fmt.Errorf("Number of memo keys and values are not equal.", nil)
@@ -563,8 +563,8 @@ func printWorkflowProgress(c *cli.Context, domain, wid, rid string) error {
 	}
 	timeElapse := 1
 	isTimeElapseExist := false
-	doneChan := make(chan bool) // Channel to signal completion
-	errChan := make(chan error)  // Separate channel for errors
+	doneChan := make(chan bool)       // Channel to signal completion
+	errChan := make(chan error)       // Separate channel for errors
 	var lastEvent *types.HistoryEvent // Used to print result of this run
 	ticker := time.NewTicker(time.Second).C
 
@@ -798,7 +798,7 @@ func constructSignalWithStartWorkflowRequest(c *cli.Context) (*types.SignalWithS
 	}
 	signalname, err := getRequiredOption(c, FlagName)
 	if err != nil {
-		return nil, fmt.Errorf("Required flag not present %v", err)
+		return nil, fmt.Errorf("Required flag not present %w", err)
 	}
 	jsoninputsignal, err := processJSONInputSignal(c)
 	if err != nil {
@@ -820,7 +820,7 @@ func constructSignalWithStartWorkflowRequest(c *cli.Context) (*types.SignalWithS
 		Memo:                                startRequest.Memo,
 		SearchAttributes:                    startRequest.SearchAttributes,
 		Header:                              startRequest.Header,
-		SignalName:                      	 signalname,
+		SignalName:                          signalname,
 		SignalInput:                         []byte(jsoninputsignal),
 		DelayStartSeconds:                   startRequest.DelayStartSeconds,
 		JitterStartSeconds:                  startRequest.JitterStartSeconds,
@@ -1083,7 +1083,7 @@ func describeWorkflowHelper(c *cli.Context, wid, rid string) error {
 	if printRaw {
 		o = resp
 	} else {
-		o , err= convertDescribeWorkflowExecutionResponse(resp, frontendClient, c)
+		o, err = convertDescribeWorkflowExecutionResponse(resp, frontendClient, c)
 		return commoncli.Problem("WF helper describe failed: ", err)
 	}
 
@@ -1239,7 +1239,7 @@ func convertDescribeWorkflowExecutionResponse(resp *types.DescribeWorkflowExecut
 		PendingActivities:      pendingActs,
 		PendingChildren:        resp.PendingChildren,
 		PendingDecision:        pendingDecision,
-	}, nil 
+	}, nil
 }
 
 func convertSearchAttributesToMapOfInterface(searchAttributes *types.SearchAttributes,
@@ -1485,7 +1485,7 @@ func displayWorkflows(c *cli.Context, workflows []*types.WorkflowExecutionInfo) 
 	return Render(c, table, tableOptions)
 }
 
-func listWorkflowExecutions(client frontend.Client, pageSize int, domain, query string, c *cli.Context) (getWorkflowPageFn) {
+func listWorkflowExecutions(client frontend.Client, pageSize int, domain, query string, c *cli.Context) getWorkflowPageFn {
 	return func(nextPageToken []byte) ([]*types.WorkflowExecutionInfo, []byte, error) {
 		request := &types.ListWorkflowExecutionsRequest{
 			Domain:        domain,
@@ -1538,7 +1538,7 @@ func listOpenWorkflow(client frontend.Client, pageSize int, earliestTime, latest
 	}
 }
 
-func listClosedWorkflow(client frontend.Client, pageSize int, earliestTime, latestTime int64, domain, workflowID, workflowType string, workflowStatus types.WorkflowExecutionCloseStatus, c *cli.Context) (getWorkflowPageFn) {
+func listClosedWorkflow(client frontend.Client, pageSize int, earliestTime, latestTime int64, domain, workflowID, workflowType string, workflowStatus types.WorkflowExecutionCloseStatus, c *cli.Context) getWorkflowPageFn {
 	return func(nextPageToken []byte) ([]*types.WorkflowExecutionInfo, []byte, error) {
 		request := &types.ListClosedWorkflowExecutionsRequest{
 			Domain:          domain,
@@ -1584,11 +1584,11 @@ func listWorkflows(c *cli.Context) (getWorkflowPageFn, error) {
 	}
 	earliestTime, err := parseTime(c.String(FlagEarliestTime), 0)
 	if err != nil {
-		return nil, fmt.Errorf("Error in listing workflows: %v", err)
+		return nil, fmt.Errorf("Error in listing workflows: %w", err)
 	}
 	latestTime, err := parseTime(c.String(FlagLatestTime), time.Now().UnixNano())
 	if err != nil {
-		return nil, fmt.Errorf("Error in listing workflows: %v", err)
+		return nil, fmt.Errorf("Error in listing workflows: %w", err)
 	}
 	workflowID := c.String(FlagWorkflowID)
 	workflowType := c.String(FlagWorkflowType)
@@ -1931,7 +1931,7 @@ func ResetInBatch(c *cli.Context) error {
 		return commoncli.Problem("Required flag not found: ", err)
 	}
 	batchResetParams := batchResetParamsType{
-		reason:           	  rsn,
+		reason:               rsn,
 		skipCurrentOpen:      c.Bool(FlagSkipCurrentOpen),
 		skipCurrentCompleted: c.Bool(FlagSkipCurrentCompleted),
 		nonDeterministicOnly: c.Bool(FlagNonDeterministicOnly),
@@ -2055,7 +2055,7 @@ func loadWorkflowIDsFromFile(excludeFileName, separator string) (map[string]bool
 		// #nosec
 		excFile, err := os.Open(excludeFileName)
 		if err != nil {
-			return nil, fmt.Errorf("Open failed2 %v", err)
+			return nil, fmt.Errorf("Open failed2 %w", err)
 		}
 		defer excFile.Close()
 		scanner := bufio.NewScanner(excFile)
@@ -2075,7 +2075,7 @@ func loadWorkflowIDsFromFile(excludeFileName, separator string) (map[string]bool
 			excludeWIDs[wid] = true
 		}
 	}
-	return excludeWIDs, nil 
+	return excludeWIDs, nil
 }
 
 func printErrorAndReturn(msg string, err error) error {
@@ -2251,11 +2251,11 @@ func getResetEventIDByType(
 	case resetTypeDecisionCompletedTime:
 		earliestTime, err := parseTime(c.String(FlagEarliestTime), 0)
 		if err != nil {
-			return "", 0, fmt.Errorf("Get reset event id by type failed: %v", err)
+			return "", 0, fmt.Errorf("Get reset event id by type failed: %w", err)
 		}
 		decisionFinishID, err = getEarliestDecisionID(ctx, domain, wid, rid, earliestTime, frontendClient)
 		if err != nil {
-			return "", 0, fmt.Errorf("Get reset event id by type failed: %v", err)
+			return "", 0, fmt.Errorf("Get reset event id by type failed: %w", err)
 		}
 	case resetTypeFirstDecisionScheduled:
 		decisionFinishID, err = getFirstDecisionTaskByType(ctx, domain, wid, rid, frontendClient, types.EventTypeDecisionTaskScheduled)

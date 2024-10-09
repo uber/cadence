@@ -153,11 +153,11 @@ func getDBFlags() []cli.Flag {
 func initializeExecutionStore(c *cli.Context, shardID int) (persistence.ExecutionManager, error) {
 	factory, err := getPersistenceFactory(c)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to get persistence factory: %v", err)
+		return nil, fmt.Errorf("Failed to get persistence factory: %w", err)
 	}
 	historyManager, err := factory.NewExecutionManager(shardID)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to initialize history manager", err)
+		return nil, fmt.Errorf("Failed to initialize history manager %w", err)
 	}
 	return historyManager, nil
 }
@@ -165,11 +165,11 @@ func initializeExecutionStore(c *cli.Context, shardID int) (persistence.Executio
 func initializeHistoryManager(c *cli.Context) (persistence.HistoryManager, error) {
 	factory, err := getPersistenceFactory(c)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to get persistence factory: %v", err)
+		return nil, fmt.Errorf("Failed to get persistence factory: %w", err)
 	}
 	historyManager, err := factory.NewHistoryManager()
 	if err != nil {
-		return nil, fmt.Errorf("Failed to initialize history manager", err)
+		return nil, fmt.Errorf("Failed to initialize history manager %w", err)
 	}
 	return historyManager, nil
 }
@@ -177,11 +177,11 @@ func initializeHistoryManager(c *cli.Context) (persistence.HistoryManager, error
 func initializeShardManager(c *cli.Context) (persistence.ShardManager, error) {
 	factory, err := getPersistenceFactory(c)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to get persistence factory: %v", err)
+		return nil, fmt.Errorf("Failed to get persistence factory: %w", err)
 	}
 	shardManager, err := factory.NewShardManager()
 	if err != nil {
-		return nil, fmt.Errorf("Failed to initialize shard manager %v", err)
+		return nil, fmt.Errorf("Failed to initialize shard manager %w", err)
 	}
 	return shardManager, nil 
 }
@@ -189,11 +189,11 @@ func initializeShardManager(c *cli.Context) (persistence.ShardManager, error) {
 func initializeDomainManager(c *cli.Context) (persistence.DomainManager, error) {
 	factory, err := getPersistenceFactory(c)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to get persistence factory: %v", err)
+		return nil, fmt.Errorf("Failed to get persistence factory: %w", err)
 	}
 	domainManager, err := factory.NewDomainManager()
 	if err != nil {
-		return nil, fmt.Errorf("Failed to initialize domain manager: %v", err)
+		return nil, fmt.Errorf("Failed to initialize domain manager: %w", err)
 	}
 	return domainManager, nil
 }
@@ -205,7 +205,7 @@ func getPersistenceFactory(c *cli.Context) (client.Factory, error) {
 	if persistenceFactory == nil {
 		persistenceFactory, err = initPersistenceFactory(c)
 		if err != nil {
-			return persistenceFactory, fmt.Errorf("%v", err)
+			return persistenceFactory, fmt.Errorf("%w", err)
 		}
 	}
 	return persistenceFactory, nil
@@ -232,7 +232,7 @@ func initPersistenceFactory(c *cli.Context) (client.Factory, error) {
 	defaultStore := cfg.Persistence.DataStores[cfg.Persistence.DefaultStore]
 	defaultStore, err = overrideDataStore(c, defaultStore)
 	if err != nil {
-		return nil, fmt.Errorf("Error in init persistence factory: %v", err)
+		return nil, fmt.Errorf("Error in init persistence factory: %w", err)
 	}
 	cfg.Persistence.DataStores[cfg.Persistence.DefaultStore] = defaultStore
 
@@ -259,7 +259,7 @@ func overrideDataStore(c *cli.Context, ds config.DataStore) (config.DataStore, e
 		var err error
 		ds, err = createDataStore(c)
 		if err != nil {
-			return config.DataStore{}, fmt.Errorf("Error in overriding data store: %v", err)
+			return config.DataStore{}, fmt.Errorf("Error in overriding data store: %w", err)
 		}
 	}
 

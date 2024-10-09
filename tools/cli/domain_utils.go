@@ -21,8 +21,8 @@
 package cli
 
 import (
-	"strings"
 	"fmt"
+	"strings"
 
 	"github.com/stretchr/testify/mock"
 	"github.com/uber-go/tally"
@@ -288,20 +288,20 @@ func initializeAdminDomainHandler(c *cli.Context) (domain.Handler, error) {
 	metricsClient := initializeMetricsClient()
 	logger, err := initializeLogger(configuration)
 	if err != nil {
-		return nil, fmt.Errorf("Error in init admin domain handler: %v", err)
+		return nil, fmt.Errorf("Error in init admin domain handler: %w", err)
 	}
 	clusterMetadata := initializeClusterMetadata(configuration, metricsClient, logger)
 	metadataMgr, err := initializeDomainManager(c)
 	if err != nil {
-		return nil, fmt.Errorf("Error in init admin domain handler: %v", err)
+		return nil, fmt.Errorf("Error in init admin domain handler: %w", err)
 	}
 	dynamicConfig, err := initializeDynamicConfig(configuration, logger)
 	if err != nil {
-		return nil, fmt.Errorf("Error in init admin domain handler: %v", err)
+		return nil, fmt.Errorf("Error in init admin domain handler: %w", err)
 	}
 	archivalprovider, err := initializeArchivalProvider(configuration, clusterMetadata, metricsClient, logger)
 	if err != nil {
-		return nil, fmt.Errorf("Error in init admin domain handler: %v", err)
+		return nil, fmt.Errorf("Error in init admin domain handler: %w", err)
 	}
 	domainhandler := initializeDomainHandler(
 		logger,
@@ -320,12 +320,12 @@ func loadConfig(
 	zone := getZone(context)
 	configDir, err := getConfigDir(context)
 	if err != nil {
-		return nil, fmt.Errorf("Unable to load config. %v", err)
+		return nil, fmt.Errorf("Unable to load config. %w", err)
 	}
 	var cfg config.Config
 	err = config.Load(env, configDir, zone, &cfg)
 	if err != nil {
-		return nil, fmt.Errorf("Unable to load config. %v", err)
+		return nil, fmt.Errorf("Unable to load config. %w", err)
 	}
 	return &cfg, nil
 }
@@ -426,7 +426,7 @@ func initializeArchivalProvider(
 		visibilityArchiverBootstrapContainer,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("Error initializing archival provider. %v", err)
+		return nil, fmt.Errorf("Error initializing archival provider. %w", err)
 	}
 	return archiverProvider, nil
 }
@@ -455,7 +455,7 @@ func initializeDynamicConfig(
 		doneChan,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("Error initializing dynamic config. %v", err)
+		return nil, fmt.Errorf("Error initializing dynamic config. %w", err)
 	}
 	return dynamicconfig.NewCollection(dynamicConfigClient, logger), nil
 }

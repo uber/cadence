@@ -174,10 +174,10 @@ func getOutputFile(outputFile string) (*os.File, error) {
 	}
 	f, err := os.Create(outputFile)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create output file %v", err)
+		return nil, fmt.Errorf("failed to create output file %w", err)
 	}
 
-	return f, nil 
+	return f, nil
 }
 
 func startReader(file *os.File, readerCh chan<- []byte) error {
@@ -411,7 +411,7 @@ func deserializeMessages(messages [][]byte, skipErrors bool) ([]*types.Replicati
 		}
 		replicationTasks = append(replicationTasks, thrift.ToReplicationTask(&task))
 	}
-	return replicationTasks, skipped, nil 
+	return replicationTasks, skipped, nil
 }
 
 func decode(message []byte, val *replicator.ReplicationTask) error {

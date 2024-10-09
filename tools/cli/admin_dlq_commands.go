@@ -209,11 +209,11 @@ func AdminGetDLQMessages(c *cli.Context) error {
 
 				events, err := deserializeBatchEvents(task.GetHistoryTaskV2Attributes().GetEvents())
 				if err != nil {
-					return nil, fmt.Errorf("Error in deserializing batch events: %v", err)
+					return nil, fmt.Errorf("Error in deserializing batch events: %w", err)
 				}
 				newRunEvents, err := deserializeBatchEvents(task.GetHistoryTaskV2Attributes().GetNewRunEvents())
 				if err != nil {
-					return nil, fmt.Errorf("Error in deserializing new run batch events: %v", err)
+					return nil, fmt.Errorf("Error in deserializing new run batch events: %w", err)
 				}
 				domainName, err := getDomainName(info.DomainID)
 				if err != nil {
@@ -405,7 +405,7 @@ func readShardsFromStdin() chan int {
 				break
 			}
 			if err != nil {
-				fmt.Printf("Unable to read from stdin: %v", err)
+				fmt.Printf("Unable to read from stdin: %w", err)
 				continue
 			}
 			shard, err := strconv.ParseInt(strings.TrimSpace(line), 10, 64)
@@ -438,7 +438,7 @@ func deserializeBatchEvents(blob *types.DataBlob) ([]*types.HistoryEvent, error)
 	serializer := persistence.NewPayloadSerializer()
 	events, err := serializer.DeserializeBatchEvents(persistence.NewDataBlobFromInternal(blob))
 	if err != nil {
-		return nil, fmt.Errorf("Failed to decode DLQ history replication events: %v", err)
+		return nil, fmt.Errorf("Failed to decode DLQ history replication events: %w", err)
 	}
 	return events, nil
 }

@@ -134,12 +134,12 @@ func fixExecution(
 	execManager, err := initializeExecutionStore(c, execution.Execution.(entity.Entity).GetShardID())
 	defer execManager.Close()
 	if err != nil {
-		return invariant.ManagerFixResult{}, fmt.Errorf("Error in fix execution: %v", err)
+		return invariant.ManagerFixResult{}, fmt.Errorf("Error in fix execution: %w", err)
 	}
 	historyV2Mgr, err := initializeHistoryManager(c)
 	defer historyV2Mgr.Close()
 	if err != nil {
-		return invariant.ManagerFixResult{}, fmt.Errorf("Error in fix execution: %v", err)
+		return invariant.ManagerFixResult{}, fmt.Errorf("Error in fix execution: %w", err)
 	}
 	pr := persistence.NewPersistenceRetryer(
 		execManager,
@@ -156,7 +156,7 @@ func fixExecution(
 	ctx, cancel, err := newContext(c)
 	defer cancel()
 	if err != nil {
-		return invariant.ManagerFixResult{}, fmt.Errorf("Context not created: %v", err)
+		return invariant.ManagerFixResult{}, fmt.Errorf("Context not created: %w", err)
 	}
 	return invariant.NewInvariantManager(ivs).RunFixes(ctx, execution.Execution), nil
 }

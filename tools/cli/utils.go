@@ -524,12 +524,6 @@ func printError(msg string, err error) {
 	}
 }
 
-// ErrorAndExit print easy to understand error msg first then error detail in a new line
-// func ErrorAndExit(msg string, err error) {
-// 	printError(msg, err)
-// 	osExit(1)
-// }
-
 func getWorkflowClient(c *cli.Context) (frontend.Client, error) {
 	return getDeps(c).ServerFrontendClient(c)
 }
@@ -730,7 +724,7 @@ func processJWTFlags(ctx context.Context, cliCtx *cli.Context) (context.Context,
 	} else if path != "" {
 		token, err = createJWT(path)
 		if err != nil {
-			return nil, fmt.Errorf("error creating JWT token: %v", err)
+			return nil, fmt.Errorf("error creating JWT token: %w", err)
 		}
 	}
 
@@ -740,7 +734,7 @@ func processJWTFlags(ctx context.Context, cliCtx *cli.Context) (context.Context,
 func populateContextFromCLIContext(ctx context.Context, cliCtx *cli.Context) (context.Context, error) {
 	ctx, err := processJWTFlags(ctx, cliCtx)
 	if err != nil {
-		return nil, fmt.Errorf("error while populating context from CLI: %v", err)
+		return nil, fmt.Errorf("error while populating context from CLI: %w", err)
 	}
 	return ctx, nil
 }
@@ -758,13 +752,13 @@ func newIndefiniteContext(c *cli.Context) (context.Context, context.CancelFunc, 
 		ctx, cancel, err := newTimedContext(c, time.Duration(c.Int(FlagContextTimeout))*time.Second)
 		defer cancel()
 		if err != nil {
-			return nil, nil, fmt.Errorf("Error in new indifinite context: %v", err)
+			return nil, nil, fmt.Errorf("Error in new indifinite context: %w", err)
 		}
 		return ctx, cancel, nil
 	}
 	ctx, err := populateContextFromCLIContext(c.Context, c)
 	if err != nil {
-		return nil, nil, fmt.Errorf("error in newIndefiniteContext: %v", err)
+		return nil, nil, fmt.Errorf("error in newIndefiniteContext: %w", err)
 	}
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
@@ -779,7 +773,7 @@ func newTimedContext(c *cli.Context, timeout time.Duration) (context.Context, co
 
 	ctx, err := populateContextFromCLIContext(c.Context, c)
 	if err != nil {
-		return nil, nil, fmt.Errorf("%v", err)
+		return nil, nil, fmt.Errorf("%w", err)
 	}
 	ctx, time_out := context.WithTimeout(ctx, timeout)
 
@@ -822,7 +816,7 @@ func processJSONInputHelper(c *cli.Context, jType jsonType) (string, error) {
 		// #nosec
 		data, err := ioutil.ReadFile(inputFile)
 		if err != nil {
-			return "", fmt.Errorf("Error reading input file: %v", err)
+			return "", fmt.Errorf("Error reading input file: %w", err)
 		}
 		input = string(data)
 	}
@@ -1028,7 +1022,7 @@ func getWorkflowMemo(input map[string]interface{}) (*types.Memo, error) {
 	for k, v := range input {
 		memoBytes, err := json.Marshal(v)
 		if err != nil {
-			return nil, fmt.Errorf("encode workflow memo error: %v", err.Error())
+			return nil, fmt.Errorf("encode workflow memo error: %w", err.Error())
 		}
 		memo[k] = memoBytes
 	}

@@ -392,7 +392,7 @@ func getFailoverWorkflowID(c *cli.Context) string {
 func getOperator() (string, error) {
 	user, err := user.Current()
 	if err != nil {
-		return "", fmt.Errorf("Unable to get operator info %v", err)
+		return "", fmt.Errorf("Unable to get operator info %w", err)
 	}
 
 	return fmt.Sprintf("%s (username: %s)", user.Name, user.Username), nil
