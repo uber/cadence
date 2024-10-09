@@ -32,6 +32,7 @@ import (
 	"go.uber.org/yarpc/transport/grpc"
 	"go.uber.org/yarpc/transport/tchannel"
 
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/authorization"
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/service"
@@ -47,6 +48,9 @@ const (
 // OutboundsBuilder allows defining outbounds for the dispatcher
 type OutboundsBuilder interface {
 	Build(*grpc.Transport, *tchannel.Transport) (yarpc.Outbounds, error)
+
+	// OutboundsBuilder is a daemon because it may run background processes. CreatePeerChooser is called before Start.
+	common.Daemon
 }
 
 type multiOutbounds struct {
@@ -77,6 +81,17 @@ func (b multiOutbounds) Build(grpc *grpc.Transport, tchannel *tchannel.Transport
 		}
 	}
 	return outbounds, errs
+}
+
+func (b multiOutbounds) Start() {
+	for _, builder := range b.builders {
+		builder.Start()
+	}
+}
+func (b multiOutbounds) Stop() {
+	for _, builder := range b.builders {
+		builder.Stop()
+	}
 }
 
 type publicClientOutbound struct {
@@ -121,6 +136,9 @@ func (b publicClientOutbound) Build(grpc *grpc.Transport, tchannel *tchannel.Tra
 	}, nil
 }
 
+func (b publicClientOutbound) Start() {}
+func (b publicClientOutbound) Stop()  {}
+
 type crossDCOutbounds struct {
 	clusterGroup map[string]config.ClusterInformation
 	pcf          PeerChooserFactory
@@ -140,7 +158,7 @@ func (b crossDCOutbounds) Build(grpcTransport *grpc.Transport, tchannelTransport
 		var outbound transport.UnaryOutbound
 		switch clusterInfo.RPCTransport {
 		case tchannel.TransportName:
-			peerChooser, err := b.pcf.CreatePeerChooser(tchannelTransport, clusterInfo.RPCAddress)
+			peerChooser, err := b.pcf.CreatePeerChooser(tchannelTransport, PeerChooserOptions{Address: clusterInfo.RPCAddress})
 			if err != nil {
 				return nil, err
 			}
@@ -150,7 +168,7 @@ func (b crossDCOutbounds) Build(grpcTransport *grpc.Transport, tchannelTransport
 			if err != nil {
 				return nil, err
 			}
-			peerChooser, err := b.pcf.CreatePeerChooser(createDialer(grpcTransport, tlsConfig), clusterInfo.RPCAddress)
+			peerChooser, err := b.pcf.CreatePeerChooser(createDialer(grpcTransport, tlsConfig), PeerChooserOptions{Address: clusterInfo.RPCAddress})
 			if err != nil {
 				return nil, err
 			}
@@ -179,20 +197,28 @@ func (b crossDCOutbounds) Build(grpcTransport *grpc.Transport, tchannelTransport
 	return outbounds, nil
 }
 
+func (b crossDCOutbounds) Start() {
+	b.pcf.Start()
+}
+func (b crossDCOutbounds) Stop() {
+	b.pcf.Stop()
+}
+
 type directOutbound struct {
 	serviceName string
 	grpcEnabled bool
 	tlsConfig   *tls.Config
+	pcf         PeerChooserFactory
 }
 
-func NewDirectOutbound(serviceName string, grpcEnabled bool, tlsConfig *tls.Config) OutboundsBuilder {
-	return directOutbound{serviceName, grpcEnabled, tlsConfig}
+func NewDirectOutboundBuilder(serviceName string, grpcEnabled bool, tlsConfig *tls.Config, pcf PeerChooserFactory) OutboundsBuilder {
+	return directOutbound{serviceName, grpcEnabled, tlsConfig, pcf}
 }
 
 func (o directOutbound) Build(grpc *grpc.Transport, tchannel *tchannel.Transport) (yarpc.Outbounds, error) {
 	var outbound transport.UnaryOutbound
 	if o.grpcEnabled {
-		directChooser, err := direct.New(direct.Configuration{}, createDialer(grpc, o.tlsConfig))
+		directChooser, err := o.pcf.CreatePeerChooser(createDialer(grpc, o.tlsConfig), PeerChooserOptions{})
 		if err != nil {
 			return nil, err
 		}
@@ -211,6 +237,14 @@ func (o directOutbound) Build(grpc *grpc.Transport, tchannel *tchannel.Transport
 			Unary:       middleware.ApplyUnaryOutbound(outbound, &ResponseInfoMiddleware{}),
 		},
 	}, nil
+}
+
+func (o directOutbound) Start() {
+	o.pcf.Start()
+}
+
+func (o directOutbound) Stop() {
+	o.pcf.Stop()
 }
 
 func IsGRPCOutbound(config transport.ClientConfig) bool {

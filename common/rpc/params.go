@@ -33,6 +33,7 @@ import (
 
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/dynamicconfig"
+	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/service"
 )
 
@@ -61,7 +62,7 @@ type httpParams struct {
 }
 
 // NewParams creates parameters for rpc.Factory from the given config
-func NewParams(serviceName string, config *config.Config, dc *dynamicconfig.Collection) (Params, error) {
+func NewParams(serviceName string, config *config.Config, dc *dynamicconfig.Collection, logger log.Logger) (Params, error) {
 	serviceConfig, err := config.GetServiceConfig(serviceName)
 	if err != nil {
 		return Params{}, err
@@ -94,6 +95,8 @@ func NewParams(serviceName string, config *config.Config, dc *dynamicconfig.Coll
 	if err != nil {
 		return Params{}, fmt.Errorf("public client outbound: %v", err)
 	}
+
+	directOutboundPCF := NewDirectPeerChooserFactory(logger)
 
 	forwardingRules, err := getForwardingRules(dc)
 	if err != nil {
@@ -138,8 +141,8 @@ func NewParams(serviceName string, config *config.Config, dc *dynamicconfig.Coll
 		GRPCAddress:     net.JoinHostPort(listenIP.String(), strconv.Itoa(int(serviceConfig.RPC.GRPCPort))),
 		GRPCMaxMsgSize:  serviceConfig.RPC.GRPCMaxMsgSize,
 		OutboundsBuilder: CombineOutbounds(
-			NewDirectOutbound(service.History, enableGRPCOutbound, outboundTLS[service.History]),
-			NewDirectOutbound(service.Matching, enableGRPCOutbound, outboundTLS[service.Matching]),
+			NewDirectOutboundBuilder(service.History, enableGRPCOutbound, outboundTLS[service.History], directOutboundPCF),
+			NewDirectOutboundBuilder(service.Matching, enableGRPCOutbound, outboundTLS[service.Matching], directOutboundPCF),
 			publicClientOutbound,
 		),
 		InboundTLS:  inboundTLS,

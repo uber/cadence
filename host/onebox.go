@@ -1042,6 +1042,8 @@ func (c *cadenceImpl) newRPCFactory(serviceName string, host membership.HostInfo
 		c.logger.Fatal("failed to get frontend PortGRPC", tag.Value(c.FrontendHost()), tag.Error(err))
 	}
 
+	directOutboundPCF := rpc.NewDirectPeerChooserFactory(c.logger)
+
 	return rpc.NewFactory(c.logger, rpc.Params{
 		ServiceName:     serviceName,
 		TChannelAddress: tchannelAddress,
@@ -1055,8 +1057,8 @@ func (c *cadenceImpl) newRPCFactory(serviceName string, host membership.HostInfo
 			&singleGRPCOutbound{testOutboundName(serviceName), serviceName, grpcAddress},
 			&singleGRPCOutbound{rpc.OutboundPublicClient, service.Frontend, frontendGrpcAddress},
 			rpc.NewCrossDCOutbounds(c.clusterMetadata.GetAllClusterInfo(), rpc.NewDNSPeerChooserFactory(0, c.logger)),
-			rpc.NewDirectOutbound(service.History, true, nil),
-			rpc.NewDirectOutbound(service.Matching, true, nil),
+			rpc.NewDirectOutboundBuilder(service.History, true, nil, directOutboundPCF),
+			rpc.NewDirectOutboundBuilder(service.Matching, true, nil, directOutboundPCF),
 		),
 	})
 }
@@ -1080,6 +1082,9 @@ func (b singleGRPCOutbound) Build(grpc *grpc.Transport, _ *tchannel.Transport) (
 		},
 	}, nil
 }
+
+func (b singleGRPCOutbound) Start() {}
+func (b singleGRPCOutbound) Stop()  {}
 
 type versionMiddleware struct {
 }

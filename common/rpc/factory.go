@@ -40,9 +40,10 @@ const defaultGRPCSizeLimit = 4 * 1024 * 1024
 
 // Factory is an implementation of common.RPCFactory interface
 type Factory struct {
-	maxMessageSize int
-	channel        tchannel.Channel
-	dispatcher     *yarpc.Dispatcher
+	maxMessageSize   int
+	channel          tchannel.Channel
+	dispatcher       *yarpc.Dispatcher
+	outboundsBuilder OutboundsBuilder
 }
 
 // NewFactory builds a new rpc.Factory
@@ -132,9 +133,10 @@ func NewFactory(logger log.Logger, p Params) *Factory {
 	})
 
 	return &Factory{
-		maxMessageSize: p.GRPCMaxMsgSize,
-		dispatcher:     dispatcher,
-		channel:        ch.Channel(),
+		maxMessageSize:   p.GRPCMaxMsgSize,
+		dispatcher:       dispatcher,
+		channel:          ch.Channel(),
+		outboundsBuilder: p.OutboundsBuilder,
 	}
 }
 
@@ -153,6 +155,22 @@ func (d *Factory) GetMaxMessageSize() int {
 		return defaultGRPCSizeLimit
 	}
 	return d.maxMessageSize
+}
+
+func (d *Factory) Start() {
+	if d.outboundsBuilder == nil {
+		return
+	}
+
+	d.outboundsBuilder.Start()
+}
+
+func (d *Factory) Stop() {
+	if d.outboundsBuilder == nil {
+		return
+	}
+
+	d.outboundsBuilder.Stop()
 }
 
 func createDialer(transport *grpc.Transport, tlsConfig *tls.Config) *grpc.Dialer {

@@ -35,6 +35,7 @@ import (
 	"go.uber.org/yarpc/transport/tchannel"
 
 	"github.com/uber/cadence/common/config"
+	"github.com/uber/cadence/common/log/testlogger"
 	"github.com/uber/cadence/common/service"
 )
 
@@ -158,13 +159,14 @@ func TestCrossDCOutbounds(t *testing.T) {
 func TestDirectOutbound(t *testing.T) {
 	grpc := &grpc.Transport{}
 	tchannel := &tchannel.Transport{}
+	logger := testlogger.New(t)
 
-	outbounds, err := NewDirectOutbound("cadence-history", false, nil).Build(grpc, tchannel)
+	outbounds, err := NewDirectOutboundBuilder("cadence-history", false, nil, NewDirectPeerChooserFactory(logger)).Build(grpc, tchannel)
 	assert.NoError(t, err)
 	assert.Equal(t, "cadence-history", outbounds["cadence-history"].ServiceName)
 	assert.NotNil(t, outbounds["cadence-history"].Unary)
 
-	outbounds, err = NewDirectOutbound("cadence-history", true, nil).Build(grpc, tchannel)
+	outbounds, err = NewDirectOutboundBuilder("cadence-history", true, nil, NewDirectPeerChooserFactory(logger)).Build(grpc, tchannel)
 	assert.NoError(t, err)
 	assert.Equal(t, "cadence-history", outbounds["cadence-history"].ServiceName)
 	assert.NotNil(t, outbounds["cadence-history"].Unary)
@@ -200,8 +202,14 @@ func (b fakeOutboundBuilder) Build(*grpc.Transport, *tchannel.Transport) (yarpc.
 	return b.outbounds, b.err
 }
 
+func (b fakeOutboundBuilder) Start() {}
+func (b fakeOutboundBuilder) Stop()  {}
+
 type fakePeerChooserFactory struct{}
 
-func (f fakePeerChooserFactory) CreatePeerChooser(transport peer.Transport, address string) (peer.Chooser, error) {
+func (f fakePeerChooserFactory) CreatePeerChooser(transport peer.Transport, opts PeerChooserOptions) (peer.Chooser, error) {
 	return direct.New(direct.Configuration{}, transport)
 }
+
+func (f fakePeerChooserFactory) Start() {}
+func (f fakePeerChooserFactory) Stop()  {}

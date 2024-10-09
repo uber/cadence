@@ -67,5 +67,7 @@ type (
 	RPCFactory interface {
 		GetDispatcher() *yarpc.Dispatcher
 		GetMaxMessageSize() int
+		Start()
+		Stop()
 	}
 )
