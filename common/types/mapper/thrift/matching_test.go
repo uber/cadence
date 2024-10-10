@@ -256,7 +256,8 @@ func TestMatchingPollForDecisionResponse(t *testing.T) {
 		thriftObj := FromMatchingPollForDecisionTaskResponse(tc.input)
 		roundTripObj := ToMatchingPollForDecisionTaskResponse(thriftObj)
 		opt := cmpopts.IgnoreFields(types.WorkflowExecutionStartedEventAttributes{}, "ParentWorkflowDomainID")
-		if diff := cmp.Diff(tc.input, roundTripObj, opt); diff != "" {
+		opt2 := cmpopts.IgnoreFields(types.MatchingPollForDecisionTaskResponse{}, "PartitionConfig")
+		if diff := cmp.Diff(tc.input, roundTripObj, opt, opt2); diff != "" {
 			t.Fatalf("Mismatch (-want +got):\n%s", diff)
 		}
 	}
@@ -283,7 +284,10 @@ func TestMatchingPollForActivityTaskResponse(t *testing.T) {
 	for _, tc := range testCases {
 		thriftObj := FromMatchingPollForActivityTaskResponse(tc.input)
 		roundTripObj := ToMatchingPollForActivityTaskResponse(thriftObj)
-		assert.Equal(t, tc.input, roundTripObj)
+		opt := cmpopts.IgnoreFields(types.MatchingPollForActivityTaskResponse{}, "PartitionConfig")
+		if diff := cmp.Diff(tc.input, roundTripObj, opt); diff != "" {
+			t.Fatalf("Mismatch (-want +got):\n%s", diff)
+		}
 	}
 }
 

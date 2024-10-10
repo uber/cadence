@@ -58,13 +58,13 @@ func NewMatchingClient(
 	}
 }
 
-func (c *matchingClient) AddActivityTask(ctx context.Context, ap1 *types.AddActivityTaskRequest, p1 ...yarpc.CallOption) (err error) {
+func (c *matchingClient) AddActivityTask(ctx context.Context, ap1 *types.AddActivityTaskRequest, p1 ...yarpc.CallOption) (ap2 *types.AddActivityTaskResponse, err error) {
 	ctx, cancel := createContext(ctx, c.timeout)
 	defer cancel()
 	return c.client.AddActivityTask(ctx, ap1, p1...)
 }
 
-func (c *matchingClient) AddDecisionTask(ctx context.Context, ap1 *types.AddDecisionTaskRequest, p1 ...yarpc.CallOption) (err error) {
+func (c *matchingClient) AddDecisionTask(ctx context.Context, ap1 *types.AddDecisionTaskRequest, p1 ...yarpc.CallOption) (ap2 *types.AddDecisionTaskResponse, err error) {
 	ctx, cancel := createContext(ctx, c.timeout)
 	defer cancel()
 	return c.client.AddDecisionTask(ctx, ap1, p1...)

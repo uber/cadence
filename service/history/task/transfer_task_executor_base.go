@@ -104,7 +104,7 @@ func (t *transferTaskExecutorBase) pushActivity(
 		t.logger.Fatal("Cannot process non activity task", tag.TaskType(task.GetTaskType()))
 	}
 
-	return t.matchingClient.AddActivityTask(ctx, &types.AddActivityTaskRequest{
+	_, err := t.matchingClient.AddActivityTask(ctx, &types.AddActivityTaskRequest{
 		DomainUUID:       task.TargetDomainID,
 		SourceDomainUUID: task.DomainID,
 		Execution: &types.WorkflowExecution{
@@ -116,6 +116,7 @@ func (t *transferTaskExecutorBase) pushActivity(
 		ScheduleToStartTimeoutSeconds: common.Int32Ptr(activityScheduleToStartTimeout),
 		PartitionConfig:               partitionConfig,
 	})
+	return err
 }
 
 func (t *transferTaskExecutorBase) pushDecision(
@@ -133,7 +134,7 @@ func (t *transferTaskExecutorBase) pushDecision(
 		t.logger.Fatal("Cannot process non decision task", tag.TaskType(task.GetTaskType()))
 	}
 
-	return t.matchingClient.AddDecisionTask(ctx, &types.AddDecisionTaskRequest{
+	_, err := t.matchingClient.AddDecisionTask(ctx, &types.AddDecisionTaskRequest{
 		DomainUUID: task.DomainID,
 		Execution: &types.WorkflowExecution{
 			WorkflowID: task.WorkflowID,
@@ -144,6 +145,7 @@ func (t *transferTaskExecutorBase) pushDecision(
 		ScheduleToStartTimeoutSeconds: common.Int32Ptr(decisionScheduleToStartTimeout),
 		PartitionConfig:               partitionConfig,
 	})
+	return err
 }
 
 func (t *transferTaskExecutorBase) recordWorkflowStarted(

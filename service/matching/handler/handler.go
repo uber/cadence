@@ -125,7 +125,7 @@ func (h *handlerImpl) newHandlerContext(
 func (h *handlerImpl) AddActivityTask(
 	ctx context.Context,
 	request *types.AddActivityTaskRequest,
-) (retError error) {
+) (resp *types.AddActivityTaskResponse, retError error) {
 	defer func() { log.CapturePanic(recover(), h.logger, &retError) }()
 
 	startT := time.Now()
@@ -145,7 +145,7 @@ func (h *handlerImpl) AddActivityTask(
 	}
 
 	if ok := h.workerRateLimiter.Allow(quotas.Info{Domain: domainName}); !ok {
-		return hCtx.handleErr(errMatchingHostThrottle)
+		return nil, hCtx.handleErr(errMatchingHostThrottle)
 	}
 
 	syncMatch, err := h.engine.AddActivityTask(hCtx, request)
@@ -153,14 +153,14 @@ func (h *handlerImpl) AddActivityTask(
 		hCtx.scope.RecordTimer(metrics.SyncMatchLatencyPerTaskList, time.Since(startT))
 	}
 
-	return hCtx.handleErr(err)
+	return &types.AddActivityTaskResponse{}, hCtx.handleErr(err)
 }
 
 // AddDecisionTask - adds a decision task.
 func (h *handlerImpl) AddDecisionTask(
 	ctx context.Context,
 	request *types.AddDecisionTaskRequest,
-) (retError error) {
+) (resp *types.AddDecisionTaskResponse, retError error) {
 	defer func() { log.CapturePanic(recover(), h.logger, &retError) }()
 
 	startT := time.Now()
@@ -180,14 +180,14 @@ func (h *handlerImpl) AddDecisionTask(
 	}
 
 	if ok := h.workerRateLimiter.Allow(quotas.Info{Domain: domainName}); !ok {
-		return hCtx.handleErr(errMatchingHostThrottle)
+		return nil, hCtx.handleErr(errMatchingHostThrottle)
 	}
 
 	syncMatch, err := h.engine.AddDecisionTask(hCtx, request)
 	if syncMatch {
 		hCtx.scope.RecordTimer(metrics.SyncMatchLatencyPerTaskList, time.Since(startT))
 	}
-	return hCtx.handleErr(err)
+	return &types.AddDecisionTaskResponse{}, hCtx.handleErr(err)
 }
 
 // PollForActivityTask - long poll for an activity task.
