@@ -170,7 +170,7 @@ func (s *server) startService() common.Daemon {
 	peerProvider, err := ringpopprovider.New(
 		params.Name,
 		&s.cfg.Ringpop,
-		rpcFactory.GetChannel(),
+		rpcFactory.GetTChannel(),
 		membership.PortMap{
 			membership.PortGRPC:     svcCfg.RPC.GRPCPort,
 			membership.PortTchannel: svcCfg.RPC.Port,
