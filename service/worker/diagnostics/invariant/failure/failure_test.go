@@ -132,3 +132,39 @@ func failedWfHistory() *types.GetWorkflowExecutionHistoryResponse {
 		},
 	}
 }
+
+func Test__RootCause(t *testing.T) {
+	metadata := failureMetadata{
+		Identity: "localhost",
+	}
+	metadataInBytes, err := json.Marshal(metadata)
+	require.NoError(t, err)
+	testCases := []struct {
+		name           string
+		input          []invariant.InvariantCheckResult
+		expectedResult []invariant.InvariantRootCauseResult
+		err            error
+	}{
+		{
+			name: "customer side failure",
+			input: []invariant.InvariantCheckResult{
+				{
+					InvariantType: ActivityFailed.String(),
+					Reason:        CustomError.String(),
+					Metadata:      metadataInBytes,
+				}},
+			expectedResult: []invariant.InvariantRootCauseResult{{
+				RootCause: invariant.RootCauseTypeServiceSideIssue,
+				Metadata:  metadataInBytes,
+			}},
+			err: nil,
+		},
+	}
+	inv := NewInvariant(Params{})
+	for _, tc := range testCases {
+		result, err := inv.RootCause(context.Background(), tc.input)
+		require.Equal(t, tc.err, err)
+		require.Equal(t, len(tc.expectedResult), len(result))
+		require.ElementsMatch(t, tc.expectedResult, result)
+	}
+}

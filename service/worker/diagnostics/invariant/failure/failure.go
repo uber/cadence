@@ -99,6 +99,15 @@ func fetchIdentity(attr *types.WorkflowExecutionFailedEventAttributes, events []
 	return ""
 }
 
-func (f *failure) RootCause(ctx context.Context, results []invariant.InvariantCheckResult) ([]invariant.InvariantRootCauseResult, error) {
-	return nil, nil
+func (f *failure) RootCause(ctx context.Context, issues []invariant.InvariantCheckResult) ([]invariant.InvariantRootCauseResult, error) {
+	result := make([]invariant.InvariantRootCauseResult, 0)
+	for _, issue := range issues {
+		if issue.Reason == CustomError.String() || issue.Reason == PanicError.String() {
+			result = append(result, invariant.InvariantRootCauseResult{
+				RootCause: invariant.RootCauseTypeServiceSideIssue,
+				Metadata:  issue.Metadata,
+			})
+		}
+	}
+	return result, nil
 }
