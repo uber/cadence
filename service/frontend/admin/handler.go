@@ -876,7 +876,7 @@ func (adh *adminHandlerImpl) DescribeCluster(
 		}
 
 		var rings []*types.RingInfo
-		for _, role := range service.List {
+		for _, role := range service.ListWithRing {
 			var servers []*types.HostInfo
 			members, err := monitor.Members(role)
 			if err != nil {
