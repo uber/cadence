@@ -123,9 +123,7 @@ func New(
 		tallyScope:               params.TallyScope,
 		zapLogger:                zapLogger.Named("scanner"),
 		startWorkflowWithRetryFn: workercommon.StartWorkflowWithRetry,
-		newWorkerFn: func(service workflowserviceclient.Interface, domain string, taskList string, options worker.Options) worker.Worker {
-			return worker.New(service, domain, taskList, options)
-		},
+		newWorkerFn:              worker.New,
 	}
 
 }
