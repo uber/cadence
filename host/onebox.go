@@ -1026,7 +1026,7 @@ func newPublicClient(dispatcher *yarpc.Dispatcher) cwsc.Interface {
 	)
 }
 
-func (c *cadenceImpl) newRPCFactory(serviceName string, host membership.HostInfo) common.RPCFactory {
+func (c *cadenceImpl) newRPCFactory(serviceName string, host membership.HostInfo) rpc.Factory {
 	tchannelAddress, err := host.GetNamedAddress(membership.PortTchannel)
 	if err != nil {
 		c.logger.Fatal("failed to get PortTchannel port from host", tag.Value(host), tag.Error(err))
@@ -1042,7 +1042,8 @@ func (c *cadenceImpl) newRPCFactory(serviceName string, host membership.HostInfo
 		c.logger.Fatal("failed to get frontend PortGRPC", tag.Value(c.FrontendHost()), tag.Error(err))
 	}
 
-	directOutboundPCF := rpc.NewDirectPeerChooserFactory(c.logger)
+	directOutboundPCF := rpc.NewDirectPeerChooserFactory(serviceName, c.logger)
+	directConnRetainFn := func(opts ...dynamicconfig.FilterOption) bool { return false }
 
 	return rpc.NewFactory(c.logger, rpc.Params{
 		ServiceName:     serviceName,
@@ -1057,8 +1058,8 @@ func (c *cadenceImpl) newRPCFactory(serviceName string, host membership.HostInfo
 			&singleGRPCOutbound{testOutboundName(serviceName), serviceName, grpcAddress},
 			&singleGRPCOutbound{rpc.OutboundPublicClient, service.Frontend, frontendGrpcAddress},
 			rpc.NewCrossDCOutbounds(c.clusterMetadata.GetAllClusterInfo(), rpc.NewDNSPeerChooserFactory(0, c.logger)),
-			rpc.NewDirectOutboundBuilder(service.History, true, nil, directOutboundPCF),
-			rpc.NewDirectOutboundBuilder(service.Matching, true, nil, directOutboundPCF),
+			rpc.NewDirectOutboundBuilder(service.History, true, nil, directOutboundPCF, directConnRetainFn),
+			rpc.NewDirectOutboundBuilder(service.Matching, true, nil, directOutboundPCF, directConnRetainFn),
 		),
 	})
 }
@@ -1074,17 +1075,16 @@ type singleGRPCOutbound struct {
 	address      string
 }
 
-func (b singleGRPCOutbound) Build(grpc *grpc.Transport, _ *tchannel.Transport) (yarpc.Outbounds, error) {
-	return yarpc.Outbounds{
-		b.outboundName: {
-			ServiceName: b.serviceName,
-			Unary:       grpc.NewSingleOutbound(b.address),
+func (b singleGRPCOutbound) Build(grpc *grpc.Transport, _ *tchannel.Transport) (*rpc.Outbounds, error) {
+	return &rpc.Outbounds{
+		Outbounds: yarpc.Outbounds{
+			b.outboundName: {
+				ServiceName: b.serviceName,
+				Unary:       grpc.NewSingleOutbound(b.address),
+			},
 		},
 	}, nil
 }
-
-func (b singleGRPCOutbound) Start() {}
-func (b singleGRPCOutbound) Stop()  {}
 
 type versionMiddleware struct {
 }

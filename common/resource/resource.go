@@ -49,7 +49,7 @@ import (
 	"github.com/uber/cadence/common/partition"
 	"github.com/uber/cadence/common/persistence"
 	persistenceClient "github.com/uber/cadence/common/persistence/client"
-	"github.com/uber/cadence/common/quotas/global/rpc"
+	qrpc "github.com/uber/cadence/common/quotas/global/rpc"
 	"github.com/uber/cadence/common/service"
 )
 
@@ -96,7 +96,7 @@ type (
 		GetMatchingClient() matching.Client
 		GetHistoryRawClient() history.Client
 		GetHistoryClient() history.Client
-		GetRatelimiterAggregatorsClient() rpc.Client
+		GetRatelimiterAggregatorsClient() qrpc.Client
 		GetRemoteAdminClient(cluster string) admin.Client
 		GetRemoteFrontendClient(cluster string) frontend.Client
 		GetClientBean() client.Bean

@@ -96,8 +96,6 @@ func NewParams(serviceName string, config *config.Config, dc *dynamicconfig.Coll
 		return Params{}, fmt.Errorf("public client outbound: %v", err)
 	}
 
-	directOutboundPCF := NewDirectPeerChooserFactory(logger)
-
 	forwardingRules, err := getForwardingRules(dc)
 	if err != nil {
 		return Params{}, err
@@ -141,8 +139,20 @@ func NewParams(serviceName string, config *config.Config, dc *dynamicconfig.Coll
 		GRPCAddress:     net.JoinHostPort(listenIP.String(), strconv.Itoa(int(serviceConfig.RPC.GRPCPort))),
 		GRPCMaxMsgSize:  serviceConfig.RPC.GRPCMaxMsgSize,
 		OutboundsBuilder: CombineOutbounds(
-			NewDirectOutboundBuilder(service.History, enableGRPCOutbound, outboundTLS[service.History], directOutboundPCF),
-			NewDirectOutboundBuilder(service.Matching, enableGRPCOutbound, outboundTLS[service.Matching], directOutboundPCF),
+			NewDirectOutboundBuilder(
+				service.History,
+				enableGRPCOutbound,
+				outboundTLS[service.History],
+				NewDirectPeerChooserFactory(service.History, logger),
+				dc.GetBoolProperty(dynamicconfig.EnableConnectionRetainingDirectChooser),
+			),
+			NewDirectOutboundBuilder(
+				service.Matching,
+				enableGRPCOutbound,
+				outboundTLS[service.Matching],
+				NewDirectPeerChooserFactory(service.Matching, logger),
+				dc.GetBoolProperty(dynamicconfig.EnableConnectionRetainingDirectChooser),
+			),
 			publicClientOutbound,
 		),
 		InboundTLS:  inboundTLS,
