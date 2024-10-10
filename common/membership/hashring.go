@@ -35,7 +35,6 @@ import (
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/clock"
-	"github.com/uber/cadence/common/debounce"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
@@ -64,7 +63,7 @@ type PeerProvider interface {
 }
 
 type ring struct {
-	debounce *debounce.DebouncedChannel
+	debounce *DebouncedChannel
 
 	status       common.DaemonStatusManager
 	service      string
@@ -103,7 +102,7 @@ func newHashring(
 		timeSource:   timeSource,
 		logger:       logger,
 		scope:        scope,
-		debounce:     debounce.NewDebouncedChannel(timeSource, debounceInterval),
+		debounce:     NewDebouncedChannel(timeSource, debounceInterval),
 	}
 
 	r.members.keys = make(map[string]HostInfo)

@@ -52,31 +52,45 @@ func TestDaemonStatusRaceCondition(t *testing.T) {
 	var dm DaemonStatusManager
 	var successes atomic.Int32
 	var wg sync.WaitGroup
+	var started sync.WaitGroup
+
+	started.Add(1) // make sure we wait until all goroutines are started
 
 	// try to issue multiple Start-s at once
 	for i := 0; i < 10; i++ {
 		wg.Add(1)
+		started.Add(1)
 		go func() {
 			defer wg.Done()
+			started.Done() // mark as "waiting"
+			started.Wait() // wait for other goroutines to catch up
 			if dm.TransitionToStart() {
 				successes.Add(1)
 			}
 		}()
 	}
+
+	started.Done() // allows resuming goroutines once they're all started
 	wg.Wait()
 	assert.Equal(t, 1, int(successes.Load()), "only one Start call should succeed")
 
 	// now do the same for stops
 	successes.Store(0)
+	started.Add(1) // make sure we wait until all goroutines are started
 	for i := 0; i < 10; i++ {
 		wg.Add(1)
+		started.Add(1)
 		go func() {
 			defer wg.Done()
+			started.Done() // mark as "waiting"
+			started.Wait() // wait for other goroutines to catch up
 			if dm.TransitionToStop() {
 				successes.Add(1)
 			}
 		}()
 	}
+
+	started.Done() // allows resuming goroutines once they're all started
 	wg.Wait()
 	assert.Equal(t, 1, int(successes.Load()), "only one Stop call should succeed")
 }
