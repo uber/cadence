@@ -352,3 +352,338 @@ func TestGetDomainReplicationMessagesRequest_GetClusterName(t *testing.T) {
 	res = nilStruct.GetClusterName()
 	assert.Equal(t, "", res)
 }
+
+func TestGetReplicationMessagesRequest_SerializeForLogging(t *testing.T) {
+	// Test case where the struct is nil
+	var nilStruct *GetReplicationMessagesRequest
+	res, err := nilStruct.SerializeForLogging()
+	assert.Equal(t, "", res)
+	assert.NoError(t, err)
+
+	// Test case with a non-nil struct
+	tokens := []*ReplicationToken{{}, {}}
+	testStruct := GetReplicationMessagesRequest{
+		Tokens:      tokens,
+		ClusterName: "test-cluster",
+	}
+
+	res, err = testStruct.SerializeForLogging()
+	assert.NotEmpty(t, res)
+	assert.NoError(t, err)
+}
+
+func TestGetReplicationMessagesRequest_GetClusterName(t *testing.T) {
+	testStruct := GetReplicationMessagesRequest{
+		ClusterName: "test-cluster",
+	}
+
+	res := testStruct.GetClusterName()
+	assert.Equal(t, "test-cluster", res)
+
+	var nilStruct *GetReplicationMessagesRequest
+	res = nilStruct.GetClusterName()
+	assert.Equal(t, "", res)
+}
+
+func TestGetReplicationMessagesResponse_GetMessagesByShard(t *testing.T) {
+	messagesByShard := map[int32]*ReplicationMessages{
+		1: {},
+		2: {},
+	}
+	testStruct := GetReplicationMessagesResponse{
+		MessagesByShard: messagesByShard,
+	}
+
+	res := testStruct.GetMessagesByShard()
+	assert.Equal(t, messagesByShard, res)
+
+	var nilStruct *GetReplicationMessagesResponse
+	res = nilStruct.GetMessagesByShard()
+	assert.Nil(t, res)
+}
+
+func TestCountDLQMessagesRequest_SerializeForLogging(t *testing.T) {
+	// Test case where the struct is nil
+	var nilStruct *CountDLQMessagesRequest
+	res, err := nilStruct.SerializeForLogging()
+	assert.Equal(t, "", res)
+	assert.NoError(t, err)
+
+	// Test case with a non-nil struct
+	testStruct := CountDLQMessagesRequest{
+		ForceFetch: true,
+	}
+
+	res, err = testStruct.SerializeForLogging()
+	assert.NotEmpty(t, res)
+	assert.NoError(t, err)
+}
+
+func TestCountDLQMessagesResponse(t *testing.T) {
+	history := map[HistoryDLQCountKey]int64{
+		{ShardID: 1, SourceCluster: "cluster-1"}: 100,
+	}
+	testStruct := CountDLQMessagesResponse{
+		History: history,
+		Domain:  200,
+	}
+
+	assert.Equal(t, history, testStruct.History)
+	assert.Equal(t, int64(200), testStruct.Domain)
+
+	// Test for empty history
+	emptyStruct := CountDLQMessagesResponse{}
+	assert.Nil(t, emptyStruct.History)
+	assert.Equal(t, int64(0), emptyStruct.Domain)
+}
+
+func TestHistoryCountDLQMessagesResponse(t *testing.T) {
+	entries := map[HistoryDLQCountKey]int64{
+		{ShardID: 1, SourceCluster: "cluster-1"}: 100,
+	}
+	testStruct := HistoryCountDLQMessagesResponse{
+		Entries: entries,
+	}
+
+	assert.Equal(t, entries, testStruct.Entries)
+
+	// Test for empty entries
+	emptyStruct := HistoryCountDLQMessagesResponse{}
+	assert.Nil(t, emptyStruct.Entries)
+}
+
+func TestMergeDLQMessagesRequest_SerializeForLogging(t *testing.T) {
+	// Test case where the struct is nil
+	var nilStruct *MergeDLQMessagesRequest
+	res, err := nilStruct.SerializeForLogging()
+	assert.Equal(t, "", res)
+	assert.NoError(t, err)
+
+	// Test case with a non-nil struct
+	dlqType := DLQTypeReplication
+	endMessageID := int64(102)
+	nextPageToken := []byte("token")
+	testStruct := MergeDLQMessagesRequest{
+		Type:                  &dlqType,
+		ShardID:               101,
+		SourceCluster:         "cluster-1",
+		InclusiveEndMessageID: &endMessageID,
+		MaximumPageSize:       50,
+		NextPageToken:         nextPageToken,
+	}
+
+	res, err = testStruct.SerializeForLogging()
+	assert.NotEmpty(t, res)
+	assert.NoError(t, err)
+}
+
+func TestMergeDLQMessagesRequest_Getters(t *testing.T) {
+	dlqType := DLQTypeReplication
+	endMessageID := int64(102)
+	nextPageToken := []byte("token")
+	testStruct := MergeDLQMessagesRequest{
+		Type:                  &dlqType,
+		ShardID:               101,
+		SourceCluster:         "cluster-1",
+		InclusiveEndMessageID: &endMessageID,
+		MaximumPageSize:       50,
+		NextPageToken:         nextPageToken,
+	}
+
+	assert.Equal(t, dlqType, testStruct.GetType())
+	assert.Equal(t, int32(101), testStruct.GetShardID())
+	assert.Equal(t, "cluster-1", testStruct.GetSourceCluster())
+	assert.Equal(t, endMessageID, testStruct.GetInclusiveEndMessageID())
+	assert.Equal(t, int32(50), testStruct.GetMaximumPageSize())
+	assert.Equal(t, nextPageToken, testStruct.GetNextPageToken())
+
+	// Test for nil values
+	var nilStruct *MergeDLQMessagesRequest
+	assert.Equal(t, DLQType(0), nilStruct.GetType())
+	assert.Equal(t, int32(0), nilStruct.GetShardID())
+	assert.Equal(t, "", nilStruct.GetSourceCluster())
+	assert.Equal(t, int64(0), nilStruct.GetInclusiveEndMessageID())
+	assert.Equal(t, int32(0), nilStruct.GetMaximumPageSize())
+	assert.Nil(t, nilStruct.GetNextPageToken())
+}
+
+func TestHistoryTaskV2Attributes_GetDomainID(t *testing.T) {
+	testStruct := HistoryTaskV2Attributes{
+		DomainID: "domain-id",
+	}
+
+	res := testStruct.GetDomainID()
+	assert.Equal(t, "domain-id", res)
+
+	var nilStruct *HistoryTaskV2Attributes
+	res = nilStruct.GetDomainID()
+	assert.Equal(t, "", res)
+}
+
+func TestHistoryTaskV2Attributes_GetWorkflowID(t *testing.T) {
+	testStruct := HistoryTaskV2Attributes{
+		WorkflowID: "workflow-id",
+	}
+
+	res := testStruct.GetWorkflowID()
+	assert.Equal(t, "workflow-id", res)
+
+	var nilStruct *HistoryTaskV2Attributes
+	res = nilStruct.GetWorkflowID()
+	assert.Equal(t, "", res)
+}
+
+func TestHistoryTaskV2Attributes_GetRunID(t *testing.T) {
+	testStruct := HistoryTaskV2Attributes{
+		RunID: "run-id",
+	}
+
+	res := testStruct.GetRunID()
+	assert.Equal(t, "run-id", res)
+
+	var nilStruct *HistoryTaskV2Attributes
+	res = nilStruct.GetRunID()
+	assert.Equal(t, "", res)
+}
+
+func TestHistoryTaskV2Attributes_GetVersionHistoryItems(t *testing.T) {
+	versionHistoryItems := []*VersionHistoryItem{{}, {}}
+	testStruct := HistoryTaskV2Attributes{
+		VersionHistoryItems: versionHistoryItems,
+	}
+
+	res := testStruct.GetVersionHistoryItems()
+	assert.Equal(t, versionHistoryItems, res)
+
+	var nilStruct *HistoryTaskV2Attributes
+	res = nilStruct.GetVersionHistoryItems()
+	assert.Nil(t, res)
+}
+
+func TestHistoryTaskV2Attributes_GetEvents(t *testing.T) {
+	events := &DataBlob{}
+	testStruct := HistoryTaskV2Attributes{
+		Events: events,
+	}
+
+	res := testStruct.GetEvents()
+	assert.Equal(t, events, res)
+
+	var nilStruct *HistoryTaskV2Attributes
+	res = nilStruct.GetEvents()
+	assert.Nil(t, res)
+}
+
+func TestHistoryTaskV2Attributes_GetNewRunEvents(t *testing.T) {
+	newRunEvents := &DataBlob{}
+	testStruct := HistoryTaskV2Attributes{
+		NewRunEvents: newRunEvents,
+	}
+
+	res := testStruct.GetNewRunEvents()
+	assert.Equal(t, newRunEvents, res)
+
+	var nilStruct *HistoryTaskV2Attributes
+	res = nilStruct.GetNewRunEvents()
+	assert.Nil(t, res)
+}
+
+func TestPurgeDLQMessagesRequest_SerializeForLogging(t *testing.T) {
+	// Test case where the struct is nil
+	var nilStruct *PurgeDLQMessagesRequest
+	res, err := nilStruct.SerializeForLogging()
+	assert.Equal(t, "", res)
+	assert.NoError(t, err)
+
+	// Test case with a non-nil struct
+	dlqType := DLQTypeReplication
+	endMessageID := int64(12345)
+	testStruct := PurgeDLQMessagesRequest{
+		Type:                  &dlqType,
+		ShardID:               101,
+		SourceCluster:         "test-cluster",
+		InclusiveEndMessageID: &endMessageID,
+	}
+
+	res, err = testStruct.SerializeForLogging()
+	assert.NotEmpty(t, res)
+	assert.NoError(t, err)
+}
+
+func TestPurgeDLQMessagesRequest_Getters(t *testing.T) {
+	dlqType := DLQTypeReplication
+	endMessageID := int64(12345)
+	testStruct := PurgeDLQMessagesRequest{
+		Type:                  &dlqType,
+		ShardID:               101,
+		SourceCluster:         "test-cluster",
+		InclusiveEndMessageID: &endMessageID,
+	}
+
+	assert.Equal(t, dlqType, testStruct.GetType())
+	assert.Equal(t, int32(101), testStruct.GetShardID())
+	assert.Equal(t, "test-cluster", testStruct.GetSourceCluster())
+	assert.Equal(t, endMessageID, testStruct.GetInclusiveEndMessageID())
+
+	// Test nil case
+	var nilStruct *PurgeDLQMessagesRequest
+	assert.Equal(t, DLQType(0), nilStruct.GetType())
+	assert.Equal(t, int32(0), nilStruct.GetShardID())
+	assert.Equal(t, "", nilStruct.GetSourceCluster())
+	assert.Equal(t, int64(0), nilStruct.GetInclusiveEndMessageID())
+}
+
+func TestReadDLQMessagesRequest_SerializeForLogging(t *testing.T) {
+	// Test case where the struct is nil
+	var nilStruct *ReadDLQMessagesRequest
+	res, err := nilStruct.SerializeForLogging()
+	assert.Equal(t, "", res)
+	assert.NoError(t, err)
+
+	// Test case with a non-nil struct
+	dlqType := DLQTypeReplication
+	endMessageID := int64(12345)
+	nextPageToken := []byte("token")
+	testStruct := ReadDLQMessagesRequest{
+		Type:                  &dlqType,
+		ShardID:               101,
+		SourceCluster:         "test-cluster",
+		InclusiveEndMessageID: &endMessageID,
+		MaximumPageSize:       50,
+		NextPageToken:         nextPageToken,
+	}
+
+	res, err = testStruct.SerializeForLogging()
+	assert.NotEmpty(t, res)
+	assert.NoError(t, err)
+}
+
+func TestReadDLQMessagesRequest_Getters(t *testing.T) {
+	dlqType := DLQTypeReplication
+	endMessageID := int64(12345)
+	nextPageToken := []byte("token")
+	testStruct := ReadDLQMessagesRequest{
+		Type:                  &dlqType,
+		ShardID:               101,
+		SourceCluster:         "test-cluster",
+		InclusiveEndMessageID: &endMessageID,
+		MaximumPageSize:       50,
+		NextPageToken:         nextPageToken,
+	}
+
+	assert.Equal(t, dlqType, testStruct.GetType())
+	assert.Equal(t, int32(101), testStruct.GetShardID())
+	assert.Equal(t, "test-cluster", testStruct.GetSourceCluster())
+	assert.Equal(t, endMessageID, testStruct.GetInclusiveEndMessageID())
+	assert.Equal(t, int32(50), testStruct.GetMaximumPageSize())
+	assert.Equal(t, nextPageToken, testStruct.GetNextPageToken())
+
+	// Test nil case
+	var nilStruct *ReadDLQMessagesRequest
+	assert.Equal(t, DLQType(0), nilStruct.GetType())
+	assert.Equal(t, int32(0), nilStruct.GetShardID())
+	assert.Equal(t, "", nilStruct.GetSourceCluster())
+	assert.Equal(t, int64(0), nilStruct.GetInclusiveEndMessageID())
+	assert.Equal(t, int32(0), nilStruct.GetMaximumPageSize())
+	assert.Nil(t, nilStruct.GetNextPageToken())
+}
