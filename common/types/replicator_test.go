@@ -298,6 +298,24 @@ func TestMergeDLQMessagesRequest_GetInclusiveEndMessageID(t *testing.T) {
 	assert.Equal(t, int64(0), res)
 }
 
+func TestGetDLQReplicationMessagesRequest_SerializeForLogging(t *testing.T) {
+	// Test case where the struct is nil
+	var nilStruct *GetDLQReplicationMessagesRequest
+	res, err := nilStruct.SerializeForLogging()
+	assert.Equal(t, "", res)
+	assert.NoError(t, err)
+
+	// Test case with a non-nil struct
+	taskInfos := []*ReplicationTaskInfo{{}, {}}
+	testStruct := GetDLQReplicationMessagesRequest{
+		TaskInfos: taskInfos,
+	}
+
+	res, err = testStruct.SerializeForLogging()
+	assert.NotEmpty(t, res)
+	assert.NoError(t, err)
+}
+
 func TestGetDLQReplicationMessagesRequest_GetTaskInfos(t *testing.T) {
 	taskInfos := []*ReplicationTaskInfo{{}, {}}
 	testStruct := GetDLQReplicationMessagesRequest{
@@ -686,4 +704,99 @@ func TestReadDLQMessagesRequest_Getters(t *testing.T) {
 	assert.Equal(t, int64(0), nilStruct.GetInclusiveEndMessageID())
 	assert.Equal(t, int32(0), nilStruct.GetMaximumPageSize())
 	assert.Nil(t, nilStruct.GetNextPageToken())
+}
+
+func TestReplicationMessages_GetReplicationTasks(t *testing.T) {
+	tasks := []*ReplicationTask{{}, {}}
+	testStruct := ReplicationMessages{
+		ReplicationTasks: tasks,
+	}
+
+	res := testStruct.GetReplicationTasks()
+	assert.Equal(t, tasks, res)
+
+	var nilStruct *ReplicationMessages
+	res = nilStruct.GetReplicationTasks()
+	assert.Nil(t, res)
+}
+
+func TestReplicationMessages_GetLastRetrievedMessageID(t *testing.T) {
+	testStruct := ReplicationMessages{
+		LastRetrievedMessageID: 12345,
+	}
+
+	res := testStruct.GetLastRetrievedMessageID()
+	assert.Equal(t, int64(12345), res)
+
+	var nilStruct *ReplicationMessages
+	res = nilStruct.GetLastRetrievedMessageID()
+	assert.Equal(t, int64(0), res)
+}
+
+func TestReplicationMessages_GetHasMore(t *testing.T) {
+	testStruct := ReplicationMessages{
+		HasMore: true,
+	}
+
+	res := testStruct.GetHasMore()
+	assert.True(t, res)
+
+	var nilStruct *ReplicationMessages
+	res = nilStruct.GetHasMore()
+	assert.False(t, res)
+}
+
+func TestReplicationMessages_GetSyncShardStatus(t *testing.T) {
+	status := &SyncShardStatus{}
+	testStruct := ReplicationMessages{
+		SyncShardStatus: status,
+	}
+
+	res := testStruct.GetSyncShardStatus()
+	assert.Equal(t, status, res)
+
+	var nilStruct *ReplicationMessages
+	res = nilStruct.GetSyncShardStatus()
+	assert.Nil(t, res)
+}
+
+func TestReplicationTask_GetTaskType(t *testing.T) {
+	taskType := ReplicationTaskTypeDomain
+	testStruct := ReplicationTask{
+		TaskType: &taskType,
+	}
+
+	res := testStruct.GetTaskType()
+	assert.Equal(t, taskType, res)
+
+	var nilStruct *ReplicationTask
+	res = nilStruct.GetTaskType()
+	assert.Equal(t, ReplicationTaskType(0), res)
+}
+
+func TestReplicationTask_GetSourceTaskID(t *testing.T) {
+	testStruct := ReplicationTask{
+		SourceTaskID: 12345,
+	}
+
+	res := testStruct.GetSourceTaskID()
+	assert.Equal(t, int64(12345), res)
+
+	var nilStruct *ReplicationTask
+	res = nilStruct.GetSourceTaskID()
+	assert.Equal(t, int64(0), res)
+}
+
+func TestReplicationTask_GetDomainTaskAttributes(t *testing.T) {
+	domainTask := &DomainTaskAttributes{}
+	testStruct := ReplicationTask{
+		DomainTaskAttributes: domainTask,
+	}
+
+	res := testStruct.GetDomainTaskAttributes()
+	assert.Equal(t, domainTask, res)
+
+	var nilStruct *ReplicationTask
+	res = nilStruct.GetDomainTaskAttributes()
+	assert.Nil(t, res)
 }
