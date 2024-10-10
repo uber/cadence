@@ -37,6 +37,9 @@ const (
 	ShardManager = "cadence-shard-manager"
 )
 
+// ListWithRing contains the list of all cadence services that has a hash ring
+var ListWithRing = []string{Frontend, History, Matching, Worker}
+
 // List contains the list of all cadence services
 var List = []string{Frontend, History, Matching, Worker, ShardManager}
 

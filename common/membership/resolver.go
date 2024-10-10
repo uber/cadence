@@ -98,12 +98,7 @@ func NewResolver(
 	logger log.Logger,
 	metrics metrics.Client,
 ) (*MultiringResolver, error) {
-	return NewMultiringResolver([]string{
-		service.Frontend,
-		service.Worker,
-		service.Matching,
-		service.History,
-	}, provider, logger.WithTags(tag.ComponentServiceResolver), metrics), nil
+	return NewMultiringResolver(service.ListWithRing, provider, logger.WithTags(tag.ComponentServiceResolver), metrics), nil
 }
 
 // NewMultiringResolver creates hashrings for all services
