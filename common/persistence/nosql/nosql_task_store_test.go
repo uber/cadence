@@ -24,6 +24,7 @@ package nosql
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -154,7 +155,8 @@ func TestLeaseTaskList_selectErrNotFound(t *testing.T) {
 	// We then expect the tasklist to be inserted
 	db.EXPECT().InsertTaskList(gomock.Any(), gomock.Any()).
 		DoAndReturn(func(ctx context.Context, taskList *nosqlplugin.TaskListRow) error {
-			checkTaskListRowExpected(t, getExpectedTaskListRow(), taskList)
+			tl := getExpectedTaskListRow()
+			checkTaskListRowExpected(t, tl, taskList)
 			return nil
 		})
 
@@ -242,12 +244,34 @@ func TestLeaseTaskList_RenewUpdateFailed_OtherError(t *testing.T) {
 	assert.ErrorContains(t, err, assert.AnError.Error())
 }
 
+func TestGetTaskList_Success(t *testing.T) {
+	store, db := setupNoSQLStoreMocks(t)
+
+	taskListRow := getExpectedTaskListRow()
+	db.EXPECT().SelectTaskList(gomock.Any(), getDecisionTaskListFilter()).Return(taskListRow, nil)
+	resp, err := store.GetTaskList(context.Background(), getValidGetTaskListRequest())
+
+	assert.NoError(t, err)
+	checkTaskListInfoExpected(t, resp.TaskListInfo)
+}
+
+func TestGetTaskList_NotFound(t *testing.T) {
+	store, db := setupNoSQLStoreMocks(t)
+
+	db.EXPECT().SelectTaskList(gomock.Any(), getDecisionTaskListFilter()).Return(nil, errors.New("not found"))
+	db.EXPECT().IsNotFoundError(gomock.Any()).Return(true)
+	resp, err := store.GetTaskList(context.Background(), getValidGetTaskListRequest())
+
+	assert.ErrorAs(t, err, new(*types.EntityNotExistsError))
+	assert.Nil(t, resp)
+}
+
 func TestUpdateTaskList(t *testing.T) {
 	store, db := setupNoSQLStoreMocks(t)
 
 	db.EXPECT().UpdateTaskList(gomock.Any(), gomock.Any(), int64(1)).DoAndReturn(
 		func(ctx context.Context, taskList *nosqlplugin.TaskListRow, previousRangeID int64) error {
-			checkTaskListRowExpected(t, getExpectedTaskListRow(), taskList)
+			checkTaskListRowExpected(t, getExpectedTaskListRowWithPartitionConfig(), taskList)
 			return nil
 		},
 	)
@@ -265,7 +289,7 @@ func TestUpdateTaskList_Sticky(t *testing.T) {
 
 	db.EXPECT().UpdateTaskListWithTTL(gomock.Any(), stickyTaskListTTL, gomock.Any(), int64(1)).DoAndReturn(
 		func(ctx context.Context, ttlSeconds int64, taskList *nosqlplugin.TaskListRow, previousRangeID int64) error {
-			expectedTaskList := getExpectedTaskListRow()
+			expectedTaskList := getExpectedTaskListRowWithPartitionConfig()
 			expectedTaskList.TaskListKind = int(types.TaskListKindSticky)
 			checkTaskListRowExpected(t, expectedTaskList, taskList)
 			return nil
@@ -288,7 +312,7 @@ func TestUpdateTaskList_ConditionFailure(t *testing.T) {
 
 	db.EXPECT().UpdateTaskList(gomock.Any(), gomock.Any(), int64(1)).DoAndReturn(
 		func(ctx context.Context, taskList *nosqlplugin.TaskListRow, previousRangeID int64) error {
-			checkTaskListRowExpected(t, getExpectedTaskListRow(), taskList)
+			checkTaskListRowExpected(t, getExpectedTaskListRowWithPartitionConfig(), taskList)
 			return &nosqlplugin.TaskOperationConditionFailure{Details: "test-details"}
 		},
 	)
@@ -431,6 +455,15 @@ func getValidLeaseTaskListRequest() *persistence.LeaseTaskListRequest {
 	}
 }
 
+func getValidGetTaskListRequest() *persistence.GetTaskListRequest {
+	return &persistence.GetTaskListRequest{
+		DomainID:   TestDomainID,
+		DomainName: TestDomainName,
+		TaskList:   TestTaskListName,
+		TaskType:   int(types.TaskListTypeDecision),
+	}
+}
+
 func checkTaskListInfoExpected(t *testing.T, taskListInfo *persistence.TaskListInfo) {
 	assert.Equal(t, TestDomainID, taskListInfo.DomainID)
 	assert.Equal(t, TestTaskListName, taskListInfo.Name)
@@ -484,6 +517,23 @@ func getExpectedTaskListRow() *nosqlplugin.TaskListRow {
 	}
 }
 
+func getExpectedTaskListRowWithPartitionConfig() *nosqlplugin.TaskListRow {
+	return &nosqlplugin.TaskListRow{
+		DomainID:        TestDomainID,
+		TaskListName:    TestTaskListName,
+		TaskListType:    int(types.TaskListTypeDecision),
+		RangeID:         initialRangeID,
+		TaskListKind:    int(types.TaskListKindNormal),
+		AckLevel:        initialAckLevel,
+		LastUpdatedTime: time.Now(),
+		AdaptivePartitionConfig: &persistence.TaskListPartitionConfig{
+			Version:            1,
+			NumReadPartitions:  2,
+			NumWritePartitions: 2,
+		},
+	}
+}
+
 func checkTaskListRowExpected(t *testing.T, expectedRow *nosqlplugin.TaskListRow, taskList *nosqlplugin.TaskListRow) {
 	// Check the duration
 	assert.WithinDuration(t, expectedRow.LastUpdatedTime, taskList.LastUpdatedTime, time.Second)
@@ -502,6 +552,11 @@ func getExpectedTaskListInfo() *persistence.TaskListInfo {
 		AckLevel:    initialAckLevel,
 		Kind:        int(types.TaskListKindNormal),
 		LastUpdated: time.Now(),
+		AdaptivePartitionConfig: &persistence.TaskListPartitionConfig{
+			Version:            1,
+			NumReadPartitions:  2,
+			NumWritePartitions: 2,
+		},
 	}
 }
 
