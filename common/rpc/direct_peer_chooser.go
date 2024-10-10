@@ -31,6 +31,7 @@ import (
 
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/membership"
 )
 
@@ -83,8 +84,9 @@ func (g *directPeerChooser) Choose(ctx context.Context, req *transport.Request) 
 	return nil, nil, yarpcerrors.UnimplementedErrorf("direct peer chooser conn retain mode unimplemented")
 }
 
-func (g *directPeerChooser) UpdatePeers([]membership.HostInfo) {
+func (g *directPeerChooser) UpdatePeers(members []membership.HostInfo) {
 	// TODO: implement
+	g.logger.Debug("direct peer chooser got a membership update", tag.Counter(len(members)))
 }
 
 func (g *directPeerChooser) chooseFromLegacyDirectPeerChooser(ctx context.Context, req *transport.Request) (peer.Peer, func(error), error) {
