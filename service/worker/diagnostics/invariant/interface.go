@@ -47,7 +47,7 @@ const (
 	RootCauseTypePollersStatus                       RootCause = "There are pollers for the tasklist. Check backlog status"
 	RootCauseTypeHeartBeatingNotEnabled              RootCause = "HeartBeating not enabled for activity"
 	RootCauseTypeHeartBeatingEnabledMissingHeartbeat RootCause = "HeartBeating enabled for activity but timed out due to missing heartbeat"
-	RootCauseTypeServiceSideIssue                    RootCause = "There is an issue in the service code that is causing this failure. Check identity for service logs"
+	RootCauseTypeServiceSideIssue                    RootCause = "There is an issue in the worker service code that is causing this failure. Check identity for service logs"
 )
 
 func (r RootCause) String() string {
