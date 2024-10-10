@@ -24,25 +24,37 @@ import (
 	"time"
 
 	"go.uber.org/yarpc/api/peer"
-	"go.uber.org/yarpc/peer/direct"
 	"go.uber.org/yarpc/peer/roundrobin"
 
-	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/membership"
 )
 
 const defaultDNSRefreshInterval = time.Second * 10
 
 type (
 	PeerChooserOptions struct {
-		// Address is used by dns peer chooser
+		// Address is the target dns address. Used by dns peer chooser.
 		Address string
+
+		// ServiceName is the name of service. Used by direct peer chooser.
+		ServiceName string
+
+		// EnableConnectionRetainingDirectChooser is used by direct peer chooser.
+		// If false, yarpc's own default direct peer chooser will be used which doesn retain connections.
+		// If true, cadence's own direct peer chooser will be used which retains connections.
+		EnableConnectionRetainingDirectChooser dynamicconfig.BoolPropertyFn
 	}
 	PeerChooserFactory interface {
-		CreatePeerChooser(transport peer.Transport, opts PeerChooserOptions) (peer.Chooser, error)
+		CreatePeerChooser(transport peer.Transport, opts PeerChooserOptions) (PeerChooser, error)
+	}
 
-		// PeerChooserFactory is a daemon because it may run background processes. CreatePeerChooser is called before Start.
-		common.Daemon
+	PeerChooser interface {
+		peer.Chooser
+
+		// UpdatePeers updates the list of peers if needed.
+		UpdatePeers([]membership.HostInfo)
 	}
 
 	dnsPeerChooserFactory struct {
@@ -51,9 +63,18 @@ type (
 	}
 
 	directPeerChooserFactory struct {
-		logger log.Logger
+		serviceName string
+		logger      log.Logger
+		choosers    []*directPeerChooser
 	}
 )
+
+type defaultPeerChooser struct {
+	peer.Chooser
+}
+
+// UpdatePeers is a no-op for defaultPeerChooser. It is added to satisfy the PeerChooser interface.
+func (d *defaultPeerChooser) UpdatePeers(peers []membership.HostInfo) {}
 
 func NewDNSPeerChooserFactory(interval time.Duration, logger log.Logger) PeerChooserFactory {
 	if interval <= 0 {
@@ -63,33 +84,32 @@ func NewDNSPeerChooserFactory(interval time.Duration, logger log.Logger) PeerCho
 	return &dnsPeerChooserFactory{interval, logger}
 }
 
-func (f *dnsPeerChooserFactory) CreatePeerChooser(transport peer.Transport, opts PeerChooserOptions) (peer.Chooser, error) {
+func (f *dnsPeerChooserFactory) CreatePeerChooser(transport peer.Transport, opts PeerChooserOptions) (PeerChooser, error) {
 	peerList := roundrobin.New(transport)
 	peerListUpdater, err := newDNSUpdater(peerList, opts.Address, f.interval, f.logger)
 	if err != nil {
 		return nil, err
 	}
 	peerListUpdater.Start()
-	return peerList, nil
+	return &defaultPeerChooser{Chooser: peerList}, nil
 }
 
-func (f *dnsPeerChooserFactory) Start() {}
-func (f *dnsPeerChooserFactory) Stop()  {}
+func (f *dnsPeerChooserFactory) UpdatePeers(peers []membership.HostInfo) {}
 
-func NewDirectPeerChooserFactory(logger log.Logger) PeerChooserFactory {
+func NewDirectPeerChooserFactory(serviceName string, logger log.Logger) PeerChooserFactory {
 	return &directPeerChooserFactory{
 		logger: logger,
 	}
 }
 
-func (f *directPeerChooserFactory) CreatePeerChooser(transport peer.Transport, opts PeerChooserOptions) (peer.Chooser, error) {
-	return direct.New(direct.Configuration{}, transport)
+func (f *directPeerChooserFactory) CreatePeerChooser(transport peer.Transport, opts PeerChooserOptions) (PeerChooser, error) {
+	c := newDirectChooser(f.serviceName, transport, f.logger, opts.EnableConnectionRetainingDirectChooser)
+	f.choosers = append(f.choosers, c)
+	return c, nil
 }
 
-func (f *directPeerChooserFactory) Start() {
-	// TODO: subscribe to membership changes
-}
-
-func (f *directPeerChooserFactory) Stop() {
-	// stop all connections and background goroutine
+func (f *directPeerChooserFactory) UpdatePeers(peers []membership.HostInfo) {
+	for _, c := range f.choosers {
+		c.UpdatePeers(peers)
+	}
 }

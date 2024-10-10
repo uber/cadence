@@ -21,10 +21,12 @@
 package rpc
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
 	"net"
 	nethttp "net/http"
+	"sync"
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/transport/grpc"
@@ -34,20 +36,32 @@ import (
 
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/membership"
 )
 
-const defaultGRPCSizeLimit = 4 * 1024 * 1024
+const (
+	defaultGRPCSizeLimit = 4 * 1024 * 1024
+	factoryComponentName = "rpc-factory"
+)
 
-// Factory is an implementation of common.RPCFactory interface
-type Factory struct {
-	maxMessageSize   int
-	channel          tchannel.Channel
-	dispatcher       *yarpc.Dispatcher
-	outboundsBuilder OutboundsBuilder
+// Factory is an implementation of rpc.Factory interface
+type FactoryImpl struct {
+	maxMessageSize int
+	channel        tchannel.Channel
+	dispatcher     *yarpc.Dispatcher
+	outbounds      *Outbounds
+	logger         log.Logger
+	serviceName    string
+	wg             sync.WaitGroup
+	ctx            context.Context
+	cancelFn       context.CancelFunc
+	peerLister     PeerLister
 }
 
 // NewFactory builds a new rpc.Factory
-func NewFactory(logger log.Logger, p Params) *Factory {
+func NewFactory(logger log.Logger, p Params) *FactoryImpl {
+	logger = logger.WithTags(tag.ComponentRPCFactory)
+
 	inbounds := yarpc.Inbounds{}
 	// Create TChannel transport
 	// This is here only because ringpop expects tchannel.ChannelTransport,
@@ -97,7 +111,6 @@ func NewFactory(logger log.Logger, p Params) *Factory {
 					return
 				}
 				nethttp.NotFound(w, r)
-				return
 			})
 		}
 
@@ -116,7 +129,7 @@ func NewFactory(logger log.Logger, p Params) *Factory {
 		logger.Info("Listening for HTTP requests", tag.Address(p.HTTP.Address))
 	}
 	// Create outbounds
-	outbounds := yarpc.Outbounds{}
+	outbounds := &Outbounds{}
 	if p.OutboundsBuilder != nil {
 		outbounds, err = p.OutboundsBuilder.Build(grpcTransport, tchannel)
 		if err != nil {
@@ -127,50 +140,83 @@ func NewFactory(logger log.Logger, p Params) *Factory {
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
 		Name:               p.ServiceName,
 		Inbounds:           inbounds,
-		Outbounds:          outbounds,
+		Outbounds:          outbounds.Outbounds,
 		InboundMiddleware:  p.InboundMiddleware,
 		OutboundMiddleware: p.OutboundMiddleware,
 	})
 
-	return &Factory{
-		maxMessageSize:   p.GRPCMaxMsgSize,
-		dispatcher:       dispatcher,
-		channel:          ch.Channel(),
-		outboundsBuilder: p.OutboundsBuilder,
+	return &FactoryImpl{
+		maxMessageSize: p.GRPCMaxMsgSize,
+		dispatcher:     dispatcher,
+		channel:        ch.Channel(),
+		outbounds:      outbounds,
+		serviceName:    p.ServiceName,
+		logger:         logger,
 	}
 }
 
 // GetDispatcher return a cached dispatcher
-func (d *Factory) GetDispatcher() *yarpc.Dispatcher {
+func (d *FactoryImpl) GetDispatcher() *yarpc.Dispatcher {
 	return d.dispatcher
 }
 
 // GetChannel returns Tchannel Channel used by Ringpop
-func (d *Factory) GetChannel() tchannel.Channel {
+func (d *FactoryImpl) GetTChannel() tchannel.Channel {
 	return d.channel
 }
 
-func (d *Factory) GetMaxMessageSize() int {
+func (d *FactoryImpl) GetMaxMessageSize() int {
 	if d.maxMessageSize == 0 {
 		return defaultGRPCSizeLimit
 	}
 	return d.maxMessageSize
 }
 
-func (d *Factory) Start() {
-	if d.outboundsBuilder == nil {
-		return
+func (d *FactoryImpl) Start(peerLister PeerLister) error {
+	// subscribe to membership changes and notify outbounds builder for peer updates
+	d.peerLister = peerLister
+	ch := make(chan *membership.ChangedEvent, 1000)
+	if err := d.peerLister.Subscribe(d.serviceName, factoryComponentName, ch); err != nil {
+		return fmt.Errorf("rpc factory failed to subscribe to membership updates: %v", err)
 	}
+	d.wg.Add(1)
+	go d.listenMembershipChanges(ch)
 
-	d.outboundsBuilder.Start()
+	return nil
 }
 
-func (d *Factory) Stop() {
-	if d.outboundsBuilder == nil {
-		return
+func (d *FactoryImpl) Stop() error {
+	d.logger.Info("stopping rpc factory")
+	if err := d.peerLister.Unsubscribe(d.serviceName, factoryComponentName); err != nil {
+		d.logger.Error("rpc factory failed to unsubscribe from membership updates", tag.Error(err))
 	}
 
-	d.outboundsBuilder.Stop()
+	d.cancelFn()
+	d.wg.Wait()
+
+	d.logger.Info("stopped rpc factory")
+	return nil
+}
+
+func (d *FactoryImpl) listenMembershipChanges(ch chan *membership.ChangedEvent) {
+	defer d.wg.Done()
+
+	for {
+		select {
+		case <-ch:
+			d.logger.Debug("rpc factory received membership changed event")
+			members, err := d.peerLister.Members(d.serviceName)
+			if err != nil {
+				d.logger.Error("rpc factory failed to get members from membership resolver", tag.Error(err))
+				continue
+			}
+
+			d.outbounds.UpdatePeers(members)
+		case <-d.ctx.Done():
+			d.logger.Info("rpc factory stopped so listenMembershipChanges returning")
+			return
+		}
+	}
 }
 
 func createDialer(transport *grpc.Transport, tlsConfig *tls.Config) *grpc.Dialer {

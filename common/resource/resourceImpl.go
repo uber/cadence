@@ -58,8 +58,9 @@ import (
 	"github.com/uber/cadence/common/partition"
 	"github.com/uber/cadence/common/persistence"
 	persistenceClient "github.com/uber/cadence/common/persistence/client"
-	"github.com/uber/cadence/common/quotas/global/rpc"
+	qrpc "github.com/uber/cadence/common/quotas/global/rpc"
 	"github.com/uber/cadence/common/quotas/permember"
+	"github.com/uber/cadence/common/rpc"
 	"github.com/uber/cadence/common/service"
 )
 
@@ -141,7 +142,7 @@ type (
 
 		pprofInitializer       common.PProfInitializer
 		runtimeMetricsReporter *metrics.RuntimeMetricsReporter
-		rpcFactory             common.RPCFactory
+		rpcFactory             rpc.Factory
 
 		isolationGroups           isolationgroup.State
 		isolationGroupConfigStore configstore.Client
@@ -149,7 +150,7 @@ type (
 
 		asyncWorkflowQueueProvider queue.Provider
 
-		ratelimiterAggregatorClient rpc.Client
+		ratelimiterAggregatorClient qrpc.Client
 	}
 )
 
@@ -304,7 +305,7 @@ func New(
 	}
 	partitioner := ensurePartitionerOrDefault(params, isolationGroupState)
 
-	ratelimiterAggs := rpc.New(
+	ratelimiterAggs := qrpc.New(
 		historyRawClient, // no retries, will retry internally if needed
 		clientBean.GetHistoryPeers(),
 		logger,
@@ -399,7 +400,7 @@ func (h *Impl) Start() {
 		h.logger.WithTags(tag.Error(err)).Fatal("fail to start PProf")
 	}
 
-	h.rpcFactory.Start()
+	h.rpcFactory.Start(h.membershipResolver)
 
 	if err := h.dispatcher.Start(); err != nil {
 		h.logger.WithTags(tag.Error(err)).Fatal("fail to start dispatcher")
@@ -425,7 +426,6 @@ func (h *Impl) Start() {
 
 // Stop stops all resources
 func (h *Impl) Stop() {
-
 	if !atomic.CompareAndSwapInt32(
 		&h.status,
 		common.DaemonStatusStarted,
@@ -560,7 +560,7 @@ func (h *Impl) GetHistoryClient() history.Client {
 	return h.historyClient
 }
 
-func (h *Impl) GetRatelimiterAggregatorsClient() rpc.Client {
+func (h *Impl) GetRatelimiterAggregatorsClient() qrpc.Client {
 	return h.ratelimiterAggregatorClient
 }
 

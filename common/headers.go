@@ -18,13 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-//go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination rpc_mock.go -self_package github.com/uber/cadence/common
-
 package common
-
-import (
-	"go.uber.org/yarpc"
-)
 
 const (
 	// LibraryVersionHeaderName refers to the name of the
@@ -60,14 +54,4 @@ const (
 
 	// ClientIsolationGroupHeaderName refers to the name of the header that contains the isolation group which the client request is from
 	ClientIsolationGroupHeaderName = "cadence-client-isolation-group"
-)
-
-type (
-	// RPCFactory Creates a dispatcher that knows how to transport requests.
-	RPCFactory interface {
-		GetDispatcher() *yarpc.Dispatcher
-		GetMaxMessageSize() int
-		Start()
-		Stop()
-	}
 )

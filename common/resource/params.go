@@ -44,6 +44,7 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/partition"
 	"github.com/uber/cadence/common/pinot"
+	"github.com/uber/cadence/common/rpc"
 )
 
 type (
@@ -58,7 +59,7 @@ type (
 
 		MetricScope        tally.Scope
 		MembershipResolver membership.Resolver
-		RPCFactory         common.RPCFactory
+		RPCFactory         rpc.Factory
 		PProfInitializer   common.PProfInitializer
 		PersistenceConfig  config.Persistence
 		ClusterMetadata    cluster.Metadata

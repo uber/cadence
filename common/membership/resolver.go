@@ -48,6 +48,7 @@ type (
 	// Resolver provides membership information for all cadence services.
 	Resolver interface {
 		common.Daemon
+
 		// WhoAmI returns self host details.
 		// To be consistent with peer provider, it is advised to use peer provider
 		// to return this information
