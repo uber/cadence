@@ -69,7 +69,11 @@ require (
 
 require github.com/google/gofuzz v1.0.0
 
-require github.com/xrash/smetrics v0.0.0-20240521201337-686a1a2994c1 // indirect
+require (
+	github.com/hexops/valast v1.4.4 // indirect
+	github.com/xrash/smetrics v0.0.0-20240521201337-686a1a2994c1 // indirect
+	mvdan.cc/gofumpt v0.4.0 // indirect
+)
 
 require (
 	github.com/BurntSushi/toml v1.3.2 // indirect

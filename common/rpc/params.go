@@ -77,7 +77,7 @@ func NewParams(serviceName string, config *config.Config, dc *dynamicconfig.Coll
 		return Params{}, fmt.Errorf("inbound TLS config: %v", err)
 	}
 	outboundTLS := map[string]*tls.Config{}
-	for _, outboundServiceName := range service.List {
+	for _, outboundServiceName := range service.ShardedServicesList {
 		outboundServiceConfig, err := config.GetServiceConfig(outboundServiceName)
 		if err != nil {
 			continue
