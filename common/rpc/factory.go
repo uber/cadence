@@ -145,6 +145,7 @@ func NewFactory(logger log.Logger, p Params) *FactoryImpl {
 		OutboundMiddleware: p.OutboundMiddleware,
 	})
 
+	ctx, cancel := context.WithCancel(context.Background())
 	return &FactoryImpl{
 		maxMessageSize: p.GRPCMaxMsgSize,
 		dispatcher:     dispatcher,
@@ -152,6 +153,8 @@ func NewFactory(logger log.Logger, p Params) *FactoryImpl {
 		outbounds:      outbounds,
 		serviceName:    p.ServiceName,
 		logger:         logger,
+		ctx:            ctx,
+		cancelFn:       cancel,
 	}
 }
 
