@@ -20,6 +20,8 @@
 
 package common
 
+import "sync/atomic"
+
 const (
 	// used for background threads
 
@@ -39,3 +41,18 @@ type (
 		Stop()
 	}
 )
+
+// DaemonStatusManager wraps daemon status management
+type DaemonStatusManager struct {
+	status atomic.Int32
+}
+
+// TransitionToStart returns true if daemon status transitioned from INITIAL to STARTED
+func (m *DaemonStatusManager) TransitionToStart() bool {
+	return m.status.CompareAndSwap(DaemonStatusInitialized, DaemonStatusStarted)
+}
+
+// TransitionToStop returns true if daemon status transitioned from STARTED to STOPPED
+func (m *DaemonStatusManager) TransitionToStop() bool {
+	return m.status.CompareAndSwap(DaemonStatusStarted, DaemonStatusStopped)
+}
