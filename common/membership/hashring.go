@@ -47,8 +47,8 @@ import (
 var ErrInsufficientHosts = &types.InternalServiceError{Message: "Not enough hosts to serve the request"}
 
 const (
-	minRefreshInternal     = time.Second * 4
-	defaultRefreshInterval = time.Second * 10
+	minRefreshInternal     = time.Second
+	defaultRefreshInterval = 2 * time.Second
 	replicaPoints          = 100
 )
 
