@@ -1282,3 +1282,24 @@ func TestSyncShardStatus_GetTimestamp(t *testing.T) {
 	res = nilStruct.GetTimestamp()
 	assert.Equal(t, int64(0), res)
 }
+
+func TestGetDomainReplicationMessagesRequest_SerializeForLogging(t *testing.T) {
+	// Test case where the struct is nil
+	var nilStruct *GetDomainReplicationMessagesRequest
+	res, err := nilStruct.SerializeForLogging()
+	assert.Equal(t, "", res)
+	assert.NoError(t, err)
+
+	// Test case with a non-nil struct
+	lastRetrievedMessageID := int64(12345)
+	lastProcessedMessageID := int64(67890)
+	testStruct := GetDomainReplicationMessagesRequest{
+		LastRetrievedMessageID: &lastRetrievedMessageID,
+		LastProcessedMessageID: &lastProcessedMessageID,
+		ClusterName:            "test-cluster",
+	}
+
+	res, err = testStruct.SerializeForLogging()
+	assert.NotEmpty(t, res)
+	assert.NoError(t, err)
+}
