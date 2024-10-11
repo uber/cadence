@@ -44,6 +44,19 @@ func Test__Check(t *testing.T) {
 	}
 	metadataInBytes, err := json.Marshal(metadata)
 	require.NoError(t, err)
+	actMetadata := failureMetadata{
+		Identity: "localhost",
+		ActivityScheduled: &types.ActivityTaskScheduledEventAttributes{
+			ActivityID:   "101",
+			ActivityType: &types.ActivityType{Name: "test-activity"},
+		},
+		ActivityStarted: &types.ActivityTaskStartedEventAttributes{
+			Identity: "localhost",
+			Attempt:  0,
+		},
+	}
+	actMetadataInBytes, err := json.Marshal(actMetadata)
+	require.NoError(t, err)
 	testCases := []struct {
 		name           string
 		testData       *types.GetWorkflowExecutionHistoryResponse
@@ -57,17 +70,17 @@ func Test__Check(t *testing.T) {
 				{
 					InvariantType: ActivityFailed.String(),
 					Reason:        GenericError.String(),
-					Metadata:      metadataInBytes,
+					Metadata:      actMetadataInBytes,
 				},
 				{
 					InvariantType: ActivityFailed.String(),
 					Reason:        PanicError.String(),
-					Metadata:      metadataInBytes,
+					Metadata:      actMetadataInBytes,
 				},
 				{
 					InvariantType: ActivityFailed.String(),
 					Reason:        CustomError.String(),
-					Metadata:      metadataInBytes,
+					Metadata:      actMetadataInBytes,
 				},
 				{
 					InvariantType: WorkflowFailed.String(),
@@ -95,24 +108,44 @@ func failedWfHistory() *types.GetWorkflowExecutionHistoryResponse {
 		History: &types.History{
 			Events: []*types.HistoryEvent{
 				{
-					ActivityTaskFailedEventAttributes: &types.ActivityTaskFailedEventAttributes{
-						Reason:   common.StringPtr("cadenceInternal:Generic"),
-						Details:  []byte("test-activity-failure"),
+					ID: 1,
+					ActivityTaskScheduledEventAttributes: &types.ActivityTaskScheduledEventAttributes{
+						ActivityID:   "101",
+						ActivityType: &types.ActivityType{Name: "test-activity"},
+					},
+				},
+				{
+					ID: 2,
+					ActivityTaskStartedEventAttributes: &types.ActivityTaskStartedEventAttributes{
 						Identity: "localhost",
+						Attempt:  0,
 					},
 				},
 				{
 					ActivityTaskFailedEventAttributes: &types.ActivityTaskFailedEventAttributes{
-						Reason:   common.StringPtr("cadenceInternal:Panic"),
-						Details:  []byte("test-activity-failure"),
-						Identity: "localhost",
+						Reason:           common.StringPtr("cadenceInternal:Generic"),
+						Details:          []byte("test-activity-failure"),
+						Identity:         "localhost",
+						ScheduledEventID: 1,
+						StartedEventID:   2,
 					},
 				},
 				{
 					ActivityTaskFailedEventAttributes: &types.ActivityTaskFailedEventAttributes{
-						Reason:   common.StringPtr("custom error"),
-						Details:  []byte("test-activity-failure"),
-						Identity: "localhost",
+						Reason:           common.StringPtr("cadenceInternal:Panic"),
+						Details:          []byte("test-activity-failure"),
+						Identity:         "localhost",
+						ScheduledEventID: 1,
+						StartedEventID:   2,
+					},
+				},
+				{
+					ActivityTaskFailedEventAttributes: &types.ActivityTaskFailedEventAttributes{
+						Reason:           common.StringPtr("custom error"),
+						Details:          []byte("test-activity-failure"),
+						Identity:         "localhost",
+						ScheduledEventID: 1,
+						StartedEventID:   2,
 					},
 				},
 				{
