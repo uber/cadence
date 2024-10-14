@@ -178,7 +178,7 @@ func (d *FactoryImpl) GetMaxMessageSize() int {
 func (d *FactoryImpl) Start(peerLister PeerLister) error {
 	// subscribe to membership changes and notify outbounds builder for peer updates
 	d.peerLister = peerLister
-	ch := make(chan *membership.ChangedEvent, 1000)
+	ch := make(chan *membership.ChangedEvent, 1)
 	if err := d.peerLister.Subscribe(d.serviceName, factoryComponentName, ch); err != nil {
 		return fmt.Errorf("rpc factory failed to subscribe to membership updates: %v", err)
 	}
