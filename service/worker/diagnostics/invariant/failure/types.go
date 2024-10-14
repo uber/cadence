@@ -22,6 +22,8 @@
 
 package failure
 
+import "github.com/uber/cadence/common/types"
+
 type ErrorType string
 
 const (
@@ -47,5 +49,7 @@ func (f FailureType) String() string {
 }
 
 type failureMetadata struct {
-	Identity string
+	Identity          string
+	ActivityScheduled *types.ActivityTaskScheduledEventAttributes
+	ActivityStarted   *types.ActivityTaskStartedEventAttributes
 }
