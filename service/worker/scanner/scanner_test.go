@@ -151,7 +151,11 @@ func (s *scannerTestSuite) TestStart() {
 				},
 			},
 			setupMocks: func() {
-				s.mockWorker.EXPECT().Start().Return(nil).Times(2)
+				// this is mocking the worker being instantiated and started
+				// in here the mockWorker is being started twice, but in reality
+				// each worker gets started only once
+				s.mockWorker.EXPECT().Start().Return(nil).Times(1)
+				s.mockWorker.EXPECT().Start().Return(nil).Times(1)
 			},
 		},
 		{
@@ -281,6 +285,7 @@ func (s *scannerTestSuite) Test__startWorkflow() {
 			setupMocks: func(options client.StartWorkflowOptions, workflowType string, args interface{}) {
 				s.mockClient.On("StartWorkflow", mock.Anything, options, workflowType).Return(nil, &shared.WorkflowExecutionAlreadyStartedError{})
 			},
+			err: nil,
 		},
 		{
 			name: "another error",
