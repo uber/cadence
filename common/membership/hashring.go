@@ -219,9 +219,7 @@ func (r *ring) notifySubscribers(msg ChangedEvent) {
 }
 
 // Unsubscribe removes subscriber
-func (r *ring) Unsubscribe(
-	name string,
-) error {
+func (r *ring) Unsubscribe(name string) error {
 	r.subscribers.Lock()
 	defer r.subscribers.Unlock()
 	delete(r.subscribers.keys, name)
@@ -254,6 +252,7 @@ func (r *ring) Members() []HostInfo {
 func (r *ring) refresh() error {
 	if r.members.refreshed.After(r.timeSource.Now().Add(-minRefreshInternal)) {
 		// refreshed too frequently
+		r.logger.Debug("refresh skipped, refreshed too frequently")
 		return nil
 	}
 
@@ -272,7 +271,9 @@ func (r *ring) refresh() error {
 	ring := emptyHashring()
 	ring.AddMembers(castToMembers(members)...)
 	r.value.Store(ring)
-	r.logger.Info("refreshed ring members", tag.Value(members))
+	// sort members for deterministic order in the logs
+	sort.Slice(members, func(i, j int) bool { return members[i].addr < members[j].addr })
+	r.logger.Info("refreshed ring members", tag.Value(members), tag.Counter(len(members)), tag.Service(r.service))
 
 	r.updateMembersMap(newMembersMap)
 
