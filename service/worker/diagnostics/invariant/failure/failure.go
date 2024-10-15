@@ -24,6 +24,7 @@ package failure
 
 import (
 	"context"
+	"encoding/json"
 	"strings"
 
 	"github.com/uber/cadence/common/types"
@@ -53,6 +54,7 @@ func NewInvariant(p Params) Failure {
 func (f *failure) Check(context.Context) ([]invariant.InvariantCheckResult, error) {
 	result := make([]invariant.InvariantCheckResult, 0)
 	events := f.workflowExecutionHistory.GetHistory().GetEvents()
+	activityCancellations, wfCancellations := cancellationsInEventHistory(events)
 	for _, event := range events {
 		if event.GetWorkflowExecutionFailedEventAttributes() != nil && event.WorkflowExecutionFailedEventAttributes.Reason != nil {
 			attr := event.WorkflowExecutionFailedEventAttributes
@@ -61,7 +63,10 @@ func (f *failure) Check(context.Context) ([]invariant.InvariantCheckResult, erro
 			result = append(result, invariant.InvariantCheckResult{
 				InvariantType: WorkflowFailed.String(),
 				Reason:        errorTypeFromReason(*reason).String(),
-				Metadata:      invariant.MarshalData(failureMetadata{Identity: identity}),
+				Metadata: invariant.MarshalData(failureMetadata{
+					Identity:              identity,
+					WorkflowCancellations: wfCancellations,
+				}),
 			})
 		}
 		if event.GetActivityTaskFailedEventAttributes() != nil && event.ActivityTaskFailedEventAttributes.Reason != nil {
@@ -73,9 +78,10 @@ func (f *failure) Check(context.Context) ([]invariant.InvariantCheckResult, erro
 				InvariantType: ActivityFailed.String(),
 				Reason:        errorTypeFromReason(*reason).String(),
 				Metadata: invariant.MarshalData(failureMetadata{
-					Identity:          attr.Identity,
-					ActivityScheduled: scheduled,
-					ActivityStarted:   started,
+					Identity:              attr.Identity,
+					ActivityScheduled:     scheduled,
+					ActivityCancellations: activityCancellations,
+					ActivityStarted:       started,
 				}),
 			})
 		}
@@ -92,6 +98,9 @@ func errorTypeFromReason(reason string) ErrorType {
 	}
 	if strings.Contains(reason, "Timeout") {
 		return TimeoutError
+	}
+	if strings.Contains(reason, "Canceled") {
+		return CancelledError
 	}
 	return CustomError
 }
@@ -123,14 +132,47 @@ func fetchStartedEvent(attr *types.ActivityTaskFailedEventAttributes, events []*
 	return nil
 }
 
+func cancellationsInEventHistory(events []*types.HistoryEvent) ([]*types.ActivityTaskCancelRequestedEventAttributes, []*types.WorkflowExecutionCancelRequestedEventAttributes) {
+	activityCancellations := make([]*types.ActivityTaskCancelRequestedEventAttributes, 0)
+	wfCancellations := make([]*types.WorkflowExecutionCancelRequestedEventAttributes, 0)
+	for _, event := range events {
+		if event.GetActivityTaskCancelRequestedEventAttributes() != nil {
+			activityCancellations = append(activityCancellations, event.GetActivityTaskCancelRequestedEventAttributes())
+		}
+		if event.GetWorkflowExecutionCancelRequestedEventAttributes() != nil {
+			wfCancellations = append(wfCancellations, event.GetWorkflowExecutionCancelRequestedEventAttributes())
+		}
+	}
+	return activityCancellations, wfCancellations
+}
+
 func (f *failure) RootCause(ctx context.Context, issues []invariant.InvariantCheckResult) ([]invariant.InvariantRootCauseResult, error) {
 	result := make([]invariant.InvariantRootCauseResult, 0)
 	for _, issue := range issues {
+		var metadata failureMetadata
+		err := json.Unmarshal(issue.Metadata, &metadata)
+		if err != nil {
+			return nil, err
+		}
 		if issue.Reason == CustomError.String() || issue.Reason == PanicError.String() {
 			result = append(result, invariant.InvariantRootCauseResult{
 				RootCause: invariant.RootCauseTypeServiceSideIssue,
 				Metadata:  issue.Metadata,
 			})
+		}
+		if issue.Reason == CancelledError.String() {
+			if issue.InvariantType == WorkflowFailed.String() && metadata.WorkflowCancellations != nil {
+				result = append(result, invariant.InvariantRootCauseResult{
+					RootCause: invariant.RootCauseTypeCancellation,
+					Metadata:  issue.Metadata,
+				})
+			}
+			if issue.InvariantType == ActivityFailed.String() && metadata.ActivityCancellations != nil {
+				result = append(result, invariant.InvariantRootCauseResult{
+					RootCause: invariant.RootCauseTypeCancellation,
+					Metadata:  issue.Metadata,
+				})
+			}
 		}
 	}
 	return result, nil

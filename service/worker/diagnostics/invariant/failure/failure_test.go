@@ -40,21 +40,15 @@ const (
 
 func Test__Check(t *testing.T) {
 	metadata := failureMetadata{
-		Identity: "localhost",
+		Identity:              "localhost",
+		ActivityCancellations: nil,
+		WorkflowCancellations: []*types.WorkflowExecutionCancelRequestedEventAttributes{{
+			Identity: "localhost",
+		}},
 	}
 	metadataInBytes, err := json.Marshal(metadata)
 	require.NoError(t, err)
-	actMetadata := failureMetadata{
-		Identity: "localhost",
-		ActivityScheduled: &types.ActivityTaskScheduledEventAttributes{
-			ActivityID:   "101",
-			ActivityType: &types.ActivityType{Name: "test-activity"},
-		},
-		ActivityStarted: &types.ActivityTaskStartedEventAttributes{
-			Identity: "localhost",
-			Attempt:  0,
-		},
-	}
+	actMetadata := activityMetadata()
 	actMetadataInBytes, err := json.Marshal(actMetadata)
 	require.NoError(t, err)
 	testCases := []struct {
@@ -100,6 +94,24 @@ func Test__Check(t *testing.T) {
 		require.Equal(t, tc.err, err)
 		require.Equal(t, len(tc.expectedResult), len(result))
 		require.ElementsMatch(t, tc.expectedResult, result)
+	}
+}
+
+func activityMetadata() failureMetadata {
+	return failureMetadata{
+		Identity: "localhost",
+		ActivityScheduled: &types.ActivityTaskScheduledEventAttributes{
+			ActivityID:   "101",
+			ActivityType: &types.ActivityType{Name: "test-activity"},
+		},
+		ActivityStarted: &types.ActivityTaskStartedEventAttributes{
+			Identity: "localhost",
+			Attempt:  0,
+		},
+		ActivityCancellations: []*types.ActivityTaskCancelRequestedEventAttributes{{
+			ActivityID: "test-id",
+		}},
+		WorkflowCancellations: nil,
 	}
 }
 
@@ -149,8 +161,19 @@ func failedWfHistory() *types.GetWorkflowExecutionHistoryResponse {
 					},
 				},
 				{
+					ActivityTaskCancelRequestedEventAttributes: &types.ActivityTaskCancelRequestedEventAttributes{
+						ActivityID: "test-id",
+					},
+				},
+				{
 					ID: 10,
 					DecisionTaskCompletedEventAttributes: &types.DecisionTaskCompletedEventAttributes{
+						Identity: "localhost",
+					},
+				},
+				{
+					ID: 10,
+					WorkflowExecutionCancelRequestedEventAttributes: &types.WorkflowExecutionCancelRequestedEventAttributes{
 						Identity: "localhost",
 					},
 				},
@@ -172,6 +195,9 @@ func Test__RootCause(t *testing.T) {
 	}
 	metadataInBytes, err := json.Marshal(metadata)
 	require.NoError(t, err)
+	actMetadata := activityMetadata()
+	actMetadataInBytes, err := json.Marshal(actMetadata)
+	require.NoError(t, err)
 	testCases := []struct {
 		name           string
 		input          []invariant.InvariantCheckResult
@@ -189,6 +215,20 @@ func Test__RootCause(t *testing.T) {
 			expectedResult: []invariant.InvariantRootCauseResult{{
 				RootCause: invariant.RootCauseTypeServiceSideIssue,
 				Metadata:  metadataInBytes,
+			}},
+			err: nil,
+		},
+		{
+			name: "cancellation failure",
+			input: []invariant.InvariantCheckResult{
+				{
+					InvariantType: ActivityFailed.String(),
+					Reason:        CancelledError.String(),
+					Metadata:      actMetadataInBytes,
+				}},
+			expectedResult: []invariant.InvariantRootCauseResult{{
+				RootCause: invariant.RootCauseTypeCancellation,
+				Metadata:  actMetadataInBytes,
 			}},
 			err: nil,
 		},

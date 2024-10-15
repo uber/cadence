@@ -27,10 +27,11 @@ import "github.com/uber/cadence/common/types"
 type ErrorType string
 
 const (
-	CustomError  ErrorType = "The failure is caused by a specific custom error returned from the service code"
-	GenericError ErrorType = "The failure is because of an error returned from the service code"
-	PanicError   ErrorType = "The failure is caused by a panic in the service code"
-	TimeoutError ErrorType = "The failure is caused by a timeout during the execution"
+	CustomError    ErrorType = "The failure is caused by a specific custom error returned from the service code"
+	GenericError   ErrorType = "The failure is because of an error returned from the service code"
+	PanicError     ErrorType = "The failure is caused by a panic in the service code"
+	CancelledError ErrorType = "The failure is caused by context cancellation"
+	TimeoutError   ErrorType = "The failure is caused by a timeout during the execution"
 )
 
 func (e ErrorType) String() string {
@@ -49,7 +50,9 @@ func (f FailureType) String() string {
 }
 
 type failureMetadata struct {
-	Identity          string
-	ActivityScheduled *types.ActivityTaskScheduledEventAttributes
-	ActivityStarted   *types.ActivityTaskStartedEventAttributes
+	Identity              string
+	ActivityScheduled     *types.ActivityTaskScheduledEventAttributes
+	ActivityStarted       *types.ActivityTaskStartedEventAttributes
+	ActivityCancellations []*types.ActivityTaskCancelRequestedEventAttributes
+	WorkflowCancellations []*types.WorkflowExecutionCancelRequestedEventAttributes
 }

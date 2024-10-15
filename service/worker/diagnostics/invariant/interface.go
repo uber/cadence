@@ -48,6 +48,7 @@ const (
 	RootCauseTypeHeartBeatingNotEnabled              RootCause = "HeartBeating not enabled for activity"
 	RootCauseTypeHeartBeatingEnabledMissingHeartbeat RootCause = "HeartBeating enabled for activity but timed out due to missing heartbeat"
 	RootCauseTypeServiceSideIssue                    RootCause = "There is an issue in the worker service code that is causing this failure. Check identity for service logs"
+	RootCauseTypeCancellation                        RootCause = "Cancellation was requested within the execution"
 )
 
 func (r RootCause) String() string {
