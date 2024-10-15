@@ -24,11 +24,11 @@ import (
 	"context"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"go.uber.org/goleak"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/transport/grpc"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log/testlogger"
 )
