@@ -28,9 +28,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/golang/mock/gomock"
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/mocktracer"
 	"github.com/stretchr/testify/assert"
+	"github.com/uber/cadence/client/admin"
+	"github.com/uber/cadence/client/frontend"
+	"github.com/uber/cadence/common/types"
 	"github.com/urfave/cli/v2"
 )
 
@@ -98,4 +102,126 @@ func TestConstructStartWorkflowRequest(t *testing.T) {
 	firstRunAt, err := time.Parse(time.RFC3339, "2024-07-24T12:00:00Z")
 	assert.NoError(t, err)
 	assert.Equal(t, firstRunAt.UnixNano(), *request.FirstRunAtTimeStamp)
+}
+
+func Test_PrintAutoResetPoints(t *testing.T) {
+	tests := []struct {
+		name string
+		resp *types.DescribeWorkflowExecutionResponse
+	}{
+		{
+			name: "empty reset points",
+			resp: &types.DescribeWorkflowExecutionResponse{
+				WorkflowExecutionInfo: &types.WorkflowExecutionInfo{},
+			},
+		},
+		{
+			name: "normal case",
+			resp: &types.DescribeWorkflowExecutionResponse{
+				WorkflowExecutionInfo: &types.WorkflowExecutionInfo{
+					AutoResetPoints: &types.ResetPoints{
+						Points: []*types.ResetPointInfo{
+							{
+								BinaryChecksum: "test-binary-checksum",
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := printAutoResetPoints(tt.resp)
+			assert.NoError(t, err)
+		})
+	}
+}
+
+func Test_DescribeWorkflow(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	serverFrontendClient := frontend.NewMockClient(mockCtrl)
+	serverAdminClient := admin.NewMockClient(mockCtrl)
+	app := NewCliApp(&clientFactoryMock{
+		serverFrontendClient: serverFrontendClient,
+		serverAdminClient:    serverAdminClient,
+	})
+	serverFrontendClient.EXPECT().DescribeWorkflowExecution(gomock.Any(), gomock.Any()).Return(&types.DescribeWorkflowExecutionResponse{
+		WorkflowExecutionInfo: &types.WorkflowExecutionInfo{
+			Execution: &types.WorkflowExecution{
+				WorkflowID: "test-workflow-id",
+				RunID:      "test-run-id",
+			},
+		},
+	}, nil).Times(1)
+	c := getMockContext(t, nil, app)
+	err := DescribeWorkflow(c)
+	assert.NoError(t, err)
+}
+
+func Test_DescribeWorkflowWithID(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	serverFrontendClient := frontend.NewMockClient(mockCtrl)
+	serverAdminClient := admin.NewMockClient(mockCtrl)
+	app := NewCliApp(&clientFactoryMock{
+		serverFrontendClient: serverFrontendClient,
+		serverAdminClient:    serverAdminClient,
+	})
+	serverFrontendClient.EXPECT().DescribeWorkflowExecution(gomock.Any(), gomock.Any()).Return(&types.DescribeWorkflowExecutionResponse{
+		WorkflowExecutionInfo: &types.WorkflowExecutionInfo{
+			Execution: &types.WorkflowExecution{
+				WorkflowID: "test-workflow-id",
+				RunID:      "test-run-id",
+			},
+		},
+	}, nil).Times(1)
+	c := getMockContext(t, nil, app)
+	err := DescribeWorkflowWithID(c)
+	assert.NoError(t, err)
+}
+
+func Test_DescribeWorkflowWithID_Error(t *testing.T) {
+	set := flag.NewFlagSet("test", 0)
+	err := DescribeWorkflowWithID(cli.NewContext(nil, set, nil))
+	assert.Error(t, err)
+}
+
+func getMockContext(t *testing.T, set *flag.FlagSet, app *cli.App) *cli.Context {
+	if set == nil {
+		set = flag.NewFlagSet("test", 0)
+		set.String(FlagDomain, "test-domain", "domain")
+		set.String("workflow_id", "test-workflow-id", "workflow_id")
+		set.String("run_id", "test-run-id", "run_id")
+		set.Bool("print_reset_points", true, "print_reset_points")
+		set.Parse([]string{"test-workflow-id", "test-run-id"})
+	}
+
+	c := cli.NewContext(app, set, nil)
+	assert.NoError(t, c.Set(FlagDomain, "test-domain"))
+	assert.NoError(t, c.Set("workflow_id", "test-workflow-id"))
+	assert.NoError(t, c.Set("run_id", "test-run-id"))
+
+	return c
+}
+
+func Test_ListAllWorkflow(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	serverFrontendClient := frontend.NewMockClient(mockCtrl)
+	app := NewCliApp(&clientFactoryMock{
+		serverFrontendClient: serverFrontendClient,
+	})
+	serverFrontendClient.EXPECT().CountWorkflowExecutions(gomock.Any(), gomock.Any()).Return(&types.CountWorkflowExecutionsResponse{
+		Count: int64(1),
+	}, nil).AnyTimes()
+	serverFrontendClient.EXPECT().ListWorkflowExecutions(gomock.Any(), gomock.Any()).Return(&types.ListWorkflowExecutionsResponse{}, nil).AnyTimes()
+	serverFrontendClient.EXPECT().ListClosedWorkflowExecutions(gomock.Any(), gomock.Any()).Return(&types.ListClosedWorkflowExecutionsResponse{}, nil).AnyTimes()
+	set := flag.NewFlagSet("test", 0)
+	set.String(FlagDomain, "test-domain", "domain")
+	set.String("workflow_id", "test-workflow-id", "workflow_id")
+	set.String("run_id", "test-run-id", "run_id")
+	set.String("status", "open", "status")
+	c := getMockContext(t, set, app)
+	err := ListAllWorkflow(c)
+	assert.NoError(t, err)
 }
