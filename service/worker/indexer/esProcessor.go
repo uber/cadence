@@ -275,8 +275,8 @@ func (p *ESProcessorImpl) shadowBulkAfterAction(id int64, requests []bulk.Generi
 			continue
 		}
 		responseItem := responseItems[i]
-		//Tt is possible for err to be nil while the responses in response.Items might still contain errors or unsuccessful statuses for individual requests.
-		//This is because the err variable refers to the overall bulk request operation, but each individual request in the bulk operation has its own status code.
+		// It is possible for err to be nil while the responses in response.Items might still contain errors or unsuccessful statuses for individual requests.
+		// This is because the err variable refers to the overall bulk request operation, but each individual request in the bulk operation has its own status code.
 		for _, resp := range responseItem {
 			if !isResponseSuccess(resp.Status) {
 				wid, rid, domainID := p.getMsgWithInfo(key)
