@@ -42,7 +42,7 @@ type (
 		ServiceName string
 
 		// EnableConnectionRetainingDirectChooser is used by direct peer chooser.
-		// If false, yarpc's own default direct peer chooser will be used which doesn retain connections.
+		// If false, yarpc's own default direct peer chooser will be used which doesn't retain connections.
 		// If true, cadence's own direct peer chooser will be used which retains connections.
 		EnableConnectionRetainingDirectChooser dynamicconfig.BoolPropertyFn
 	}
