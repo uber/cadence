@@ -266,6 +266,25 @@ func (p *ESProcessorImpl) shadowBulkAfterAction(id int64, requests []bulk.Generi
 				tag.ESResponseStatus(err.Status),
 				tag.ESRequest(request.String()))
 		}
+		return
+	}
+	responseItems := response.Items
+	for i := 0; i < len(requests); i++ {
+		key := p.retrieveKafkaKey(requests[i])
+		if key == "" {
+			continue
+		}
+		responseItem := responseItems[i]
+		//Tt is possible for err to be nil while the responses in response.Items might still contain errors or unsuccessful statuses for individual requests.
+		//This is because the err variable refers to the overall bulk request operation, but each individual request in the bulk operation has its own status code.
+		for _, resp := range responseItem {
+			if !isResponseSuccess(resp.Status) {
+				wid, rid, domainID := p.getMsgWithInfo(key)
+				p.logger.Error("ES request failed in secondary processor",
+					tag.ESResponseStatus(resp.Status), tag.ESResponseError(getErrorMsgFromESResp(resp)), tag.WorkflowID(wid), tag.WorkflowRunID(rid),
+					tag.WorkflowDomainID(domainID))
+			}
+		}
 	}
 }
 
