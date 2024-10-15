@@ -526,12 +526,15 @@ func processHeader(c *cli.Context) (map[string][]byte, error) {
 	headers := mapFromKeysValues(headerKeys, headerValues)
 	// append context headers if exist
 	if span := opentracing.SpanFromContext(c.Context); span != nil && span.Context() != nil {
-		span.Context().ForeachBaggageItem(func(k, v string) bool {
+		spanHeaders := make(map[string]string)
+		if err := span.Tracer().Inject(span.Context(), opentracing.TextMap, opentracing.TextMapCarrier(spanHeaders)); err != nil {
+			return nil, fmt.Errorf("error in inject span context: %w", err)
+		}
+		for k, v := range spanHeaders {
 			if _, exist := headers[k]; !exist { // append only if not exist
 				headers[k] = []byte(v)
 			}
-			return true
-		})
+		}
 	}
 	return headers, nil
 }

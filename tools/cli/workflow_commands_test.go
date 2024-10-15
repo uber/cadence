@@ -92,7 +92,8 @@ func TestConstructStartWorkflowRequest(t *testing.T) {
 	assert.NotNil(t, request.WorkflowIDReusePolicy)
 	assert.Equal(t, int32(5), *request.DelayStartSeconds)
 	assert.Equal(t, int32(2), *request.JitterStartSeconds)
-	assert.Equal(t, map[string][]byte{"tracer-test-key": []byte("tracer-test-value")}, request.Header.Fields)
+	assert.Contains(t, request.Header.Fields, "mockpfx-baggage-tracer-test-key")
+	assert.Equal(t, []byte("tracer-test-value"), request.Header.Fields["mockpfx-baggage-tracer-test-key"])
 
 	firstRunAt, err := time.Parse(time.RFC3339, "2024-07-24T12:00:00Z")
 	assert.NoError(t, err)
