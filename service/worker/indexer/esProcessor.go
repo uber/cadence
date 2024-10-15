@@ -269,7 +269,7 @@ func (p *ESProcessorImpl) shadowBulkAfterAction(id int64, requests []bulk.Generi
 		return
 	}
 	responseItems := response.Items
-	for i := 0; i < len(requests); i++ {
+	for i := 0; i < len(requests) && i < len(responseItems); i++ {
 		key := p.retrieveKafkaKey(requests[i])
 		if key == "" {
 			continue
