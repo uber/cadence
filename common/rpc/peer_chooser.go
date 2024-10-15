@@ -94,8 +94,6 @@ func (f *dnsPeerChooserFactory) CreatePeerChooser(transport peer.Transport, opts
 	return &defaultPeerChooser{Chooser: peerList}, nil
 }
 
-func (f *dnsPeerChooserFactory) UpdatePeers(peers []membership.HostInfo) {}
-
 func NewDirectPeerChooserFactory(serviceName string, logger log.Logger) PeerChooserFactory {
 	return &directPeerChooserFactory{
 		logger: logger,
@@ -106,10 +104,4 @@ func (f *directPeerChooserFactory) CreatePeerChooser(transport peer.Transport, o
 	c := newDirectChooser(f.serviceName, transport, f.logger, opts.EnableConnectionRetainingDirectChooser)
 	f.choosers = append(f.choosers, c)
 	return c, nil
-}
-
-func (f *directPeerChooserFactory) UpdatePeers(peers []membership.HostInfo) {
-	for _, c := range f.choosers {
-		c.UpdatePeers(peers)
-	}
 }

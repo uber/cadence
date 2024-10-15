@@ -29,9 +29,29 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/transport/grpc"
 
+	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/testlogger"
 )
+
+type (
+	fakePeerTransport struct{}
+	fakePeer          struct{}
+)
+
+func (t *fakePeerTransport) RetainPeer(peer.Identifier, peer.Subscriber) (peer.Peer, error) {
+	return &fakePeer{}, nil
+}
+func (t *fakePeerTransport) ReleasePeer(peer.Identifier, peer.Subscriber) error {
+	return nil
+}
+
+func (p *fakePeer) Identifier() string  { return "fakePeer" }
+func (p *fakePeer) Status() peer.Status { return peer.Status{ConnectionStatus: peer.Available} }
+func (p *fakePeer) StartRequest()       {}
+func (p *fakePeer) EndRequest()         {}
 
 func TestDNSPeerChooserFactory(t *testing.T) {
 	logger := log.NewNoop()
@@ -60,19 +80,24 @@ func TestDNSPeerChooserFactory(t *testing.T) {
 	assert.Equal(t, "fakePeer", peer.Identifier())
 }
 
-type (
-	fakePeerTransport struct{}
-	fakePeer          struct{}
-)
+func TestDirectPeerChooserFactory(t *testing.T) {
+	logger := testlogger.New(t)
+	serviceName := "service"
+	pcf := NewDirectPeerChooserFactory(serviceName, logger)
+	directConnRetainFn := func(opts ...dynamicconfig.FilterOption) bool { return false }
+	grpcTransport := grpc.NewTransport()
+	chooser, err := pcf.CreatePeerChooser(grpcTransport, PeerChooserOptions{
+		ServiceName:                            serviceName,
+		EnableConnectionRetainingDirectChooser: directConnRetainFn,
+	})
+	if err != nil {
+		t.Fatalf("Failed to create direct peer chooser: %v", err)
+	}
+	if chooser == nil {
+		t.Fatal("Failed to create direct peer chooser: nil")
+	}
 
-func (t *fakePeerTransport) RetainPeer(peer.Identifier, peer.Subscriber) (peer.Peer, error) {
-	return &fakePeer{}, nil
+	if _, dc := chooser.(*directPeerChooser); !dc {
+		t.Fatalf("Want chooser be of type (*directPeerChooser), got %d", chooser)
+	}
 }
-func (t *fakePeerTransport) ReleasePeer(peer.Identifier, peer.Subscriber) error {
-	return nil
-}
-
-func (p *fakePeer) Identifier() string  { return "fakePeer" }
-func (p *fakePeer) Status() peer.Status { return peer.Status{ConnectionStatus: peer.Available} }
-func (p *fakePeer) StartRequest()       {}
-func (p *fakePeer) EndRequest()         {}

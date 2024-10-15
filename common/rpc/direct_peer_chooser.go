@@ -43,6 +43,7 @@ type directPeerChooser struct {
 	t                    peer.Transport
 	enableConnRetainMode dynamicconfig.BoolPropertyFn
 	legacyChooser        peer.Chooser
+	legacyChooserErr     error
 	mu                   sync.RWMutex
 }
 
@@ -56,17 +57,32 @@ func newDirectChooser(serviceName string, t peer.Transport, logger log.Logger, e
 }
 
 // Start statisfies the peer.Chooser interface.
-func (*directPeerChooser) Start() error {
+func (g *directPeerChooser) Start() error {
+	c, ok := g.getLegacyChooser()
+	if ok {
+		return c.Start()
+	}
+
 	return nil // no-op
 }
 
 // Stop statisfies the peer.Chooser interface.
-func (*directPeerChooser) Stop() error {
+func (g *directPeerChooser) Stop() error {
+	c, ok := g.getLegacyChooser()
+	if ok {
+		return c.Stop()
+	}
+
 	return nil // no-op
 }
 
 // IsRunning statisfies the peer.Chooser interface.
-func (*directPeerChooser) IsRunning() bool {
+func (g *directPeerChooser) IsRunning() bool {
+	c, ok := g.getLegacyChooser()
+	if ok {
+		return c.IsRunning()
+	}
+
 	return true // no-op
 }
 
@@ -90,23 +106,39 @@ func (g *directPeerChooser) UpdatePeers(members []membership.HostInfo) {
 }
 
 func (g *directPeerChooser) chooseFromLegacyDirectPeerChooser(ctx context.Context, req *transport.Request) (peer.Peer, func(error), error) {
+	c, ok := g.getLegacyChooser()
+	if !ok {
+		return nil, nil, yarpcerrors.InternalErrorf("failed to get legacy direct peer chooser")
+	}
+
+	return c.Choose(ctx, req)
+}
+
+func (g *directPeerChooser) getLegacyChooser() (peer.Chooser, bool) {
 	g.mu.RLock()
 
 	if g.legacyChooser != nil {
+		// Legacy chooser already created, return it
 		g.mu.RUnlock()
-		return g.legacyChooser.Choose(ctx, req)
+		return g.legacyChooser, true
+	}
+
+	if g.legacyChooserErr != nil {
+		// There was an error creating the legacy chooser, return false
+		g.mu.RUnlock()
+		return nil, false
 	}
 
 	g.mu.RUnlock()
 
-	var err error
 	g.mu.Lock()
-	g.legacyChooser, err = direct.New(direct.Configuration{}, g.t)
+	g.legacyChooser, g.legacyChooserErr = direct.New(direct.Configuration{}, g.t)
 	g.mu.Unlock()
 
-	if err != nil {
-		return nil, nil, err
+	if g.legacyChooserErr != nil {
+		g.logger.Error("failed to create legacy direct peer chooser", tag.Error(g.legacyChooserErr))
+		return nil, false
 	}
 
-	return g.legacyChooser.Choose(ctx, req)
+	return g.legacyChooser, true
 }
