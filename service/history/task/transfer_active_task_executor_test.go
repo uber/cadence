@@ -601,7 +601,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessDecisionTask_StickyWorkerUn
 	)
 
 	err = s.transferActiveTaskExecutor.Execute(transferTask, true)
-	s.Nil(err)
+	s.NoError(err)
 }
 
 func (s *transferActiveTaskExecutorSuite) TestProcessCloseExecution_HasParent_Success() {
@@ -1912,7 +1912,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessResetWorkflow_OtherError() 
 	s.testProcessResetWorkflowWithError(true, errors.New("some random error"), errors.New("some random error"))
 }
 
-func (s *transferActiveTaskExecutorSuite) testProcessResetWorkflowWithError(sameRunID bool, resetError error, err error) {
+func (s *transferActiveTaskExecutorSuite) testProcessResetWorkflowWithError(sameRunID bool, resetError error, returnErr error) {
 	workflowExecution, mutableState, decisionCompletionID, err := test.SetupWorkflowWithCompletedDecision(s.mockShard, s.domainID)
 	s.NoError(err)
 
@@ -1988,8 +1988,8 @@ func (s *transferActiveTaskExecutorSuite) testProcessResetWorkflowWithError(same
 
 	err = s.transferActiveTaskExecutor.Execute(transferTask, true)
 
-	if err != nil {
-		s.Equal(err, err)
+	if returnErr != nil {
+		s.Equal(returnErr, err)
 	} else {
 		s.Nil(err)
 	}
