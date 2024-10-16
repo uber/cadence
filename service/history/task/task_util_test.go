@@ -402,7 +402,7 @@ func Test_verifyTaskVersion(t *testing.T) {
 		{
 			name: "true - domain is not global",
 			setupMock: func(s *shard.MockContext, c *cache.MockDomainCache) {
-				domainResponse := cache.NewDomainCacheEntryForTest(&persistence.DomainInfo{ID: constants.TestDomainID, Name: constants.TestDomainName}, &persistence.DomainConfig{}, false, nil, 0, nil)
+				domainResponse := cache.NewDomainCacheEntryForTest(&persistence.DomainInfo{ID: constants.TestDomainID, Name: constants.TestDomainName}, &persistence.DomainConfig{}, false, nil, 0, nil, 0, 0, 0)
 				c.EXPECT().GetDomainByID(constants.TestDomainID).Return(domainResponse, nil).Times(1)
 				s.EXPECT().GetDomainCache().Return(c).Times(1)
 			},
@@ -412,7 +412,7 @@ func Test_verifyTaskVersion(t *testing.T) {
 		{
 			name: "false - version is different from task version",
 			setupMock: func(s *shard.MockContext, c *cache.MockDomainCache) {
-				domainResponse := cache.NewDomainCacheEntryForTest(&persistence.DomainInfo{ID: constants.TestDomainID, Name: constants.TestDomainName}, &persistence.DomainConfig{}, true, nil, 0, nil)
+				domainResponse := cache.NewDomainCacheEntryForTest(&persistence.DomainInfo{ID: constants.TestDomainID, Name: constants.TestDomainName}, &persistence.DomainConfig{}, true, nil, 0, nil, 0, 0, 0)
 				c.EXPECT().GetDomainByID(constants.TestDomainID).Return(domainResponse, nil).Times(1)
 				s.EXPECT().GetDomainCache().Return(c).Times(1)
 			},
@@ -423,7 +423,7 @@ func Test_verifyTaskVersion(t *testing.T) {
 		{
 			name: "true - version is same as task version",
 			setupMock: func(s *shard.MockContext, c *cache.MockDomainCache) {
-				domainResponse := cache.NewDomainCacheEntryForTest(&persistence.DomainInfo{ID: constants.TestDomainID, Name: constants.TestDomainName}, &persistence.DomainConfig{}, true, nil, 0, nil)
+				domainResponse := cache.NewDomainCacheEntryForTest(&persistence.DomainInfo{ID: constants.TestDomainID, Name: constants.TestDomainName}, &persistence.DomainConfig{}, true, nil, 0, nil, 0, 0, 0)
 				c.EXPECT().GetDomainByID(constants.TestDomainID).Return(domainResponse, nil).Times(1)
 				s.EXPECT().GetDomainCache().Return(c).Times(1)
 			},

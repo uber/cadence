@@ -887,6 +887,9 @@ func (s *mutableStateSuite) newDomainCacheEntry() *cache.DomainCacheEntry {
 		&persistence.DomainReplicationConfig{},
 		1,
 		nil,
+		0,
+		0,
+		0,
 	)
 }
 
@@ -1040,6 +1043,9 @@ func TestNewMutableStateBuilderWithEventV2(t *testing.T) {
 		&persistence.DomainReplicationConfig{},
 		1,
 		nil,
+		0,
+		0,
+		0,
 	)
 
 	NewMutableStateBuilderWithEventV2(mockShard, log.NewNoop(), "A82146B5-7A5C-4660-9195-E80E5161EC56", domainCache)

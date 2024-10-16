@@ -364,6 +364,7 @@ func TestNewHistoryReplicator_newMutableState(t *testing.T) {
 		&persistence.DomainReplicationConfig{ActiveClusterName: "test-active-cluster"},
 		0,
 		&deadline,
+		0, 0, 0,
 	)
 	assert.NotNil(t, testReplicatorImpl.newMutableStateFn(mockDomainCacheEntry, log.NewNoop()))
 }
