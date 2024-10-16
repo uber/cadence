@@ -1,6 +1,6 @@
 // The MIT License (MIT)
 
-// Copyright (c) 2017-2020 Uber Technologies Inc.
+// Copyright (c) 2024 Uber Technologies Inc.
 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,36 +20,21 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package failure
+package worker
 
-import "github.com/uber/cadence/common/types"
-
-type ErrorType string
-
-const (
-	CustomError  ErrorType = "The failure is caused by a specific custom error returned from the service code"
-	GenericError ErrorType = "The failure is because of an error returned from the service code"
-	PanicError   ErrorType = "The failure is caused by a panic in the service code"
-	TimeoutError ErrorType = "The failure is caused by a timeout during the execution"
+import (
+	"go.uber.org/cadence/activity"
+	"go.uber.org/cadence/workflow"
 )
 
-func (e ErrorType) String() string {
-	return string(e)
-}
+//go:generate mockgen -source $GOFILE -destination worker_mock.go -package worker github.com/uber/cadence/service/worker/worker Worker
 
-type FailureType string
-
-const (
-	ActivityFailed FailureType = "Activity Failed"
-	WorkflowFailed FailureType = "Workflow Failed"
-)
-
-func (f FailureType) String() string {
-	return string(f)
-}
-
-type failureMetadata struct {
-	Identity          string
-	ActivityScheduled *types.ActivityTaskScheduledEventAttributes
-	ActivityStarted   *types.ActivityTaskStartedEventAttributes
+type Worker interface {
+	RegisterActivity(activity interface{})
+	RegisterActivityWithOptions(activity interface{}, options activity.RegisterOptions)
+	RegisterWorkflow(workflow interface{})
+	RegisterWorkflowWithOptions(workflow interface{}, options workflow.RegisterOptions)
+	Start() error
+	Stop()
+	Run() error
 }

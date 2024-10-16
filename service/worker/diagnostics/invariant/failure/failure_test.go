@@ -44,6 +44,19 @@ func Test__Check(t *testing.T) {
 	}
 	metadataInBytes, err := json.Marshal(metadata)
 	require.NoError(t, err)
+	actMetadata := failureMetadata{
+		Identity: "localhost",
+		ActivityScheduled: &types.ActivityTaskScheduledEventAttributes{
+			ActivityID:   "101",
+			ActivityType: &types.ActivityType{Name: "test-activity"},
+		},
+		ActivityStarted: &types.ActivityTaskStartedEventAttributes{
+			Identity: "localhost",
+			Attempt:  0,
+		},
+	}
+	actMetadataInBytes, err := json.Marshal(actMetadata)
+	require.NoError(t, err)
 	testCases := []struct {
 		name           string
 		testData       *types.GetWorkflowExecutionHistoryResponse
@@ -57,17 +70,17 @@ func Test__Check(t *testing.T) {
 				{
 					InvariantType: ActivityFailed.String(),
 					Reason:        GenericError.String(),
-					Metadata:      metadataInBytes,
+					Metadata:      actMetadataInBytes,
 				},
 				{
 					InvariantType: ActivityFailed.String(),
 					Reason:        PanicError.String(),
-					Metadata:      metadataInBytes,
+					Metadata:      actMetadataInBytes,
 				},
 				{
 					InvariantType: ActivityFailed.String(),
 					Reason:        CustomError.String(),
-					Metadata:      metadataInBytes,
+					Metadata:      actMetadataInBytes,
 				},
 				{
 					InvariantType: WorkflowFailed.String(),
@@ -95,24 +108,44 @@ func failedWfHistory() *types.GetWorkflowExecutionHistoryResponse {
 		History: &types.History{
 			Events: []*types.HistoryEvent{
 				{
-					ActivityTaskFailedEventAttributes: &types.ActivityTaskFailedEventAttributes{
-						Reason:   common.StringPtr("cadenceInternal:Generic"),
-						Details:  []byte("test-activity-failure"),
+					ID: 1,
+					ActivityTaskScheduledEventAttributes: &types.ActivityTaskScheduledEventAttributes{
+						ActivityID:   "101",
+						ActivityType: &types.ActivityType{Name: "test-activity"},
+					},
+				},
+				{
+					ID: 2,
+					ActivityTaskStartedEventAttributes: &types.ActivityTaskStartedEventAttributes{
 						Identity: "localhost",
+						Attempt:  0,
 					},
 				},
 				{
 					ActivityTaskFailedEventAttributes: &types.ActivityTaskFailedEventAttributes{
-						Reason:   common.StringPtr("cadenceInternal:Panic"),
-						Details:  []byte("test-activity-failure"),
-						Identity: "localhost",
+						Reason:           common.StringPtr("cadenceInternal:Generic"),
+						Details:          []byte("test-activity-failure"),
+						Identity:         "localhost",
+						ScheduledEventID: 1,
+						StartedEventID:   2,
 					},
 				},
 				{
 					ActivityTaskFailedEventAttributes: &types.ActivityTaskFailedEventAttributes{
-						Reason:   common.StringPtr("custom error"),
-						Details:  []byte("test-activity-failure"),
-						Identity: "localhost",
+						Reason:           common.StringPtr("cadenceInternal:Panic"),
+						Details:          []byte("test-activity-failure"),
+						Identity:         "localhost",
+						ScheduledEventID: 1,
+						StartedEventID:   2,
+					},
+				},
+				{
+					ActivityTaskFailedEventAttributes: &types.ActivityTaskFailedEventAttributes{
+						Reason:           common.StringPtr("custom error"),
+						Details:          []byte("test-activity-failure"),
+						Identity:         "localhost",
+						ScheduledEventID: 1,
+						StartedEventID:   2,
 					},
 				},
 				{
@@ -130,5 +163,41 @@ func failedWfHistory() *types.GetWorkflowExecutionHistoryResponse {
 				},
 			},
 		},
+	}
+}
+
+func Test__RootCause(t *testing.T) {
+	metadata := failureMetadata{
+		Identity: "localhost",
+	}
+	metadataInBytes, err := json.Marshal(metadata)
+	require.NoError(t, err)
+	testCases := []struct {
+		name           string
+		input          []invariant.InvariantCheckResult
+		expectedResult []invariant.InvariantRootCauseResult
+		err            error
+	}{
+		{
+			name: "customer side failure",
+			input: []invariant.InvariantCheckResult{
+				{
+					InvariantType: ActivityFailed.String(),
+					Reason:        CustomError.String(),
+					Metadata:      metadataInBytes,
+				}},
+			expectedResult: []invariant.InvariantRootCauseResult{{
+				RootCause: invariant.RootCauseTypeServiceSideIssue,
+				Metadata:  metadataInBytes,
+			}},
+			err: nil,
+		},
+	}
+	inv := NewInvariant(Params{})
+	for _, tc := range testCases {
+		result, err := inv.RootCause(context.Background(), tc.input)
+		require.Equal(t, tc.err, err)
+		require.Equal(t, len(tc.expectedResult), len(result))
+		require.ElementsMatch(t, tc.expectedResult, result)
 	}
 }

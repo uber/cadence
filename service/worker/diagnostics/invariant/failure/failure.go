@@ -67,10 +67,16 @@ func (f *failure) Check(context.Context) ([]invariant.InvariantCheckResult, erro
 		if event.GetActivityTaskFailedEventAttributes() != nil && event.ActivityTaskFailedEventAttributes.Reason != nil {
 			attr := event.ActivityTaskFailedEventAttributes
 			reason := attr.Reason
+			scheduled := fetchScheduledEvent(attr, events)
+			started := fetchStartedEvent(attr, events)
 			result = append(result, invariant.InvariantCheckResult{
 				InvariantType: ActivityFailed.String(),
 				Reason:        errorTypeFromReason(*reason).String(),
-				Metadata:      invariant.MarshalData(failureMetadata{Identity: attr.Identity}),
+				Metadata: invariant.MarshalData(failureMetadata{
+					Identity:          attr.Identity,
+					ActivityScheduled: scheduled,
+					ActivityStarted:   started,
+				}),
 			})
 		}
 	}
@@ -99,6 +105,33 @@ func fetchIdentity(attr *types.WorkflowExecutionFailedEventAttributes, events []
 	return ""
 }
 
-func (f *failure) RootCause(ctx context.Context, results []invariant.InvariantCheckResult) ([]invariant.InvariantRootCauseResult, error) {
-	return nil, nil
+func fetchScheduledEvent(attr *types.ActivityTaskFailedEventAttributes, events []*types.HistoryEvent) *types.ActivityTaskScheduledEventAttributes {
+	for _, event := range events {
+		if event.ID == attr.GetScheduledEventID() {
+			return event.GetActivityTaskScheduledEventAttributes()
+		}
+	}
+	return nil
+}
+
+func fetchStartedEvent(attr *types.ActivityTaskFailedEventAttributes, events []*types.HistoryEvent) *types.ActivityTaskStartedEventAttributes {
+	for _, event := range events {
+		if event.ID == attr.GetStartedEventID() {
+			return event.GetActivityTaskStartedEventAttributes()
+		}
+	}
+	return nil
+}
+
+func (f *failure) RootCause(ctx context.Context, issues []invariant.InvariantCheckResult) ([]invariant.InvariantRootCauseResult, error) {
+	result := make([]invariant.InvariantRootCauseResult, 0)
+	for _, issue := range issues {
+		if issue.Reason == CustomError.String() || issue.Reason == PanicError.String() {
+			result = append(result, invariant.InvariantRootCauseResult{
+				RootCause: invariant.RootCauseTypeServiceSideIssue,
+				Metadata:  issue.Metadata,
+			})
+		}
+	}
+	return result, nil
 }
