@@ -309,17 +309,6 @@ func TestDomainCallback(t *testing.T) {
 	// notification_version          | 1
 	// previous_failover_version     | -1
 
-	//t0 := cache.NewDomainCacheEntryForTest(&domainInfo,
-	//	&domainConfig,
-	//	true,
-	//	&replicationConfig,
-	//	1, // cluster 0
-	//	nil,
-	//	0,
-	//	common.InitialPreviousFailoverVersion,
-	//	1,
-	//)
-
 	// A domain update, no failover though
 	// failover_end_time             | 0
 	// failover_notification_version | 0
