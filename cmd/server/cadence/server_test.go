@@ -24,7 +24,6 @@
 package cadence
 
 import (
-	"github.com/uber/cadence/common/log/testlogger"
 	"log"
 	"os"
 	"testing"
@@ -40,6 +39,7 @@ import (
 	"github.com/uber/cadence/common/dynamicconfig"
 	cadenceLog "github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/loggerimpl"
+	"github.com/uber/cadence/common/log/testlogger"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
 	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/common/service"
