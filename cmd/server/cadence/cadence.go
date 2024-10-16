@@ -22,6 +22,7 @@ package cadence
 
 import (
 	"fmt"
+	"github.com/uber/cadence/common/log/loggerimpl"
 	"log"
 	"os"
 	"os/signal"
@@ -57,8 +58,15 @@ func startHandler(c *cli.Context) error {
 	if err != nil {
 		return fmt.Errorf("Config file corrupted: %w", err)
 	}
+
+	zapLogger, err := cfg.Log.NewZapLogger()
+	if err != nil {
+		log.Fatal("failed to create the zap logger, err: ", err.Error())
+	}
+	rootLogger := loggerimpl.NewLogger(zapLogger)
+
 	if cfg.Log.Level == "debug" {
-		log.Printf("config=%v", cfg.String())
+		zapLogger.Sugar().Debugf("config=%v", cfg.String())
 	}
 	if cfg.DynamicConfig.Client == "" {
 		cfg.DynamicConfigClient.Filepath = constructPathIfNeed(rootDir, cfg.DynamicConfigClient.Filepath)
@@ -70,7 +78,7 @@ func startHandler(c *cli.Context) error {
 		return fmt.Errorf("config validation failed: %w", err)
 	}
 	// cassandra schema version validation
-	if err := cassandra.VerifyCompatibleVersion(cfg.Persistence, gocql.Quorum); err != nil {
+	if err := cassandra.VerifyCompatibleVersion(rootLogger, cfg.Persistence, gocql.Quorum); err != nil {
 		return fmt.Errorf("cassandra schema version compatibility check failed: %w", err)
 	}
 	// sql schema version validation
@@ -83,13 +91,13 @@ func startHandler(c *cli.Context) error {
 	sigc := make(chan os.Signal, 1)
 	signal.Notify(sigc, syscall.SIGTERM, syscall.SIGINT)
 	for _, svc := range services {
-		server := newServer(svc, &cfg)
+		server := newServer(svc, &cfg, rootLogger)
 		daemons = append(daemons, server)
 		server.Start()
 	}
 
 	<-sigc
-	log.Println("Received SIGTERM signal, initiating shutdown.")
+	rootLogger.Info("Received SIGTERM signal, initiating shutdown.")
 	for _, daemon := range daemons {
 		daemon.Stop()
 	}

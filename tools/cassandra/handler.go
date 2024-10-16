@@ -24,12 +24,13 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/urfave/cli/v2"
-
 	"github.com/uber/cadence/common/config"
+
+	cadenceLog "github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
 	"github.com/uber/cadence/schema/cassandra"
 	"github.com/uber/cadence/tools/common/schema"
+	"github.com/urfave/cli/v2"
 )
 
 const defaultNumReplicas = 1
@@ -46,17 +47,17 @@ type SetupSchemaConfig struct {
 // rollback, the code version (expected version) would fall lower than the actual version in
 // cassandra.
 func VerifyCompatibleVersion(
-	cfg config.Persistence, expectedConsistency gocql.Consistency,
+	logger cadenceLog.Logger, cfg config.Persistence, expectedConsistency gocql.Consistency,
 ) error {
 
 	if ds, ok := cfg.DataStores[cfg.DefaultStore]; ok {
-		if err := verifyCompatibleVersion(ds, cassandra.Version, expectedConsistency); err != nil {
+		if err := verifyCompatibleVersion(logger, ds, cassandra.Version, expectedConsistency); err != nil {
 			return err
 		}
 	}
 
 	if ds, ok := cfg.DataStores[cfg.VisibilityStore]; ok {
-		if err := verifyCompatibleVersion(ds, cassandra.VisibilityVersion, expectedConsistency); err != nil {
+		if err := verifyCompatibleVersion(logger, ds, cassandra.VisibilityVersion, expectedConsistency); err != nil {
 			return err
 		}
 	}
@@ -65,15 +66,16 @@ func VerifyCompatibleVersion(
 }
 
 func verifyCompatibleVersion(
+	logger cadenceLog.Logger,
 	ds config.DataStore,
 	expectedCassandraVersion string, expectedConsistency gocql.Consistency,
 ) error {
 	if ds.NoSQL != nil {
-		return verifyPluginVersion(ds.NoSQL, expectedCassandraVersion, expectedConsistency)
+		return verifyPluginVersion(logger, ds.NoSQL, expectedCassandraVersion, expectedConsistency)
 	}
 	if ds.ShardedNoSQL != nil {
 		for shardName, connection := range ds.ShardedNoSQL.Connections {
-			err := verifyPluginVersion(connection.NoSQLPlugin, expectedCassandraVersion, expectedConsistency)
+			err := verifyPluginVersion(logger, connection.NoSQLPlugin, expectedCassandraVersion, expectedConsistency)
 			if err != nil {
 				return fmt.Errorf("Failed to verify version for DB shard: %v. Error: %v", shardName, err.Error())
 			}
@@ -84,7 +86,7 @@ func verifyCompatibleVersion(
 	return nil
 }
 
-func verifyPluginVersion(plugin *config.NoSQL, expectedCassandraVersion string, expectedConsistency gocql.Consistency) error {
+func verifyPluginVersion(logger cadenceLog.Logger, plugin *config.NoSQL, expectedCassandraVersion string, expectedConsistency gocql.Consistency) error {
 	// Use hardcoded instead of constant because of cycle dependency issue.
 	// However, this file will be refactor to support NoSQL soon. After the refactoring, cycle dependency issue
 	// should be gone and we can use constant at that time
@@ -92,11 +94,12 @@ func verifyPluginVersion(plugin *config.NoSQL, expectedCassandraVersion string, 
 		return fmt.Errorf("unknown NoSQL plugin name: %q", plugin.PluginName)
 	}
 
-	return CheckCompatibleVersion(*plugin, expectedCassandraVersion, expectedConsistency)
+	return CheckCompatibleVersion(logger, *plugin, expectedCassandraVersion, expectedConsistency)
 }
 
 // CheckCompatibleVersion check the version compatibility
 func CheckCompatibleVersion(
+	logger cadenceLog.Logger,
 	cfg config.Cassandra,
 	expectedVersion string,
 	expectedConsistency gocql.Consistency,
@@ -119,7 +122,7 @@ func CheckCompatibleVersion(
 	}
 	defer client.Close()
 
-	return schema.VerifyCompatibleVersion(client, cfg.Keyspace, expectedVersion)
+	return schema.VerifyCompatibleVersion(logger, client, cfg.Keyspace, expectedVersion)
 }
 
 // setupSchema executes the setupSchemaTask
