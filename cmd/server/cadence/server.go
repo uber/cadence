@@ -112,7 +112,7 @@ func (s *server) startService() common.Daemon {
 
 	params := resource.Params{}
 	params.Name = service.FullName(s.name)
-	
+
 	params.Logger = s.rootLogger.WithTags(tag.Service(params.Name))
 
 	params.PersistenceConfig = s.cfg.Persistence

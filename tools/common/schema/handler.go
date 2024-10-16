@@ -22,17 +22,16 @@ package schema
 
 import (
 	"fmt"
-	"github.com/uber/cadence/common/log/loggerimpl"
 	"os"
 
 	"github.com/urfave/cli/v2"
 
 	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/loggerimpl"
 )
 
 // VerifyCompatibleVersion ensures that the installed version is greater than or equal to the expected version.
 func VerifyCompatibleVersion(
-	logger log.Logger,
 	db SchemaClient,
 	dbName string,
 	expectedVersion string,

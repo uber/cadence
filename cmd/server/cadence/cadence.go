@@ -22,7 +22,6 @@ package cadence
 
 import (
 	"fmt"
-	"github.com/uber/cadence/common/log/loggerimpl"
 	"log"
 	"os"
 	"os/signal"
@@ -35,6 +34,7 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/client"
 	"github.com/uber/cadence/common/config"
+	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/tools/cassandra"
@@ -78,7 +78,7 @@ func startHandler(c *cli.Context) error {
 		return fmt.Errorf("config validation failed: %w", err)
 	}
 	// cassandra schema version validation
-	if err := cassandra.VerifyCompatibleVersion(rootLogger, cfg.Persistence, gocql.Quorum); err != nil {
+	if err := cassandra.VerifyCompatibleVersion(cfg.Persistence, gocql.Quorum); err != nil {
 		return fmt.Errorf("cassandra schema version compatibility check failed: %w", err)
 	}
 	// sql schema version validation

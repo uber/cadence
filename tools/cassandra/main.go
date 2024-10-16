@@ -22,10 +22,10 @@ package cassandra
 
 import (
 	"fmt"
-	"github.com/uber/cadence/common/log"
 
 	"github.com/urfave/cli/v2"
 
+	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
 	"github.com/uber/cadence/tools/common/schema"
 )
