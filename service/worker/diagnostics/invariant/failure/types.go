@@ -48,7 +48,7 @@ func (f FailureType) String() string {
 	return string(f)
 }
 
-type failureMetadata struct {
+type FailureMetadata struct {
 	Identity          string
 	ActivityScheduled *types.ActivityTaskScheduledEventAttributes
 	ActivityStarted   *types.ActivityTaskStartedEventAttributes

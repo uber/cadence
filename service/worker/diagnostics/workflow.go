@@ -25,6 +25,7 @@ package diagnostics
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/uber/cadence/service/worker/diagnostics/invariant/failure"
 	"time"
 
 	"go.uber.org/cadence/workflow"
@@ -40,8 +41,8 @@ const (
 	tasklist            = "diagnostics-wf-tasklist"
 
 	retrieveWfExecutionHistoryActivity = "retrieveWfExecutionHistory"
-	identifyTimeoutsActivity           = "identifyTimeouts"
-	rootCauseTimeoutsActivity          = "rootCauseTimeouts"
+	identifyIssuesActivity             = "identifyIssues"
+	rootCauseIssuesActivity            = "rootCauseIssues"
 )
 
 type DiagnosticsWorkflowInput struct {
@@ -52,6 +53,7 @@ type DiagnosticsWorkflowInput struct {
 
 type DiagnosticsWorkflowResult struct {
 	Timeouts *timeoutDiagnostics
+	Failures *failureDiagnostics
 }
 
 type timeoutDiagnostics struct {
@@ -75,6 +77,18 @@ type timeoutRootCauseResult struct {
 	HeartBeatingMetadata *timeout.HeartbeatingMetadata
 }
 
+type failureDiagnostics struct {
+	Issues    []*failuresIssuesResult
+	RootCause []string
+	Runbooks  []string
+}
+
+type failuresIssuesResult struct {
+	InvariantType string
+	Reason        string
+	Metadata      failure.FailureMetadata
+}
+
 func (w *dw) DiagnosticsWorkflow(ctx workflow.Context, params DiagnosticsWorkflowInput) (*DiagnosticsWorkflowResult, error) {
 	scope := w.metricsClient.Scope(metrics.DiagnosticsWorkflowScope, metrics.DomainTag(params.Domain))
 	scope.IncCounter(metrics.DiagnosticsWorkflowStartedCount)
@@ -82,6 +96,10 @@ func (w *dw) DiagnosticsWorkflow(ctx workflow.Context, params DiagnosticsWorkflo
 	defer sw.Stop()
 
 	var timeoutsResult timeoutDiagnostics
+	var failureResult failureDiagnostics
+	var checkResult []invariant.InvariantCheckResult
+	var rootCauseResult []invariant.InvariantRootCauseResult
+
 	activityOptions := workflow.ActivityOptions{
 		ScheduleToCloseTimeout: time.Second * 10,
 		ScheduleToStartTimeout: time.Second * 5,
@@ -102,13 +120,21 @@ func (w *dw) DiagnosticsWorkflow(ctx workflow.Context, params DiagnosticsWorkflo
 
 	timeoutsResult.Runbooks = []string{linkToTimeoutsRunbook}
 
-	var checkResult []invariant.InvariantCheckResult
-	err = workflow.ExecuteActivity(activityCtx, w.identifyTimeouts, identifyTimeoutsInputParams{
+	err = workflow.ExecuteActivity(activityCtx, w.identifyIssues, identifyIssuesParams{
 		History: wfExecutionHistory,
 		Domain:  params.Domain,
 	}).Get(ctx, &checkResult)
 	if err != nil {
-		return nil, fmt.Errorf("IdentifyTimeouts: %w", err)
+		return nil, fmt.Errorf("IdentifyIssues: %w", err)
+	}
+
+	err = workflow.ExecuteActivity(activityCtx, w.rootCauseIssues, rootCauseIssuesParams{
+		History: wfExecutionHistory,
+		Domain:  params.Domain,
+		Issues:  checkResult,
+	}).Get(ctx, &rootCauseResult)
+	if err != nil {
+		return nil, fmt.Errorf("RootCauseIssues: %w", err)
 	}
 
 	timeoutIssues, err := retrieveTimeoutIssues(checkResult)
@@ -117,24 +143,25 @@ func (w *dw) DiagnosticsWorkflow(ctx workflow.Context, params DiagnosticsWorkflo
 	}
 	timeoutsResult.Issues = timeoutIssues
 
-	var rootCauseResult []invariant.InvariantRootCauseResult
-	err = workflow.ExecuteActivity(activityCtx, w.rootCauseTimeouts, rootCauseTimeoutsParams{
-		History: wfExecutionHistory,
-		Domain:  params.Domain,
-		Issues:  checkResult,
-	}).Get(ctx, &rootCauseResult)
-	if err != nil {
-		return nil, fmt.Errorf("RootCauseTimeouts: %w", err)
-	}
-
 	timeoutRootCause, err := retrieveTimeoutRootCause(rootCauseResult)
 	if err != nil {
 		return nil, fmt.Errorf("RetrieveTimeoutRootCause: %w", err)
 	}
 	timeoutsResult.RootCause = timeoutRootCause
 
+	failureIssues, err := retrieveFailureIssues(checkResult)
+	if err != nil {
+		return nil, fmt.Errorf("RetrieveFailureIssues: %w", err)
+	}
+	failureResult.Issues = failureIssues
+
+	failureResult.RootCause = retrieveFailureRootCause(rootCauseResult)
+
 	scope.IncCounter(metrics.DiagnosticsWorkflowSuccess)
-	return &DiagnosticsWorkflowResult{Timeouts: &timeoutsResult}, nil
+	return &DiagnosticsWorkflowResult{
+		Timeouts: &timeoutsResult,
+		Failures: &failureResult,
+	}, nil
 }
 
 func retrieveTimeoutIssues(issues []invariant.InvariantCheckResult) ([]*timeoutIssuesResult, error) {
@@ -217,4 +244,33 @@ func retrieveTimeoutRootCause(rootCause []invariant.InvariantRootCauseResult) ([
 		}
 	}
 	return result, nil
+}
+
+func retrieveFailureIssues(issues []invariant.InvariantCheckResult) ([]*failuresIssuesResult, error) {
+	result := make([]*failuresIssuesResult, 0)
+	for _, issue := range issues {
+		if issue.InvariantType == failure.ActivityFailed.String() || issue.InvariantType == failure.WorkflowFailed.String() {
+			var data failure.FailureMetadata
+			err := json.Unmarshal(issue.Metadata, &data)
+			if err != nil {
+				return nil, err
+			}
+			result = append(result, &failuresIssuesResult{
+				InvariantType: issue.InvariantType,
+				Reason:        issue.Reason,
+				Metadata:      data,
+			})
+		}
+	}
+	return result, nil
+}
+
+func retrieveFailureRootCause(rootCause []invariant.InvariantRootCauseResult) []string {
+	result := make([]string, 0)
+	for _, rc := range rootCause {
+		if rc.RootCause == invariant.RootCauseTypeServiceSideIssue {
+			result = append(result, rc.RootCause.String())
+		}
+	}
+	return result
 }

@@ -39,12 +39,12 @@ const (
 )
 
 func Test__Check(t *testing.T) {
-	metadata := failureMetadata{
+	metadata := FailureMetadata{
 		Identity: "localhost",
 	}
 	metadataInBytes, err := json.Marshal(metadata)
 	require.NoError(t, err)
-	actMetadata := failureMetadata{
+	actMetadata := FailureMetadata{
 		Identity: "localhost",
 		ActivityScheduled: &types.ActivityTaskScheduledEventAttributes{
 			ActivityID:   "101",
@@ -167,7 +167,7 @@ func failedWfHistory() *types.GetWorkflowExecutionHistoryResponse {
 }
 
 func Test__RootCause(t *testing.T) {
-	metadata := failureMetadata{
+	metadata := FailureMetadata{
 		Identity: "localhost",
 	}
 	metadataInBytes, err := json.Marshal(metadata)
