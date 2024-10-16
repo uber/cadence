@@ -42,7 +42,6 @@ import (
 	"github.com/uber/cadence/client/wrappers/metered"
 	"github.com/uber/cadence/client/wrappers/thrift"
 	timeoutwrapper "github.com/uber/cadence/client/wrappers/timeout"
-	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/membership"
@@ -68,7 +67,7 @@ type (
 	DomainIDToNameFunc func(string) (string, error)
 
 	rpcClientFactory struct {
-		rpcFactory            common.RPCFactory
+		rpcFactory            rpc.Factory
 		resolver              membership.Resolver
 		metricsClient         metrics.Client
 		dynConfig             *dynamicconfig.Collection
@@ -79,7 +78,7 @@ type (
 
 // NewRPCClientFactory creates an instance of client factory that knows how to dispatch RPC calls.
 func NewRPCClientFactory(
-	rpcFactory common.RPCFactory,
+	rpcFactory rpc.Factory,
 	resolver membership.Resolver,
 	metricsClient metrics.Client,
 	dc *dynamicconfig.Collection,

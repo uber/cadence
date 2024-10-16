@@ -213,7 +213,7 @@ func (r *ring) notifySubscribers(msg ChangedEvent) {
 		select {
 		case ch <- &msg:
 		default:
-			r.logger.Error("subscriber notification failed", tag.Name(name))
+			r.logger.Warn("subscriber notification failed", tag.Name(name))
 		}
 	}
 }

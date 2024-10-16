@@ -1588,6 +1588,12 @@ const (
 	// Default value: false
 	// Allowed filters: N/A
 	EnableSQLAsyncTransaction
+	// EnableConnectionRetainingDirectChooser is the key for enabling connection retaining direct yarpc chooser
+	// KeyName: system.enableConnectionRetainingDirectChooser
+	// Value type: Bool
+	// Default value: false
+	// Allowed filters: N/A
+	EnableConnectionRetainingDirectChooser
 
 	// key for frontend
 
@@ -3948,6 +3954,11 @@ var BoolKeys = map[BoolKey]DynamicBool{
 	EnableSQLAsyncTransaction: {
 		KeyName:      "system.enableSQLAsyncTransaction",
 		Description:  "EnableSQLAsyncTransaction is the key for enabling async transaction",
+		DefaultValue: false,
+	},
+	EnableConnectionRetainingDirectChooser: {
+		KeyName:      "system.enableConnectionRetainingDirectChooser",
+		Description:  "EnableConnectionRetainingDirectChooser is the key for enabling connection retaining direct chooser",
 		DefaultValue: false,
 	},
 	EnableClientVersionCheck: {
