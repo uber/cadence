@@ -37,7 +37,6 @@ import (
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log/testlogger"
-	"github.com/uber/cadence/common/membership"
 	"github.com/uber/cadence/common/service"
 )
 
@@ -218,5 +217,3 @@ func (f fakePeerChooserFactory) CreatePeerChooser(transport peer.Transport, opts
 	}
 	return &defaultPeerChooser{Chooser: chooser}, nil
 }
-
-func (f fakePeerChooserFactory) UpdatePeers([]membership.HostInfo) {}
