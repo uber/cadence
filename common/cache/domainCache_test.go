@@ -333,6 +333,9 @@ func Test_IsActiveIn(t *testing.T) {
 				&persistence.DomainReplicationConfig{ActiveClusterName: tt.activeCluster},
 				0,
 				tt.failoverDeadline,
+				0,
+				0,
+				0,
 			)
 
 			isActive, err := domain.IsActiveIn(tt.currentCluster)

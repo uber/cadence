@@ -23,8 +23,6 @@ package engineimpl
 
 import (
 	"context"
-	"fmt"
-	"github.com/hexops/valast"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
@@ -69,10 +67,6 @@ func (e *historyEngineImpl) domainChangeCB(nextDomains []*cache.DomainCacheEntry
 		e.unlockProcessingForFailover()
 	}()
 
-	fmt.Println("==================")
-	fmt.Println(">>", valast.String(nextDomains))
-	fmt.Println("==================")
-
 	if len(nextDomains) == 0 {
 		return
 	}
@@ -101,35 +95,7 @@ func (e *historyEngineImpl) domainChangeCB(nextDomains []*cache.DomainCacheEntry
 		e.timerProcessor.NotifyNewTask(e.currentClusterName, &hcommon.NotifyTaskInfo{Tasks: fakeDecisionTimeoutTask})
 	}
 
-	// handle graceful failover on active to passive
-	// make sure task processor failover the domain before inserting the failover marker
-	failoverMarkerTasks := []*persistence.FailoverMarkerTask{}
-	for _, nextDomain := range nextDomains {
-		domainFailoverNotificationVersion := nextDomain.GetFailoverNotificationVersion()
-		domainActiveCluster := nextDomain.GetReplicationConfig().ActiveClusterName
-		previousFailoverVersion := nextDomain.GetPreviousFailoverVersion()
-		previousClusterName, err := e.clusterMetadata.ClusterNameForFailoverVersion(previousFailoverVersion)
-		if err != nil && previousFailoverVersion != common.InitialPreviousFailoverVersion {
-			e.logger.Error("Failed to handle graceful failover", tag.WorkflowDomainID(nextDomain.GetInfo().ID), tag.Error(err))
-			continue
-		}
-
-		if nextDomain.IsGlobalDomain() &&
-			domainFailoverNotificationVersion >= shardNotificationVersion &&
-			domainActiveCluster != e.currentClusterName &&
-			previousFailoverVersion != common.InitialPreviousFailoverVersion &&
-			previousClusterName == e.currentClusterName {
-			// the visibility timestamp will be set in shard context
-			failoverMarkerTasks = append(failoverMarkerTasks, &persistence.FailoverMarkerTask{
-				TaskData: persistence.TaskData{
-					Version: nextDomain.GetFailoverVersion(),
-				},
-				DomainID: nextDomain.GetInfo().ID,
-			})
-			// This is a debug metric
-			e.metricsClient.IncCounter(metrics.FailoverMarkerScope, metrics.FailoverMarkerCallbackCount)
-		}
-	}
+	failoverMarkerTasks := e.generateGracefulFailoverTasksForDomainUpdateCallback(shardNotificationVersion, nextDomains)
 
 	// This is a debug metric
 	e.metricsClient.IncCounter(metrics.FailoverMarkerScope, metrics.HistoryFailoverCallbackCount)
@@ -149,7 +115,7 @@ func (e *historyEngineImpl) domainChangeCB(nextDomains []*cache.DomainCacheEntry
 	e.shard.UpdateDomainNotificationVersion(nextDomains[len(nextDomains)-1].GetNotificationVersion() + 1)
 }
 
-func (e *historyEngineImpl) generateFailoverTasksForDomainUpdateCallback(shardNotificationVersion int64, nextDomains []*cache.DomainCacheEntry) []*persistence.FailoverMarkerTask {
+func (e *historyEngineImpl) generateGracefulFailoverTasksForDomainUpdateCallback(shardNotificationVersion int64, nextDomains []*cache.DomainCacheEntry) []*persistence.FailoverMarkerTask {
 
 	// handle graceful failover on active to passive
 	// make sure task processor failover the domain before inserting the failover marker
@@ -184,13 +150,13 @@ func (e *historyEngineImpl) generateFailoverTasksForDomainUpdateCallback(shardNo
 }
 
 func (e *historyEngineImpl) lockProcessingForFailover() {
-	e.logger.Info("locking processing for failover")
+	e.logger.Debug("locking processing for failover")
 	e.txProcessor.LockTaskProcessing()
 	e.timerProcessor.LockTaskProcessing()
 }
 
 func (e *historyEngineImpl) unlockProcessingForFailover() {
-	e.logger.Info("unlocking processing for failover")
+	e.logger.Debug("unlocking processing for failover")
 	e.txProcessor.UnlockTaskProcessing()
 	e.timerProcessor.UnlockTaskProcessing()
 }

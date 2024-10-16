@@ -89,7 +89,7 @@ func TestAvailableIsolationGroupsHandler(t *testing.T) {
 			},
 			dcAffordance: func(client *dynamicconfig.MockClient) {},
 			domainAffordance: func(mock *cache.MockDomainCache) {
-				domainResponse := cache.NewDomainCacheEntryForTest(&persistence.DomainInfo{ID: "domain-id", Name: "domain"}, &persistence.DomainConfig{}, true, nil, 0, nil)
+				domainResponse := cache.NewDomainCacheEntryForTest(&persistence.DomainInfo{ID: "domain-id", Name: "domain"}, &persistence.DomainConfig{}, true, nil, 0, nil, 0, 0, 0)
 				mock.EXPECT().GetDomainByID("domain-id").Return(domainResponse, nil)
 				mock.EXPECT().GetDomainName("domain-id").Return("domain", nil)
 			},
@@ -118,7 +118,7 @@ func TestAvailableIsolationGroupsHandler(t *testing.T) {
 				).Return(dynamicConfigResponseNormal, nil)
 			},
 			domainAffordance: func(mock *cache.MockDomainCache) {
-				domainResponse := cache.NewDomainCacheEntryForTest(&persistence.DomainInfo{ID: "domain-id", Name: "domain"}, &persistence.DomainConfig{}, true, nil, 0, nil)
+				domainResponse := cache.NewDomainCacheEntryForTest(&persistence.DomainInfo{ID: "domain-id", Name: "domain"}, &persistence.DomainConfig{}, true, nil, 0, nil, 0, 0, 0)
 				mock.EXPECT().GetDomainByID("domain-id").Return(domainResponse, nil)
 				mock.EXPECT().GetDomainName("domain-id").Return("domain", nil)
 				mock.EXPECT().GetDomain("domain").Return(domainResponse, nil).AnyTimes()
@@ -148,7 +148,7 @@ func TestAvailableIsolationGroupsHandler(t *testing.T) {
 				).Return(dynamicConfigResponseDrained, nil)
 			},
 			domainAffordance: func(mock *cache.MockDomainCache) {
-				domainResponse := cache.NewDomainCacheEntryForTest(&persistence.DomainInfo{ID: "domain-id", Name: "domain"}, &persistence.DomainConfig{}, true, nil, 0, nil)
+				domainResponse := cache.NewDomainCacheEntryForTest(&persistence.DomainInfo{ID: "domain-id", Name: "domain"}, &persistence.DomainConfig{}, true, nil, 0, nil, 0, 0, 0)
 				mock.EXPECT().GetDomainByID("domain-id").Return(domainResponse, nil)
 				mock.EXPECT().GetDomainName("domain-id").Return("domain", nil)
 				mock.EXPECT().GetDomain("domain").Return(domainResponse, nil).AnyTimes()
@@ -173,7 +173,7 @@ func TestAvailableIsolationGroupsHandler(t *testing.T) {
 				).Return(nil, nil)
 			},
 			domainAffordance: func(mock *cache.MockDomainCache) {
-				domainResponse := cache.NewDomainCacheEntryForTest(&persistence.DomainInfo{ID: "domain-id", Name: "domain"}, &persistence.DomainConfig{}, true, nil, 0, nil)
+				domainResponse := cache.NewDomainCacheEntryForTest(&persistence.DomainInfo{ID: "domain-id", Name: "domain"}, &persistence.DomainConfig{}, true, nil, 0, nil, 0, 0, 0)
 				mock.EXPECT().GetDomainByID("domain-id").Return(domainResponse, nil)
 				mock.EXPECT().GetDomainName("domain-id").Return("domain", nil)
 				mock.EXPECT().GetDomain("domain").Return(domainResponse, nil).AnyTimes()
@@ -202,7 +202,7 @@ func TestAvailableIsolationGroupsHandler(t *testing.T) {
 				).Return(nil, fmt.Errorf("an error"))
 			},
 			domainAffordance: func(mock *cache.MockDomainCache) {
-				domainResponse := cache.NewDomainCacheEntryForTest(&persistence.DomainInfo{ID: "domain-id", Name: "domain"}, &persistence.DomainConfig{}, true, nil, 0, nil)
+				domainResponse := cache.NewDomainCacheEntryForTest(&persistence.DomainInfo{ID: "domain-id", Name: "domain"}, &persistence.DomainConfig{}, true, nil, 0, nil, 0, 0, 0)
 				mock.EXPECT().GetDomainByID("domain-id").Return(domainResponse, nil)
 				mock.EXPECT().GetDomain("domain").Return(domainResponse, nil).AnyTimes()
 			},
@@ -236,7 +236,7 @@ func TestAvailableIsolationGroupsHandler(t *testing.T) {
 				).Return(nil, fmt.Errorf("an error"))
 			},
 			domainAffordance: func(mock *cache.MockDomainCache) {
-				domainResponse := cache.NewDomainCacheEntryForTest(&persistence.DomainInfo{ID: "domain-id", Name: "domain"}, &persistence.DomainConfig{}, true, nil, 0, nil)
+				domainResponse := cache.NewDomainCacheEntryForTest(&persistence.DomainInfo{ID: "domain-id", Name: "domain"}, &persistence.DomainConfig{}, true, nil, 0, nil, 0, 0, 0)
 				mock.EXPECT().GetDomainByID("domain-id").Return(domainResponse, nil)
 				mock.EXPECT().GetDomain("domain").Return(domainResponse, nil).AnyTimes()
 			},
@@ -252,7 +252,7 @@ func TestAvailableIsolationGroupsHandler(t *testing.T) {
 			dcAffordance: func(client *dynamicconfig.MockClient) {
 			},
 			domainAffordance: func(mock *cache.MockDomainCache) {
-				domainResponse := cache.NewDomainCacheEntryForTest(&persistence.DomainInfo{ID: "domain-id", Name: "domain"}, &persistence.DomainConfig{}, true, nil, 0, nil)
+				domainResponse := cache.NewDomainCacheEntryForTest(&persistence.DomainInfo{ID: "domain-id", Name: "domain"}, &persistence.DomainConfig{}, true, nil, 0, nil, 0, 0, 0)
 				mock.EXPECT().GetDomainByID("domain-id").Return(domainResponse, nil)
 				mock.EXPECT().GetDomain("domain").Return(nil, errors.New("a failure")).AnyTimes()
 			},
@@ -268,7 +268,7 @@ func TestAvailableIsolationGroupsHandler(t *testing.T) {
 			dcAffordance: func(client *dynamicconfig.MockClient) {
 			},
 			domainAffordance: func(mock *cache.MockDomainCache) {
-				domainResponse := cache.NewDomainCacheEntryForTest(&persistence.DomainInfo{ID: "domain-id", Name: "domain"}, &persistence.DomainConfig{}, true, nil, 0, nil)
+				domainResponse := cache.NewDomainCacheEntryForTest(&persistence.DomainInfo{ID: "domain-id", Name: "domain"}, &persistence.DomainConfig{}, true, nil, 0, nil, 0, 0, 0)
 				mock.EXPECT().GetDomainByID("domain-id").Return(domainResponse, nil)
 				mock.EXPECT().GetDomain("domain").Return(nil, nil).AnyTimes()
 			},
@@ -288,7 +288,7 @@ func TestAvailableIsolationGroupsHandler(t *testing.T) {
 				).Return(nil, nil)
 			},
 			domainAffordance: func(mock *cache.MockDomainCache) {
-				domainResponse := cache.NewDomainCacheEntryForTest(&persistence.DomainInfo{ID: "domain-id", Name: "domain"}, &persistence.DomainConfig{}, true, nil, 0, nil)
+				domainResponse := cache.NewDomainCacheEntryForTest(&persistence.DomainInfo{ID: "domain-id", Name: "domain"}, &persistence.DomainConfig{}, true, nil, 0, nil, 0, 0, 0)
 				mock.EXPECT().GetDomainByID("domain-id").Return(domainResponse, nil)
 				mock.EXPECT().GetDomainName("domain-id").Return("domain", nil)
 				mock.EXPECT().GetDomain("domain").Return(domainResponse, nil).AnyTimes()
@@ -362,7 +362,7 @@ func TestIsDrainedHandler(t *testing.T) {
 				).Return(dynamicConfigResponse, nil)
 			},
 			domainAffordance: func(mock *cache.MockDomainCache) {
-				domainResponse := cache.NewDomainCacheEntryForTest(&persistence.DomainInfo{ID: "domain-id", Name: "domain"}, &persistence.DomainConfig{}, true, nil, 0, nil)
+				domainResponse := cache.NewDomainCacheEntryForTest(&persistence.DomainInfo{ID: "domain-id", Name: "domain"}, &persistence.DomainConfig{}, true, nil, 0, nil, 0, 0, 0)
 				mock.EXPECT().GetDomainByID("domain-id").Return(domainResponse, nil)
 				mock.EXPECT().GetDomain("domain").Return(domainResponse, nil)
 			},
@@ -381,7 +381,7 @@ func TestIsDrainedHandler(t *testing.T) {
 				).Return(dynamicConfigResponse, nil)
 			},
 			domainAffordance: func(mock *cache.MockDomainCache) {
-				domainResponse := cache.NewDomainCacheEntryForTest(&persistence.DomainInfo{ID: "domain-id", Name: "domain"}, &persistence.DomainConfig{}, true, nil, 0, nil)
+				domainResponse := cache.NewDomainCacheEntryForTest(&persistence.DomainInfo{ID: "domain-id", Name: "domain"}, &persistence.DomainConfig{}, true, nil, 0, nil, 0, 0, 0)
 				mock.EXPECT().GetDomainByID("domain-id").Return(domainResponse, nil)
 				mock.EXPECT().GetDomain("domain").Return(domainResponse, nil)
 			},
@@ -395,7 +395,7 @@ func TestIsDrainedHandler(t *testing.T) {
 			},
 			dcAffordance: func(client *dynamicconfig.MockClient) {},
 			domainAffordance: func(mock *cache.MockDomainCache) {
-				domainResponse := cache.NewDomainCacheEntryForTest(&persistence.DomainInfo{ID: "domain-id", Name: "domain"}, &persistence.DomainConfig{}, true, nil, 0, nil)
+				domainResponse := cache.NewDomainCacheEntryForTest(&persistence.DomainInfo{ID: "domain-id", Name: "domain"}, &persistence.DomainConfig{}, true, nil, 0, nil, 0, 0, 0)
 				mock.EXPECT().GetDomainByID("domain-id").Return(domainResponse, nil)
 			},
 			expected: false,
