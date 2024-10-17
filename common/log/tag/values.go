@@ -226,6 +226,7 @@ var (
 	StoreOperationCompleteTask          = storeOperation("complete-task")
 	StoreOperationCompleteTasksLessThan = storeOperation("complete-tasks-less-than")
 	StoreOperationLeaseTaskList         = storeOperation("lease-task-list")
+	StoreOperationGetTaskList           = storeOperation("get-task-list")
 	StoreOperationUpdateTaskList        = storeOperation("update-task-list")
 	StoreOperationListTaskList          = storeOperation("list-task-list")
 	StoreOperationDeleteTaskList        = storeOperation("delete-task-list")

@@ -449,12 +449,18 @@ func TestTaskListInfo(t *testing.T) {
 		AckLevel:        int64(rand.Intn(1000)),
 		ExpiryTimestamp: time.Now(),
 		LastUpdated:     time.Now(),
+		AdaptivePartitionConfig: &TaskListPartitionConfig{
+			Version:            0,
+			NumReadPartitions:  1,
+			NumWritePartitions: 2,
+		},
 	}
 	actual := taskListInfoFromThrift(taskListInfoToThrift(expected))
 	assert.Equal(t, expected.Kind, actual.Kind)
 	assert.Equal(t, expected.AckLevel, actual.AckLevel)
 	assert.Equal(t, expected.LastUpdated.Sub(actual.LastUpdated), time.Duration(0))
 	assert.Equal(t, expected.ExpiryTimestamp.Sub(actual.ExpiryTimestamp), time.Duration(0))
+	assert.Equal(t, expected.AdaptivePartitionConfig, actual.AdaptivePartitionConfig)
 }
 
 func TestTransferTaskInfo(t *testing.T) {
