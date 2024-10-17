@@ -85,27 +85,7 @@ func (t *MatcherTestSuite) SetupTest() {
 	t.cfg = tlCfg
 	t.isolationGroups = []string{"dca1", "dca2"}
 	t.fwdr = newForwarder(&t.cfg.ForwarderConfig, t.taskList, types.TaskListKindNormal, t.client, []string{"dca1", "dca2"}, metrics.NoopScope(metrics.Matching))
-
-	dPtr := tlCfg.TaskDispatchRPS
-	isolatedTaskC := make(map[string]chan *InternalTask)
-	for _, g := range t.isolationGroups {
-		isolatedTaskC[g] = make(chan *InternalTask)
-	}
-	cancelCtx, cancelFunc := context.WithCancel(context.Background())
-	t.matcher = &taskMatcherImpl{
-		config:        tlCfg,
-		log:           loggerimpl.NewNopLogger(),
-		limiter:       quotas.NewRateLimiter(&dPtr, tlCfg.TaskDispatchRPSTTL, tlCfg.MinTaskThrottlingBurstSize()),
-		scope:         metrics.NoopScope(metrics.Matching),
-		fwdr:          t.fwdr,
-		taskC:         make(chan *InternalTask),
-		isolatedTaskC: isolatedTaskC,
-		queryTaskC:    make(chan *InternalTask),
-		tasklist:      t.taskList,
-		tasklistKind:  types.TaskListKindNormal,
-		cancelCtx:     cancelCtx,
-		cancelFunc:    cancelFunc,
-	}
+	t.matcher = newTaskMatcher(tlCfg, t.fwdr, metrics.NoopScope(metrics.Matching), []string{"dca1", "dca2"}, loggerimpl.NewNopLogger(), t.taskList, types.TaskListKindNormal).(*taskMatcherImpl)
 
 	rootTaskList := NewTestTaskListID(t.T(), t.taskList.GetDomainID(), t.taskList.Parent(20), persistence.TaskListTypeDecision)
 	rootTasklistCfg := newTaskListConfig(rootTaskList, cfg, testDomainName)
