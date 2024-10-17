@@ -254,11 +254,12 @@ func (m *MockHandler) EXPECT() *MockHandlerMockRecorder {
 }
 
 // AddActivityTask mocks base method.
-func (m *MockHandler) AddActivityTask(arg0 context.Context, arg1 *types.AddActivityTaskRequest) error {
+func (m *MockHandler) AddActivityTask(arg0 context.Context, arg1 *types.AddActivityTaskRequest) (*types.AddActivityTaskResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AddActivityTask", arg0, arg1)
-	ret0, _ := ret[0].(error)
-	return ret0
+	ret0, _ := ret[0].(*types.AddActivityTaskResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // AddActivityTask indicates an expected call of AddActivityTask.
@@ -268,11 +269,12 @@ func (mr *MockHandlerMockRecorder) AddActivityTask(arg0, arg1 interface{}) *gomo
 }
 
 // AddDecisionTask mocks base method.
-func (m *MockHandler) AddDecisionTask(arg0 context.Context, arg1 *types.AddDecisionTaskRequest) error {
+func (m *MockHandler) AddDecisionTask(arg0 context.Context, arg1 *types.AddDecisionTaskRequest) (*types.AddDecisionTaskResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AddDecisionTask", arg0, arg1)
-	ret0, _ := ret[0].(error)
-	return ret0
+	ret0, _ := ret[0].(*types.AddDecisionTaskResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // AddDecisionTask indicates an expected call of AddDecisionTask.

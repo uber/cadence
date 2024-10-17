@@ -35,14 +35,20 @@ import (
 	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
-func (g matchingClient) AddActivityTask(ctx context.Context, ap1 *types.AddActivityTaskRequest, p1 ...yarpc.CallOption) (err error) {
+func (g matchingClient) AddActivityTask(ctx context.Context, ap1 *types.AddActivityTaskRequest, p1 ...yarpc.CallOption) (ap2 *types.AddActivityTaskResponse, err error) {
 	err = g.c.AddActivityTask(ctx, thrift.FromMatchingAddActivityTaskRequest(ap1), p1...)
-	return thrift.ToError(err)
+	if err != nil {
+		return nil, err
+	}
+	return &types.AddActivityTaskResponse{}, nil
 }
 
-func (g matchingClient) AddDecisionTask(ctx context.Context, ap1 *types.AddDecisionTaskRequest, p1 ...yarpc.CallOption) (err error) {
+func (g matchingClient) AddDecisionTask(ctx context.Context, ap1 *types.AddDecisionTaskRequest, p1 ...yarpc.CallOption) (ap2 *types.AddDecisionTaskResponse, err error) {
 	err = g.c.AddDecisionTask(ctx, thrift.FromMatchingAddDecisionTaskRequest(ap1), p1...)
-	return thrift.ToError(err)
+	if err != nil {
+		return nil, err
+	}
+	return &types.AddDecisionTaskResponse{}, nil
 }
 
 func (g matchingClient) CancelOutstandingPoll(ctx context.Context, cp1 *types.CancelOutstandingPollRequest, p1 ...yarpc.CallOption) (err error) {

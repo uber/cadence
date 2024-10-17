@@ -62,11 +62,11 @@ func NewMatchingClient(client matching.Client, errorRate float64, logger log.Log
 	}
 }
 
-func (c *matchingClient) AddActivityTask(ctx context.Context, ap1 *types.AddActivityTaskRequest, p1 ...yarpc.CallOption) (err error) {
+func (c *matchingClient) AddActivityTask(ctx context.Context, ap1 *types.AddActivityTaskRequest, p1 ...yarpc.CallOption) (ap2 *types.AddActivityTaskResponse, err error) {
 	fakeErr := c.fakeErrFn(c.errorRate)
 	var forwardCall bool
 	if forwardCall = c.forwardCallFn(fakeErr); forwardCall {
-		err = c.client.AddActivityTask(ctx, ap1, p1...)
+		ap2, err = c.client.AddActivityTask(ctx, ap1, p1...)
 	}
 
 	if fakeErr != nil {
@@ -82,11 +82,11 @@ func (c *matchingClient) AddActivityTask(ctx context.Context, ap1 *types.AddActi
 	return
 }
 
-func (c *matchingClient) AddDecisionTask(ctx context.Context, ap1 *types.AddDecisionTaskRequest, p1 ...yarpc.CallOption) (err error) {
+func (c *matchingClient) AddDecisionTask(ctx context.Context, ap1 *types.AddDecisionTaskRequest, p1 ...yarpc.CallOption) (ap2 *types.AddDecisionTaskResponse, err error) {
 	fakeErr := c.fakeErrFn(c.errorRate)
 	var forwardCall bool
 	if forwardCall = c.forwardCallFn(fakeErr); forwardCall {
-		err = c.client.AddDecisionTask(ctx, ap1, p1...)
+		ap2, err = c.client.AddDecisionTask(ctx, ap1, p1...)
 	}
 
 	if fakeErr != nil {

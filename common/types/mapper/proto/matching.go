@@ -94,6 +94,42 @@ func ToMatchingAddDecisionTaskRequest(t *matchingv1.AddDecisionTaskRequest) *typ
 	}
 }
 
+func FromMatchingAddActivityTaskResponse(t *types.AddActivityTaskResponse) *matchingv1.AddActivityTaskResponse {
+	if t == nil {
+		return nil
+	}
+	return &matchingv1.AddActivityTaskResponse{
+		PartitionConfig: FromTaskListPartitionConfig(t.PartitionConfig),
+	}
+}
+
+func ToMatchingAddActivityTaskResponse(t *matchingv1.AddActivityTaskResponse) *types.AddActivityTaskResponse {
+	if t == nil {
+		return nil
+	}
+	return &types.AddActivityTaskResponse{
+		PartitionConfig: ToTaskListPartitionConfig(t.PartitionConfig),
+	}
+}
+
+func FromMatchingAddDecisionTaskResponse(t *types.AddDecisionTaskResponse) *matchingv1.AddDecisionTaskResponse {
+	if t == nil {
+		return nil
+	}
+	return &matchingv1.AddDecisionTaskResponse{
+		PartitionConfig: FromTaskListPartitionConfig(t.PartitionConfig),
+	}
+}
+
+func ToMatchingAddDecisionTaskResponse(t *matchingv1.AddDecisionTaskResponse) *types.AddDecisionTaskResponse {
+	if t == nil {
+		return nil
+	}
+	return &types.AddDecisionTaskResponse{
+		PartitionConfig: ToTaskListPartitionConfig(t.PartitionConfig),
+	}
+}
+
 func FromActivityTaskDispatchInfo(t *types.ActivityTaskDispatchInfo) *matchingv1.ActivityTaskDispatchInfo {
 	if t == nil {
 		return nil
@@ -324,6 +360,28 @@ func ToMatchingPollForActivityTaskRequest(t *matchingv1.PollForActivityTaskReque
 	}
 }
 
+func FromTaskListPartitionConfig(t *types.TaskListPartitionConfig) *matchingv1.TaskListPartitionConfig {
+	if t == nil {
+		return nil
+	}
+	return &matchingv1.TaskListPartitionConfig{
+		Version:            t.Version,
+		NumReadPartitions:  t.NumReadPartitions,
+		NumWritePartitions: t.NumWritePartitions,
+	}
+}
+
+func ToTaskListPartitionConfig(t *matchingv1.TaskListPartitionConfig) *types.TaskListPartitionConfig {
+	if t == nil {
+		return nil
+	}
+	return &types.TaskListPartitionConfig{
+		Version:            t.Version,
+		NumReadPartitions:  t.NumReadPartitions,
+		NumWritePartitions: t.NumWritePartitions,
+	}
+}
+
 func FromMatchingPollForActivityTaskResponse(t *types.MatchingPollForActivityTaskResponse) *matchingv1.PollForActivityTaskResponse {
 	if t == nil {
 		return nil
@@ -345,6 +403,7 @@ func FromMatchingPollForActivityTaskResponse(t *types.MatchingPollForActivityTas
 		WorkflowType:               FromWorkflowType(t.WorkflowType),
 		WorkflowDomain:             t.WorkflowDomain,
 		Header:                     FromHeader(t.Header),
+		PartitionConfig:            FromTaskListPartitionConfig(t.PartitionConfig),
 	}
 }
 
@@ -369,6 +428,7 @@ func ToMatchingPollForActivityTaskResponse(t *matchingv1.PollForActivityTaskResp
 		WorkflowType:                    ToWorkflowType(t.WorkflowType),
 		WorkflowDomain:                  t.WorkflowDomain,
 		Header:                          ToHeader(t.Header),
+		PartitionConfig:                 ToTaskListPartitionConfig(t.PartitionConfig),
 	}
 }
 
@@ -421,6 +481,7 @@ func FromMatchingPollForDecisionTaskResponse(t *types.MatchingPollForDecisionTas
 		StartedTime:               unixNanoToTime(t.StartedTimestamp),
 		Queries:                   FromWorkflowQueryMap(t.Queries),
 		TotalHistoryBytes:         t.TotalHistoryBytes,
+		PartitionConfig:           FromTaskListPartitionConfig(t.PartitionConfig),
 	}
 }
 
@@ -447,6 +508,7 @@ func ToMatchingPollForDecisionTaskResponse(t *matchingv1.PollForDecisionTaskResp
 		StartedTimestamp:          timeToUnixNano(t.StartedTime),
 		Queries:                   ToWorkflowQueryMap(t.Queries),
 		TotalHistoryBytes:         t.TotalHistoryBytes,
+		PartitionConfig:           ToTaskListPartitionConfig(t.PartitionConfig),
 	}
 }
 

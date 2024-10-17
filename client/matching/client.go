@@ -55,7 +55,7 @@ func (c *clientImpl) AddActivityTask(
 	ctx context.Context,
 	request *types.AddActivityTaskRequest,
 	opts ...yarpc.CallOption,
-) error {
+) (*types.AddActivityTaskResponse, error) {
 	partition := c.loadBalancer.PickWritePartition(
 		request.GetDomainUUID(),
 		*request.GetTaskList(),
@@ -65,7 +65,7 @@ func (c *clientImpl) AddActivityTask(
 	request.TaskList.Name = partition
 	peer, err := c.peerResolver.FromTaskList(request.TaskList.GetName())
 	if err != nil {
-		return err
+		return nil, err
 	}
 	return c.client.AddActivityTask(ctx, request, append(opts, yarpc.WithShardKey(peer))...)
 }
@@ -74,7 +74,7 @@ func (c *clientImpl) AddDecisionTask(
 	ctx context.Context,
 	request *types.AddDecisionTaskRequest,
 	opts ...yarpc.CallOption,
-) error {
+) (*types.AddDecisionTaskResponse, error) {
 	partition := c.loadBalancer.PickWritePartition(
 		request.GetDomainUUID(),
 		*request.GetTaskList(),
@@ -84,7 +84,7 @@ func (c *clientImpl) AddDecisionTask(
 	request.TaskList.Name = partition
 	peer, err := c.peerResolver.FromTaskList(request.TaskList.GetName())
 	if err != nil {
-		return err
+		return nil, err
 	}
 	return c.client.AddDecisionTask(ctx, request, append(opts, yarpc.WithShardKey(peer))...)
 }

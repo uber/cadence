@@ -92,7 +92,7 @@ func (t *ForwarderTestSuite) TestForwardDecisionTask() {
 		func(arg0 context.Context, arg1 *types.AddDecisionTaskRequest, option ...yarpc.CallOption) {
 			request = arg1
 		},
-	).Return(nil).Times(1)
+	).Return(&types.AddDecisionTaskResponse{}, nil).Times(1)
 
 	taskInfo := t.newTaskInfo()
 	task := newInternalTask(taskInfo, nil, types.TaskSourceHistory, "", false, nil, "")
@@ -116,7 +116,7 @@ func (t *ForwarderTestSuite) TestForwardActivityTask() {
 		func(arg0 context.Context, arg1 *types.AddActivityTaskRequest, option ...yarpc.CallOption) {
 			request = arg1
 		},
-	).Return(nil).Times(1)
+	).Return(&types.AddActivityTaskResponse{}, nil).Times(1)
 
 	taskInfo := t.newTaskInfo()
 	task := newInternalTask(taskInfo, nil, types.TaskSourceHistory, "", false, nil, "")
@@ -137,7 +137,7 @@ func (t *ForwarderTestSuite) TestForwardTaskRateExceeded() {
 	t.usingTasklistPartition(persistence.TaskListTypeActivity)
 
 	rps := 2
-	t.client.EXPECT().AddActivityTask(gomock.Any(), gomock.Any()).Return(nil).Times(rps)
+	t.client.EXPECT().AddActivityTask(gomock.Any(), gomock.Any()).Return(&types.AddActivityTaskResponse{}, nil).Times(rps)
 	taskInfo := t.newTaskInfo()
 	task := newInternalTask(taskInfo, nil, types.TaskSourceHistory, "", false, nil, "")
 	for i := 0; i < rps; i++ {

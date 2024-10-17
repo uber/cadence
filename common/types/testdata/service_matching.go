@@ -31,6 +31,11 @@ const (
 )
 
 var (
+	TaskListPartitionConfig = types.TaskListPartitionConfig{
+		Version:            1,
+		NumReadPartitions:  3,
+		NumWritePartitions: 2,
+	}
 	MatchingAddActivityTaskRequest = types.AddActivityTaskRequest{
 		DomainUUID:                    DomainID,
 		Execution:                     &WorkflowExecution,
@@ -51,6 +56,12 @@ var (
 		Source:                        types.TaskSourceDbBacklog.Ptr(),
 		ForwardedFrom:                 ForwardedFrom,
 		PartitionConfig:               PartitionConfig,
+	}
+	MatchingAddActivityTaskResponse = types.AddActivityTaskResponse{
+		PartitionConfig: &TaskListPartitionConfig,
+	}
+	MatchingAddDecisionTaskResponse = types.AddDecisionTaskResponse{
+		PartitionConfig: &TaskListPartitionConfig,
 	}
 	MatchingCancelOutstandingPollRequest = types.CancelOutstandingPollRequest{
 		DomainUUID:   DomainID,
@@ -98,6 +109,7 @@ var (
 		WorkflowType:                    &WorkflowType,
 		WorkflowDomain:                  DomainName,
 		Header:                          &Header,
+		PartitionConfig:                 &TaskListPartitionConfig,
 	}
 	MatchingPollForDecisionTaskRequest = types.MatchingPollForDecisionTaskRequest{
 		DomainUUID:     DomainID,
@@ -124,6 +136,7 @@ var (
 		ScheduledTimestamp:        &Timestamp1,
 		StartedTimestamp:          &Timestamp2,
 		Queries:                   WorkflowQueryMap,
+		PartitionConfig:           &TaskListPartitionConfig,
 	}
 	MatchingQueryWorkflowRequest = types.MatchingQueryWorkflowRequest{
 		DomainUUID:    DomainID,

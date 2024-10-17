@@ -53,8 +53,8 @@ type (
 		common.Daemon
 
 		Health(context.Context) (*types.HealthStatus, error)
-		AddActivityTask(context.Context, *types.AddActivityTaskRequest) error
-		AddDecisionTask(context.Context, *types.AddDecisionTaskRequest) error
+		AddActivityTask(context.Context, *types.AddActivityTaskRequest) (*types.AddActivityTaskResponse, error)
+		AddDecisionTask(context.Context, *types.AddDecisionTaskRequest) (*types.AddDecisionTaskResponse, error)
 		CancelOutstandingPoll(context.Context, *types.CancelOutstandingPollRequest) error
 		DescribeTaskList(context.Context, *types.MatchingDescribeTaskListRequest) (*types.DescribeTaskListResponse, error)
 		ListTaskListPartitions(context.Context, *types.MatchingListTaskListPartitionsRequest) (*types.ListTaskListPartitionsResponse, error)

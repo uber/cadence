@@ -195,7 +195,7 @@ func (s *handlerSuite) TestAddActivityTask() {
 			tc.setupMocks()
 			s.mockDomainCache.EXPECT().GetDomainName(request.DomainUUID).Return(s.testDomain, nil).Times(1)
 
-			err := s.handler.AddActivityTask(context.Background(), &request)
+			_, err := s.handler.AddActivityTask(context.Background(), &request)
 
 			if tc.err != nil {
 				s.Error(err)
@@ -248,7 +248,7 @@ func (s *handlerSuite) TestAddDecisionTask() {
 			tc.setupMocks()
 			s.mockDomainCache.EXPECT().GetDomainName(request.DomainUUID).Return(s.testDomain, nil).Times(1)
 
-			err := s.handler.AddDecisionTask(context.Background(), &request)
+			_, err := s.handler.AddDecisionTask(context.Background(), &request)
 
 			if tc.err != nil {
 				s.Error(err)

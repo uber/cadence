@@ -60,15 +60,16 @@ func (m *MockClient) EXPECT() *MockClientMockRecorder {
 }
 
 // AddActivityTask mocks base method.
-func (m *MockClient) AddActivityTask(arg0 context.Context, arg1 *types.AddActivityTaskRequest, arg2 ...yarpc.CallOption) error {
+func (m *MockClient) AddActivityTask(arg0 context.Context, arg1 *types.AddActivityTaskRequest, arg2 ...yarpc.CallOption) (*types.AddActivityTaskResponse, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "AddActivityTask", varargs...)
-	ret0, _ := ret[0].(error)
-	return ret0
+	ret0, _ := ret[0].(*types.AddActivityTaskResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // AddActivityTask indicates an expected call of AddActivityTask.
@@ -79,15 +80,16 @@ func (mr *MockClientMockRecorder) AddActivityTask(arg0, arg1 interface{}, arg2 .
 }
 
 // AddDecisionTask mocks base method.
-func (m *MockClient) AddDecisionTask(arg0 context.Context, arg1 *types.AddDecisionTaskRequest, arg2 ...yarpc.CallOption) error {
+func (m *MockClient) AddDecisionTask(arg0 context.Context, arg1 *types.AddDecisionTaskRequest, arg2 ...yarpc.CallOption) (*types.AddDecisionTaskResponse, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "AddDecisionTask", varargs...)
-	ret0, _ := ret[0].(error)
-	return ret0
+	ret0, _ := ret[0].(*types.AddDecisionTaskResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // AddDecisionTask indicates an expected call of AddDecisionTask.

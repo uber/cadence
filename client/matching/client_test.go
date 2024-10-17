@@ -59,74 +59,6 @@ func TestClient_withoutResponse(t *testing.T) {
 		wantError bool
 	}{
 		{
-			name: "AddActivityTask",
-			op: func(c Client) error {
-				return c.AddActivityTask(context.Background(), testAddActivityTaskRequest())
-			},
-			mock: func(p *MockPeerResolver, balancer *MockLoadBalancer, c *MockClient) {
-				balancer.EXPECT().PickWritePartition(_testDomainUUID, types.TaskList{Name: _testTaskList}, persistence.TaskListTypeActivity, "").Return(_testPartition)
-				p.EXPECT().FromTaskList(_testPartition).Return("peer0", nil)
-				c.EXPECT().AddActivityTask(gomock.Any(), gomock.Any(), []yarpc.CallOption{yarpc.WithShardKey("peer0")}).Return(nil)
-			},
-		},
-		{
-			name: "AddActivityTask - Error in resolving peer",
-			op: func(c Client) error {
-				return c.AddActivityTask(context.Background(), testAddActivityTaskRequest())
-			},
-			mock: func(p *MockPeerResolver, balancer *MockLoadBalancer, c *MockClient) {
-				balancer.EXPECT().PickWritePartition(_testDomainUUID, types.TaskList{Name: _testTaskList}, persistence.TaskListTypeActivity, "").Return(_testPartition)
-				p.EXPECT().FromTaskList(_testPartition).Return("peer0", assert.AnError)
-			},
-			wantError: true,
-		},
-		{
-			name: "AddActivityTask - Error while adding activity task",
-			op: func(c Client) error {
-				return c.AddActivityTask(context.Background(), testAddActivityTaskRequest())
-			},
-			mock: func(p *MockPeerResolver, balancer *MockLoadBalancer, c *MockClient) {
-				balancer.EXPECT().PickWritePartition(_testDomainUUID, types.TaskList{Name: _testTaskList}, persistence.TaskListTypeActivity, "").Return(_testPartition)
-				p.EXPECT().FromTaskList(_testPartition).Return("peer0", nil)
-				c.EXPECT().AddActivityTask(gomock.Any(), gomock.Any(), []yarpc.CallOption{yarpc.WithShardKey("peer0")}).Return(assert.AnError)
-			},
-			wantError: true,
-		},
-		{
-			name: "AddDecisionTask",
-			op: func(c Client) error {
-				return c.AddDecisionTask(context.Background(), testAddDecisionTaskRequest())
-			},
-			mock: func(p *MockPeerResolver, balancer *MockLoadBalancer, c *MockClient) {
-				balancer.EXPECT().PickWritePartition(_testDomainUUID, types.TaskList{Name: _testTaskList}, persistence.TaskListTypeDecision, "").Return(_testPartition)
-				p.EXPECT().FromTaskList(_testPartition).Return("peer0", nil)
-				c.EXPECT().AddDecisionTask(gomock.Any(), gomock.Any(), []yarpc.CallOption{yarpc.WithShardKey("peer0")}).Return(nil)
-			},
-		},
-		{
-			name: "AddDecisionTask - Error in resolving peer",
-			op: func(c Client) error {
-				return c.AddDecisionTask(context.Background(), testAddDecisionTaskRequest())
-			},
-			mock: func(p *MockPeerResolver, balancer *MockLoadBalancer, c *MockClient) {
-				balancer.EXPECT().PickWritePartition(_testDomainUUID, types.TaskList{Name: _testTaskList}, persistence.TaskListTypeDecision, "").Return(_testPartition)
-				p.EXPECT().FromTaskList(_testPartition).Return("peer0", assert.AnError)
-			},
-			wantError: true,
-		},
-		{
-			name: "AddDecisionTask - Error while adding decision task",
-			op: func(c Client) error {
-				return c.AddDecisionTask(context.Background(), testAddDecisionTaskRequest())
-			},
-			mock: func(p *MockPeerResolver, balancer *MockLoadBalancer, c *MockClient) {
-				balancer.EXPECT().PickWritePartition(_testDomainUUID, types.TaskList{Name: _testTaskList}, persistence.TaskListTypeDecision, "").Return(_testPartition)
-				p.EXPECT().FromTaskList(_testPartition).Return("peer0", nil)
-				c.EXPECT().AddDecisionTask(gomock.Any(), gomock.Any(), []yarpc.CallOption{yarpc.WithShardKey("peer0")}).Return(assert.AnError)
-			},
-			wantError: true,
-		},
-		{
 			name: "RespondQueryTaskCompleted",
 			op: func(c Client) error {
 				return c.RespondQueryTaskCompleted(context.Background(), testRespondQueryTaskCompletedRequest())
@@ -220,6 +152,76 @@ func TestClient_withResponse(t *testing.T) {
 		want      any
 		wantError bool
 	}{
+		{
+			name: "AddActivityTask",
+			op: func(c Client) (any, error) {
+				return c.AddActivityTask(context.Background(), testAddActivityTaskRequest())
+			},
+			mock: func(p *MockPeerResolver, balancer *MockLoadBalancer, c *MockClient) {
+				balancer.EXPECT().PickWritePartition(_testDomainUUID, types.TaskList{Name: _testTaskList}, persistence.TaskListTypeActivity, "").Return(_testPartition)
+				p.EXPECT().FromTaskList(_testPartition).Return("peer0", nil)
+				c.EXPECT().AddActivityTask(gomock.Any(), gomock.Any(), []yarpc.CallOption{yarpc.WithShardKey("peer0")}).Return(&types.AddActivityTaskResponse{}, nil)
+			},
+			want: &types.AddActivityTaskResponse{},
+		},
+		{
+			name: "AddActivityTask - Error in resolving peer",
+			op: func(c Client) (any, error) {
+				return c.AddActivityTask(context.Background(), testAddActivityTaskRequest())
+			},
+			mock: func(p *MockPeerResolver, balancer *MockLoadBalancer, c *MockClient) {
+				balancer.EXPECT().PickWritePartition(_testDomainUUID, types.TaskList{Name: _testTaskList}, persistence.TaskListTypeActivity, "").Return(_testPartition)
+				p.EXPECT().FromTaskList(_testPartition).Return("peer0", assert.AnError)
+			},
+			wantError: true,
+		},
+		{
+			name: "AddActivityTask - Error while adding activity task",
+			op: func(c Client) (any, error) {
+				return c.AddActivityTask(context.Background(), testAddActivityTaskRequest())
+			},
+			mock: func(p *MockPeerResolver, balancer *MockLoadBalancer, c *MockClient) {
+				balancer.EXPECT().PickWritePartition(_testDomainUUID, types.TaskList{Name: _testTaskList}, persistence.TaskListTypeActivity, "").Return(_testPartition)
+				p.EXPECT().FromTaskList(_testPartition).Return("peer0", nil)
+				c.EXPECT().AddActivityTask(gomock.Any(), gomock.Any(), []yarpc.CallOption{yarpc.WithShardKey("peer0")}).Return(nil, assert.AnError)
+			},
+			wantError: true,
+		},
+		{
+			name: "AddDecisionTask",
+			op: func(c Client) (any, error) {
+				return c.AddDecisionTask(context.Background(), testAddDecisionTaskRequest())
+			},
+			mock: func(p *MockPeerResolver, balancer *MockLoadBalancer, c *MockClient) {
+				balancer.EXPECT().PickWritePartition(_testDomainUUID, types.TaskList{Name: _testTaskList}, persistence.TaskListTypeDecision, "").Return(_testPartition)
+				p.EXPECT().FromTaskList(_testPartition).Return("peer0", nil)
+				c.EXPECT().AddDecisionTask(gomock.Any(), gomock.Any(), []yarpc.CallOption{yarpc.WithShardKey("peer0")}).Return(&types.AddDecisionTaskResponse{}, nil)
+			},
+			want: &types.AddDecisionTaskResponse{},
+		},
+		{
+			name: "AddDecisionTask - Error in resolving peer",
+			op: func(c Client) (any, error) {
+				return c.AddDecisionTask(context.Background(), testAddDecisionTaskRequest())
+			},
+			mock: func(p *MockPeerResolver, balancer *MockLoadBalancer, c *MockClient) {
+				balancer.EXPECT().PickWritePartition(_testDomainUUID, types.TaskList{Name: _testTaskList}, persistence.TaskListTypeDecision, "").Return(_testPartition)
+				p.EXPECT().FromTaskList(_testPartition).Return("peer0", assert.AnError)
+			},
+			wantError: true,
+		},
+		{
+			name: "AddDecisionTask - Error while adding decision task",
+			op: func(c Client) (any, error) {
+				return c.AddDecisionTask(context.Background(), testAddDecisionTaskRequest())
+			},
+			mock: func(p *MockPeerResolver, balancer *MockLoadBalancer, c *MockClient) {
+				balancer.EXPECT().PickWritePartition(_testDomainUUID, types.TaskList{Name: _testTaskList}, persistence.TaskListTypeDecision, "").Return(_testPartition)
+				p.EXPECT().FromTaskList(_testPartition).Return("peer0", nil)
+				c.EXPECT().AddDecisionTask(gomock.Any(), gomock.Any(), []yarpc.CallOption{yarpc.WithShardKey("peer0")}).Return(nil, assert.AnError)
+			},
+			wantError: true,
+		},
 		{
 			name: "PollForActivityTask",
 			op: func(c Client) (any, error) {

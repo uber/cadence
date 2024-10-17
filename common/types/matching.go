@@ -199,6 +199,14 @@ func (v *AddDecisionTaskRequest) GetPartitionConfig() (o map[string]string) {
 	return
 }
 
+type AddActivityTaskResponse struct {
+	PartitionConfig *TaskListPartitionConfig
+}
+
+type AddDecisionTaskResponse struct {
+	PartitionConfig *TaskListPartitionConfig
+}
+
 // CancelOutstandingPollRequest is an internal type (TBD...)
 type CancelOutstandingPollRequest struct {
 	DomainUUID   string    `json:"domainUUID,omitempty"`
@@ -410,6 +418,12 @@ func (v *MatchingPollForDecisionTaskRequest) GetIsolationGroup() (o string) {
 	return
 }
 
+type TaskListPartitionConfig struct {
+	Version            int64
+	NumReadPartitions  int32
+	NumWritePartitions int32
+}
+
 // MatchingPollForDecisionTaskResponse is an internal type (TBD...)
 type MatchingPollForDecisionTaskResponse struct {
 	TaskToken                 []byte                    `json:"taskToken,omitempty"`
@@ -430,6 +444,7 @@ type MatchingPollForDecisionTaskResponse struct {
 	StartedTimestamp          *int64                    `json:"startedTimestamp,omitempty"`
 	Queries                   map[string]*WorkflowQuery `json:"queries,omitempty"`
 	TotalHistoryBytes         int64                     `json:"currentHistorySize,omitempty"`
+	PartitionConfig           *TaskListPartitionConfig
 }
 
 // GetWorkflowExecution is an internal getter (TBD...)
@@ -498,6 +513,7 @@ type MatchingPollForActivityTaskResponse struct {
 	WorkflowDomain                  string             `json:"workflowDomain,omitempty"`
 	Header                          *Header            `json:"header,omitempty"`
 	BacklogCountHint                int64              `json:"backlogCountHint,omitempty"`
+	PartitionConfig                 *TaskListPartitionConfig
 }
 
 // MatchingQueryWorkflowRequest is an internal type (TBD...)

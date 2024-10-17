@@ -38,8 +38,8 @@ import (
 
 // Client is the interface exposed by types service client
 type Client interface {
-	AddActivityTask(context.Context, *types.AddActivityTaskRequest, ...yarpc.CallOption) error
-	AddDecisionTask(context.Context, *types.AddDecisionTaskRequest, ...yarpc.CallOption) error
+	AddActivityTask(context.Context, *types.AddActivityTaskRequest, ...yarpc.CallOption) (*types.AddActivityTaskResponse, error)
+	AddDecisionTask(context.Context, *types.AddDecisionTaskRequest, ...yarpc.CallOption) (*types.AddDecisionTaskResponse, error)
 	CancelOutstandingPoll(context.Context, *types.CancelOutstandingPollRequest, ...yarpc.CallOption) error
 	DescribeTaskList(context.Context, *types.MatchingDescribeTaskListRequest, ...yarpc.CallOption) (*types.DescribeTaskListResponse, error)
 	ListTaskListPartitions(context.Context, *types.MatchingListTaskListPartitionsRequest, ...yarpc.CallOption) (*types.ListTaskListPartitionsResponse, error)

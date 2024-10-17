@@ -138,7 +138,7 @@ func (fwdr *Forwarder) ForwardTask(ctx context.Context, task *InternalTask) erro
 	defer sw.Stop()
 	switch fwdr.taskListID.GetType() {
 	case persistence.TaskListTypeDecision:
-		err = fwdr.client.AddDecisionTask(ctx, &types.AddDecisionTaskRequest{
+		_, err = fwdr.client.AddDecisionTask(ctx, &types.AddDecisionTaskRequest{
 			DomainUUID: task.Event.DomainID,
 			Execution:  task.WorkflowExecution(),
 			TaskList: &types.TaskList{
@@ -152,7 +152,7 @@ func (fwdr *Forwarder) ForwardTask(ctx context.Context, task *InternalTask) erro
 			PartitionConfig:               task.Event.PartitionConfig,
 		})
 	case persistence.TaskListTypeActivity:
-		err = fwdr.client.AddActivityTask(ctx, &types.AddActivityTaskRequest{
+		_, err = fwdr.client.AddActivityTask(ctx, &types.AddActivityTaskRequest{
 			DomainUUID:       fwdr.taskListID.GetDomainID(),
 			SourceDomainUUID: task.Event.DomainID,
 			Execution:        task.WorkflowExecution(),
