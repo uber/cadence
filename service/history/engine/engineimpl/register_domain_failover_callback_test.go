@@ -385,6 +385,22 @@ func TestDomainCallback(t *testing.T) {
 		t3,
 	}
 
+	invalidDomainUpdate := []*cache.DomainCacheEntry{
+		cache.NewDomainCacheEntryForTest(&domainInfo,
+			&domainConfig,
+			true,
+			&persistence.DomainReplicationConfig{
+				ActiveClusterName: "cluster0",
+				Clusters:          clusters,
+			},
+			11,
+			common.Ptr(time.Now().Add(time.Second).UnixNano()),
+			4,
+			5, // not a valid initial failover vrsion
+			5,
+		),
+	}
+
 	timeSource := clock.NewMockedTimeSource()
 
 	tests := map[string]struct {
@@ -493,6 +509,72 @@ func TestDomainCallback(t *testing.T) {
 				timerProcessor.EXPECT().UnlockTaskProcessing()
 			},
 		},
+		"graceful failover domain update. cluster1 POV": {
+			domainUpdates: failoverUpdateT3,
+			asCluster:     "cluster1",
+			affordances: func(
+				shardCtx *shard.MockContext,
+				txProcessor *queue.MockProcessor,
+				timerProcessor *queue.MockProcessor,
+				taskProcessor *task.MockProcessor) {
+
+				shardCtx.EXPECT().GetDomainNotificationVersion().Return(int64(1))
+				shardCtx.EXPECT().UpdateDomainNotificationVersion(int64(6))
+
+				shardCtx.EXPECT().ReplicateFailoverMarkers(gomock.Any(), []*persistence.FailoverMarkerTask{
+					{
+						TaskData: persistence.TaskData{
+							Version: 11,
+						},
+						DomainID: "83b48dab-68cb-4f73-8752-c75d9271977f",
+					},
+				})
+
+				txProcessor.EXPECT().UnlockTaskProcessing()
+				timerProcessor.EXPECT().UnlockTaskProcessing()
+			},
+		},
+		"graceful failover domain update. cluster1 POV - error on replication": {
+			domainUpdates: failoverUpdateT3,
+			asCluster:     "cluster1",
+			affordances: func(
+				shardCtx *shard.MockContext,
+				txProcessor *queue.MockProcessor,
+				timerProcessor *queue.MockProcessor,
+				taskProcessor *task.MockProcessor) {
+
+				shardCtx.EXPECT().GetDomainNotificationVersion().Return(int64(1))
+
+				shardCtx.EXPECT().ReplicateFailoverMarkers(gomock.Any(), []*persistence.FailoverMarkerTask{
+					{
+						TaskData: persistence.TaskData{
+							Version: 11,
+						},
+						DomainID: "83b48dab-68cb-4f73-8752-c75d9271977f",
+					},
+				}).Return(assert.AnError)
+
+				txProcessor.EXPECT().UnlockTaskProcessing()
+				timerProcessor.EXPECT().UnlockTaskProcessing()
+			},
+		},
+		"invalid failover version": {
+			domainUpdates: invalidDomainUpdate,
+			asCluster:     "cluster1",
+			affordances: func(
+				shardCtx *shard.MockContext,
+				txProcessor *queue.MockProcessor,
+				timerProcessor *queue.MockProcessor,
+				taskProcessor *task.MockProcessor) {
+
+				shardCtx.EXPECT().GetDomainNotificationVersion().Return(int64(1))
+
+				shardCtx.EXPECT().UpdateDomainNotificationVersion(int64(6))
+
+				txProcessor.EXPECT().UnlockTaskProcessing()
+				timerProcessor.EXPECT().UnlockTaskProcessing()
+			},
+		},
 	}
 
 	for name, td := range tests {
@@ -543,4 +625,48 @@ func TestDomainCallback(t *testing.T) {
 			he.domainChangeCB(td.domainUpdates)
 		})
 	}
+}
+
+func TestDomainLocking(t *testing.T) {
+
+	cluster := cluster.NewMetadata(
+		10,
+		"cluster0",
+		"cluster0",
+		map[string]config.ClusterInformation{
+			"cluster0": config.ClusterInformation{
+				Enabled:                true,
+				InitialFailoverVersion: 1,
+			},
+		},
+		func(string) bool { return false },
+		metrics.NewNoopMetricsClient(),
+		loggerimpl.NewNopLogger(),
+	)
+
+	ctrl := gomock.NewController(t)
+	timeProcessor := queue.NewMockProcessor(ctrl)
+	queueTaskProcessor := task.NewMockProcessor(ctrl)
+	txProcessor := queue.NewMockProcessor(ctrl)
+	shardCtx := shard.NewMockContext(ctrl)
+
+	timeProcessor.EXPECT().LockTaskProcessing()
+	timeProcessor.EXPECT().UnlockTaskProcessing()
+
+	txProcessor.EXPECT().LockTaskProcessing()
+	txProcessor.EXPECT().UnlockTaskProcessing()
+
+	he := historyEngineImpl{
+		logger:             loggerimpl.NewNopLogger(),
+		clusterMetadata:    cluster,
+		currentClusterName: "cluster0",
+		metricsClient:      metrics.NewNoopMetricsClient(),
+		timerProcessor:     timeProcessor,
+		queueTaskProcessor: queueTaskProcessor,
+		txProcessor:        txProcessor,
+		shard:              shardCtx,
+	}
+
+	he.lockProcessingForFailover()
+	he.unlockProcessingForFailover()
 }
