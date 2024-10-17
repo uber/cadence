@@ -21,6 +21,7 @@
 // SOFTWARE.
 
 //go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination interfaces_mock.go github.com/uber/cadence/service/matching/tasklist Manager
+//go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination interfaces_mock.go github.com/uber/cadence/service/matching/tasklist TaskMatcher
 package tasklist
 
 import (
@@ -56,5 +57,17 @@ type (
 		String() string
 		GetTaskListKind() types.TaskListKind
 		TaskListID() *Identifier
+	}
+
+	TaskMatcher interface {
+		DisconnectBlockedPollers()
+		Offer(ctx context.Context, task *InternalTask) (bool, error)
+		OfferOrTimeout(ctx context.Context, startT time.Time, task *InternalTask) (bool, error)
+		OfferQuery(ctx context.Context, task *InternalTask) (*types.QueryWorkflowResponse, error)
+		MustOffer(ctx context.Context, task *InternalTask) error
+		Poll(ctx context.Context, isolationGroup string) (*InternalTask, error)
+		PollForQuery(ctx context.Context) (*InternalTask, error)
+		UpdateRatelimit(rps *float64)
+		Rate() float64
 	}
 )

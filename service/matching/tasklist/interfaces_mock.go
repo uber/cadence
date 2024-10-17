@@ -239,3 +239,153 @@ func (mr *MockManagerMockRecorder) TaskListID() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TaskListID", reflect.TypeOf((*MockManager)(nil).TaskListID))
 }
+
+// MockTaskMatcher is a mock of TaskMatcher interface.
+type MockTaskMatcher struct {
+	ctrl     *gomock.Controller
+	recorder *MockTaskMatcherMockRecorder
+}
+
+// MockTaskMatcherMockRecorder is the mock recorder for MockTaskMatcher.
+type MockTaskMatcherMockRecorder struct {
+	mock *MockTaskMatcher
+}
+
+// NewMockTaskMatcher creates a new mock instance.
+func NewMockTaskMatcher(ctrl *gomock.Controller) *MockTaskMatcher {
+	mock := &MockTaskMatcher{ctrl: ctrl}
+	mock.recorder = &MockTaskMatcherMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockTaskMatcher) EXPECT() *MockTaskMatcherMockRecorder {
+	return m.recorder
+}
+
+// DisconnectBlockedPollers mocks base method.
+func (m *MockTaskMatcher) DisconnectBlockedPollers() {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "DisconnectBlockedPollers")
+}
+
+// DisconnectBlockedPollers indicates an expected call of DisconnectBlockedPollers.
+func (mr *MockTaskMatcherMockRecorder) DisconnectBlockedPollers() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DisconnectBlockedPollers", reflect.TypeOf((*MockTaskMatcher)(nil).DisconnectBlockedPollers))
+}
+
+// MustOffer mocks base method.
+func (m *MockTaskMatcher) MustOffer(ctx context.Context, task *InternalTask) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MustOffer", ctx, task)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// MustOffer indicates an expected call of MustOffer.
+func (mr *MockTaskMatcherMockRecorder) MustOffer(ctx, task interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MustOffer", reflect.TypeOf((*MockTaskMatcher)(nil).MustOffer), ctx, task)
+}
+
+// Offer mocks base method.
+func (m *MockTaskMatcher) Offer(ctx context.Context, task *InternalTask) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Offer", ctx, task)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Offer indicates an expected call of Offer.
+func (mr *MockTaskMatcherMockRecorder) Offer(ctx, task interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Offer", reflect.TypeOf((*MockTaskMatcher)(nil).Offer), ctx, task)
+}
+
+// OfferOrTimeout mocks base method.
+func (m *MockTaskMatcher) OfferOrTimeout(ctx context.Context, startT time.Time, task *InternalTask) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "OfferOrTimeout", ctx, startT, task)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// OfferOrTimeout indicates an expected call of OfferOrTimeout.
+func (mr *MockTaskMatcherMockRecorder) OfferOrTimeout(ctx, startT, task interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "OfferOrTimeout", reflect.TypeOf((*MockTaskMatcher)(nil).OfferOrTimeout), ctx, startT, task)
+}
+
+// OfferQuery mocks base method.
+func (m *MockTaskMatcher) OfferQuery(ctx context.Context, task *InternalTask) (*types.QueryWorkflowResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "OfferQuery", ctx, task)
+	ret0, _ := ret[0].(*types.QueryWorkflowResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// OfferQuery indicates an expected call of OfferQuery.
+func (mr *MockTaskMatcherMockRecorder) OfferQuery(ctx, task interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "OfferQuery", reflect.TypeOf((*MockTaskMatcher)(nil).OfferQuery), ctx, task)
+}
+
+// Poll mocks base method.
+func (m *MockTaskMatcher) Poll(ctx context.Context, isolationGroup string) (*InternalTask, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Poll", ctx, isolationGroup)
+	ret0, _ := ret[0].(*InternalTask)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Poll indicates an expected call of Poll.
+func (mr *MockTaskMatcherMockRecorder) Poll(ctx, isolationGroup interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Poll", reflect.TypeOf((*MockTaskMatcher)(nil).Poll), ctx, isolationGroup)
+}
+
+// PollForQuery mocks base method.
+func (m *MockTaskMatcher) PollForQuery(ctx context.Context) (*InternalTask, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PollForQuery", ctx)
+	ret0, _ := ret[0].(*InternalTask)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// PollForQuery indicates an expected call of PollForQuery.
+func (mr *MockTaskMatcherMockRecorder) PollForQuery(ctx interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PollForQuery", reflect.TypeOf((*MockTaskMatcher)(nil).PollForQuery), ctx)
+}
+
+// Rate mocks base method.
+func (m *MockTaskMatcher) Rate() float64 {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Rate")
+	ret0, _ := ret[0].(float64)
+	return ret0
+}
+
+// Rate indicates an expected call of Rate.
+func (mr *MockTaskMatcherMockRecorder) Rate() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Rate", reflect.TypeOf((*MockTaskMatcher)(nil).Rate))
+}
+
+// UpdateRatelimit mocks base method.
+func (m *MockTaskMatcher) UpdateRatelimit(rps *float64) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "UpdateRatelimit", rps)
+}
+
+// UpdateRatelimit indicates an expected call of UpdateRatelimit.
+func (mr *MockTaskMatcherMockRecorder) UpdateRatelimit(rps interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateRatelimit", reflect.TypeOf((*MockTaskMatcher)(nil).UpdateRatelimit), rps)
+}

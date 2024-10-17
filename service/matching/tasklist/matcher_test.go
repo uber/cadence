@@ -60,8 +60,8 @@ type MatcherTestSuite struct {
 	fwdr            *Forwarder
 	cfg             *config.TaskListConfig
 	taskList        *Identifier
-	matcher         *TaskMatcher // matcher for child partition
-	rootMatcher     *TaskMatcher // matcher for parent partition
+	matcher         *taskMatcherImpl // matcher for child partition
+	rootMatcher     TaskMatcher      // matcher for parent partition
 	isolationGroups []string
 }
 
@@ -85,11 +85,11 @@ func (t *MatcherTestSuite) SetupTest() {
 	t.cfg = tlCfg
 	t.isolationGroups = []string{"dca1", "dca2"}
 	t.fwdr = newForwarder(&t.cfg.ForwarderConfig, t.taskList, types.TaskListKindNormal, t.client, []string{"dca1", "dca2"}, metrics.NoopScope(metrics.Matching))
-	t.matcher = newTaskMatcher(tlCfg, t.fwdr, metrics.NoopScope(metrics.Matching), []string{"dca1", "dca2"}, loggerimpl.NewNopLogger(), t.taskList, types.TaskListKindNormal)
+	t.matcher = newTaskMatcher(tlCfg, t.fwdr, metrics.NoopScope(metrics.Matching), []string{"dca1", "dca2"}, loggerimpl.NewNopLogger(), t.taskList, types.TaskListKindNormal).(*taskMatcherImpl)
 
 	rootTaskList := NewTestTaskListID(t.T(), t.taskList.GetDomainID(), t.taskList.Parent(20), persistence.TaskListTypeDecision)
 	rootTasklistCfg := newTaskListConfig(rootTaskList, cfg, testDomainName)
-	t.rootMatcher = newTaskMatcher(rootTasklistCfg, nil, metrics.NoopScope(metrics.Matching), []string{"dca1", "dca2"}, loggerimpl.NewNopLogger(), t.taskList, types.TaskListKindNormal)
+	t.rootMatcher = newTaskMatcher(rootTasklistCfg, nil, metrics.NoopScope(metrics.Matching), []string{"dca1", "dca2"}, loggerimpl.NewNopLogger(), t.taskList, types.TaskListKindNormal).(*taskMatcherImpl)
 }
 
 func (t *MatcherTestSuite) TearDownTest() {
@@ -820,7 +820,7 @@ func TestRatelimitBehavior(t *testing.T) {
 				perSecond := float64(time.Second / granularity)
 				limiter := quotas.NewRateLimiter(&perSecond, time.Minute, int(perSecond))
 				check(t, limiter.Allow, func(ctx context.Context) (*rate.Reservation, error) {
-					return nil, (&TaskMatcher{limiter: limiter}).ratelimit(ctx)
+					return nil, (&taskMatcherImpl{limiter: limiter}).ratelimit(ctx)
 				})
 			})
 		})
@@ -923,7 +923,7 @@ func TestRatelimitBehavior(t *testing.T) {
 				}
 
 				elapsed, err := cancelWhileWaiting(func(ctx context.Context) error {
-					return (&TaskMatcher{limiter: limit}).ratelimit(ctx)
+					return (&taskMatcherImpl{limiter: limit}).ratelimit(ctx)
 				})
 
 				assert.ErrorIs(t, err, context.Canceled, "gives up and returns context error")
