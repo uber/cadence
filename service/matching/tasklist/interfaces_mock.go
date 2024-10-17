@@ -304,6 +304,21 @@ func (mr *MockTaskMatcherMockRecorder) Offer(ctx, task interface{}) *gomock.Call
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Offer", reflect.TypeOf((*MockTaskMatcher)(nil).Offer), ctx, task)
 }
 
+// OfferOrTimeout mocks base method.
+func (m *MockTaskMatcher) OfferOrTimeout(ctx context.Context, startT time.Time, task *InternalTask) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "OfferOrTimeout", ctx, startT, task)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// OfferOrTimeout indicates an expected call of OfferOrTimeout.
+func (mr *MockTaskMatcherMockRecorder) OfferOrTimeout(ctx, startT, task interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "OfferOrTimeout", reflect.TypeOf((*MockTaskMatcher)(nil).OfferOrTimeout), ctx, startT, task)
+}
+
 // OfferQuery mocks base method.
 func (m *MockTaskMatcher) OfferQuery(ctx context.Context, task *InternalTask) (*types.QueryWorkflowResponse, error) {
 	m.ctrl.T.Helper()

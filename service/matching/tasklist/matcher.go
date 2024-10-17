@@ -213,7 +213,7 @@ func (tm *taskMatcherImpl) Offer(ctx context.Context, task *InternalTask) (bool,
 				task.IsForwarded() { // task came from a child partition
 				// a forwarded backlog task from a child partition, block trying
 				// to match with a poller until ctx timeout
-				return tm.offerOrTimeout(ctx, startT, task)
+				return tm.OfferOrTimeout(ctx, startT, task)
 			}
 		}
 
@@ -222,7 +222,7 @@ func (tm *taskMatcherImpl) Offer(ctx context.Context, task *InternalTask) (bool,
 }
 
 // OfferOrTimeout offers a task to a poller and blocks until a poller picks up the task or context timeouts
-func (tm *taskMatcherImpl) offerOrTimeout(ctx context.Context, startT time.Time, task *InternalTask) (bool, error) {
+func (tm *taskMatcherImpl) OfferOrTimeout(ctx context.Context, startT time.Time, task *InternalTask) (bool, error) {
 	select {
 	case tm.getTaskC(task) <- task: // poller picked up the task
 		if task.ResponseC != nil {

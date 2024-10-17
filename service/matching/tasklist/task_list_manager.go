@@ -98,7 +98,7 @@ type (
 		liveness        *liveness.Liveness
 		taskGC          *taskGC
 		taskAckManager  messaging.AckManager // tracks ackLevel for delivered messages
-		matcher         *taskMatcherImpl     // for matching a task producer with a poller
+		matcher         TaskMatcher          // for matching a task producer with a poller
 		clusterMetadata cluster.Metadata
 		domainCache     cache.DomainCache
 		partitioner     partition.Partitioner
@@ -570,7 +570,7 @@ func (c *taskListManagerImpl) trySyncMatch(ctx context.Context, params AddTaskPa
 	var matched bool
 	var err error
 	if params.ActivityTaskDispatchInfo != nil {
-		matched, err = c.matcher.offerOrTimeout(childCtx, c.timeSource.Now(), task)
+		matched, err = c.matcher.OfferOrTimeout(childCtx, c.timeSource.Now(), task)
 	} else {
 		matched, err = c.matcher.Offer(childCtx, task)
 	}

@@ -62,6 +62,7 @@ type (
 	TaskMatcher interface {
 		DisconnectBlockedPollers()
 		Offer(ctx context.Context, task *InternalTask) (bool, error)
+		OfferOrTimeout(ctx context.Context, startT time.Time, task *InternalTask) (bool, error)
 		OfferQuery(ctx context.Context, task *InternalTask) (*types.QueryWorkflowResponse, error)
 		MustOffer(ctx context.Context, task *InternalTask) error
 		Poll(ctx context.Context, isolationGroup string) (*InternalTask, error)
