@@ -61,7 +61,7 @@ func (f *failure) Check(context.Context) ([]invariant.InvariantCheckResult, erro
 			result = append(result, invariant.InvariantCheckResult{
 				InvariantType: WorkflowFailed.String(),
 				Reason:        errorTypeFromReason(*reason).String(),
-				Metadata:      invariant.MarshalData(failureMetadata{Identity: identity}),
+				Metadata:      invariant.MarshalData(FailureMetadata{Identity: identity}),
 			})
 		}
 		if event.GetActivityTaskFailedEventAttributes() != nil && event.ActivityTaskFailedEventAttributes.Reason != nil {
@@ -72,7 +72,7 @@ func (f *failure) Check(context.Context) ([]invariant.InvariantCheckResult, erro
 			result = append(result, invariant.InvariantCheckResult{
 				InvariantType: ActivityFailed.String(),
 				Reason:        errorTypeFromReason(*reason).String(),
-				Metadata: invariant.MarshalData(failureMetadata{
+				Metadata: invariant.MarshalData(FailureMetadata{
 					Identity:          attr.Identity,
 					ActivityScheduled: scheduled,
 					ActivityStarted:   started,

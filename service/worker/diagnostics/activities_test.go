@@ -38,6 +38,7 @@ import (
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/worker/diagnostics/analytics"
 	"github.com/uber/cadence/service/worker/diagnostics/invariant"
+	"github.com/uber/cadence/service/worker/diagnostics/invariant/failure"
 	"github.com/uber/cadence/service/worker/diagnostics/invariant/timeout"
 )
 
@@ -60,20 +61,37 @@ func Test__retrieveExecutionHistory(t *testing.T) {
 	require.Equal(t, testWorkflowExecutionHistoryResponse(), result)
 }
 
-func Test__identifyTimeouts(t *testing.T) {
+func Test__identifyIssues(t *testing.T) {
 	dwtest := testDiagnosticWorkflow(t)
 	workflowTimeoutData := timeout.ExecutionTimeoutMetadata{
 		ExecutionTime:     110 * time.Second,
 		ConfiguredTimeout: 110 * time.Second,
 		LastOngoingEvent: &types.HistoryEvent{
-			ID:        1,
+			ID:        4,
 			Timestamp: common.Int64Ptr(testTimeStamp),
-			WorkflowExecutionStartedEventAttributes: &types.WorkflowExecutionStartedEventAttributes{
-				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(workflowTimeoutSecond),
+			ActivityTaskFailedEventAttributes: &types.ActivityTaskFailedEventAttributes{
+				Reason:           common.StringPtr("cadenceInternal:Generic"),
+				Details:          []byte("test-activity-failure"),
+				Identity:         "localhost",
+				ScheduledEventID: 2,
+				StartedEventID:   3,
 			},
 		},
 	}
 	workflowTimeoutDataInBytes, err := json.Marshal(workflowTimeoutData)
+	require.NoError(t, err)
+	actMetadata := failure.FailureMetadata{
+		Identity: "localhost",
+		ActivityScheduled: &types.ActivityTaskScheduledEventAttributes{
+			ActivityID:   "101",
+			ActivityType: &types.ActivityType{Name: "test-activity"},
+		},
+		ActivityStarted: &types.ActivityTaskStartedEventAttributes{
+			Identity: "localhost",
+			Attempt:  0,
+		},
+	}
+	actMetadataInBytes, err := json.Marshal(actMetadata)
 	require.NoError(t, err)
 	expectedResult := []invariant.InvariantCheckResult{
 		{
@@ -81,13 +99,18 @@ func Test__identifyTimeouts(t *testing.T) {
 			Reason:        "START_TO_CLOSE",
 			Metadata:      workflowTimeoutDataInBytes,
 		},
+		{
+			InvariantType: failure.ActivityFailed.String(),
+			Reason:        failure.GenericError.String(),
+			Metadata:      actMetadataInBytes,
+		},
 	}
-	result, err := dwtest.identifyTimeouts(context.Background(), identifyTimeoutsInputParams{History: testWorkflowExecutionHistoryResponse()})
+	result, err := dwtest.identifyIssues(context.Background(), identifyIssuesParams{History: testWorkflowExecutionHistoryResponse()})
 	require.NoError(t, err)
 	require.Equal(t, expectedResult, result)
 }
 
-func Test__rootCauseTimeouts(t *testing.T) {
+func Test__rootCauseIssues(t *testing.T) {
 	dwtest := testDiagnosticWorkflow(t)
 	workflowTimeoutData := timeout.ExecutionTimeoutMetadata{
 		ExecutionTime:     110 * time.Second,
@@ -106,11 +129,29 @@ func Test__rootCauseTimeouts(t *testing.T) {
 	}
 	workflowTimeoutDataInBytes, err := json.Marshal(workflowTimeoutData)
 	require.NoError(t, err)
+	actMetadata := failure.FailureMetadata{
+		Identity: "localhost",
+		ActivityScheduled: &types.ActivityTaskScheduledEventAttributes{
+			ActivityID:   "101",
+			ActivityType: &types.ActivityType{Name: "test-activity"},
+		},
+		ActivityStarted: &types.ActivityTaskStartedEventAttributes{
+			Identity: "localhost",
+			Attempt:  0,
+		},
+	}
+	actMetadataInBytes, err := json.Marshal(actMetadata)
+	require.NoError(t, err)
 	issues := []invariant.InvariantCheckResult{
 		{
 			InvariantType: timeout.TimeoutTypeExecution.String(),
 			Reason:        "START_TO_CLOSE",
 			Metadata:      workflowTimeoutDataInBytes,
+		},
+		{
+			InvariantType: failure.ActivityFailed.String(),
+			Reason:        failure.CustomError.String(),
+			Metadata:      actMetadataInBytes,
 		},
 	}
 	taskListBacklog := int64(10)
@@ -121,8 +162,12 @@ func Test__rootCauseTimeouts(t *testing.T) {
 			RootCause: invariant.RootCauseTypePollersStatus,
 			Metadata:  taskListBacklogInBytes,
 		},
+		{
+			RootCause: invariant.RootCauseTypeServiceSideIssue,
+			Metadata:  actMetadataInBytes,
+		},
 	}
-	result, err := dwtest.rootCauseTimeouts(context.Background(), rootCauseTimeoutsParams{History: testWorkflowExecutionHistoryResponse(), Domain: "test-domain", Issues: issues})
+	result, err := dwtest.rootCauseIssues(context.Background(), rootCauseIssuesParams{History: testWorkflowExecutionHistoryResponse(), Domain: "test-domain", Issues: issues})
 	require.NoError(t, err)
 	require.Equal(t, expectedRootCause, result)
 }
@@ -170,7 +215,32 @@ func testWorkflowExecutionHistoryResponse() *types.GetWorkflowExecutionHistoryRe
 					},
 				},
 				{
-					ID:                                       2,
+					ID: 2,
+					ActivityTaskScheduledEventAttributes: &types.ActivityTaskScheduledEventAttributes{
+						ActivityID:   "101",
+						ActivityType: &types.ActivityType{Name: "test-activity"},
+					},
+				},
+				{
+					ID: 3,
+					ActivityTaskStartedEventAttributes: &types.ActivityTaskStartedEventAttributes{
+						Identity: "localhost",
+						Attempt:  0,
+					},
+				},
+				{
+					ID:        4,
+					Timestamp: common.Int64Ptr(testTimeStamp),
+					ActivityTaskFailedEventAttributes: &types.ActivityTaskFailedEventAttributes{
+						Reason:           common.StringPtr("cadenceInternal:Generic"),
+						Details:          []byte("test-activity-failure"),
+						Identity:         "localhost",
+						ScheduledEventID: 2,
+						StartedEventID:   3,
+					},
+				},
+				{
+					ID:                                       5,
 					Timestamp:                                common.Int64Ptr(testTimeStamp + int64(workflowTimeoutSecond)*timeUnit.Nanoseconds()),
 					WorkflowExecutionTimedOutEventAttributes: &types.WorkflowExecutionTimedOutEventAttributes{TimeoutType: types.TimeoutTypeStartToClose.Ptr()},
 				},

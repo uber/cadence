@@ -41,6 +41,7 @@ import (
 	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/worker/diagnostics/invariant"
+	"github.com/uber/cadence/service/worker/diagnostics/invariant/failure"
 	"github.com/uber/cadence/service/worker/diagnostics/invariant/timeout"
 )
 
@@ -73,8 +74,8 @@ func (s *diagnosticsWorkflowTestSuite) SetupTest() {
 	s.workflowEnv.RegisterWorkflowWithOptions(s.dw.DiagnosticsStarterWorkflow, workflow.RegisterOptions{Name: diagnosticsStarterWorkflow})
 	s.workflowEnv.RegisterWorkflowWithOptions(s.dw.DiagnosticsWorkflow, workflow.RegisterOptions{Name: diagnosticsWorkflow})
 	s.workflowEnv.RegisterActivityWithOptions(s.dw.retrieveExecutionHistory, activity.RegisterOptions{Name: retrieveWfExecutionHistoryActivity})
-	s.workflowEnv.RegisterActivityWithOptions(s.dw.identifyTimeouts, activity.RegisterOptions{Name: identifyTimeoutsActivity})
-	s.workflowEnv.RegisterActivityWithOptions(s.dw.rootCauseTimeouts, activity.RegisterOptions{Name: rootCauseTimeoutsActivity})
+	s.workflowEnv.RegisterActivityWithOptions(s.dw.identifyIssues, activity.RegisterOptions{Name: identifyIssuesActivity})
+	s.workflowEnv.RegisterActivityWithOptions(s.dw.rootCauseIssues, activity.RegisterOptions{Name: rootCauseIssuesActivity})
 	s.workflowEnv.RegisterActivityWithOptions(s.dw.emitUsageLogs, activity.RegisterOptions{Name: emitUsageLogsActivity})
 }
 
@@ -131,8 +132,8 @@ func (s *diagnosticsWorkflowTestSuite) TestWorkflow() {
 		},
 	}
 	s.workflowEnv.OnActivity(retrieveWfExecutionHistoryActivity, mock.Anything, mock.Anything).Return(nil, nil)
-	s.workflowEnv.OnActivity(identifyTimeoutsActivity, mock.Anything, mock.Anything).Return(issues, nil)
-	s.workflowEnv.OnActivity(rootCauseTimeoutsActivity, mock.Anything, mock.Anything).Return(rootCause, nil)
+	s.workflowEnv.OnActivity(identifyIssuesActivity, mock.Anything, mock.Anything).Return(issues, nil)
+	s.workflowEnv.OnActivity(rootCauseIssuesActivity, mock.Anything, mock.Anything).Return(rootCause, nil)
 	s.workflowEnv.OnActivity(emitUsageLogsActivity, mock.Anything, mock.Anything).Return(nil)
 	s.workflowEnv.ExecuteWorkflow(diagnosticsStarterWorkflow, params)
 	s.True(s.workflowEnv.IsWorkflowCompleted())
@@ -153,9 +154,9 @@ func (s *diagnosticsWorkflowTestSuite) TestWorkflow_Error() {
 		RunID:      "abc",
 	}
 	mockErr := errors.New("mockErr")
-	errExpected := fmt.Errorf("IdentifyTimeouts: %w", mockErr)
+	errExpected := fmt.Errorf("IdentifyIssues: %w", mockErr)
 	s.workflowEnv.OnActivity(retrieveWfExecutionHistoryActivity, mock.Anything, mock.Anything).Return(nil, nil)
-	s.workflowEnv.OnActivity(identifyTimeoutsActivity, mock.Anything, mock.Anything).Return(nil, mockErr)
+	s.workflowEnv.OnActivity(identifyIssuesActivity, mock.Anything, mock.Anything).Return(nil, mockErr)
 	s.workflowEnv.ExecuteWorkflow(diagnosticsWorkflow, params)
 	s.True(s.workflowEnv.IsWorkflowCompleted())
 	s.Error(s.workflowEnv.GetWorkflowError())
@@ -283,4 +284,37 @@ func (s *diagnosticsWorkflowTestSuite) Test__retrieveTimeoutRootCause() {
 	result, err := retrieveTimeoutRootCause(rootCause)
 	s.NoError(err)
 	s.Equal(timeoutRootCause, result)
+}
+
+func (s *diagnosticsWorkflowTestSuite) Test__retrieveFailureIssues() {
+	actMetadata := failure.FailureMetadata{
+		Identity: "localhost",
+		ActivityScheduled: &types.ActivityTaskScheduledEventAttributes{
+			ActivityID:   "101",
+			ActivityType: &types.ActivityType{Name: "test-activity"},
+		},
+		ActivityStarted: &types.ActivityTaskStartedEventAttributes{
+			Identity: "localhost",
+			Attempt:  0,
+		},
+	}
+	actMetadataInBytes, err := json.Marshal(actMetadata)
+	s.NoError(err)
+	issues := []invariant.InvariantCheckResult{
+		{
+			InvariantType: failure.ActivityFailed.String(),
+			Reason:        failure.CustomError.String(),
+			Metadata:      actMetadataInBytes,
+		},
+	}
+	failureIssues := []*failuresIssuesResult{
+		{
+			InvariantType: failure.ActivityFailed.String(),
+			Reason:        failure.CustomError.String(),
+			Metadata:      actMetadata,
+		},
+	}
+	result, err := retrieveFailureIssues(issues)
+	s.NoError(err)
+	s.Equal(failureIssues, result)
 }
