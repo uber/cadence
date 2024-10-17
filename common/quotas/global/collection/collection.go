@@ -451,6 +451,8 @@ func (c *Collection) doUpdate(since time.Duration, usage map[shared.GlobalKey]rp
 	res := c.aggs.Update(ctx, since, usage)
 	if res.Err != nil {
 		// should not happen outside pretty major errors, but may recover next time.
+		// if sustained, e.g. due to a bug, this should eventually cause the affected
+		// keys to use their fallback behavior, which is easily alerted on.
 		c.logger.Error("aggregator update error", tag.Error(res.Err))
 	}
 	// either way, process all weights we did successfully retrieve.
@@ -464,19 +466,13 @@ func (c *Collection) doUpdate(since time.Duration, usage map[shared.GlobalKey]rp
 			continue
 		}
 
-		if info.Weight < 0 {
-			// negative values cannot be valid, so they're a failure.
-			//
-			// this is largely for future-proofing and to cover all possibilities,
-			// so unrecognized values lead to fallback behavior because they cannot be understood.
-			c.global.Load(lkey).FailedUpdate()
-		} else {
-			target := rate.Limit(c.targetRPS(lkey))
-			limiter := c.global.Load(lkey)
-			fallbackTarget := limiter.FallbackLimit()
-			boosted := boostRPS(target, fallbackTarget, info.Weight, info.UsedRPS)
-			limiter.Update(boosted)
-		}
+		// < 0, nan, and inf in `info` are prevented by Update and do not need to be handled here,
+		// though the math below could create new irrational values.
+		target := rate.Limit(c.targetRPS(lkey))
+		limiter := c.global.Load(lkey)
+		fallbackTarget := limiter.FallbackLimit()
+		boosted := boostRPS(target, fallbackTarget, info.Weight, info.UsedRPS)
+		limiter.Update(boosted)
 	}
 
 	// mark all non-returned limits as failures.

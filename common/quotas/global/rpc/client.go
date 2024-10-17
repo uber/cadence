@@ -29,7 +29,9 @@ package rpc
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"math"
 	"sync"
 	"time"
 
@@ -82,6 +84,10 @@ type (
 		// Currently, there are no truly fatal errors so this API does not return `error`.
 		// Even in the presence of errors, some successful data may have been loaded,
 		// and that will be part of the UpdateResult struct.
+		//
+		// As part of the contract of this call, UpdateResult will not ever contain
+		// NaN, Inf, or negative values, as these imply fatal calculation problems.
+		// It checks internally and will return an error rather than any value.
 		Update(ctx context.Context, period time.Duration, load map[shared.GlobalKey]Calls) UpdateResult
 	}
 
@@ -197,6 +203,25 @@ func (c *client) updateSinglePeer(ctx context.Context, peer history.Peer, period
 		// deserialization errors should never happen
 		return nil, &SerializationError{err}
 	}
+
+	// and check the values.
+	// - weights must be 0..1 inclusive
+	// - used RPS must be non-negative
+	// - NaNs and Infs are always rejected
+	//
+	// any failure is fatal to the whole request, that host cannot be trusted,
+	// and any affected limiters should switch to their fallbacks if the issue
+	// persists long enough.
+	for key, entry := range resp {
+		if msg := shared.SanityCheckFloat(0, entry.Weight, 1, "weight"); msg != "" {
+			return nil, fmt.Errorf("bad value for key %q: from host: %q: %w", key, peer, errors.New(msg))
+		}
+		// no upper bound, but true infs are not allowed
+		if msg := shared.SanityCheckFloat(0, entry.UsedRPS, math.Inf(1), "used rps"); msg != "" {
+			return nil, fmt.Errorf("bad value for key %q: from host: %q %w", key, peer, errors.New(msg))
+		}
+	}
+
 	return resp, nil
 }
 

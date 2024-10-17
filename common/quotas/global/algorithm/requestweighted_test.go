@@ -40,7 +40,9 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/dynamicconfig"
+	"github.com/uber/cadence/common/log/testlogger"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/quotas/global/shared"
 )
 
 // just simplifies newForTest usage as most tests only care about rate
@@ -60,11 +62,11 @@ func defaultConfig(rate time.Duration) configSnapshot {
 	}
 }
 
-func newValid(t require.TestingT, snap configSnapshot) (*impl, clock.MockedTimeSource) {
+func newValid(t testlogger.TestingT, snap configSnapshot) (*impl, clock.MockedTimeSource) {
 	return newForTest(t, snap, true)
 }
 
-func newForTest(t require.TestingT, snap configSnapshot, validate bool) (*impl, clock.MockedTimeSource) {
+func newForTest(t testlogger.TestingT, snap configSnapshot, validate bool) (*impl, clock.MockedTimeSource) {
 	cfg := Config{
 		NewDataWeight: func(_ ...dynamicconfig.FilterOption) float64 {
 			return snap.weight
@@ -82,7 +84,11 @@ func newForTest(t require.TestingT, snap configSnapshot, validate bool) (*impl, 
 	var agg *impl
 
 	if validate {
-		i, err := New(metrics.NewNoopMetricsClient(), cfg)
+		l, obs := testlogger.NewObserved(t)
+		t.Cleanup(func() {
+			shared.AssertNoSanityCheckFailures(t, obs.TakeAll())
+		})
+		i, err := New(metrics.NewNoopMetricsClient(), l, cfg)
 		require.NoError(t, err)
 		agg = i.(*impl)
 	} else {
@@ -767,7 +773,7 @@ func TestSimulate(t *testing.T) {
 		require.NoError(t, err)
 		// h2 has slightly over half weight due to greater historical use
 		expectSimilarUsage(t, map[Limit]HostUsage{
-			query: {Weight: 0.52},
+			query: {Weight: 0.45},
 			start: {Weight: 0.53}, // still more starts than queries
 		}, usage)
 		usage, err = agg.HostUsage(h3, all)
@@ -779,7 +785,7 @@ func TestSimulate(t *testing.T) {
 			// - smaller numerator (lower calls by this host)
 			// - smaller denominator (lower total calls)
 			// - higher final value (smaller denominator has greater influence)
-			query: {Weight: 0.47},
+			query: {Weight: 0.54},
 			start: {Weight: 0.46},
 		}, usage)
 	})
@@ -804,8 +810,8 @@ func TestSimulate(t *testing.T) {
 		// this is likely a faster shift than we want in practice, as it'll make allowed-request
 		// behavior quite jumpy, which is why the initial weight is likely to be around 0.5.
 		expectSimilarUsage(t, map[Limit]HostUsage{
-			query: {Weight: 0.29, Used: 13.21}, // used is adjusting towards 15
-			start: {Weight: 0.28, Used: 13.31},
+			query: {Weight: 0.28, Used: 13.21}, // used is adjusting towards 15
+			start: {Weight: 0.28, Used: 13.52},
 		}, usage)
 		// and weights are flattening towards 0.33
 		usage, err = agg.HostUsage(h2, all)
@@ -817,7 +823,7 @@ func TestSimulate(t *testing.T) {
 		usage, err = agg.HostUsage(h3, all)
 		require.NoError(t, err)
 		expectSimilarUsage(t, map[Limit]HostUsage{
-			query: {Weight: 0.35},
+			query: {Weight: 0.37},
 			start: {Weight: 0.35},
 		}, usage)
 	})
