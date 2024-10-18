@@ -235,7 +235,7 @@ func getPositiveInt64(data []byte) (int64, []byte, string) {
 	if val < 0 {
 		// -INT_MIN == INT_MIN, so the above check may have done nothing.
 		// so special case INT_MIN by rolling it over to INT_MAX.
-		val -= 1
+		val--
 	}
 	// and last but not least: make sure it's below our "impossible" value when accept+reject are combined.
 	// partly this ensures random fuzzed rps doesn't exceed it (which is common),
