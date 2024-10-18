@@ -2054,3 +2054,14 @@ func (e *WorkflowExecutionInfo) CopyPartitionConfig() map[string]string {
 	}
 	return partitionConfig
 }
+
+func (p *TaskListPartitionConfig) ToInternalType() *types.TaskListPartitionConfig {
+	if p == nil {
+		return nil
+	}
+	return &types.TaskListPartitionConfig{
+		Version:            p.Version,
+		NumReadPartitions:  int32(p.NumReadPartitions),
+		NumWritePartitions: int32(p.NumWritePartitions),
+	}
+}

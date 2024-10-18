@@ -23,7 +23,6 @@ package handler
 import (
 	"context"
 	"sync"
-	"time"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
@@ -128,7 +127,6 @@ func (h *handlerImpl) AddActivityTask(
 ) (resp *types.AddActivityTaskResponse, retError error) {
 	defer func() { log.CapturePanic(recover(), h.logger, &retError) }()
 
-	startT := time.Now()
 	domainName := h.domainName(request.GetDomainUUID())
 	hCtx := h.newHandlerContext(
 		ctx,
@@ -148,12 +146,8 @@ func (h *handlerImpl) AddActivityTask(
 		return nil, hCtx.handleErr(errMatchingHostThrottle)
 	}
 
-	syncMatch, err := h.engine.AddActivityTask(hCtx, request)
-	if syncMatch {
-		hCtx.scope.RecordTimer(metrics.SyncMatchLatencyPerTaskList, time.Since(startT))
-	}
-
-	return &types.AddActivityTaskResponse{}, hCtx.handleErr(err)
+	resp, err := h.engine.AddActivityTask(hCtx, request)
+	return resp, hCtx.handleErr(err)
 }
 
 // AddDecisionTask - adds a decision task.
@@ -163,7 +157,6 @@ func (h *handlerImpl) AddDecisionTask(
 ) (resp *types.AddDecisionTaskResponse, retError error) {
 	defer func() { log.CapturePanic(recover(), h.logger, &retError) }()
 
-	startT := time.Now()
 	domainName := h.domainName(request.GetDomainUUID())
 	hCtx := h.newHandlerContext(
 		ctx,
@@ -183,11 +176,8 @@ func (h *handlerImpl) AddDecisionTask(
 		return nil, hCtx.handleErr(errMatchingHostThrottle)
 	}
 
-	syncMatch, err := h.engine.AddDecisionTask(hCtx, request)
-	if syncMatch {
-		hCtx.scope.RecordTimer(metrics.SyncMatchLatencyPerTaskList, time.Since(startT))
-	}
-	return &types.AddDecisionTaskResponse{}, hCtx.handleErr(err)
+	resp, err := h.engine.AddDecisionTask(hCtx, request)
+	return resp, hCtx.handleErr(err)
 }
 
 // PollForActivityTask - long poll for an activity task.

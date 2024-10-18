@@ -57,6 +57,7 @@ type (
 		String() string
 		GetTaskListKind() types.TaskListKind
 		TaskListID() *Identifier
+		TaskListPartitionConfig() *types.TaskListPartitionConfig
 	}
 
 	TaskMatcher interface {

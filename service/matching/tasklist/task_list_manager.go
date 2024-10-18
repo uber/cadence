@@ -121,6 +121,8 @@ type (
 		closeCallback        func(Manager)
 
 		qpsTracker stats.QPSTracker
+
+		adaptivePartitionConfig *types.TaskListPartitionConfig
 	}
 )
 
@@ -213,11 +215,17 @@ func NewManager(
 func (c *taskListManagerImpl) Start() error {
 	defer c.startWG.Done()
 
-	c.liveness.Start()
+	info, err := c.db.GetTaskListInfo(c.taskListID.GetRoot())
+	if err != nil {
+		c.Stop()
+		return err
+	}
+	c.adaptivePartitionConfig = info.AdaptivePartitionConfig.ToInternalType()
 	if err := c.taskWriter.Start(); err != nil {
 		c.Stop()
 		return err
 	}
+	c.liveness.Start()
 	c.taskReader.Start()
 	c.qpsTracker.Start()
 
@@ -251,6 +259,10 @@ func (c *taskListManagerImpl) handleErr(err error) error {
 		}
 	}
 	return err
+}
+
+func (c *taskListManagerImpl) TaskListPartitionConfig() *types.TaskListPartitionConfig {
+	return c.adaptivePartitionConfig
 }
 
 // AddTask adds a task to the task list. This method will first attempt a synchronous

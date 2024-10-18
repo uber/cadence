@@ -1514,9 +1514,13 @@ type addTaskRequest struct {
 	PartitionConfig               map[string]string
 }
 
-func addTask(engine *matchingEngineImpl, hCtx *handlerContext, request *addTaskRequest) (bool, error) {
+type addTaskResponse struct {
+	PartitionConfig *types.TaskListPartitionConfig
+}
+
+func addTask(engine *matchingEngineImpl, hCtx *handlerContext, request *addTaskRequest) (*addTaskResponse, error) {
 	if request.TaskType == persistence.TaskListTypeActivity {
-		return engine.AddActivityTask(hCtx, &types.AddActivityTaskRequest{
+		resp, err := engine.AddActivityTask(hCtx, &types.AddActivityTaskRequest{
 			SourceDomainUUID:              request.DomainUUID,
 			DomainUUID:                    request.DomainUUID,
 			Execution:                     request.Execution,
@@ -1527,8 +1531,14 @@ func addTask(engine *matchingEngineImpl, hCtx *handlerContext, request *addTaskR
 			ForwardedFrom:                 request.ForwardedFrom,
 			PartitionConfig:               request.PartitionConfig,
 		})
+		if err != nil {
+			return nil, err
+		}
+		return &addTaskResponse{
+			PartitionConfig: resp.PartitionConfig,
+		}, nil
 	}
-	return engine.AddDecisionTask(hCtx, &types.AddDecisionTaskRequest{
+	resp, err := engine.AddDecisionTask(hCtx, &types.AddDecisionTaskRequest{
 		DomainUUID:                    request.DomainUUID,
 		Execution:                     request.Execution,
 		TaskList:                      request.TaskList,
@@ -1538,6 +1548,12 @@ func addTask(engine *matchingEngineImpl, hCtx *handlerContext, request *addTaskR
 		ForwardedFrom:                 request.ForwardedFrom,
 		PartitionConfig:               request.PartitionConfig,
 	})
+	if err != nil {
+		return nil, err
+	}
+	return &addTaskResponse{
+		PartitionConfig: resp.PartitionConfig,
+	}, nil
 }
 
 type pollTaskRequest struct {

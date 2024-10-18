@@ -49,11 +49,12 @@ type (
 	}
 
 	testTaskListManager struct {
-		sync.Mutex
+		sync.RWMutex
 		rangeID         int64
 		ackLevel        int64
 		createTaskCount int
 		tasks           *treemap.Map
+		adaptivePartitionConfig *persistence.TaskListPartitionConfig
 	}
 )
 
@@ -104,7 +105,19 @@ func (m *TestTaskManager) GetTaskList(
 	_ context.Context,
 	request *persistence.GetTaskListRequest,
 ) (*persistence.GetTaskListResponse, error) {
-	return nil, fmt.Errorf("not implemented")
+	tlm := m.getTaskListManager(NewTestTaskListID(m.t, request.DomainID, request.TaskList, request.TaskType))
+	tlm.RLock()
+	defer tlm.RUnlock()
+	return &persistence.GetTaskListResponse{
+		TaskListInfo: &persistence.TaskListInfo{
+			AckLevel: tlm.ackLevel,
+			DomainID: request.DomainID,
+			Name:     request.TaskList,
+			TaskType: request.TaskType,
+			RangeID:  tlm.rangeID,
+			AdaptivePartitionConfig: tlm.adaptivePartitionConfig,
+		},
+	}, nil
 }
 
 // UpdateTaskList provides a mock function with given fields: ctx, request
