@@ -240,6 +240,20 @@ func (mr *MockManagerMockRecorder) TaskListID() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TaskListID", reflect.TypeOf((*MockManager)(nil).TaskListID))
 }
 
+// TaskListPartitionConfig mocks base method.
+func (m *MockManager) TaskListPartitionConfig() *types.TaskListPartitionConfig {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "TaskListPartitionConfig")
+	ret0, _ := ret[0].(*types.TaskListPartitionConfig)
+	return ret0
+}
+
+// TaskListPartitionConfig indicates an expected call of TaskListPartitionConfig.
+func (mr *MockManagerMockRecorder) TaskListPartitionConfig() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TaskListPartitionConfig", reflect.TypeOf((*MockManager)(nil).TaskListPartitionConfig))
+}
+
 // MockTaskMatcher is a mock of TaskMatcher interface.
 type MockTaskMatcher struct {
 	ctrl     *gomock.Controller
