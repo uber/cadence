@@ -321,7 +321,8 @@ func (e *matchingEngineImpl) removeTaskListManager(tlMgr tasklist.Manager) {
 func (e *matchingEngineImpl) AddDecisionTask(
 	hCtx *handlerContext,
 	request *types.AddDecisionTaskRequest,
-) (bool, error) {
+) (*types.AddDecisionTaskResponse, error) {
+	startT := time.Now()
 	domainID := request.GetDomainUUID()
 	taskListName := request.GetTaskList().GetName()
 	taskListKind := request.GetTaskList().Kind
@@ -355,13 +356,13 @@ func (e *matchingEngineImpl) AddDecisionTask(
 
 	taskListID, err := tasklist.NewIdentifier(domainID, taskListName, taskListType)
 	if err != nil {
-		return false, err
+		return nil, err
 	}
 
 	// get the domainName
 	domainName, err := e.domainCache.GetDomainName(domainID)
 	if err != nil {
-		return false, err
+		return nil, err
 	}
 
 	// Only emit traffic metrics if the tasklist is not sticky and is not forwarded
@@ -376,13 +377,13 @@ func (e *matchingEngineImpl) AddDecisionTask(
 
 	tlMgr, err := e.getTaskListManager(taskListID, taskListKind)
 	if err != nil {
-		return false, err
+		return nil, err
 	}
 
 	if taskListKind != nil && *taskListKind == types.TaskListKindSticky {
 		// check if the sticky worker is still available, if not, fail this request early
 		if !tlMgr.HasPollerAfter(e.timeSource.Now().Add(-_stickyPollerUnavailableWindow)) {
-			return false, _stickyPollerUnavailableError
+			return nil, _stickyPollerUnavailableError
 		}
 	}
 
@@ -396,18 +397,28 @@ func (e *matchingEngineImpl) AddDecisionTask(
 		PartitionConfig:        request.GetPartitionConfig(),
 	}
 
-	return tlMgr.AddTask(hCtx.Context, tasklist.AddTaskParams{
+	syncMatched, err := tlMgr.AddTask(hCtx.Context, tasklist.AddTaskParams{
 		TaskInfo:      taskInfo,
 		Source:        request.GetSource(),
 		ForwardedFrom: request.GetForwardedFrom(),
 	})
+	if err != nil {
+		return nil, err
+	}
+	if syncMatched {
+		hCtx.scope.RecordTimer(metrics.SyncMatchLatencyPerTaskList, time.Since(startT))
+	}
+	return &types.AddDecisionTaskResponse{
+		PartitionConfig: tlMgr.TaskListPartitionConfig(),
+	}, nil
 }
 
 // AddActivityTask either delivers task directly to waiting poller or save it into task list persistence.
 func (e *matchingEngineImpl) AddActivityTask(
 	hCtx *handlerContext,
 	request *types.AddActivityTaskRequest,
-) (bool, error) {
+) (*types.AddActivityTaskResponse, error) {
+	startT := time.Now()
 	domainID := request.GetDomainUUID()
 	taskListName := request.GetTaskList().GetName()
 	taskListKind := request.GetTaskList().Kind
@@ -427,13 +438,13 @@ func (e *matchingEngineImpl) AddActivityTask(
 
 	taskListID, err := tasklist.NewIdentifier(domainID, taskListName, taskListType)
 	if err != nil {
-		return false, err
+		return nil, err
 	}
 
 	// get the domainName
 	domainName, err := e.domainCache.GetDomainName(domainID)
 	if err != nil {
-		return false, err
+		return nil, err
 	}
 
 	// Only emit traffic metrics if the tasklist is not sticky and is not forwarded
@@ -448,7 +459,7 @@ func (e *matchingEngineImpl) AddActivityTask(
 
 	tlMgr, err := e.getTaskListManager(taskListID, taskListKind)
 	if err != nil {
-		return false, err
+		return nil, err
 	}
 
 	taskInfo := &persistence.TaskInfo{
@@ -461,12 +472,21 @@ func (e *matchingEngineImpl) AddActivityTask(
 		PartitionConfig:        request.GetPartitionConfig(),
 	}
 
-	return tlMgr.AddTask(hCtx.Context, tasklist.AddTaskParams{
+	syncMatched, err := tlMgr.AddTask(hCtx.Context, tasklist.AddTaskParams{
 		TaskInfo:                 taskInfo,
 		Source:                   request.GetSource(),
 		ForwardedFrom:            request.GetForwardedFrom(),
 		ActivityTaskDispatchInfo: request.ActivityTaskDispatchInfo,
 	})
+	if err != nil {
+		return nil, err
+	}
+	if syncMatched {
+		hCtx.scope.RecordTimer(metrics.SyncMatchLatencyPerTaskList, time.Since(startT))
+	}
+	return &types.AddActivityTaskResponse{
+		PartitionConfig: tlMgr.TaskListPartitionConfig(),
+	}, nil
 }
 
 // PollForDecisionTask tries to get the decision task using exponential backoff.
@@ -512,7 +532,11 @@ pollLoop:
 		pollerCtx := tasklist.ContextWithPollerID(hCtx.Context, pollerID)
 		pollerCtx = tasklist.ContextWithIdentity(pollerCtx, request.GetIdentity())
 		pollerCtx = tasklist.ContextWithIsolationGroup(pollerCtx, req.GetIsolationGroup())
-		task, err := e.getTask(pollerCtx, taskListID, nil, taskListKind)
+		tlMgr, err := e.getTaskListManager(taskListID, taskListKind)
+		if err != nil {
+			return nil, fmt.Errorf("couldn't load tasklist namanger: %w", err)
+		}
+		task, err := tlMgr.GetTask(pollerCtx, nil)
 		if err != nil {
 			// TODO: Is empty poll the best reply for errPumpClosed?
 			if errors.Is(err, tasklist.ErrNoTasks) || errors.Is(err, errPumpClosed) {
@@ -534,7 +558,9 @@ pollLoop:
 						"RequestForwardedFrom": req.GetForwardedFrom(),
 					},
 				})
-				return emptyPollForDecisionTaskResponse, nil
+				return &types.MatchingPollForDecisionTaskResponse{
+					PartitionConfig: tlMgr.TaskListPartitionConfig(),
+				}, nil
 			}
 			return nil, fmt.Errorf("couldn't get task: %w", err)
 		}
@@ -568,7 +594,9 @@ pollLoop:
 			if err != nil {
 				// will notify query client that the query task failed
 				e.deliverQueryResult(task.Query.TaskID, &queryResult{internalError: err}) //nolint:errcheck
-				return emptyPollForDecisionTaskResponse, nil
+				return &types.MatchingPollForDecisionTaskResponse{
+					PartitionConfig: tlMgr.TaskListPartitionConfig(),
+				}, nil
 			}
 
 			isStickyEnabled := false
@@ -585,7 +613,7 @@ pollLoop:
 				BranchToken:               mutableStateResp.CurrentBranchToken,
 				HistorySize:               mutableStateResp.HistorySize,
 			}
-			return e.createPollForDecisionTaskResponse(task, resp, hCtx.scope), nil
+			return e.createPollForDecisionTaskResponse(task, resp, hCtx.scope, tlMgr.TaskListPartitionConfig()), nil
 		}
 
 		e.emitTaskIsolationMetrics(hCtx.scope, task.Event.PartitionConfig, req.GetIsolationGroup())
@@ -641,7 +669,7 @@ pollLoop:
 			},
 		})
 
-		return e.createPollForDecisionTaskResponse(task, resp, hCtx.scope), nil
+		return e.createPollForDecisionTaskResponse(task, resp, hCtx.scope, tlMgr.TaskListPartitionConfig()), nil
 	}
 }
 
@@ -683,11 +711,17 @@ pollLoop:
 		pollerCtx = tasklist.ContextWithIdentity(pollerCtx, request.GetIdentity())
 		pollerCtx = tasklist.ContextWithIsolationGroup(pollerCtx, req.GetIsolationGroup())
 		taskListKind := request.TaskList.Kind
-		task, err := e.getTask(pollerCtx, taskListID, maxDispatch, taskListKind)
+		tlMgr, err := e.getTaskListManager(taskListID, taskListKind)
+		if err != nil {
+			return nil, fmt.Errorf("couldn't load tasklist namanger: %w", err)
+		}
+		task, err := tlMgr.GetTask(pollerCtx, maxDispatch)
 		if err != nil {
 			// TODO: Is empty poll the best reply for errPumpClosed?
 			if errors.Is(err, tasklist.ErrNoTasks) || errors.Is(err, errPumpClosed) {
-				return emptyPollForActivityTaskResponse, nil
+				return &types.MatchingPollForActivityTaskResponse{
+					PartitionConfig: tlMgr.TaskListPartitionConfig(),
+				}, nil
 			}
 			e.logger.Error("Received unexpected err while getting task",
 				tag.WorkflowTaskListName(taskListName),
@@ -705,7 +739,7 @@ pollLoop:
 		e.emitTaskIsolationMetrics(hCtx.scope, task.Event.PartitionConfig, req.GetIsolationGroup())
 		if task.ActivityTaskDispatchInfo != nil {
 			task.Finish(nil)
-			return e.createSyncMatchPollForActivityTaskResponse(task, task.ActivityTaskDispatchInfo), nil
+			return e.createSyncMatchPollForActivityTaskResponse(task, task.ActivityTaskDispatchInfo, tlMgr.TaskListPartitionConfig()), nil
 		}
 
 		resp, err := e.recordActivityTaskStarted(hCtx.Context, request, task)
@@ -737,13 +771,14 @@ pollLoop:
 			continue pollLoop
 		}
 		task.Finish(nil)
-		return e.createPollForActivityTaskResponse(task, resp, hCtx.scope), nil
+		return e.createPollForActivityTaskResponse(task, resp, hCtx.scope, tlMgr.TaskListPartitionConfig()), nil
 	}
 }
 
 func (e *matchingEngineImpl) createSyncMatchPollForActivityTaskResponse(
 	task *tasklist.InternalTask,
 	activityTaskDispatchInfo *types.ActivityTaskDispatchInfo,
+	partitionConfig *types.TaskListPartitionConfig,
 ) *types.MatchingPollForActivityTaskResponse {
 
 	scheduledEvent := activityTaskDispatchInfo.ScheduledEvent
@@ -777,6 +812,7 @@ func (e *matchingEngineImpl) createSyncMatchPollForActivityTaskResponse(
 	response.HeartbeatDetails = activityTaskDispatchInfo.HeartbeatDetails
 	response.WorkflowType = activityTaskDispatchInfo.WorkflowType
 	response.WorkflowDomain = activityTaskDispatchInfo.WorkflowDomain
+	response.PartitionConfig = partitionConfig
 	return response
 }
 
@@ -1006,15 +1042,6 @@ func (e *matchingEngineImpl) getAllPartitions(
 	return partitionKeys, nil
 }
 
-// Loads a task from persistence and wraps it in a task context
-func (e *matchingEngineImpl) getTask(ctx context.Context, taskList *tasklist.Identifier, maxDispatchPerSecond *float64, taskListKind *types.TaskListKind) (*tasklist.InternalTask, error) {
-	tlMgr, err := e.getTaskListManager(taskList, taskListKind)
-	if err != nil {
-		return nil, fmt.Errorf("couldn't load tasklist namanger: %w", err)
-	}
-	return tlMgr.GetTask(ctx, maxDispatchPerSecond)
-}
-
 func (e *matchingEngineImpl) unloadTaskList(tlMgr tasklist.Manager) {
 	id := tlMgr.TaskListID()
 	e.taskListsLock.Lock()
@@ -1033,6 +1060,7 @@ func (e *matchingEngineImpl) createPollForDecisionTaskResponse(
 	task *tasklist.InternalTask,
 	historyResponse *types.RecordDecisionTaskStartedResponse,
 	scope metrics.Scope,
+	partitionConfig *types.TaskListPartitionConfig,
 ) *types.MatchingPollForDecisionTaskResponse {
 
 	var token []byte
@@ -1067,6 +1095,7 @@ func (e *matchingEngineImpl) createPollForDecisionTaskResponse(
 		response.Query = task.Query.Request.QueryRequest.Query
 	}
 	response.BacklogCountHint = task.BacklogCountHint
+	response.PartitionConfig = partitionConfig
 	return response
 }
 
@@ -1075,6 +1104,7 @@ func (e *matchingEngineImpl) createPollForActivityTaskResponse(
 	task *tasklist.InternalTask,
 	historyResponse *types.RecordActivityTaskStartedResponse,
 	scope metrics.Scope,
+	partitionConfig *types.TaskListPartitionConfig,
 ) *types.MatchingPollForActivityTaskResponse {
 
 	scheduledEvent := historyResponse.ScheduledEvent
@@ -1118,6 +1148,7 @@ func (e *matchingEngineImpl) createPollForActivityTaskResponse(
 	response.HeartbeatDetails = historyResponse.HeartbeatDetails
 	response.WorkflowType = historyResponse.WorkflowType
 	response.WorkflowDomain = historyResponse.WorkflowDomain
+	response.PartitionConfig = partitionConfig
 	return response
 }
 

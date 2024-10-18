@@ -164,13 +164,27 @@ func (s *handlerSuite) TestAddActivityTask() {
 	testCases := []struct {
 		name       string
 		setupMocks func()
+		want       *types.AddActivityTaskResponse
 		err        error
 	}{
 		{
 			name: "Success case",
 			setupMocks: func() {
 				s.mockLimiter.EXPECT().Allow().Return(true).Times(1)
-				s.mockEngine.EXPECT().AddActivityTask(gomock.Any(), &request).Return(true, nil).Times(1)
+				s.mockEngine.EXPECT().AddActivityTask(gomock.Any(), &request).Return(&types.AddActivityTaskResponse{
+					PartitionConfig: &types.TaskListPartitionConfig{
+						Version:            1,
+						NumReadPartitions:  2,
+						NumWritePartitions: 2,
+					},
+				}, nil).Times(1)
+			},
+			want: &types.AddActivityTaskResponse{
+				PartitionConfig: &types.TaskListPartitionConfig{
+					Version:            1,
+					NumReadPartitions:  2,
+					NumWritePartitions: 2,
+				},
 			},
 		},
 		{
@@ -184,7 +198,7 @@ func (s *handlerSuite) TestAddActivityTask() {
 			name: "Error case - AddActivityTask failed",
 			setupMocks: func() {
 				s.mockLimiter.EXPECT().Allow().Return(true).Times(1) // Ensure Allow() returns true
-				s.mockEngine.EXPECT().AddActivityTask(gomock.Any(), &request).Return(false, errors.New("add-activity-error")).Times(1)
+				s.mockEngine.EXPECT().AddActivityTask(gomock.Any(), &request).Return(nil, errors.New("add-activity-error")).Times(1)
 			},
 			err: &types.InternalServiceError{Message: "add-activity-error"},
 		},
@@ -195,12 +209,13 @@ func (s *handlerSuite) TestAddActivityTask() {
 			tc.setupMocks()
 			s.mockDomainCache.EXPECT().GetDomainName(request.DomainUUID).Return(s.testDomain, nil).Times(1)
 
-			_, err := s.handler.AddActivityTask(context.Background(), &request)
+			resp, err := s.handler.AddActivityTask(context.Background(), &request)
 
 			if tc.err != nil {
 				s.Error(err)
 				s.Equal(tc.err, err)
 			} else {
+				s.Equal(tc.want, resp)
 				s.NoError(err)
 			}
 		})
@@ -217,13 +232,27 @@ func (s *handlerSuite) TestAddDecisionTask() {
 	testCases := []struct {
 		name       string
 		setupMocks func()
+		want       *types.AddDecisionTaskResponse
 		err        error
 	}{
 		{
 			name: "Success case",
 			setupMocks: func() {
 				s.mockLimiter.EXPECT().Allow().Return(true).Times(1)
-				s.mockEngine.EXPECT().AddDecisionTask(gomock.Any(), &request).Return(true, nil).Times(1)
+				s.mockEngine.EXPECT().AddDecisionTask(gomock.Any(), &request).Return(&types.AddDecisionTaskResponse{
+					PartitionConfig: &types.TaskListPartitionConfig{
+						Version:            1,
+						NumReadPartitions:  2,
+						NumWritePartitions: 2,
+					},
+				}, nil).Times(1)
+			},
+			want: &types.AddDecisionTaskResponse{
+				PartitionConfig: &types.TaskListPartitionConfig{
+					Version:            1,
+					NumReadPartitions:  2,
+					NumWritePartitions: 2,
+				},
 			},
 		},
 		{
@@ -237,7 +266,7 @@ func (s *handlerSuite) TestAddDecisionTask() {
 			name: "Error case - AddDecisionTask failed",
 			setupMocks: func() {
 				s.mockLimiter.EXPECT().Allow().Return(true).Times(1) // Ensure Allow() returns true
-				s.mockEngine.EXPECT().AddDecisionTask(gomock.Any(), &request).Return(false, errors.New("add-decision-error")).Times(1)
+				s.mockEngine.EXPECT().AddDecisionTask(gomock.Any(), &request).Return(nil, errors.New("add-decision-error")).Times(1)
 			},
 			err: &types.InternalServiceError{Message: "add-decision-error"},
 		},
@@ -248,12 +277,13 @@ func (s *handlerSuite) TestAddDecisionTask() {
 			tc.setupMocks()
 			s.mockDomainCache.EXPECT().GetDomainName(request.DomainUUID).Return(s.testDomain, nil).Times(1)
 
-			_, err := s.handler.AddDecisionTask(context.Background(), &request)
+			resp, err := s.handler.AddDecisionTask(context.Background(), &request)
 
 			if tc.err != nil {
 				s.Error(err)
 				s.Equal(tc.err, err)
 			} else {
+				s.Equal(tc.want, resp)
 				s.NoError(err)
 			}
 		})

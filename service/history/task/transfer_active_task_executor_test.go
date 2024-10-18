@@ -596,8 +596,8 @@ func (s *transferActiveTaskExecutorSuite) TestProcessDecisionTask_StickyWorkerUn
 	}
 
 	gomock.InOrder(
-		s.mockMatchingClient.EXPECT().AddDecisionTask(gomock.Any(), addDecisionTaskRequest).Return(&types.StickyWorkerUnavailableError{}).Times(1),
-		s.mockMatchingClient.EXPECT().AddDecisionTask(gomock.Any(), gomock.Eq(&modifiedRequest)).Return(nil).Times(1),
+		s.mockMatchingClient.EXPECT().AddDecisionTask(gomock.Any(), addDecisionTaskRequest).Return(nil, &types.StickyWorkerUnavailableError{}).Times(1),
+		s.mockMatchingClient.EXPECT().AddDecisionTask(gomock.Any(), gomock.Eq(&modifiedRequest)).Return(&types.AddDecisionTaskResponse{}, nil).Times(1),
 	)
 
 	err = s.transferActiveTaskExecutor.Execute(transferTask, true)
