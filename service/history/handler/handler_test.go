@@ -3621,6 +3621,7 @@ func TestRatelimitUpdate(t *testing.T) {
 	require.NoError(t, err)
 	alg, err := algorithm.New(
 		metrics.NewNoopMetricsClient(),
+		testlogger.New(t),
 		algorithm.Config{
 			NewDataWeight:  func(opts ...dynamicconfig.FilterOption) float64 { return 0.5 },
 			UpdateInterval: func(opts ...dynamicconfig.FilterOption) time.Duration { return 3 * time.Second },
