@@ -52,32 +52,32 @@ func NewMatchingClient(client matching.Client, metricsClient metrics.Client) mat
 	}
 }
 
-func (c *matchingClient) AddActivityTask(ctx context.Context, ap1 *types.AddActivityTaskRequest, p1 ...yarpc.CallOption) (err error) {
+func (c *matchingClient) AddActivityTask(ctx context.Context, ap1 *types.AddActivityTaskRequest, p1 ...yarpc.CallOption) (ap2 *types.AddActivityTaskResponse, err error) {
 	c.metricsClient.IncCounter(metrics.MatchingClientAddActivityTaskScope, metrics.CadenceClientRequests)
 	c.emitForwardedFromStats(metrics.MatchingClientAddActivityTaskScope, ap1)
 
 	sw := c.metricsClient.StartTimer(metrics.MatchingClientAddActivityTaskScope, metrics.CadenceClientLatency)
-	err = c.client.AddActivityTask(ctx, ap1, p1...)
+	ap2, err = c.client.AddActivityTask(ctx, ap1, p1...)
 	sw.Stop()
 
 	if err != nil {
 		c.metricsClient.IncCounter(metrics.MatchingClientAddActivityTaskScope, metrics.CadenceClientFailures)
 	}
-	return err
+	return ap2, err
 }
 
-func (c *matchingClient) AddDecisionTask(ctx context.Context, ap1 *types.AddDecisionTaskRequest, p1 ...yarpc.CallOption) (err error) {
+func (c *matchingClient) AddDecisionTask(ctx context.Context, ap1 *types.AddDecisionTaskRequest, p1 ...yarpc.CallOption) (ap2 *types.AddDecisionTaskResponse, err error) {
 	c.metricsClient.IncCounter(metrics.MatchingClientAddDecisionTaskScope, metrics.CadenceClientRequests)
 	c.emitForwardedFromStats(metrics.MatchingClientAddDecisionTaskScope, ap1)
 
 	sw := c.metricsClient.StartTimer(metrics.MatchingClientAddDecisionTaskScope, metrics.CadenceClientLatency)
-	err = c.client.AddDecisionTask(ctx, ap1, p1...)
+	ap2, err = c.client.AddDecisionTask(ctx, ap1, p1...)
 	sw.Stop()
 
 	if err != nil {
 		c.metricsClient.IncCounter(metrics.MatchingClientAddDecisionTaskScope, metrics.CadenceClientFailures)
 	}
-	return err
+	return ap2, err
 }
 
 func (c *matchingClient) CancelOutstandingPoll(ctx context.Context, cp1 *types.CancelOutstandingPollRequest, p1 ...yarpc.CallOption) (err error) {

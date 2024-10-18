@@ -41,6 +41,18 @@ func TestMatchingAddDecisionTaskRequest(t *testing.T) {
 	}
 }
 
+func TestMatchingAddActivityTaskResponse(t *testing.T) {
+	for _, item := range []*types.AddActivityTaskResponse{nil, {}, &testdata.MatchingAddActivityTaskResponse} {
+		assert.Equal(t, item, ToMatchingAddActivityTaskResponse(FromMatchingAddActivityTaskResponse(item)))
+	}
+}
+
+func TestMatchingAddDecisionTaskResponse(t *testing.T) {
+	for _, item := range []*types.AddDecisionTaskResponse{nil, {}, &testdata.MatchingAddDecisionTaskResponse} {
+		assert.Equal(t, item, ToMatchingAddDecisionTaskResponse(FromMatchingAddDecisionTaskResponse(item)))
+	}
+}
+
 func TestMatchingCancelOutstandingPollRequest(t *testing.T) {
 	for _, item := range []*types.CancelOutstandingPollRequest{nil, {}, &testdata.MatchingCancelOutstandingPollRequest} {
 		assert.Equal(t, item, ToMatchingCancelOutstandingPollRequest(FromMatchingCancelOutstandingPollRequest(item)))
@@ -86,6 +98,12 @@ func TestMatchingPollForActivityTaskRequest(t *testing.T) {
 func TestMatchingPollForActivityTaskResponse(t *testing.T) {
 	for _, item := range []*types.MatchingPollForActivityTaskResponse{nil, {}, &testdata.MatchingPollForActivityTaskResponse} {
 		assert.Equal(t, item, ToMatchingPollForActivityTaskResponse(FromMatchingPollForActivityTaskResponse(item)))
+	}
+}
+
+func TestTaskListPartitionConfig(t *testing.T) {
+	for _, item := range []*types.TaskListPartitionConfig{nil, {}, &testdata.TaskListPartitionConfig} {
+		assert.Equal(t, item, ToTaskListPartitionConfig(FromTaskListPartitionConfig(item)))
 	}
 }
 

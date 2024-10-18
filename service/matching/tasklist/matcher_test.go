@@ -204,7 +204,7 @@ func (t *MatcherTestSuite) testRemoteSyncMatch(taskSource types.TaskSource, isol
 			}
 			remoteSyncMatch, err = t.rootMatcher.Offer(ctx, task)
 		},
-	).Return(nil)
+	).Return(&types.AddDecisionTaskResponse{}, nil)
 
 	_, err0 := t.matcher.Offer(ctx, task)
 	t.NoError(err0)
@@ -226,7 +226,7 @@ func (t *MatcherTestSuite) TestSyncMatchFailure() {
 		func(arg0 context.Context, arg1 *types.AddDecisionTaskRequest, option ...yarpc.CallOption) {
 			req = arg1
 		},
-	).Return(&types.ServiceBusyError{})
+	).Return(nil, &types.ServiceBusyError{})
 
 	syncMatch, err := t.matcher.Offer(ctx, task)
 	cancel()
@@ -241,7 +241,7 @@ func (t *MatcherTestSuite) TestRateLimitHandling() {
 	scope.On("RecordTimer", mock.Anything, mock.Anything)
 	t.matcher.scope = &scope
 	for i := 0; i < 5; i++ {
-		t.client.EXPECT().AddDecisionTask(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+		t.client.EXPECT().AddDecisionTask(gomock.Any(), gomock.Any()).Return(&types.AddDecisionTaskResponse{}, nil).AnyTimes()
 		task := newInternalTask(t.newTaskInfo(), nil, types.TaskSourceHistory, "", true, nil, "")
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		_, err := t.matcher.Offer(ctx, task)
@@ -444,7 +444,7 @@ func (t *MatcherTestSuite) TestMustOfferRemoteMatch() {
 	var err error
 	var remoteSyncMatch bool
 	var req *types.AddDecisionTaskRequest
-	t.client.EXPECT().AddDecisionTask(gomock.Any(), gomock.Any()).Return(&types.ServiceBusyError{}).Times(1)
+	t.client.EXPECT().AddDecisionTask(gomock.Any(), gomock.Any()).Return(nil, &types.ServiceBusyError{}).Times(1)
 	t.client.EXPECT().AddDecisionTask(gomock.Any(), gomock.Any()).Do(
 		func(arg0 context.Context, arg1 *types.AddDecisionTaskRequest, option ...yarpc.CallOption) {
 			req = arg1
@@ -452,7 +452,7 @@ func (t *MatcherTestSuite) TestMustOfferRemoteMatch() {
 			close(pollSigC)
 			remoteSyncMatch, err = t.rootMatcher.Offer(ctx, task)
 		},
-	).Return(nil)
+	).Return(&types.AddDecisionTaskResponse{}, nil)
 
 	// Poll needs to happen before MustOffer, or else it goes into the non-blocking path.
 	var pollResultMu sync.Mutex
@@ -488,7 +488,7 @@ func (t *MatcherTestSuite) TestMustOfferRemoteRateLimit() {
 	completionFunc := func(*persistence.TaskInfo, error) {}
 	for i := 0; i < 5; i++ {
 		scope.On("IncCounter", metrics.AsyncMatchForwardPollCounterPerTaskList)
-		t.client.EXPECT().AddDecisionTask(gomock.Any(), gomock.Any()).Return(nil)
+		t.client.EXPECT().AddDecisionTask(gomock.Any(), gomock.Any()).Return(&types.AddDecisionTaskResponse{}, nil)
 		task := newInternalTask(t.newTaskInfo(), completionFunc, types.TaskSourceDbBacklog, "", false, nil, "")
 		ctx, cancel := context.WithTimeout(context.Background(), 4*time.Second)
 		t.NoError(t.matcher.MustOffer(ctx, task))
@@ -528,7 +528,7 @@ func (t *MatcherTestSuite) TestIsolationMustOfferRemoteMatch() {
 	var err error
 	var remoteSyncMatch bool
 	var req *types.AddDecisionTaskRequest
-	t.client.EXPECT().AddDecisionTask(gomock.Any(), gomock.Any()).Return(&types.ServiceBusyError{}).Times(1)
+	t.client.EXPECT().AddDecisionTask(gomock.Any(), gomock.Any()).Return(nil, &types.ServiceBusyError{}).Times(1)
 	t.client.EXPECT().AddDecisionTask(gomock.Any(), gomock.Any()).Do(
 		func(arg0 context.Context, arg1 *types.AddDecisionTaskRequest, option ...yarpc.CallOption) {
 			req = arg1
@@ -536,7 +536,7 @@ func (t *MatcherTestSuite) TestIsolationMustOfferRemoteMatch() {
 			close(pollSigC)
 			remoteSyncMatch, err = t.rootMatcher.Offer(arg0, task)
 		},
-	).Return(nil)
+	).Return(&types.AddDecisionTaskResponse{}, nil)
 
 	// Poll needs to happen before MustOffer, or else it goes into the non-blocking path.
 	var pollResultMu sync.Mutex

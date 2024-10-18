@@ -85,6 +85,12 @@ service MatchingAPI {
   rpc GetTaskListsByDomain(GetTaskListsByDomainRequest) returns (GetTaskListsByDomainResponse);
 }
 
+message TaskListPartitionConfig {
+  int64 version = 1;
+  int32 num_read_partitions = 2;
+  int32 num_write_partitions = 3;
+}
+
 message PollForDecisionTaskRequest {
   api.v1.PollForDecisionTaskRequest request = 1;
   string domain_id = 2;
@@ -112,6 +118,7 @@ message PollForDecisionTaskResponse {
   google.protobuf.Timestamp started_time = 16;
   map<string, api.v1.WorkflowQuery> queries = 17;
   int64 total_history_bytes = 18;
+  TaskListPartitionConfig partition_config = 19;
 }
 
 message PollForActivityTaskRequest {
@@ -139,6 +146,7 @@ message PollForActivityTaskResponse {
   api.v1.WorkflowType workflow_type = 14;
   string workflow_domain = 15;
   api.v1.Header header = 16;
+  TaskListPartitionConfig partition_config = 19;
 }
 
 message AddDecisionTaskRequest {
@@ -153,6 +161,7 @@ message AddDecisionTaskRequest {
 }
 
 message AddDecisionTaskResponse {
+  TaskListPartitionConfig partition_config = 1;
 }
 
 message AddActivityTaskRequest {
@@ -168,7 +177,6 @@ message AddActivityTaskRequest {
   map<string, string> partition_config = 10;
 }
 
-
 message ActivityTaskDispatchInfo {
   api.v1.HistoryEvent scheduled_event = 1;
   google.protobuf.Timestamp started_time = 2;
@@ -180,6 +188,7 @@ message ActivityTaskDispatchInfo {
 }
 
 message AddActivityTaskResponse {
+  TaskListPartitionConfig partition_config = 1;
 }
 
 message QueryWorkflowRequest {
@@ -242,4 +251,3 @@ message GetTaskListsByDomainResponse {
   map <string,DescribeTaskListResponse> decision_task_list_map = 1;
   map <string,DescribeTaskListResponse> activity_task_list_map = 2;
 }
-
