@@ -213,6 +213,8 @@ const (
 	PersistenceGetOrphanTasksScope
 	// PersistenceLeaseTaskListScope tracks LeaseTaskList calls made by service to persistence layer
 	PersistenceLeaseTaskListScope
+	// PersistenceGetTaskListScope tracks GetTaskList calls made by service to persistence layer
+	PersistenceGetTaskListScope
 	// PersistenceUpdateTaskListScope tracks PersistenceUpdateTaskListScope calls made by service to persistence layer
 	PersistenceUpdateTaskListScope
 	// PersistenceListTaskListScope is the metric scope for persistence.TaskManager.ListTaskList API
@@ -1418,6 +1420,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		PersistenceCompleteTasksLessThanScope:                    {operation: "CompleteTasksLessThan"},
 		PersistenceGetOrphanTasksScope:                           {operation: "GetOrphanTasks"},
 		PersistenceLeaseTaskListScope:                            {operation: "LeaseTaskList"},
+		PersistenceGetTaskListScope:                              {operation: "GetTaskList"},
 		PersistenceUpdateTaskListScope:                           {operation: "UpdateTaskList"},
 		PersistenceListTaskListScope:                             {operation: "ListTaskList"},
 		PersistenceDeleteTaskListScope:                           {operation: "DeleteTaskList"},

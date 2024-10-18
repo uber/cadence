@@ -57,6 +57,10 @@ func (t *taskManager) LeaseTaskList(ctx context.Context, request *LeaseTaskListR
 	return t.persistence.LeaseTaskList(ctx, request)
 }
 
+func (t *taskManager) GetTaskList(ctx context.Context, request *GetTaskListRequest) (*GetTaskListResponse, error) {
+	return t.persistence.GetTaskList(ctx, request)
+}
+
 func (t *taskManager) UpdateTaskList(ctx context.Context, request *UpdateTaskListRequest) (*UpdateTaskListResponse, error) {
 	return t.persistence.UpdateTaskList(ctx, request)
 }

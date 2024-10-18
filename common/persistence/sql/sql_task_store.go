@@ -189,18 +189,70 @@ func (m *sqlTaskStore) LeaseTaskList(
 		if rowsAffected == 0 {
 			return fmt.Errorf("%v rows affected instead of 1", rowsAffected)
 		}
+		var c *persistence.TaskListPartitionConfig
+		if tlInfo.AdaptivePartitionConfig != nil {
+			c = &persistence.TaskListPartitionConfig{
+				Version:            tlInfo.AdaptivePartitionConfig.Version,
+				NumReadPartitions:  int(tlInfo.AdaptivePartitionConfig.NumReadPartitions),
+				NumWritePartitions: int(tlInfo.AdaptivePartitionConfig.NumWritePartitions),
+			}
+		}
 		resp = &persistence.LeaseTaskListResponse{TaskListInfo: &persistence.TaskListInfo{
-			DomainID:    request.DomainID,
-			Name:        request.TaskList,
-			TaskType:    request.TaskType,
-			RangeID:     rangeID + 1,
-			AckLevel:    ackLevel,
-			Kind:        request.TaskListKind,
-			LastUpdated: now,
+			DomainID:                request.DomainID,
+			Name:                    request.TaskList,
+			TaskType:                request.TaskType,
+			RangeID:                 rangeID + 1,
+			AckLevel:                ackLevel,
+			Kind:                    request.TaskListKind,
+			LastUpdated:             now,
+			AdaptivePartitionConfig: c,
 		}}
 		return nil
 	})
 	return resp, err
+}
+
+func (m *sqlTaskStore) GetTaskList(
+	ctx context.Context,
+	request *persistence.GetTaskListRequest,
+) (*persistence.GetTaskListResponse, error) {
+	dbShardID := sqlplugin.GetDBShardIDFromDomainIDAndTasklist(request.DomainID, request.TaskList, m.db.GetTotalNumDBShards())
+
+	domainID := serialization.MustParseUUID(request.DomainID)
+	rows, err := m.db.SelectFromTaskLists(ctx, &sqlplugin.TaskListsFilter{
+		ShardID:  dbShardID,
+		DomainID: &domainID,
+		Name:     &request.TaskList,
+		TaskType: common.Int64Ptr(int64(request.TaskType))})
+	if err != nil {
+		return nil, convertCommonErrors(m.db, "GetTaskList", "", err)
+	}
+	row := rows[0]
+	tlInfo, err := m.parser.TaskListInfoFromBlob(row.Data, row.DataEncoding)
+	if err != nil {
+		return nil, err
+	}
+	var c *persistence.TaskListPartitionConfig
+	if tlInfo.AdaptivePartitionConfig != nil {
+		c = &persistence.TaskListPartitionConfig{
+			Version:            tlInfo.AdaptivePartitionConfig.Version,
+			NumReadPartitions:  int(tlInfo.AdaptivePartitionConfig.NumReadPartitions),
+			NumWritePartitions: int(tlInfo.AdaptivePartitionConfig.NumWritePartitions),
+		}
+	}
+	return &persistence.GetTaskListResponse{
+		TaskListInfo: &persistence.TaskListInfo{
+			DomainID:                request.DomainID,
+			Name:                    request.TaskList,
+			TaskType:                request.TaskType,
+			RangeID:                 row.RangeID,
+			AckLevel:                tlInfo.AckLevel,
+			Kind:                    int(tlInfo.Kind),
+			Expiry:                  tlInfo.ExpiryTimestamp,
+			LastUpdated:             tlInfo.LastUpdated,
+			AdaptivePartitionConfig: c,
+		},
+	}, nil
 }
 
 func (m *sqlTaskStore) UpdateTaskList(
@@ -209,11 +261,20 @@ func (m *sqlTaskStore) UpdateTaskList(
 ) (*persistence.UpdateTaskListResponse, error) {
 	dbShardID := sqlplugin.GetDBShardIDFromDomainIDAndTasklist(request.TaskListInfo.DomainID, request.TaskListInfo.Name, m.db.GetTotalNumDBShards())
 	domainID := serialization.MustParseUUID(request.TaskListInfo.DomainID)
+	var c *serialization.TaskListPartitionConfig
+	if request.TaskListInfo.AdaptivePartitionConfig != nil {
+		c = &serialization.TaskListPartitionConfig{
+			Version:            request.TaskListInfo.AdaptivePartitionConfig.Version,
+			NumReadPartitions:  int32(request.TaskListInfo.AdaptivePartitionConfig.NumReadPartitions),
+			NumWritePartitions: int32(request.TaskListInfo.AdaptivePartitionConfig.NumWritePartitions),
+		}
+	}
 	tlInfo := &serialization.TaskListInfo{
-		AckLevel:        request.TaskListInfo.AckLevel,
-		Kind:            int16(request.TaskListInfo.Kind),
-		ExpiryTimestamp: time.Unix(0, 0),
-		LastUpdated:     time.Now(),
+		AckLevel:                request.TaskListInfo.AckLevel,
+		Kind:                    int16(request.TaskListInfo.Kind),
+		ExpiryTimestamp:         time.Unix(0, 0),
+		LastUpdated:             time.Now(),
+		AdaptivePartitionConfig: c,
 	}
 	if request.TaskListInfo.Kind == persistence.TaskListKindSticky {
 		tlInfo.ExpiryTimestamp = stickyTaskListExpiry()
