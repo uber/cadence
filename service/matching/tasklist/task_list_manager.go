@@ -98,7 +98,7 @@ type (
 		liveness        *liveness.Liveness
 		taskGC          *taskGC
 		taskAckManager  messaging.AckManager // tracks ackLevel for delivered messages
-		matcher         *TaskMatcher         // for matching a task producer with a poller
+		matcher         TaskMatcher          // for matching a task producer with a poller
 		clusterMetadata cluster.Metadata
 		domainCache     cache.DomainCache
 		partitioner     partition.Partitioner
@@ -201,7 +201,7 @@ func NewManager(
 	if tlMgr.isFowardingAllowed(taskList, *taskListKind) {
 		fwdr = newForwarder(&taskListConfig.ForwarderConfig, taskList, *taskListKind, matchingClient, isolationGroups, scope)
 	}
-	tlMgr.matcher = newTaskMatcher(taskListConfig, fwdr, tlMgr.scope, isolationGroups, tlMgr.logger, taskList, *taskListKind)
+	tlMgr.matcher = newTaskMatcher(taskListConfig, fwdr, tlMgr.scope, isolationGroups, tlMgr.logger, taskList, *taskListKind).(*taskMatcherImpl)
 	tlMgr.taskWriter = newTaskWriter(tlMgr)
 	tlMgr.taskReader = newTaskReader(tlMgr, isolationGroups)
 	tlMgr.startWG.Add(1)
@@ -570,7 +570,7 @@ func (c *taskListManagerImpl) trySyncMatch(ctx context.Context, params AddTaskPa
 	var matched bool
 	var err error
 	if params.ActivityTaskDispatchInfo != nil {
-		matched, err = c.matcher.offerOrTimeout(childCtx, c.timeSource.Now(), task)
+		matched, err = c.matcher.OfferOrTimeout(childCtx, c.timeSource.Now(), task)
 	} else {
 		matched, err = c.matcher.Offer(childCtx, task)
 	}
