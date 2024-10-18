@@ -26,6 +26,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"reflect"
 	"testing"
 	"time"
@@ -52,6 +53,14 @@ func TestClient(t *testing.T) {
 		return impl.(*client), hc, pr
 	}
 
+	encode := func(t *testing.T, w map[algorithm.Limit]algorithm.HostUsage) (*types.RatelimitUpdateResponse, error) {
+		a, err := AggregatorWeightsToAny(w)
+		assert.NoError(t, err, "should be impossible: could not encode aggregator response to any")
+		return &types.RatelimitUpdateResponse{
+			Any: a,
+		}, nil
+	}
+
 	t.Run("valid request", func(t *testing.T) {
 		c, hc, pr := setup(t)
 		data := map[shared.GlobalKey]Calls{
@@ -69,13 +78,6 @@ func TestClient(t *testing.T) {
 			"b": {Weight: 0.2, UsedRPS: used},
 			"c": {Weight: 0.3, UsedRPS: used},
 		}
-		encode := func(w map[algorithm.Limit]algorithm.HostUsage) (*types.RatelimitUpdateResponse, error) {
-			a, err := AggregatorWeightsToAny(w)
-			assert.NoError(t, err, "should be impossible: could not encode aggregator response to any")
-			return &types.RatelimitUpdateResponse{
-				Any: a,
-			}, nil
-		}
 		stringKeys := make([]string, 0, len(data))
 		for k := range data {
 			stringKeys = append(stringKeys, string(k))
@@ -86,10 +88,10 @@ func TestClient(t *testing.T) {
 		}, nil)
 		hc.EXPECT().
 			RatelimitUpdate(gomock.Any(), matchrequest{t, []string{"a", "c"}}, matchyarpc{t, yarpc.WithShardKey("agg-1")}).
-			Return(encode(map[algorithm.Limit]algorithm.HostUsage{"a": {Weight: 0.1, Used: algorithm.PerSecond(used)}, "c": {Weight: 0.3, Used: algorithm.PerSecond(used)}}))
+			Return(encode(t, map[algorithm.Limit]algorithm.HostUsage{"a": {Weight: 0.1, Used: algorithm.PerSecond(used)}, "c": {Weight: 0.3, Used: algorithm.PerSecond(used)}}))
 		hc.EXPECT().
 			RatelimitUpdate(gomock.Any(), matchrequest{t, []string{"b"}}, matchyarpc{t, yarpc.WithShardKey("agg-2")}).
-			Return(encode(map[algorithm.Limit]algorithm.HostUsage{"b": {Weight: 0.2, Used: algorithm.PerSecond(used)}}))
+			Return(encode(t, map[algorithm.Limit]algorithm.HostUsage{"b": {Weight: 0.2, Used: algorithm.PerSecond(used)}}))
 
 		result := c.Update(context.Background(), time.Second, data)
 		assert.NoError(t, result.Err)
@@ -102,6 +104,24 @@ func TestClient(t *testing.T) {
 		res := c.Update(context.Background(), time.Second, nil)
 		assert.ErrorContains(t, res.Err, "unable to shard")
 		assert.ErrorIs(t, res.Err, err) // should contain the cause
+	})
+	t.Run("bad math", func(t *testing.T) {
+		// the client should validate responses to make sure they do not contain
+		// known-to-be-invalid data.
+		c, hc, pr := setup(t)
+		pr.EXPECT().GlobalRatelimitPeers([]string{"a"}).
+			Return(map[history.Peer][]string{"agg-1": {"a"}}, nil)
+		hc.EXPECT().RatelimitUpdate(gomock.Any(), gomock.Any(), gomock.Any()).
+			Return(encode(t, map[algorithm.Limit]algorithm.HostUsage{"a": {
+				Weight: algorithm.HostWeight(math.NaN()), // invalid value from agg, detected after deserializing
+				Used:   1,
+			}}))
+
+		result := c.Update(context.Background(), time.Second, map[shared.GlobalKey]Calls{"a": {10, 20}})
+		assert.Empty(t, result.Weights, "bad data should lead to no usable response")
+		assert.ErrorContains(t, result.Err, `bad value for key "a"`, "failure should mention the key")
+		assert.ErrorContains(t, result.Err, "is NaN", "failure should mention the bad value type")
+		assert.ErrorContains(t, result.Err, "potentially fatal error during ratelimit update requests", "failure should look alarming")
 	})
 }
 

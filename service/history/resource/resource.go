@@ -136,6 +136,7 @@ func New(
 	)
 	ratelimitAlgorithm, err := algorithm.New(
 		params.MetricsClient,
+		params.Logger,
 		algorithm.Config{
 			NewDataWeight:  config.GlobalRatelimiterNewDataWeight,
 			UpdateInterval: config.GlobalRatelimiterUpdateInterval,
