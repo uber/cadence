@@ -509,3 +509,41 @@ func TestCopyPartitionConfig(t *testing.T) {
 		})
 	}
 }
+
+func TestTaskListPartitionConfigToInternalType(t *testing.T) {
+	testCases := []struct {
+		name   string
+		input  *TaskListPartitionConfig
+		expect *types.TaskListPartitionConfig
+	}{
+		{
+			name:   "nil case",
+			input:  nil,
+			expect: nil,
+		},
+		{
+			name:   "empty case",
+			input:  &TaskListPartitionConfig{},
+			expect: &types.TaskListPartitionConfig{},
+		},
+		{
+			name: "normal case",
+			input: &TaskListPartitionConfig{
+				Version:            1,
+				NumReadPartitions:  2,
+				NumWritePartitions: 3,
+			},
+			expect: &types.TaskListPartitionConfig{
+				Version:            1,
+				NumReadPartitions:  2,
+				NumWritePartitions: 3,
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.expect, tc.input.ToInternalType())
+		})
+	}
+}

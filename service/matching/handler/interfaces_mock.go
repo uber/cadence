@@ -59,10 +59,10 @@ func (m *MockEngine) EXPECT() *MockEngineMockRecorder {
 }
 
 // AddActivityTask mocks base method.
-func (m *MockEngine) AddActivityTask(hCtx *handlerContext, request *types.AddActivityTaskRequest) (bool, error) {
+func (m *MockEngine) AddActivityTask(hCtx *handlerContext, request *types.AddActivityTaskRequest) (*types.AddActivityTaskResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AddActivityTask", hCtx, request)
-	ret0, _ := ret[0].(bool)
+	ret0, _ := ret[0].(*types.AddActivityTaskResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -74,10 +74,10 @@ func (mr *MockEngineMockRecorder) AddActivityTask(hCtx, request interface{}) *go
 }
 
 // AddDecisionTask mocks base method.
-func (m *MockEngine) AddDecisionTask(hCtx *handlerContext, request *types.AddDecisionTaskRequest) (bool, error) {
+func (m *MockEngine) AddDecisionTask(hCtx *handlerContext, request *types.AddDecisionTaskRequest) (*types.AddDecisionTaskResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AddDecisionTask", hCtx, request)
-	ret0, _ := ret[0].(bool)
+	ret0, _ := ret[0].(*types.AddDecisionTaskResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

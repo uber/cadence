@@ -928,3 +928,56 @@ func TestTaskListManagerImpl_HasPollerAfter(t *testing.T) {
 func getIsolationgroupsHelper() []string {
 	return []string{"datacenterA", "datacenterB"}
 }
+
+func TestLoadTaskListPartitionConfig(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	mockPartitioner := partition.NewMockPartitioner(ctrl)
+	mockPartitioner.EXPECT().GetIsolationGroupByDomainID(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("", nil).AnyTimes()
+	mockDomainCache := cache.NewMockDomainCache(ctrl)
+	mockDomainCache.EXPECT().GetDomainByID(gomock.Any()).Return(cache.CreateDomainCacheEntry("domainName"), nil).AnyTimes()
+	mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return("domainName", nil).AnyTimes()
+
+	mockTm := persistence.NewMockTaskManager(ctrl)
+	mockTm.EXPECT().GetTaskList(gomock.Any(), &persistence.GetTaskListRequest{
+		DomainID:   "domain",
+		DomainName: "domainName",
+		TaskList:   "tasklist",
+		TaskType:   persistence.TaskListTypeActivity,
+	}).Return(nil, errors.New("error")).Times(1)
+	mockTm.EXPECT().GetTaskList(gomock.Any(), &persistence.GetTaskListRequest{
+		DomainID:   "domain",
+		DomainName: "domainName",
+		TaskList:   "tasklist",
+		TaskType:   persistence.TaskListTypeActivity,
+	}).Return(&persistence.GetTaskListResponse{
+		TaskListInfo: &persistence.TaskListInfo{
+			AdaptivePartitionConfig: nil,
+		},
+	}, nil).Times(1)
+
+	tlID, err := NewIdentifier("domain", "/__cadence_sys/tasklist/1", persistence.TaskListTypeActivity)
+	require.NoError(t, err)
+
+	tlMgr, err := NewManager(
+		mockDomainCache,
+		testlogger.New(t),
+		metrics.NewClient(tally.NoopScope, metrics.Matching),
+		mockTm,
+		cluster.GetTestClusterMetadata(true),
+		mockPartitioner,
+		nil,
+		func(Manager) {},
+		tlID,
+		types.TaskListKindNormal.Ptr(),
+		defaultTestConfig(),
+		clock.NewRealTimeSource(),
+		time.Now())
+
+	tlm := tlMgr.(*taskListManagerImpl)
+	tlm.loadTaskListPartitionConfig()
+	assert.Nil(t, tlm.TaskListPartitionConfig())
+	tlm.loadTaskListPartitionConfig()
+	assert.Equal(t, &types.TaskListPartitionConfig{NumReadPartitions: 1, NumWritePartitions: 1}, tlm.TaskListPartitionConfig())
+	tlm.loadTaskListPartitionConfig()
+	assert.Equal(t, &types.TaskListPartitionConfig{NumReadPartitions: 1, NumWritePartitions: 1}, tlm.TaskListPartitionConfig())
+}
