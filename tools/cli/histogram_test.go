@@ -134,7 +134,6 @@ func TestHistogram_Print(t *testing.T) {
 	// Restore the original stdout
 	os.Stdout = oldStdout
 
-	// Verify that the buffer contains expected output
 	output := buf.String()
 	if !bytes.Contains([]byte(output), []byte("Bucket")) {
 		t.Errorf("Print() failed. Expected header 'Bucket' in output")
