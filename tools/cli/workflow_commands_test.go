@@ -24,6 +24,7 @@ package cli
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"testing"
 	"time"
@@ -224,4 +225,166 @@ func Test_ListAllWorkflow(t *testing.T) {
 	c := getMockContext(t, set, app)
 	err := ListAllWorkflow(c)
 	assert.NoError(t, err)
+}
+
+func Test_ConvertSearchAttributesToMapOfInterface(t *testing.T) {
+	tests := []struct {
+		name          string
+		in            *types.SearchAttributes
+		out           map[string]interface{}
+		expectedError bool
+		mockResponse  *types.GetSearchAttributesResponse
+		mockError     error
+	}{
+		{
+			name:          "empty search attributes",
+			out:           nil,
+			expectedError: false,
+		},
+		{
+			name: "error when get search attributes",
+			in: &types.SearchAttributes{
+				IndexedFields: map[string][]byte{
+					"CustomKeywordField": []byte("test-value"),
+				},
+			},
+			out:           nil,
+			mockError:     errors.New("test-error"),
+			expectedError: true,
+		},
+		{
+			name: "error deserialize search attributes",
+			in: &types.SearchAttributes{
+				IndexedFields: map[string][]byte{
+					"CustomKeywordField": []byte("test-value"),
+				},
+			},
+			out:           nil,
+			mockError:     nil,
+			expectedError: true,
+		},
+		{
+			name: "normal case",
+			in: &types.SearchAttributes{
+				IndexedFields: map[string][]byte{
+					"CustomKeywordField": []byte(`"test-value"`), // Assuming the value is a serialized string
+				},
+			},
+			out: map[string]interface{}{
+				"CustomKeywordField": "test-value", // Expected deserialized value
+			},
+			mockResponse: &types.GetSearchAttributesResponse{
+				Keys: map[string]types.IndexedValueType{
+					"CustomKeywordField": types.IndexedValueTypeKeyword,
+				},
+			},
+			mockError:     nil,
+			expectedError: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockCtrl := gomock.NewController(t)
+			serverFrontendClient := frontend.NewMockClient(mockCtrl)
+			serverAdminClient := admin.NewMockClient(mockCtrl)
+			app := NewCliApp(&clientFactoryMock{
+				serverFrontendClient: serverFrontendClient,
+				serverAdminClient:    serverAdminClient,
+			})
+			c := getMockContext(t, nil, app)
+			serverFrontendClient.EXPECT().GetSearchAttributes(gomock.Any()).Return(tt.mockResponse, tt.mockError).AnyTimes()
+			out, err := convertSearchAttributesToMapOfInterface(tt.in, serverFrontendClient, c)
+			if tt.expectedError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.out, out)
+			}
+		})
+	}
+}
+
+func Test_GetAllWorkflowIDsByQuery(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	serverFrontendClient := frontend.NewMockClient(mockCtrl)
+	serverAdminClient := admin.NewMockClient(mockCtrl)
+	app := NewCliApp(&clientFactoryMock{
+		serverFrontendClient: serverFrontendClient,
+		serverAdminClient:    serverAdminClient,
+	})
+	// missing required flag
+	set := flag.NewFlagSet("test", 0)
+	set.String("workflow_id", "test-workflow-id", "workflow_id")
+	c := cli.NewContext(app, set, nil)
+	_, err := getAllWorkflowIDsByQuery(c, "WorkflowType='test-workflow-type'")
+	assert.Error(t, err)
+
+	c = getMockContext(t, nil, app)
+	serverFrontendClient.EXPECT().ScanWorkflowExecutions(gomock.Any(), &types.ListWorkflowExecutionsRequest{
+		Query:    "WorkflowType='test-workflow-type'",
+		Domain:   "test-domain",
+		PageSize: 1000,
+	}).Return(&types.ListWorkflowExecutionsResponse{}, nil).Times(1)
+
+	resp, err := getAllWorkflowIDsByQuery(c, "WorkflowType='test-workflow-type'")
+	assert.NoError(t, err)
+	assert.NotNil(t, resp)
+
+	serverFrontendClient.EXPECT().ScanWorkflowExecutions(gomock.Any(), &types.ListWorkflowExecutionsRequest{
+		Query:    "WorkflowType='test-workflow-type'",
+		Domain:   "test-domain",
+		PageSize: 1000,
+	}).Return(&types.ListWorkflowExecutionsResponse{}, errors.New("test-error")).Times(1)
+
+	_, err = getAllWorkflowIDsByQuery(c, "WorkflowType='test-workflow-type'")
+	assert.Error(t, err)
+}
+
+func Test_GetWorkflowStatus(t *testing.T) {
+	tests := []struct {
+		name          string
+		input         string
+		expected      types.WorkflowExecutionCloseStatus
+		expectedError bool
+	}{
+		{
+			name:          "Valid status - completed",
+			input:         "completed",
+			expected:      types.WorkflowExecutionCloseStatusCompleted,
+			expectedError: false,
+		},
+		{
+			name:          "Valid alias - fail",
+			input:         "fail",
+			expected:      types.WorkflowExecutionCloseStatusFailed,
+			expectedError: false,
+		},
+		{
+			name:          "Valid status - timed_out",
+			input:         "timed_out",
+			expected:      types.WorkflowExecutionCloseStatusTimedOut,
+			expectedError: false,
+		},
+		{
+			name:          "Invalid status",
+			input:         "invalid",
+			expected:      -1,
+			expectedError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			status, err := getWorkflowStatus(tt.input)
+
+			if tt.expectedError {
+				assert.Error(t, err)
+				assert.Equal(t, -1, int(status))
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.expected, status)
+			}
+		})
+	}
 }

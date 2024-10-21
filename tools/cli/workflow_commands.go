@@ -1079,7 +1079,9 @@ func describeWorkflowHelper(c *cli.Context, wid, rid string) error {
 		o = resp
 	} else {
 		o, err = convertDescribeWorkflowExecutionResponse(resp, frontendClient, c)
-		return commoncli.Problem("WF helper describe failed: ", err)
+		if err != nil {
+			return commoncli.Problem("WF helper describe failed: ", err)
+		}
 	}
 
 	prettyPrintJSONObject(o)
