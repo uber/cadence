@@ -33,10 +33,11 @@ import (
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/mocktracer"
 	"github.com/stretchr/testify/assert"
+	"github.com/urfave/cli/v2"
+
 	"github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/common/types"
-	"github.com/urfave/cli/v2"
 )
 
 func TestConstructStartWorkflowRequest(t *testing.T) {
@@ -185,6 +186,33 @@ func Test_DescribeWorkflowWithID(t *testing.T) {
 func Test_DescribeWorkflowWithID_Error(t *testing.T) {
 	set := flag.NewFlagSet("test", 0)
 	err := DescribeWorkflowWithID(cli.NewContext(nil, set, nil))
+	assert.Error(t, err)
+
+	// WF helper describe failed
+	mockCtrl := gomock.NewController(t)
+	serverFrontendClient := frontend.NewMockClient(mockCtrl)
+	serverAdminClient := admin.NewMockClient(mockCtrl)
+	app := NewCliApp(&clientFactoryMock{
+		serverFrontendClient: serverFrontendClient,
+		serverAdminClient:    serverAdminClient,
+	})
+	serverFrontendClient.EXPECT().DescribeWorkflowExecution(gomock.Any(), gomock.Any()).Return(&types.DescribeWorkflowExecutionResponse{
+		WorkflowExecutionInfo: &types.WorkflowExecutionInfo{
+			Execution: &types.WorkflowExecution{
+				WorkflowID: "test-workflow-id",
+				RunID:      "test-run-id",
+			},
+			SearchAttributes: &types.SearchAttributes{
+				IndexedFields: map[string][]byte{
+					"CustomKeywordField": []byte("test-value"),
+				},
+			},
+		},
+	}, nil).Times(1)
+	serverFrontendClient.EXPECT().GetSearchAttributes(gomock.Any()).Return(nil, errors.New("test-error")).Times(1)
+
+	c := getMockContext(t, nil, app)
+	err = DescribeWorkflowWithID(c)
 	assert.Error(t, err)
 }
 
