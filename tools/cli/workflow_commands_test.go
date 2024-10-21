@@ -26,17 +26,20 @@ import (
 	"context"
 	"errors"
 	"flag"
+	"fmt"
 	"testing"
 	"time"
 
 	"github.com/golang/mock/gomock"
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/mocktracer"
+	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/urfave/cli/v2"
 
 	"github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/client/frontend"
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -673,4 +676,252 @@ func Test_ResetWorkflow_Missing_RunID(t *testing.T) {
 	c := cli.NewContext(app, set, nil)
 	err := ResetWorkflow(c)
 	assert.Error(t, err)
+}
+
+func (s *cliAppSuite) TestCompleteActivity() {
+	s.testcaseHelper([]testcase{
+		{
+			name:    "happy",
+			command: `cadence --do test-domain wf activity complete -w wid -r rid -aid 3 -result result --identity tester`,
+			err:     "",
+			mock: func() {
+				s.serverFrontendClient.EXPECT().RespondActivityTaskCompletedByID(gomock.Any(), gomock.Any()).Return(nil)
+			},
+		},
+	})
+}
+
+func (s *cliAppSuite) TestDescribeWorkflow() {
+	s.testcaseHelper([]testcase{
+		{
+			"happy",
+			"cadence --do test-domain wf describe -w wid",
+			"",
+			func() {
+				resp := &types.DescribeWorkflowExecutionResponse{
+					WorkflowExecutionInfo: &types.WorkflowExecutionInfo{
+						Execution: &types.WorkflowExecution{
+							WorkflowID: "wid",
+						},
+						Type: &types.WorkflowType{
+							Name: "workflow-type",
+						},
+						StartTime: common.Int64Ptr(time.Now().UnixNano()),
+						CloseTime: common.Int64Ptr(time.Now().UnixNano()),
+					},
+					PendingActivities: []*types.PendingActivityInfo{
+						{},
+					},
+					PendingDecision: &types.PendingDecisionInfo{},
+				}
+				s.serverFrontendClient.EXPECT().DescribeWorkflowExecution(gomock.Any(), gomock.Any()).Return(resp, nil)
+			},
+		},
+	})
+}
+
+func (s *cliAppSuite) TestFailActivity() {
+	s.testcaseHelper([]testcase{
+		{
+			name:    "happy",
+			command: `cadence --do test-domain wf activity fail -w wid -r rid -aid 3 --reason somereason --detail somedetail --identity tester`,
+			err:     "",
+			mock: func() {
+				s.serverFrontendClient.EXPECT().RespondActivityTaskFailedByID(gomock.Any(), gomock.Any()).Return(nil)
+			},
+		},
+	})
+}
+
+func (s *cliAppSuite) TestListAllWorkflow() {
+	s.testcaseHelper([]testcase{
+		{
+			name:    "happy",
+			command: `cadence --do test-domain wf listall`,
+			mock: func() {
+				countWorkflowResp := &types.CountWorkflowExecutionsResponse{}
+				s.serverFrontendClient.EXPECT().CountWorkflowExecutions(gomock.Any(), gomock.Any()).Return(countWorkflowResp, nil)
+				s.serverFrontendClient.EXPECT().ListClosedWorkflowExecutions(gomock.Any(), gomock.Any()).Return(listClosedWorkflowExecutionsResponse, nil)
+			},
+		},
+	})
+}
+
+func (s *cliAppSuite) TestQueryWorkflow() {
+	s.testcaseHelper([]testcase{
+		{
+			name:    "happy",
+			command: `cadence --do test-domain wf query -w wid -qt query-type-test`,
+			err:     "",
+			mock: func() {
+				resp := &types.QueryWorkflowResponse{
+					QueryResult: []byte("query-result"),
+				}
+				s.serverFrontendClient.EXPECT().QueryWorkflow(gomock.Any(), gomock.Any()).Return(resp, nil)
+			},
+		},
+		{
+			name:    "query with reject not_open",
+			command: `cadence --do test-domain wf query -w wid -qt query-type-test --query_reject_condition not_open`,
+			err:     "",
+			mock: func() {
+				resp := &types.QueryWorkflowResponse{
+					QueryResult: []byte("query-result"),
+				}
+				s.serverFrontendClient.EXPECT().
+					QueryWorkflow(gomock.Any(), &types.QueryWorkflowRequest{
+						Domain: "test-domain",
+						Execution: &types.WorkflowExecution{
+							WorkflowID: "wid",
+						},
+						Query: &types.WorkflowQuery{
+							QueryType: "query-type-test",
+						},
+						QueryRejectCondition: types.QueryRejectConditionNotOpen.Ptr(),
+					}).
+					Return(resp, nil)
+			},
+		},
+		{
+			name:    "query with reject not_completed_cleanly",
+			command: `cadence --do test-domain wf query -w wid -qt query-type-test --query_reject_condition not_completed_cleanly`,
+			err:     "",
+			mock: func() {
+				resp := &types.QueryWorkflowResponse{
+					QueryResult: []byte("query-result"),
+				}
+				s.serverFrontendClient.EXPECT().
+					QueryWorkflow(gomock.Any(), &types.QueryWorkflowRequest{
+						Domain: "test-domain",
+						Execution: &types.WorkflowExecution{
+							WorkflowID: "wid",
+						},
+						Query: &types.WorkflowQuery{
+							QueryType: "query-type-test",
+						},
+						QueryRejectCondition: types.QueryRejectConditionNotCompletedCleanly.Ptr(),
+					}).
+					Return(resp, nil)
+			},
+		},
+		{
+			name:    "query with unknown reject",
+			command: `cadence --do test-domain wf query -w wid -qt query-type-test --query_reject_condition unknown`,
+			err:     "invalid reject condition",
+		},
+		{
+			name:    "query with eventual consistency",
+			command: `cadence --do test-domain wf query -w wid -qt query-type-test --query_consistency_level eventual`,
+			err:     "",
+			mock: func() {
+				resp := &types.QueryWorkflowResponse{
+					QueryResult: []byte("query-result"),
+				}
+				s.serverFrontendClient.EXPECT().
+					QueryWorkflow(gomock.Any(), &types.QueryWorkflowRequest{
+						Domain: "test-domain",
+						Execution: &types.WorkflowExecution{
+							WorkflowID: "wid",
+						},
+						Query: &types.WorkflowQuery{
+							QueryType: "query-type-test",
+						},
+						QueryConsistencyLevel: types.QueryConsistencyLevelEventual.Ptr(),
+					}).
+					Return(resp, nil)
+			},
+		},
+		{
+			name:    "query with strong consistency",
+			command: `cadence --do test-domain wf query -w wid -qt query-type-test --query_consistency_level strong`,
+			err:     "",
+			mock: func() {
+				resp := &types.QueryWorkflowResponse{
+					QueryResult: []byte("query-result"),
+				}
+				s.serverFrontendClient.EXPECT().
+					QueryWorkflow(gomock.Any(), &types.QueryWorkflowRequest{
+						Domain: "test-domain",
+						Execution: &types.WorkflowExecution{
+							WorkflowID: "wid",
+						},
+						Query: &types.WorkflowQuery{
+							QueryType: "query-type-test",
+						},
+						QueryConsistencyLevel: types.QueryConsistencyLevelStrong.Ptr(),
+					}).
+					Return(resp, nil)
+			},
+		},
+		{
+			name:    "query with invalid consistency",
+			command: `cadence --do test-domain wf query -w wid -qt query-type-test --query_consistency_level invalid`,
+			err:     "invalid query consistency level",
+		},
+		{
+			name:    "failed",
+			command: `cadence --do test-domain wf query -w wid -qt query-type-test`,
+			err:     "some error",
+			mock: func() {
+				s.serverFrontendClient.EXPECT().QueryWorkflow(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("some error"))
+			},
+		},
+		{
+			name:    "missing flags",
+			command: "cadence wf query",
+			err:     "Required flag not found",
+		},
+	})
+}
+
+func (s *cliAppSuite) TestResetWorkflow() {
+	s.testcaseHelper([]testcase{
+		{
+			name:    "happy",
+			command: `cadence --do test-domain wf reset -w wid -r rid -reason test-reason --event_id 1`,
+			err:     "",
+			mock: func() {
+				resp := &types.ResetWorkflowExecutionResponse{RunID: uuid.New()}
+				s.serverFrontendClient.EXPECT().ResetWorkflowExecution(gomock.Any(), gomock.Any()).Return(resp, nil)
+			},
+		},
+	})
+}
+
+func (s *cliAppSuite) TestScanAllWorkflow() {
+	s.testcaseHelper([]testcase{
+		{
+			name:    "happy",
+			command: `cadence --do test-domain wf scanall`,
+			mock: func() {
+				s.serverFrontendClient.EXPECT().ScanWorkflowExecutions(gomock.Any(), gomock.Any()).Return(&types.ListWorkflowExecutionsResponse{}, nil)
+			},
+		},
+	})
+}
+
+func (s *cliAppSuite) TestSignalWithStartWorkflowExecution() {
+	s.testcaseHelper([]testcase{
+		{
+			name:    "happy",
+			command: `cadence --do test-domain wf signalwithstart --et 100 --workflow_type sometype --tasklist tasklist -w wid -n signal-name --signal_input []`,
+			err:     "",
+			mock: func() {
+				s.serverFrontendClient.EXPECT().SignalWithStartWorkflowExecution(gomock.Any(), gomock.Any()).Return(&types.StartWorkflowExecutionResponse{}, nil)
+			},
+		},
+		{
+			name:    "failed",
+			command: `cadence --do test-domain wf signalwithstart --et 100 --workflow_type sometype --tasklist tasklist -w wid -n signal-name --signal_input []`,
+			err:     "some error",
+			mock: func() {
+				s.serverFrontendClient.EXPECT().SignalWithStartWorkflowExecution(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("some error"))
+			},
+		},
+		{
+			name:    "missing flags",
+			command: "cadence wf signalwithstart",
+			err:     "Required flag not found",
+		},
+	})
 }

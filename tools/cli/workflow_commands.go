@@ -1080,7 +1080,7 @@ func describeWorkflowHelper(c *cli.Context, wid, rid string) error {
 	} else {
 		o, err = convertDescribeWorkflowExecutionResponse(resp, frontendClient, c)
 		if err != nil {
-			return commoncli.Problem("WF helper describe failed: ", err)
+			return commoncli.Problem("convert describe workflow response failed: ", err)
 		}
 	}
 
