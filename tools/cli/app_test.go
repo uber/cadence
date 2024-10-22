@@ -29,6 +29,7 @@ import (
 	"github.com/olekukonko/tablewriter"
 	"github.com/olivere/elastic"
 	"github.com/pborman/uuid"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 	"github.com/urfave/cli/v2"
 
@@ -39,13 +40,22 @@ import (
 	"github.com/uber/cadence/common/types"
 )
 
-type cliAppSuite struct {
-	suite.Suite
-	app                  *cli.App
-	mockCtrl             *gomock.Controller
-	serverFrontendClient *frontend.MockClient
-	serverAdminClient    *admin.MockClient
-}
+type (
+	cliAppSuite struct {
+		suite.Suite
+		app                  *cli.App
+		mockCtrl             *gomock.Controller
+		serverFrontendClient *frontend.MockClient
+		serverAdminClient    *admin.MockClient
+	}
+
+	testcase struct {
+		name    string
+		command string
+		err     string
+		mock    func()
+	}
+)
 
 var _ ClientFactory = (*clientFactoryMock)(nil)
 
@@ -103,6 +113,22 @@ func (s *cliAppSuite) SetupTest() {
 
 func (s *cliAppSuite) TearDownTest() {
 	s.mockCtrl.Finish() // assert mock’s expectations
+}
+
+func (s *cliAppSuite) testcaseHelper(testcases []testcase) {
+	for _, tt := range testcases {
+		s.T().Run(tt.name, func(t *testing.T) {
+			if tt.mock != nil {
+				tt.mock()
+			}
+			err := s.app.Run(strings.Split(tt.command, " "))
+			if tt.err != "" {
+				assert.ErrorContains(t, err, tt.err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
 }
 
 func (s *cliAppSuite) TestAppCommands() {
@@ -417,15 +443,6 @@ func (s *cliAppSuite) TestSignalWorkflow_Failed() {
 	s.Error(s.app.Run([]string{"", "--do", domainName, "workflow", "signal", "-w", "wid", "-n", "signal-name"}))
 }
 
-func (s *cliAppSuite) TestQueryWorkflow() {
-	resp := &types.QueryWorkflowResponse{
-		QueryResult: []byte("query-result"),
-	}
-	s.serverFrontendClient.EXPECT().QueryWorkflow(gomock.Any(), gomock.Any()).Return(resp, nil)
-	err := s.app.Run([]string{"", "--do", domainName, "workflow", "query", "-w", "wid", "-qt", "query-type-test"})
-	s.Nil(err)
-}
-
 func (s *cliAppSuite) TestQueryWorkflowUsingStackTrace() {
 	resp := &types.QueryWorkflowResponse{
 		QueryResult: []byte("query-result"),
@@ -433,14 +450,6 @@ func (s *cliAppSuite) TestQueryWorkflowUsingStackTrace() {
 	s.serverFrontendClient.EXPECT().QueryWorkflow(gomock.Any(), gomock.Any()).Return(resp, nil)
 	err := s.app.Run([]string{"", "--do", domainName, "workflow", "stack", "-w", "wid"})
 	s.Nil(err)
-}
-
-func (s *cliAppSuite) TestQueryWorkflow_Failed() {
-	resp := &types.QueryWorkflowResponse{
-		QueryResult: []byte("query-result"),
-	}
-	s.serverFrontendClient.EXPECT().QueryWorkflow(gomock.Any(), gomock.Any()).Return(resp, &types.BadRequestError{"faked error"})
-	s.Error(s.app.Run([]string{"", "--do", domainName, "workflow", "query", "-w", "wid", "-qt", "query-type-test"}))
 }
 
 var (
