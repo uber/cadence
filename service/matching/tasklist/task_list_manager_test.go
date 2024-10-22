@@ -286,12 +286,12 @@ func TestCheckIdleTaskList(t *testing.T) {
 
 		addTaskParam := AddTaskParams{
 			TaskInfo: &persistence.TaskInfo{
-				DomainID:               domainID,
-				WorkflowID:             workflowID,
-				RunID:                  runID,
-				ScheduleID:             2,
-				ScheduleToStartTimeout: 5,
-				CreatedTime:            time.Now(),
+				DomainID:                      domainID,
+				WorkflowID:                    workflowID,
+				RunID:                         runID,
+				ScheduleID:                    2,
+				ScheduleToStartTimeoutSeconds: 5,
+				CreatedTime:                   time.Now(),
 			},
 		}
 
@@ -335,12 +335,12 @@ func TestAddTaskStandby(t *testing.T) {
 
 	addTaskParam := AddTaskParams{
 		TaskInfo: &persistence.TaskInfo{
-			DomainID:               domainID,
-			WorkflowID:             workflowID,
-			RunID:                  runID,
-			ScheduleID:             2,
-			ScheduleToStartTimeout: 5,
-			CreatedTime:            time.Now(),
+			DomainID:                      domainID,
+			WorkflowID:                    workflowID,
+			RunID:                         runID,
+			ScheduleID:                    2,
+			ScheduleToStartTimeoutSeconds: 5,
+			CreatedTime:                   time.Now(),
 		},
 	}
 
@@ -535,11 +535,11 @@ func TestTaskWriterShutdown(t *testing.T) {
 	// now attempt to add a task
 	addParams := AddTaskParams{
 		TaskInfo: &persistence.TaskInfo{
-			DomainID:               "domainId",
-			RunID:                  "run1",
-			WorkflowID:             "workflow1",
-			ScheduleID:             5,
-			ScheduleToStartTimeout: 1,
+			DomainID:                      "domainId",
+			RunID:                         "run1",
+			WorkflowID:                    "workflow1",
+			ScheduleID:                    5,
+			ScheduleToStartTimeoutSeconds: 1,
 		},
 	}
 	_, err = tlm.AddTask(context.Background(), addParams)
@@ -593,11 +593,11 @@ func TestTaskListManagerGetTaskBatch(t *testing.T) {
 		scheduleID := i * 3
 		addParams := AddTaskParams{
 			TaskInfo: &persistence.TaskInfo{
-				DomainID:               "domainId",
-				RunID:                  "run1",
-				WorkflowID:             "workflow1",
-				ScheduleID:             scheduleID,
-				ScheduleToStartTimeout: 100,
+				DomainID:                      "domainId",
+				RunID:                         "run1",
+				WorkflowID:                    "workflow1",
+				ScheduleID:                    scheduleID,
+				ScheduleToStartTimeoutSeconds: 100,
 			},
 		}
 		_, err = tlm.AddTask(context.Background(), addParams)
@@ -851,16 +851,16 @@ func TestTaskExpiryAndCompletion(t *testing.T) {
 				scheduleID := i * 3
 				addParams := AddTaskParams{
 					TaskInfo: &persistence.TaskInfo{
-						DomainID:               "domainId",
-						RunID:                  "run1",
-						WorkflowID:             "workflow1",
-						ScheduleID:             scheduleID,
-						ScheduleToStartTimeout: 100,
+						DomainID:                      "domainId",
+						RunID:                         "run1",
+						WorkflowID:                    "workflow1",
+						ScheduleID:                    scheduleID,
+						ScheduleToStartTimeoutSeconds: 100,
 					},
 				}
 				if i%2 == 0 {
 					// simulates creating a task whose scheduledToStartTimeout is already expired
-					addParams.TaskInfo.ScheduleToStartTimeout = -5
+					addParams.TaskInfo.ScheduleToStartTimeoutSeconds = -5
 				}
 				_, err = tlm.AddTask(context.Background(), addParams)
 				assert.NoError(t, err)

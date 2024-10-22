@@ -253,8 +253,8 @@ func (m *TestTaskManager) CreateTasks(
 			TaskID:          task.TaskID,
 			PartitionConfig: task.Data.PartitionConfig,
 		}
-		if task.Data.ScheduleToStartTimeout != 0 {
-			info.Expiry = m.timeSource.Now().Add(time.Duration(task.Data.ScheduleToStartTimeout) * time.Second)
+		if task.Data.ScheduleToStartTimeoutSeconds != 0 {
+			info.Expiry = m.timeSource.Now().Add(time.Duration(task.Data.ScheduleToStartTimeoutSeconds) * time.Second)
 		}
 		tlm.tasks.Put(task.TaskID, info)
 		tlm.createTaskCount++

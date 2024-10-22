@@ -104,7 +104,7 @@ func (t *ForwarderTestSuite) TestForwardDecisionTask() {
 	t.Equal(taskInfo.WorkflowID, request.GetExecution().GetWorkflowID())
 	t.Equal(taskInfo.RunID, request.GetExecution().GetRunID())
 	t.Equal(taskInfo.ScheduleID, request.GetScheduleID())
-	t.Equal(taskInfo.ScheduleToStartTimeout, request.GetScheduleToStartTimeoutSeconds())
+	t.Equal(taskInfo.ScheduleToStartTimeoutSeconds, request.GetScheduleToStartTimeoutSeconds())
 	t.Equal(t.taskList.name, request.GetForwardedFrom())
 }
 
@@ -129,7 +129,7 @@ func (t *ForwarderTestSuite) TestForwardActivityTask() {
 	t.Equal(taskInfo.WorkflowID, request.GetExecution().GetWorkflowID())
 	t.Equal(taskInfo.RunID, request.GetExecution().GetRunID())
 	t.Equal(taskInfo.ScheduleID, request.GetScheduleID())
-	t.Equal(taskInfo.ScheduleToStartTimeout, request.GetScheduleToStartTimeoutSeconds())
+	t.Equal(taskInfo.ScheduleToStartTimeoutSeconds, request.GetScheduleToStartTimeoutSeconds())
 	t.Equal(t.taskList.name, request.GetForwardedFrom())
 }
 
@@ -357,11 +357,11 @@ func (t *ForwarderTestSuite) usingTasklistPartition(taskType int) {
 
 func (t *ForwarderTestSuite) newTaskInfo() *persistence.TaskInfo {
 	return &persistence.TaskInfo{
-		DomainID:               uuid.New(),
-		WorkflowID:             uuid.New(),
-		RunID:                  uuid.New(),
-		TaskID:                 rand.Int63(),
-		ScheduleID:             rand.Int63(),
-		ScheduleToStartTimeout: rand.Int31(),
+		DomainID:                      uuid.New(),
+		WorkflowID:                    uuid.New(),
+		RunID:                         uuid.New(),
+		TaskID:                        rand.Int63(),
+		ScheduleID:                    rand.Int63(),
+		ScheduleToStartTimeoutSeconds: rand.Int31(),
 	}
 }

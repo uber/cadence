@@ -449,7 +449,7 @@ func TestCreateTasks(t *testing.T) {
 	testCases := []struct {
 		name          string
 		setupMock     func(*nosqlplugin.MockDB)
-		request       *persistence.InternalCreateTasksRequest
+		request       *persistence.CreateTasksRequest
 		expectError   bool
 		expectedError string
 	}{
@@ -473,22 +473,22 @@ func TestCreateTasks(t *testing.T) {
 					assert.Equal(t, 30, tasks[0].TTLSeconds)
 				}).Return(nil).Times(1)
 			},
-			request: &persistence.InternalCreateTasksRequest{
+			request: &persistence.CreateTasksRequest{
 				TaskListInfo: &persistence.TaskListInfo{
 					DomainID: TestDomainID,
 					Name:     TestTaskListName,
 					TaskType: TestTaskType,
 					RangeID:  1,
 				},
-				Tasks: []*persistence.InternalCreateTasksInfo{
+				Tasks: []*persistence.CreateTaskInfo{
 					{
 						TaskID: 100,
-						Data: &persistence.InternalTaskInfo{
-							WorkflowID:             "workflow1",
-							RunID:                  "run1",
-							ScheduleID:             10,
-							PartitionConfig:        nil,
-							ScheduleToStartTimeout: 30 * time.Second,
+						Data: &persistence.TaskInfo{
+							WorkflowID:                    "workflow1",
+							RunID:                         "run1",
+							ScheduleID:                    10,
+							PartitionConfig:               nil,
+							ScheduleToStartTimeoutSeconds: 30,
 						},
 					},
 				},
@@ -502,22 +502,22 @@ func TestCreateTasks(t *testing.T) {
 					Details: "rangeID mismatch",
 				}).Times(1)
 			},
-			request: &persistence.InternalCreateTasksRequest{
+			request: &persistence.CreateTasksRequest{
 				TaskListInfo: &persistence.TaskListInfo{
 					DomainID: TestDomainID,
 					Name:     TestTaskListName,
 					TaskType: TestTaskType,
 					RangeID:  1,
 				},
-				Tasks: []*persistence.InternalCreateTasksInfo{
+				Tasks: []*persistence.CreateTaskInfo{
 					{
 						TaskID: 100,
-						Data: &persistence.InternalTaskInfo{
-							WorkflowID:             "workflow1",
-							RunID:                  "run1",
-							ScheduleID:             10,
-							PartitionConfig:        nil,
-							ScheduleToStartTimeout: 30 * time.Second,
+						Data: &persistence.TaskInfo{
+							WorkflowID:                    "workflow1",
+							RunID:                         "run1",
+							ScheduleID:                    10,
+							PartitionConfig:               nil,
+							ScheduleToStartTimeoutSeconds: 30,
 						},
 					},
 				},
@@ -531,22 +531,22 @@ func TestCreateTasks(t *testing.T) {
 				dbMock.EXPECT().InsertTasks(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("db error")).Times(1)
 				dbMock.EXPECT().IsNotFoundError(gomock.Any()).Return(true).Times(1)
 			},
-			request: &persistence.InternalCreateTasksRequest{
+			request: &persistence.CreateTasksRequest{
 				TaskListInfo: &persistence.TaskListInfo{
 					DomainID: TestDomainID,
 					Name:     TestTaskListName,
 					TaskType: TestTaskType,
 					RangeID:  1,
 				},
-				Tasks: []*persistence.InternalCreateTasksInfo{
+				Tasks: []*persistence.CreateTaskInfo{
 					{
 						TaskID: 100,
-						Data: &persistence.InternalTaskInfo{
-							WorkflowID:             "workflow1",
-							RunID:                  "run1",
-							ScheduleID:             10,
-							PartitionConfig:        nil,
-							ScheduleToStartTimeout: 30 * time.Second,
+						Data: &persistence.TaskInfo{
+							WorkflowID:                    "workflow1",
+							RunID:                         "run1",
+							ScheduleID:                    10,
+							PartitionConfig:               nil,
+							ScheduleToStartTimeoutSeconds: 30,
 						},
 					},
 				},
@@ -609,7 +609,7 @@ func checkTaskListInfoExpected(t *testing.T, taskListInfo *persistence.TaskListI
 	assert.WithinDuration(t, time.Now(), taskListInfo.LastUpdated, time.Second)
 }
 
-func taskRowEqualTaskInfo(t *testing.T, taskrow1 nosqlplugin.TaskRow, taskInfo1 *persistence.InternalTaskInfo) {
+func taskRowEqualTaskInfo(t *testing.T, taskrow1 nosqlplugin.TaskRow, taskInfo1 *persistence.TaskInfo) {
 	assert.Equal(t, taskrow1.DomainID, taskInfo1.DomainID)
 	assert.Equal(t, taskrow1.WorkflowID, taskInfo1.WorkflowID)
 	assert.Equal(t, taskrow1.RunID, taskInfo1.RunID)

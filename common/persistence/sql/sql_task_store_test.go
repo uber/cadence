@@ -1035,26 +1035,26 @@ func TestDeleteTaskList(t *testing.T) {
 func TestCreateTasks(t *testing.T) {
 	testCases := []struct {
 		name      string
-		req       *persistence.InternalCreateTasksRequest
+		req       *persistence.CreateTasksRequest
 		mockSetup func(*sqlplugin.MockDB, *sqlplugin.MockTx, *serialization.MockParser)
 		want      *persistence.CreateTasksResponse
 		wantErr   bool
 	}{
 		{
 			name: "Success case",
-			req: &persistence.InternalCreateTasksRequest{
+			req: &persistence.CreateTasksRequest{
 				TaskListInfo: &persistence.TaskListInfo{
 					Name:     "tl",
 					TaskType: 1,
 					RangeID:  9,
 					DomainID: "c9488dc7-20b2-44c3-b2e4-bfea5af62ac0",
 				},
-				Tasks: []*persistence.InternalCreateTasksInfo{
+				Tasks: []*persistence.CreateTaskInfo{
 					{
-						Data: &persistence.InternalTaskInfo{
-							ScheduleToStartTimeout: time.Second,
-							DomainID:               "c9488dc7-20b2-44c3-b2e4-bfea5af62ac0",
-							TaskID:                 999,
+						Data: &persistence.TaskInfo{
+							ScheduleToStartTimeoutSeconds: 1,
+							DomainID:                      "c9488dc7-20b2-44c3-b2e4-bfea5af62ac0",
+							TaskID:                        999,
 						},
 						TaskID: 999,
 					},
@@ -1096,19 +1096,19 @@ func TestCreateTasks(t *testing.T) {
 		},
 		{
 			name: "Error case - failed to insert tasks",
-			req: &persistence.InternalCreateTasksRequest{
+			req: &persistence.CreateTasksRequest{
 				TaskListInfo: &persistence.TaskListInfo{
 					Name:     "tl",
 					TaskType: 1,
 					RangeID:  9,
 					DomainID: "c9488dc7-20b2-44c3-b2e4-bfea5af62ac0",
 				},
-				Tasks: []*persistence.InternalCreateTasksInfo{
+				Tasks: []*persistence.CreateTaskInfo{
 					{
-						Data: &persistence.InternalTaskInfo{
-							ScheduleToStartTimeout: time.Second,
-							DomainID:               "c9488dc7-20b2-44c3-b2e4-bfea5af62ac0",
-							TaskID:                 999,
+						Data: &persistence.TaskInfo{
+							ScheduleToStartTimeoutSeconds: 1,
+							DomainID:                      "c9488dc7-20b2-44c3-b2e4-bfea5af62ac0",
+							TaskID:                        999,
 						},
 						TaskID: 999,
 					},
@@ -1145,19 +1145,19 @@ func TestCreateTasks(t *testing.T) {
 		},
 		{
 			name: "Error case - failed to lock tasklist",
-			req: &persistence.InternalCreateTasksRequest{
+			req: &persistence.CreateTasksRequest{
 				TaskListInfo: &persistence.TaskListInfo{
 					Name:     "tl",
 					TaskType: 1,
 					RangeID:  9,
 					DomainID: "c9488dc7-20b2-44c3-b2e4-bfea5af62ac0",
 				},
-				Tasks: []*persistence.InternalCreateTasksInfo{
+				Tasks: []*persistence.CreateTaskInfo{
 					{
-						Data: &persistence.InternalTaskInfo{
-							ScheduleToStartTimeout: time.Second,
-							DomainID:               "c9488dc7-20b2-44c3-b2e4-bfea5af62ac0",
-							TaskID:                 999,
+						Data: &persistence.TaskInfo{
+							ScheduleToStartTimeoutSeconds: 1,
+							DomainID:                      "c9488dc7-20b2-44c3-b2e4-bfea5af62ac0",
+							TaskID:                        999,
 						},
 						TaskID: 999,
 					},
@@ -1230,7 +1230,7 @@ func TestGetTasks(t *testing.T) {
 		name      string
 		req       *persistence.GetTasksRequest
 		mockSetup func(*sqlplugin.MockDB, *serialization.MockParser)
-		want      *persistence.InternalGetTasksResponse
+		want      *persistence.GetTasksResponse
 		wantErr   bool
 	}{
 		{
@@ -1269,8 +1269,8 @@ func TestGetTasks(t *testing.T) {
 					PartitionConfig:  map[string]string{"a": "b"},
 				}, nil)
 			},
-			want: &persistence.InternalGetTasksResponse{
-				Tasks: []*persistence.InternalTaskInfo{
+			want: &persistence.GetTasksResponse{
+				Tasks: []*persistence.TaskInfo{
 					{
 						DomainID:        "c9488dc7-20b2-44c3-b2e4-bfea5af62ac0",
 						WorkflowID:      "test",
