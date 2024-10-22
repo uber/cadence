@@ -90,7 +90,6 @@ type clientFactory struct {
 }
 
 // NewClientFactory creates a new ClientFactory
-
 func NewClientFactory(logger *zap.Logger) ClientFactory {
 	return &clientFactory{
 		logger: logger,
