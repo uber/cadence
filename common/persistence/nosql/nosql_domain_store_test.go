@@ -274,11 +274,12 @@ func TestUpdateDomain(t *testing.T) {
 
 func TestGetDomain(t *testing.T) {
 	testCases := []struct {
-		name        string
-		setupMock   func(*nosqlplugin.MockDB)
-		request     *persistence.GetDomainRequest
-		expectError bool
-		expected    *persistence.InternalGetDomainResponse
+		name          string
+		setupMock     func(*nosqlplugin.MockDB)
+		request       *persistence.GetDomainRequest
+		expectError   bool
+		expected      *persistence.InternalGetDomainResponse
+		expectedError string
 	}{
 		{
 			name: "success by ID",
@@ -347,25 +348,49 @@ func TestGetDomain(t *testing.T) {
 			setupMock: func(dbMock *nosqlplugin.MockDB) {
 				// No database call should be made
 			},
-			request:     &persistence.GetDomainRequest{ID: "test-id", Name: "test-name"},
-			expectError: true,
+			request:       &persistence.GetDomainRequest{ID: "test-id", Name: "test-name"},
+			expectError:   true,
+			expectedError: "GetDomain operation failed.  Both ID and Name specified in request.",
 		},
 		{
 			name: "bad request error - both id and domain are empty",
 			setupMock: func(dbMock *nosqlplugin.MockDB) {
 				// No database call should be made
 			},
-			request:     &persistence.GetDomainRequest{},
-			expectError: true,
+			request:       &persistence.GetDomainRequest{},
+			expectError:   true,
+			expectedError: "GetDomain operation failed.  Both ID and Name are empty.",
 		},
 		{
-			name: "common error",
+			name: "not found error - by name",
 			setupMock: func(dbMock *nosqlplugin.MockDB) {
 				dbMock.EXPECT().SelectDomain(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, errors.New("test error")).Times(1)
 				dbMock.EXPECT().IsNotFoundError(gomock.Any()).Return(true).Times(1)
 			},
-			request:     &persistence.GetDomainRequest{Name: "test-domain"},
-			expectError: true,
+			request:       &persistence.GetDomainRequest{Name: "test-domain"},
+			expectError:   true,
+			expectedError: "Domain test-domain does not exist.",
+		},
+		{
+			name: "not found error - by id",
+			setupMock: func(dbMock *nosqlplugin.MockDB) {
+				dbMock.EXPECT().SelectDomain(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, errors.New("test error")).Times(1)
+				dbMock.EXPECT().IsNotFoundError(gomock.Any()).Return(true).Times(1)
+			},
+			request:       &persistence.GetDomainRequest{ID: "test-domain-id"},
+			expectError:   true,
+			expectedError: "Domain test-domain-id does not exist.",
+		},
+		{
+			name: "generic db error",
+			setupMock: func(dbMock *nosqlplugin.MockDB) {
+				dbMock.EXPECT().SelectDomain(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, errors.New("test error")).Times(1)
+				dbMock.EXPECT().IsNotFoundError(gomock.Any()).Return(false).Times(1)
+				dbMock.EXPECT().IsNotFoundError(gomock.Any()).Return(true).Times(1)
+			},
+			request:       &persistence.GetDomainRequest{ID: "test-domain-id"},
+			expectError:   true,
+			expectedError: "GetDomain failed. Error: test error ",
 		},
 	}
 
@@ -383,6 +408,7 @@ func TestGetDomain(t *testing.T) {
 			// Validate results
 			if tc.expectError {
 				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tc.expectedError)
 			} else {
 				require.NoError(t, err)
 				assert.Equal(t, tc.expected, resp)
@@ -474,6 +500,14 @@ func TestGetMetadata(t *testing.T) {
 			},
 			expectError:     false,
 			expectedVersion: 10,
+		},
+		{
+			name: "common error",
+			setupMock: func(dbMock *nosqlplugin.MockDB) {
+				dbMock.EXPECT().SelectDomainMetadata(gomock.Any()).Return(int64(0), errors.New("test error")).Times(1)
+				dbMock.EXPECT().IsNotFoundError(gomock.Any()).Return(true).Times(1)
+			},
+			expectError: true,
 		},
 	}
 
