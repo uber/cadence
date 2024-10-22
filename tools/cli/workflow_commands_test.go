@@ -416,3 +416,261 @@ func Test_GetWorkflowStatus(t *testing.T) {
 		})
 	}
 }
+
+func Test_ConvertDescribeWorkflowExecutionResponse(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	serverFrontendClient := frontend.NewMockClient(mockCtrl)
+	mockResp := &types.DescribeWorkflowExecutionResponse{
+		WorkflowExecutionInfo: &types.WorkflowExecutionInfo{
+			Execution: &types.WorkflowExecution{
+				WorkflowID: "test-workflow-id",
+				RunID:      "test-run-id",
+			},
+		},
+		PendingActivities: []*types.PendingActivityInfo{
+			{
+				ActivityID: "test-activity-id",
+				ActivityType: &types.ActivityType{
+					Name: "test-activity-type",
+				},
+				HeartbeatDetails:   []byte("test-heartbeat-details"),
+				LastFailureDetails: []byte("test-failure-details"),
+			},
+		},
+		PendingDecision: &types.PendingDecisionInfo{
+			State: nil,
+		},
+	}
+
+	resp, err := convertDescribeWorkflowExecutionResponse(mockResp, serverFrontendClient, nil)
+	assert.NoError(t, err)
+	assert.Equal(t, "test-workflow-id", resp.WorkflowExecutionInfo.Execution.WorkflowID)
+}
+
+func Test_PrintRunStatus(t *testing.T) {
+	// this method only prints results, no need to test the output
+	tests := []struct {
+		name  string
+		event *types.HistoryEvent
+	}{
+		{
+			name: "COMPLETED",
+			event: &types.HistoryEvent{
+				EventType: types.EventTypeWorkflowExecutionCompleted.Ptr(),
+				WorkflowExecutionCompletedEventAttributes: &types.WorkflowExecutionCompletedEventAttributes{
+					Result: []byte("workflow completed successfully"),
+				},
+			},
+		},
+		{
+			name: "FAILED",
+			event: &types.HistoryEvent{
+				EventType: types.EventTypeWorkflowExecutionFailed.Ptr(),
+				WorkflowExecutionFailedEventAttributes: &types.WorkflowExecutionFailedEventAttributes{
+					Reason:  nil,
+					Details: []byte("failure details"),
+				},
+			},
+		},
+		{
+			name: "TIMEOUT",
+			event: &types.HistoryEvent{
+				EventType: types.EventTypeWorkflowExecutionTimedOut.Ptr(),
+				WorkflowExecutionTimedOutEventAttributes: &types.WorkflowExecutionTimedOutEventAttributes{
+					TimeoutType: types.TimeoutTypeStartToClose.Ptr(),
+				},
+			},
+		},
+		{
+			name: "CANCELED",
+			event: &types.HistoryEvent{
+				EventType: types.EventTypeWorkflowExecutionCanceled.Ptr(),
+				WorkflowExecutionCanceledEventAttributes: &types.WorkflowExecutionCanceledEventAttributes{
+					Details: []byte("canceled details"),
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.NotPanics(t, func() {
+				printRunStatus(tt.event)
+			})
+		})
+	}
+}
+
+func Test_ListWorkflowExecutions(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	serverFrontendClient := frontend.NewMockClient(mockCtrl)
+	serverAdminClient := admin.NewMockClient(mockCtrl)
+	app := NewCliApp(&clientFactoryMock{
+		serverFrontendClient: serverFrontendClient,
+		serverAdminClient:    serverAdminClient,
+	})
+	c := getMockContext(t, nil, app)
+	listFn := listWorkflowExecutions(serverFrontendClient, 100, "test-domain", "WorkflowType='test-workflow-type'", c)
+	assert.NotNil(t, listFn)
+	expectedResp := &types.ListWorkflowExecutionsResponse{
+		Executions: []*types.WorkflowExecutionInfo{
+			{
+				Execution: &types.WorkflowExecution{
+					WorkflowID: "test-workflow-id",
+					RunID:      "test-run-id",
+				},
+			},
+		},
+		NextPageToken: []byte("test-next-page-token"),
+	}
+	serverFrontendClient.EXPECT().ListWorkflowExecutions(gomock.Any(), gomock.Any()).Return(expectedResp, nil).Times(1)
+	executions, nextPageToken, err := listFn(nil)
+	assert.NoError(t, err)
+	assert.NotNil(t, executions)
+	assert.Equal(t, expectedResp.Executions, executions)
+	assert.NotNil(t, nextPageToken)
+
+	serverFrontendClient.EXPECT().ListWorkflowExecutions(gomock.Any(), gomock.Any()).Return(nil, errors.New("test-error")).Times(1)
+	_, _, err = listFn(nil)
+	assert.Error(t, err)
+}
+
+func Test_PrintListResults(t *testing.T) {
+	executions := []*types.WorkflowExecutionInfo{
+		{
+			Execution: &types.WorkflowExecution{
+				WorkflowID: "test-workflow-id-1",
+				RunID:      "test-run-id-1",
+			},
+			Type: &types.WorkflowType{
+				Name: "test-workflow-type-1",
+			},
+		},
+		{
+			Execution: &types.WorkflowExecution{
+				WorkflowID: "test-workflow-id-2",
+				RunID:      "test-run-id-2",
+			},
+			Type: &types.WorkflowType{
+				Name: "test-workflow-type-2",
+			},
+		},
+	}
+
+	assert.NotPanics(t, func() {
+		printListResults(executions, true, false)
+		printListResults(executions, false, false)
+		printListResults(executions, true, true)
+		printListResults(nil, true, false)
+	})
+}
+
+func Test_ResetWorkflow(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	serverFrontendClient := frontend.NewMockClient(mockCtrl)
+	serverAdminClient := admin.NewMockClient(mockCtrl)
+	app := NewCliApp(&clientFactoryMock{
+		serverFrontendClient: serverFrontendClient,
+		serverAdminClient:    serverAdminClient,
+	})
+
+	set := flag.NewFlagSet("test", 0)
+	c := cli.NewContext(app, set, nil)
+	// missing domain flag
+	err := ResetWorkflow(c)
+	assert.Error(t, err)
+
+	set.String(FlagDomain, "test-domain", "domain")
+	// missing workflowID flag
+	err = ResetWorkflow(c)
+	assert.Error(t, err)
+
+	set.String("workflow_id", "test-workflow-id", "workflow_id")
+	set.Parse([]string{"test-workflow-id", "test-run-id"})
+	// missing reason flag
+	err = ResetWorkflow(c)
+	assert.Error(t, err)
+
+	set.String("reason", "test", "reason")
+	set.String("decision_offset", "-1", "decision_offset")
+	// invalid event ID
+	err = ResetWorkflow(c)
+	assert.Error(t, err)
+
+	set.String("reset_type", "LastDecisionCompleted", "reset_type")
+	set.String("run_id", "test-run-id", "run_id")
+	serverFrontendClient.EXPECT().GetWorkflowExecutionHistory(gomock.Any(), gomock.Any()).Return(&types.GetWorkflowExecutionHistoryResponse{
+		History: &types.History{
+			Events: []*types.HistoryEvent{
+				{
+					ID:        1,
+					EventType: types.EventTypeDecisionTaskCompleted.Ptr(),
+				},
+				{
+					ID:        2,
+					EventType: types.EventTypeDecisionTaskScheduled.Ptr(),
+				},
+			},
+		},
+	}, nil).Times(2)
+	serverFrontendClient.EXPECT().ResetWorkflowExecution(gomock.Any(), gomock.Any()).Return(nil, nil).Times(1)
+	serverFrontendClient.EXPECT().DescribeWorkflowExecution(gomock.Any(), gomock.Any()).Return(&types.DescribeWorkflowExecutionResponse{
+		WorkflowExecutionInfo: &types.WorkflowExecutionInfo{},
+	}, nil).AnyTimes()
+	err = ResetWorkflow(c)
+	assert.NoError(t, err)
+
+	// reset failed
+	serverFrontendClient.EXPECT().ResetWorkflowExecution(gomock.Any(), gomock.Any()).Return(nil, errors.New("test-error")).Times(1)
+	err = ResetWorkflow(c)
+	assert.Error(t, err)
+
+	// getResetEventIDByType failed
+	serverFrontendClient.EXPECT().GetWorkflowExecutionHistory(gomock.Any(), gomock.Any()).Return(nil, errors.New("test-error")).Times(1)
+	err = ResetWorkflow(c)
+	assert.Error(t, err)
+}
+
+func Test_ResetWorkflow_Invalid_Decision_Offset(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	serverFrontendClient := frontend.NewMockClient(mockCtrl)
+	serverAdminClient := admin.NewMockClient(mockCtrl)
+	app := NewCliApp(&clientFactoryMock{
+		serverFrontendClient: serverFrontendClient,
+		serverAdminClient:    serverAdminClient,
+	})
+
+	set := flag.NewFlagSet("test", 0)
+	set.String(FlagDomain, "test-domain", "domain")
+	set.String("workflow_id", "test-workflow-id", "workflow_id")
+	set.Parse([]string{"test-workflow-id", "test-run-id"})
+	set.String("reason", "test", "reason")
+	set.String("decision_offset", "100", "decision_offset")
+	c := cli.NewContext(app, set, nil)
+	err := ResetWorkflow(c)
+	assert.Error(t, err)
+}
+
+func Test_ResetWorkflow_Missing_RunID(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	serverFrontendClient := frontend.NewMockClient(mockCtrl)
+	serverAdminClient := admin.NewMockClient(mockCtrl)
+	app := NewCliApp(&clientFactoryMock{
+		serverFrontendClient: serverFrontendClient,
+		serverAdminClient:    serverAdminClient,
+	})
+
+	set := flag.NewFlagSet("test", 0)
+	set.String(FlagDomain, "test-domain", "domain")
+	set.String("workflow_id", "test-workflow-id", "workflow_id")
+	set.String("reason", "test", "reason")
+	set.String("decision_offset", "-1", "decision_offset")
+	set.String("reset_type", "BadBinary", "reset_type")
+	set.String("reset_bad_binary_checksum", "test-bad-binary-checksum", "reset_bad_binary_checksum")
+	serverFrontendClient.EXPECT().DescribeWorkflowExecution(gomock.Any(), gomock.Any()).Return(&types.DescribeWorkflowExecutionResponse{
+		WorkflowExecutionInfo: &types.WorkflowExecutionInfo{},
+	}, errors.New("test-error")).AnyTimes()
+	c := cli.NewContext(app, set, nil)
+	err := ResetWorkflow(c)
+	assert.Error(t, err)
+}
