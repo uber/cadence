@@ -210,109 +210,114 @@ func TestAdminDescribeTaskList_InvalidTaskListType(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestAdminListTaskList_Success(t *testing.T) {
+func TestAdminListTaskList(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
-	// Mock clients
-	serverFrontendClient := frontend.NewMockClient(mockCtrl)
-	serverAdminClient := admin.NewMockClient(mockCtrl)
-
-	// Create CLI app with mock clients
-	app := NewCliApp(&clientFactoryMock{
-		serverFrontendClient: serverFrontendClient,
-		serverAdminClient:    serverAdminClient,
-	})
-
-	// Prepare expected response
-	expectedResponse := &types.GetTaskListsByDomainResponse{
-		DecisionTaskListMap: map[string]*types.DescribeTaskListResponse{
-			"decision-tasklist-1": {
-				Pollers: []*types.PollerInfo{
-					{Identity: "poller1"},
-					{Identity: "poller2"},
-				},
+	// Define table of test cases
+	tests := []struct {
+		name          string
+		setupMocks    func(*frontend.MockClient)
+		expectedError string
+		domainFlag    string
+		taskListFlag  string
+		taskListType  string
+	}{
+		{
+			name: "Success",
+			setupMocks: func(client *frontend.MockClient) {
+				expectedResponse := &types.GetTaskListsByDomainResponse{
+					DecisionTaskListMap: map[string]*types.DescribeTaskListResponse{
+						"decision-tasklist-1": {
+							Pollers: []*types.PollerInfo{
+								{Identity: "poller1"},
+								{Identity: "poller2"},
+							},
+						},
+						"decision-tasklist-2": {
+							Pollers: []*types.PollerInfo{
+								{Identity: "poller3"},
+							},
+						},
+					},
+					ActivityTaskListMap: map[string]*types.DescribeTaskListResponse{
+						"activity-tasklist-1": {
+							Pollers: []*types.PollerInfo{
+								{Identity: "poller4"},
+							},
+						},
+					},
+				}
+				client.EXPECT().
+					GetTaskListsByDomain(gomock.Any(), gomock.Any()).
+					Return(expectedResponse, nil).
+					Times(1)
 			},
-			"decision-tasklist-2": {
-				Pollers: []*types.PollerInfo{
-					{Identity: "poller3"},
-				},
-			},
+			expectedError: "",
+			domainFlag:    "test-domain",
+			taskListFlag:  "test-tasklist",
+			taskListType:  "decision",
 		},
-		ActivityTaskListMap: map[string]*types.DescribeTaskListResponse{
-			"activity-tasklist-1": {
-				Pollers: []*types.PollerInfo{
-					{Identity: "poller4"},
-				},
+		{
+			name: "GetTaskListsByDomainFails",
+			setupMocks: func(client *frontend.MockClient) {
+				client.EXPECT().
+					GetTaskListsByDomain(gomock.Any(), gomock.Any()).
+					Return(nil, fmt.Errorf("GetTaskListsByDomain failed")).
+					Times(1)
 			},
+			expectedError: "Operation GetTaskListByDomain failed",
+			domainFlag:    "test-domain",
+			taskListFlag:  "test-tasklist",
+			taskListType:  "decision",
+		},
+		{
+			name:          "NoDomainFlag",
+			setupMocks:    func(client *frontend.MockClient) {},
+			expectedError: "Required flag not found",
+			domainFlag:    "", // Omit Domain flag
+			taskListFlag:  "test-tasklist",
+			taskListType:  "decision",
 		},
 	}
 
-	// Set up the expected call and response
-	serverFrontendClient.EXPECT().
-		GetTaskListsByDomain(gomock.Any(), gomock.Any()).
-		Return(expectedResponse, nil).
-		Times(1)
+	// Loop through test cases
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Mock clients
+			serverFrontendClient := frontend.NewMockClient(mockCtrl)
+			serverAdminClient := admin.NewMockClient(mockCtrl)
 
-	// Set up CLI context
-	c := setTasklistMock(app)
+			// Create CLI app with mock clients
+			app := NewCliApp(&clientFactoryMock{
+				serverFrontendClient: serverFrontendClient,
+				serverAdminClient:    serverAdminClient,
+			})
 
-	// Call the function under test
-	err := AdminListTaskList(c)
-	assert.NoError(t, err)
-}
+			// Set up mocks for the current test case
+			tt.setupMocks(serverFrontendClient)
 
-func TestAdminListTaskList_GetTaskListsByDomainFails(t *testing.T) {
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
+			// Set up the CLI context
+			set := flag.NewFlagSet("test", 0)
+			if tt.domainFlag != "" {
+				set.String(FlagDomain, tt.domainFlag, "Domain flag")
+			}
+			set.String(FlagTaskList, tt.taskListFlag, "TaskList flag")
+			set.String(FlagTaskListType, tt.taskListType, "TaskListType flag")
+			c := cli.NewContext(app, set, nil)
 
-	// Mock clients
-	serverFrontendClient := frontend.NewMockClient(mockCtrl)
-	serverAdminClient := admin.NewMockClient(mockCtrl)
+			// Call the function under test
+			err := AdminListTaskList(c)
 
-	// Create CLI app with mock clients
-	app := NewCliApp(&clientFactoryMock{
-		serverFrontendClient: serverFrontendClient,
-		serverAdminClient:    serverAdminClient,
-	})
-
-	// Set up the expected call to return an error
-	serverFrontendClient.EXPECT().
-		GetTaskListsByDomain(gomock.Any(), gomock.Any()).
-		Return(nil, fmt.Errorf("GetTaskListsByDomain failed")).
-		Times(1)
-
-	// Set up CLI context
-	c := setTasklistMock(app)
-
-	// Call the function under test
-	err := AdminListTaskList(c)
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "Operation GetTaskListByDomain failed.")
-}
-
-func TestAdminListTaskList_NoDomainFlag(t *testing.T) {
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
-
-	// Mock clients
-	serverFrontendClient := frontend.NewMockClient(mockCtrl)
-	serverAdminClient := admin.NewMockClient(mockCtrl)
-
-	// Create CLI app with mock clients
-	app := NewCliApp(&clientFactoryMock{
-		serverFrontendClient: serverFrontendClient,
-		serverAdminClient:    serverAdminClient,
-	})
-
-	// Omit the Domain flag
-	set := flag.NewFlagSet("test", 0)
-	c := cli.NewContext(app, set, nil)
-
-	// Call the function under test
-	err := AdminListTaskList(c)
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "Required flag not found: ")
+			// Check expected outcomes
+			if tt.expectedError != "" {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tt.expectedError)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
 }
 
 // Helper function to set up the CLI context
