@@ -18,6 +18,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+//go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination factory_mock.go -self_package github.com/uber/cadence/tools/cli
+
 package cli
 
 import (
@@ -88,7 +90,6 @@ type clientFactory struct {
 }
 
 // NewClientFactory creates a new ClientFactory
-
 func NewClientFactory(logger *zap.Logger) ClientFactory {
 	return &clientFactory{
 		logger: logger,
