@@ -645,14 +645,14 @@ func (s *MatchingPersistenceSuite) TestGetOrphanTasks() {
 		Tasks: []*p.CreateTaskInfo{
 			{
 				Data: &p.TaskInfo{
-					DomainID:               domainID,
-					WorkflowID:             wid,
-					RunID:                  rid,
-					TaskID:                 0,
-					ScheduleID:             0,
-					ScheduleToStartTimeout: 0,
-					Expiry:                 time.Now(),
-					CreatedTime:            time.Now(),
+					DomainID:                      domainID,
+					WorkflowID:                    wid,
+					RunID:                         rid,
+					TaskID:                        0,
+					ScheduleID:                    0,
+					ScheduleToStartTimeoutSeconds: 0,
+					Expiry:                        time.Now(),
+					CreatedTime:                   time.Now(),
 				},
 				TaskID: 0,
 			},

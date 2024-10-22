@@ -24,8 +24,6 @@ package persistence
 
 import (
 	"context"
-
-	"github.com/uber/cadence/common"
 )
 
 type (
@@ -78,31 +76,11 @@ func (t *taskManager) GetTaskListSize(ctx context.Context, request *GetTaskListS
 }
 
 func (t *taskManager) CreateTasks(ctx context.Context, request *CreateTasksRequest) (*CreateTasksResponse, error) {
-	var internalCreateTasks []*InternalCreateTasksInfo
-	for _, task := range request.Tasks {
-		internalCreateTasks = append(internalCreateTasks, t.toInternalCreateTaskInfo(task))
-	}
-	internalRequest := &InternalCreateTasksRequest{
-		TaskListInfo: request.TaskListInfo,
-		Tasks:        internalCreateTasks,
-	}
-	_, err := t.persistence.CreateTasks(ctx, internalRequest)
-	if err != nil {
-		return nil, err
-	}
-	return &CreateTasksResponse{}, err
+	return t.persistence.CreateTasks(ctx, request)
 }
 
 func (t *taskManager) GetTasks(ctx context.Context, request *GetTasksRequest) (*GetTasksResponse, error) {
-	internalResult, err := t.persistence.GetTasks(ctx, request)
-	if err != nil {
-		return nil, err
-	}
-	var taskInfo []*TaskInfo
-	for _, task := range internalResult.Tasks {
-		taskInfo = append(taskInfo, t.fromInternalTaskInfo(task))
-	}
-	return &GetTasksResponse{Tasks: taskInfo}, nil
+	return t.persistence.GetTasks(ctx, request)
 }
 
 func (t *taskManager) CompleteTask(ctx context.Context, request *CompleteTaskRequest) error {
@@ -115,47 +93,4 @@ func (t *taskManager) CompleteTasksLessThan(ctx context.Context, request *Comple
 
 func (t *taskManager) GetOrphanTasks(ctx context.Context, request *GetOrphanTasksRequest) (*GetOrphanTasksResponse, error) {
 	return t.persistence.GetOrphanTasks(ctx, request)
-}
-
-func (t *taskManager) toInternalCreateTaskInfo(createTaskInfo *CreateTaskInfo) *InternalCreateTasksInfo {
-	if createTaskInfo == nil {
-		return nil
-	}
-	return &InternalCreateTasksInfo{
-		Data:   t.toInternalTaskInfo(createTaskInfo.Data),
-		TaskID: createTaskInfo.TaskID,
-	}
-}
-
-func (t *taskManager) toInternalTaskInfo(taskInfo *TaskInfo) *InternalTaskInfo {
-	if taskInfo == nil {
-		return nil
-	}
-	return &InternalTaskInfo{
-		DomainID:               taskInfo.DomainID,
-		WorkflowID:             taskInfo.WorkflowID,
-		RunID:                  taskInfo.RunID,
-		TaskID:                 taskInfo.TaskID,
-		ScheduleID:             taskInfo.ScheduleID,
-		ScheduleToStartTimeout: common.SecondsToDuration(int64(taskInfo.ScheduleToStartTimeout)),
-		Expiry:                 taskInfo.Expiry,
-		CreatedTime:            taskInfo.CreatedTime,
-		PartitionConfig:        taskInfo.PartitionConfig,
-	}
-}
-func (t *taskManager) fromInternalTaskInfo(internalTaskInfo *InternalTaskInfo) *TaskInfo {
-	if internalTaskInfo == nil {
-		return nil
-	}
-	return &TaskInfo{
-		DomainID:               internalTaskInfo.DomainID,
-		WorkflowID:             internalTaskInfo.WorkflowID,
-		RunID:                  internalTaskInfo.RunID,
-		TaskID:                 internalTaskInfo.TaskID,
-		ScheduleID:             internalTaskInfo.ScheduleID,
-		ScheduleToStartTimeout: int32(internalTaskInfo.ScheduleToStartTimeout.Seconds()),
-		Expiry:                 internalTaskInfo.Expiry,
-		CreatedTime:            internalTaskInfo.CreatedTime,
-		PartitionConfig:        internalTaskInfo.PartitionConfig,
-	}
 }

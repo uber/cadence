@@ -654,12 +654,12 @@ func (t *MatcherTestSuite) newDomainCache() cache.DomainCache {
 
 func (t *MatcherTestSuite) newTaskInfo() *persistence.TaskInfo {
 	return &persistence.TaskInfo{
-		DomainID:               uuid.New(),
-		WorkflowID:             uuid.New(),
-		RunID:                  uuid.New(),
-		TaskID:                 rand.Int63(),
-		ScheduleID:             rand.Int63(),
-		ScheduleToStartTimeout: rand.Int31(),
+		DomainID:                      uuid.New(),
+		WorkflowID:                    uuid.New(),
+		RunID:                         uuid.New(),
+		TaskID:                        rand.Int63(),
+		ScheduleID:                    rand.Int63(),
+		ScheduleToStartTimeoutSeconds: rand.Int31(),
 	}
 }
 

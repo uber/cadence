@@ -468,15 +468,15 @@ type (
 
 	// TaskInfo describes either activity or decision task
 	TaskInfo struct {
-		DomainID               string
-		WorkflowID             string
-		RunID                  string
-		TaskID                 int64
-		ScheduleID             int64
-		ScheduleToStartTimeout int32
-		Expiry                 time.Time
-		CreatedTime            time.Time
-		PartitionConfig        map[string]string
+		DomainID                      string
+		WorkflowID                    string
+		RunID                         string
+		TaskID                        int64
+		ScheduleID                    int64
+		ScheduleToStartTimeoutSeconds int32
+		Expiry                        time.Time
+		CreatedTime                   time.Time
+		PartitionConfig               map[string]string
 	}
 
 	// TaskKey gives primary key info for a specific task

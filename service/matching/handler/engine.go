@@ -388,13 +388,13 @@ func (e *matchingEngineImpl) AddDecisionTask(
 	}
 
 	taskInfo := &persistence.TaskInfo{
-		DomainID:               domainID,
-		RunID:                  request.Execution.GetRunID(),
-		WorkflowID:             request.Execution.GetWorkflowID(),
-		ScheduleID:             request.GetScheduleID(),
-		ScheduleToStartTimeout: request.GetScheduleToStartTimeoutSeconds(),
-		CreatedTime:            e.timeSource.Now(),
-		PartitionConfig:        request.GetPartitionConfig(),
+		DomainID:                      domainID,
+		RunID:                         request.Execution.GetRunID(),
+		WorkflowID:                    request.Execution.GetWorkflowID(),
+		ScheduleID:                    request.GetScheduleID(),
+		ScheduleToStartTimeoutSeconds: request.GetScheduleToStartTimeoutSeconds(),
+		CreatedTime:                   e.timeSource.Now(),
+		PartitionConfig:               request.GetPartitionConfig(),
 	}
 
 	syncMatched, err := tlMgr.AddTask(hCtx.Context, tasklist.AddTaskParams{
@@ -463,13 +463,13 @@ func (e *matchingEngineImpl) AddActivityTask(
 	}
 
 	taskInfo := &persistence.TaskInfo{
-		DomainID:               request.GetSourceDomainUUID(),
-		RunID:                  request.Execution.GetRunID(),
-		WorkflowID:             request.Execution.GetWorkflowID(),
-		ScheduleID:             request.GetScheduleID(),
-		ScheduleToStartTimeout: request.GetScheduleToStartTimeoutSeconds(),
-		CreatedTime:            e.timeSource.Now(),
-		PartitionConfig:        request.GetPartitionConfig(),
+		DomainID:                      request.GetSourceDomainUUID(),
+		RunID:                         request.Execution.GetRunID(),
+		WorkflowID:                    request.Execution.GetWorkflowID(),
+		ScheduleID:                    request.GetScheduleID(),
+		ScheduleToStartTimeoutSeconds: request.GetScheduleToStartTimeoutSeconds(),
+		CreatedTime:                   e.timeSource.Now(),
+		PartitionConfig:               request.GetPartitionConfig(),
 	}
 
 	syncMatched, err := tlMgr.AddTask(hCtx.Context, tasklist.AddTaskParams{
