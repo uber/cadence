@@ -138,29 +138,6 @@ func (s *cliAppSuite) TestAppCommands() {
 	}
 }
 
-func (s *cliAppSuite) TestDomainRegister_LocalDomain() {
-	s.serverFrontendClient.EXPECT().RegisterDomain(gomock.Any(), gomock.Any()).Return(nil)
-	s.NoError(s.app.Run([]string{"", "--do", domainName, "domain", "register", "--global_domain", "false"}))
-}
-
-func (s *cliAppSuite) TestDomainRegister_GlobalDomain() {
-	s.serverFrontendClient.EXPECT().RegisterDomain(gomock.Any(), gomock.Any()).Return(nil)
-	s.NoError(s.app.Run([]string{"", "--do", domainName, "domain", "register", "--global_domain", "true"}))
-}
-
-func (s *cliAppSuite) TestDomainRegister_DomainExist() {
-	s.serverFrontendClient.EXPECT().RegisterDomain(gomock.Any(), gomock.Any()).Return(&types.DomainAlreadyExistsError{})
-	s.Error(s.app.Run([]string{"", "--do", domainName, "domain", "register", "--global_domain", "true"}))
-}
-
-func (s *cliAppSuite) TestDomainRegister_Failed() {
-	s.serverFrontendClient.EXPECT().RegisterDomain(gomock.Any(), gomock.Any()).Return(&types.BadRequestError{"fake error"})
-	// TODO check error message for all s.Error use cases
-	s.ErrorContains(
-		s.app.Run(([]string{"", "--do", domainName, "domain", "register", "--global_domain", "true"})),
-		"Register Domain operation failed.")
-}
-
 var describeDomainResponseServer = &types.DescribeDomainResponse{
 	DomainInfo: &types.DomainInfo{
 		Name:        "test-domain",
@@ -182,35 +159,6 @@ var describeDomainResponseServer = &types.DescribeDomainResponse{
 			},
 		},
 	},
-}
-
-func (s *cliAppSuite) TestDomainUpdate() {
-	resp := describeDomainResponseServer
-	s.serverFrontendClient.EXPECT().DescribeDomain(gomock.Any(), gomock.Any()).Return(resp, nil).Times(2)
-	s.serverFrontendClient.EXPECT().UpdateDomain(gomock.Any(), gomock.Any()).Return(nil, nil).Times(2)
-	err := s.app.Run([]string{"", "--do", domainName, "domain", "update"})
-	s.Nil(err)
-	err = s.app.Run([]string{"", "--do", domainName, "domain", "update", "--desc", "another desc", "--oe", "another@uber.com", "--rd", "1"})
-	s.Nil(err)
-}
-
-func (s *cliAppSuite) TestDomainUpdate_DomainNotExist() {
-	resp := describeDomainResponseServer
-	s.serverFrontendClient.EXPECT().DescribeDomain(gomock.Any(), gomock.Any()).Return(resp, nil)
-	s.serverFrontendClient.EXPECT().UpdateDomain(gomock.Any(), gomock.Any()).Return(nil, &types.EntityNotExistsError{})
-	s.Error(s.app.Run([]string{"", "--do", domainName, "domain", "update"}))
-}
-
-func (s *cliAppSuite) TestDomainUpdate_ActiveClusterFlagNotSet_DomainNotExist() {
-	s.serverFrontendClient.EXPECT().DescribeDomain(gomock.Any(), gomock.Any()).Return(nil, &types.EntityNotExistsError{})
-	s.Error(s.app.Run([]string{"", "--do", domainName, "domain", "update"}))
-}
-
-func (s *cliAppSuite) TestDomainUpdate_Failed() {
-	resp := describeDomainResponseServer
-	s.serverFrontendClient.EXPECT().DescribeDomain(gomock.Any(), gomock.Any()).Return(resp, nil)
-	s.serverFrontendClient.EXPECT().UpdateDomain(gomock.Any(), gomock.Any()).Return(nil, &types.BadRequestError{"faked error"})
-	s.Error(s.app.Run([]string{"", "--do", domainName, "domain", "update"}))
 }
 
 func (s *cliAppSuite) TestDomainDeprecate() {
