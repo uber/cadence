@@ -39,12 +39,10 @@ type (
 	}
 )
 
-var _ DomainManager = (*domainManagerImpl)(nil)
-
 // NewDomainManagerImpl returns new DomainManager
-func NewDomainManagerImpl(persistence DomainStore, logger log.Logger) DomainManager {
+func NewDomainManagerImpl(persistence DomainStore, logger log.Logger, serializer PayloadSerializer) DomainManager {
 	return &domainManagerImpl{
-		serializer:  NewPayloadSerializer(),
+		serializer:  serializer,
 		persistence: persistence,
 		logger:      logger,
 	}
@@ -168,6 +166,7 @@ func (m *domainManagerImpl) ListDomains(
 			FailoverNotificationVersion: d.FailoverNotificationVersion,
 			PreviousFailoverVersion:     d.PreviousFailoverVersion,
 			NotificationVersion:         d.NotificationVersion,
+			LastUpdatedTime:             d.LastUpdatedTime.UnixNano(),
 		}
 		if d.FailoverEndTime != nil {
 			currResp.FailoverEndTime = common.Int64Ptr(d.FailoverEndTime.UnixNano())
