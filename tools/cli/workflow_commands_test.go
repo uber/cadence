@@ -27,6 +27,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"os"
 	"testing"
 	"time"
 
@@ -924,4 +925,195 @@ func (s *cliAppSuite) TestSignalWithStartWorkflowExecution() {
 			err:     "Required flag not found",
 		},
 	})
+}
+
+func Test_DoReset(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	serverFrontendClient := frontend.NewMockClient(mockCtrl)
+	serverAdminClient := admin.NewMockClient(mockCtrl)
+	app := NewCliApp(&clientFactoryMock{
+		serverFrontendClient: serverFrontendClient,
+		serverAdminClient:    serverAdminClient,
+	})
+
+	set := flag.NewFlagSet("test", 0)
+
+	set.String(FlagDomain, "test-domain", "domain")
+	set.String("workflow_id", "test-workflow-id", "workflow_id")
+	set.Parse([]string{"test-workflow-id", "test-run-id"})
+	set.String("reason", "test", "reason")
+	set.String("decision_offset", "-1", "decision_offset")
+	set.String("reset_type", "LastDecisionCompleted", "reset_type")
+	serverFrontendClient.EXPECT().GetWorkflowExecutionHistory(gomock.Any(), gomock.Any()).Return(nil, errors.New("test-error")).Times(1)
+	serverFrontendClient.EXPECT().GetWorkflowExecutionHistory(gomock.Any(), gomock.Any()).Return(&types.GetWorkflowExecutionHistoryResponse{
+		History: &types.History{
+			Events: []*types.HistoryEvent{
+				{
+					ID:        1,
+					EventType: types.EventTypeDecisionTaskCompleted.Ptr(),
+				},
+				{
+					ID:        2,
+					EventType: types.EventTypeDecisionTaskScheduled.Ptr(),
+				},
+			},
+		},
+	}, nil).AnyTimes()
+	serverFrontendClient.EXPECT().ResetWorkflowExecution(gomock.Any(), gomock.Any()).Return(nil, errors.New("test-error")).Times(1)
+	serverFrontendClient.EXPECT().ResetWorkflowExecution(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
+	serverFrontendClient.EXPECT().DescribeWorkflowExecution(gomock.Any(), gomock.Any()).Return(&types.DescribeWorkflowExecutionResponse{
+		WorkflowExecutionInfo: &types.WorkflowExecutionInfo{},
+	}, errors.New("test-error")).Times(1)
+	serverFrontendClient.EXPECT().DescribeWorkflowExecution(gomock.Any(), gomock.Any()).Return(&types.DescribeWorkflowExecutionResponse{
+		WorkflowExecutionInfo: &types.WorkflowExecutionInfo{
+			Execution: &types.WorkflowExecution{
+				WorkflowID: "test-workflow-id",
+				RunID:      "test-run-id",
+			},
+		},
+	}, nil).AnyTimes()
+
+	c := cli.NewContext(app, set, nil)
+	params := &batchResetParamsType{
+		reason:    "test",
+		resetType: "LastDecisionCompleted",
+	}
+	// describe workflow execution failed
+	err := doReset(c, "test-domain", "test-workflow-id", "test-run-id", *params)
+	assert.Error(t, err)
+
+	// get reset event id failure
+	err = doReset(c, "test-domain", "test-workflow-id", "test-run-id", *params)
+	assert.Error(t, err)
+
+	// reset failure
+	err = doReset(c, "test-domain", "test-workflow-id", "", *params)
+	assert.Error(t, err)
+
+	// normal case
+	err = doReset(c, "test-domain", "test-workflow-id", "", *params)
+	assert.NoError(t, err)
+
+	// dry run
+	params.dryRun = true
+	err = doReset(c, "test-domain", "test-workflow-id", "", *params)
+	assert.NoError(t, err)
+
+	// skip current open
+	params.skipCurrentOpen = true
+	err = doReset(c, "test-domain", "test-workflow-id", "", *params)
+	assert.NoError(t, err)
+
+	// current run id not match with input rid
+	params.skipBaseNotCurrent = true
+	err = doReset(c, "test-domain", "test-workflow-id", "test-not-matched-rid", *params)
+	assert.NoError(t, err)
+
+	// dry run
+	params.dryRun = true
+	err = doReset(c, "test-domain", "test-workflow-id", "", *params)
+	assert.NoError(t, err)
+}
+
+func Test_DoReset_SkipCurrentCompleted(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	serverFrontendClient := frontend.NewMockClient(mockCtrl)
+	serverAdminClient := admin.NewMockClient(mockCtrl)
+	app := NewCliApp(&clientFactoryMock{
+		serverFrontendClient: serverFrontendClient,
+		serverAdminClient:    serverAdminClient,
+	})
+
+	set := flag.NewFlagSet("test", 0)
+
+	set.String(FlagDomain, "test-domain", "domain")
+	set.String("workflow_id", "test-workflow-id", "workflow_id")
+	set.Parse([]string{"test-workflow-id", "test-run-id"})
+	set.String("reason", "test", "reason")
+	set.String("decision_offset", "-1", "decision_offset")
+	set.String("reset_type", "LastDecisionCompleted", "reset_type")
+	serverFrontendClient.EXPECT().GetWorkflowExecutionHistory(gomock.Any(), gomock.Any()).Return(nil, errors.New("test-error")).Times(1)
+	serverFrontendClient.EXPECT().GetWorkflowExecutionHistory(gomock.Any(), gomock.Any()).Return(&types.GetWorkflowExecutionHistoryResponse{
+		History: &types.History{
+			Events: []*types.HistoryEvent{
+				{
+					ID:        1,
+					EventType: types.EventTypeDecisionTaskCompleted.Ptr(),
+				},
+			},
+		},
+	}, nil).AnyTimes()
+	serverFrontendClient.EXPECT().ResetWorkflowExecution(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
+	serverFrontendClient.EXPECT().DescribeWorkflowExecution(gomock.Any(), gomock.Any()).Return(&types.DescribeWorkflowExecutionResponse{
+		WorkflowExecutionInfo: &types.WorkflowExecutionInfo{
+			Execution: &types.WorkflowExecution{
+				WorkflowID: "test-workflow-id",
+				RunID:      "test-run-id",
+			},
+			CloseStatus: types.WorkflowExecutionCloseStatusCompleted.Ptr(),
+			CloseTime:   common.Int64Ptr(time.Now().UnixNano()),
+		},
+	}, nil).AnyTimes()
+
+	c := cli.NewContext(app, set, nil)
+	params := &batchResetParamsType{
+		reason:               "test",
+		resetType:            "LastDecisionCompleted",
+		nonDeterministicOnly: true,
+	}
+	// check non determinism failed when get history
+	err := doReset(c, "test-domain", "test-workflow-id", "test-run-id", *params)
+	assert.Error(t, err)
+
+	err = doReset(c, "test-domain", "test-workflow-id", "test-run-id", *params)
+	assert.NoError(t, err)
+
+	// describe workflow execution failed
+	params.skipCurrentCompleted = true
+	err = doReset(c, "test-domain", "test-workflow-id", "test-run-id", *params)
+	assert.NoError(t, err)
+}
+
+func createTempFileWithContent(t *testing.T, content string) (string, func()) {
+	tmpFile, err := os.CreateTemp("", "testfile")
+	if err != nil {
+		t.Fatalf("Failed to create temporary file: %v", err)
+	}
+
+	_, err = tmpFile.Write([]byte(content))
+	if err != nil {
+		t.Fatalf("Failed to write to temporary file: %v", err)
+	}
+
+	tmpFileName := tmpFile.Name()
+	tmpFile.Close()
+
+	// Return a cleanup function to delete the file after the test
+	cleanup := func() {
+		os.Remove(tmpFileName)
+	}
+
+	return tmpFileName, cleanup
+}
+
+func TestLoadWorkflowIDsFromFile_Success(t *testing.T) {
+	content := "wid1,wid2,wid3\n\nwid4,wid5\nwid6\n"
+	fileName, cleanup := createTempFileWithContent(t, content)
+	defer cleanup()
+
+	workflowIDs, err := loadWorkflowIDsFromFile(fileName, ",")
+	assert.NoError(t, err)
+
+	expected := map[string]bool{
+		"wid1": true,
+		"wid4": true,
+		"wid6": true,
+	}
+	assert.Equal(t, expected, workflowIDs)
+}
+
+func TestLoadWorkflowIDsFromFile_Failure(t *testing.T) {
+	// open failed
+	_, err := loadWorkflowIDsFromFile("non exist file", ",")
+	assert.Error(t, err)
 }
