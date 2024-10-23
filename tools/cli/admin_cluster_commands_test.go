@@ -25,18 +25,18 @@ package cli
 import (
 	"flag"
 	"fmt"
-	"github.com/uber/cadence/client/admin"
-	"github.com/uber/cadence/service/worker/failovermanager"
 	"testing"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/urfave/cli/v2"
 
+	"github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/common/visibility"
+	"github.com/uber/cadence/service/worker/failovermanager"
 )
 
 func TestAdminAddSearchAttribute_isValueTypeValid(t *testing.T) {
