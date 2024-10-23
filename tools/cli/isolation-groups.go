@@ -72,7 +72,6 @@ func AdminUpdateGlobalIsolationGroups(c *cli.Context) error {
 	}
 	err = validateIsolationGroupUpdateArgs(
 		c.String(FlagDomain),
-		c.String(FlagDomain),
 		c.StringSlice(FlagIsolationGroupSetDrains),
 		c.String(FlagJSON),
 		c.Bool(FlagIsolationGroupsRemoveAllDrains),
@@ -140,7 +139,6 @@ func AdminUpdateDomainIsolationGroups(c *cli.Context) error {
 
 	err = validateIsolationGroupUpdateArgs(
 		c.String(FlagDomain),
-		c.String(FlagDomain),
 		c.StringSlice(FlagIsolationGroupSetDrains),
 		c.String(FlagJSON),
 		c.Bool(FlagIsolationGroupsRemoveAllDrains),
@@ -179,16 +177,12 @@ func AdminUpdateDomainIsolationGroups(c *cli.Context) error {
 
 func validateIsolationGroupUpdateArgs(
 	domainArgs string,
-	globalDomainArg string,
 	setDrainsArgs []string,
 	jsonCfgArgs string,
 	removeAllDrainsArgs bool,
 	requiresDomain bool,
 ) error {
 	if requiresDomain {
-		if globalDomainArg != "" {
-			return fmt.Errorf("the flag '--domain' has to go at the end")
-		}
 		if domainArgs == "" {
 			return fmt.Errorf("the --domain flag is required")
 		}
