@@ -24,10 +24,15 @@ package cli
 
 import (
 	"errors"
+	"flag"
+	"fmt"
 	"testing"
 
+	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+	"github.com/urfave/cli/v2"
 
+	"github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -186,6 +191,159 @@ zone-4                  Unknown state: 5
 	for name, td := range tests {
 		t.Run(name, func(t *testing.T) {
 			assert.Equal(t, td.expectedOutput, renderIsolationGroups(td.input))
+		})
+	}
+}
+
+func TestAdminGetGlobalIsolationGroups(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	// Table of test cases
+	tests := []struct {
+		name             string
+		setupMocks       func(*admin.MockClient)
+		expectedError    string
+		flagFormat       string
+		mockDepsError    error
+		mockContextError error
+	}{
+		{
+			name: "Success with JSON format",
+			setupMocks: func(client *admin.MockClient) {
+				expectedResponse := &types.GetGlobalIsolationGroupsResponse{
+					IsolationGroups: types.IsolationGroupConfiguration{
+						"zone-1": {
+							Name:  "zone-1",
+							State: types.IsolationGroupStateHealthy,
+						},
+						"zone-2": {
+							Name:  "zone-2",
+							State: types.IsolationGroupStateDrained,
+						},
+					},
+				}
+				client.EXPECT().
+					GetGlobalIsolationGroups(gomock.Any(), gomock.Any()).
+					Return(expectedResponse, nil).
+					Times(1)
+			},
+			expectedError: "",
+			flagFormat:    "json",
+		},
+		{
+			name: "Failed to get global isolation groups",
+			setupMocks: func(client *admin.MockClient) {
+				client.EXPECT().
+					GetGlobalIsolationGroups(gomock.Any(), gomock.Any()).
+					Return(nil, fmt.Errorf("failed to get isolation-groups")).
+					Times(1)
+			},
+			expectedError: "failed to get isolation-groups",
+			flagFormat:    "json",
+		},
+	}
+
+	// Loop through test cases
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Mock the admin client
+			adminClient := admin.NewMockClient(mockCtrl)
+
+			// Set up mocks for the current test case
+			tt.setupMocks(adminClient)
+
+			// Create mock app with clientFactoryMock, including any deps errors
+			app := NewCliApp(&clientFactoryMock{
+				serverAdminClient: adminClient,
+			})
+
+			// Create CLI context with flags
+			set := flag.NewFlagSet("test", 0)
+			set.String(FlagFormat, tt.flagFormat, "Format flag")
+			c := cli.NewContext(app, set, nil)
+
+			// Call the function under test
+			err := AdminGetGlobalIsolationGroups(c)
+
+			// Check the expected outcome
+			if tt.expectedError != "" {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tt.expectedError)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestAdminUpdateGlobalIsolationGroups(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	// Define table-driven tests
+	tests := []struct {
+		name             string
+		setupMocks       func(*admin.MockClient)
+		expectedError    string
+		flagDomain       string
+		removeAllDrains  bool
+		mockDepsError    error
+		mockContextError error
+		validationError  error
+		parseConfigError error
+	}{
+		{
+			name: "Success",
+			setupMocks: func(client *admin.MockClient) {
+				client.EXPECT().
+					UpdateGlobalIsolationGroups(gomock.Any(), gomock.Any()).
+					Return(&types.UpdateGlobalIsolationGroupsResponse{}, nil).
+					Times(1)
+			},
+			expectedError:   "",
+			flagDomain:      "test-domain",
+			removeAllDrains: true,
+		},
+		{
+			name: "parse failure",
+			setupMocks: func(client *admin.MockClient) {
+			},
+			expectedError:   "invalid args:",
+			flagDomain:      "test-domain",
+			removeAllDrains: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Mock the admin client
+			adminClient := admin.NewMockClient(mockCtrl)
+
+			// Set up mocks for the current test case
+			tt.setupMocks(adminClient)
+
+			// Create mock app with clientFactoryMock, including any deps errors
+			app := NewCliApp(&clientFactoryMock{
+				serverAdminClient: adminClient,
+			})
+
+			// Set up CLI context with flags
+			set := flag.NewFlagSet("test", 0)
+			set.String(FlagDomain, tt.flagDomain, "Domain flag")
+			set.Bool(FlagIsolationGroupsRemoveAllDrains, tt.removeAllDrains, "RemoveAllDrains flag")
+			c := cli.NewContext(app, set, nil)
+
+			// Call the function under test
+			err := AdminUpdateGlobalIsolationGroups(c)
+
+			// Check the expected outcome
+			if tt.expectedError != "" {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tt.expectedError)
+			} else {
+				assert.NoError(t, err)
+			}
 		})
 	}
 }
