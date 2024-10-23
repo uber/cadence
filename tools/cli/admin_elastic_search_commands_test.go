@@ -26,18 +26,19 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
-	"github.com/golang/mock/gomock"
-	"github.com/olivere/elastic"
-	"github.com/uber/cadence/.gen/go/indexer"
-	"github.com/uber/cadence/common/elasticsearch"
-	"github.com/urfave/cli/v2"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"testing"
 	"time"
 
+	"github.com/golang/mock/gomock"
+	"github.com/olivere/elastic"
 	"github.com/stretchr/testify/assert"
+	"github.com/urfave/cli/v2"
+
+	"github.com/uber/cadence/.gen/go/indexer"
+	"github.com/uber/cadence/common/elasticsearch"
 )
 
 // Tests for timeKeyFilter function
