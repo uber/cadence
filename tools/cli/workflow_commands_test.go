@@ -1143,7 +1143,7 @@ func Test_ResetInBatch_WithQuery(t *testing.T) {
 	assert.Error(t, err)
 
 	set.String(FlagReason, "test", "reason")
-	//missing query
+	// missing query
 	err = ResetInBatch(c)
 	assert.Error(t, err)
 
