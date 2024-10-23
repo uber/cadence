@@ -139,28 +139,14 @@ func TestValidSearchAttributeKey(t *testing.T) {
 }
 
 func TestAdminDescribeCluster(t *testing.T) {
-	// Initialize mock controller
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
-
-	// Create mock frontend and admin clients
-	serverFrontendClient := frontend.NewMockClient(mockCtrl)
-	serverAdminClient := admin.NewMockClient(mockCtrl)
-
-	// Set up the CLI app and mock dependencies
-	app := NewCliApp(&clientFactoryMock{
-		serverFrontendClient: serverFrontendClient,
-		serverAdminClient:    serverAdminClient,
-	})
-
 	tests := []struct {
 		name          string
-		mockSetup     func()
+		mockSetup     func(serverFrontendClient *frontend.MockClient, serverAdminClient *admin.MockClient)
 		expectedError string
 	}{
 		{
 			name: "Success",
-			mockSetup: func() {
+			mockSetup: func(serverFrontendClient *frontend.MockClient, serverAdminClient *admin.MockClient) {
 				// Expected response from DescribeCluster
 				expectedResponse := &types.DescribeClusterResponse{
 					SupportedClientVersions: &types.SupportedClientVersions{
@@ -174,7 +160,7 @@ func TestAdminDescribeCluster(t *testing.T) {
 		},
 		{
 			name: "DescribeClusterError",
-			mockSetup: func() {
+			mockSetup: func(serverFrontendClient *frontend.MockClient, serverAdminClient *admin.MockClient) {
 				// Mock DescribeCluster to return an error
 				serverAdminClient.EXPECT().DescribeCluster(gomock.Any()).Return(nil, fmt.Errorf("DescribeCluster failed")).Times(1)
 			},
@@ -184,8 +170,22 @@ func TestAdminDescribeCluster(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			// Initialize mock controller
+			mockCtrl := gomock.NewController(t)
+			defer mockCtrl.Finish()
+
+			// Create mock frontend and admin clients
+			serverFrontendClient := frontend.NewMockClient(mockCtrl)
+			serverAdminClient := admin.NewMockClient(mockCtrl)
+
+			// Set up the CLI app and mock dependencies
+			app := NewCliApp(&clientFactoryMock{
+				serverFrontendClient: serverFrontendClient,
+				serverAdminClient:    serverAdminClient,
+			})
+
 			// Set up mock based on the specific test case
-			tt.mockSetup()
+			tt.mockSetup(serverFrontendClient, serverAdminClient)
 
 			// Set up CLI context
 			set := flag.NewFlagSet("test", 0)
