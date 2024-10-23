@@ -1117,3 +1117,160 @@ func TestLoadWorkflowIDsFromFile_Failure(t *testing.T) {
 	_, err := loadWorkflowIDsFromFile("non exist file", ",")
 	assert.Error(t, err)
 }
+
+func Test_ResetInBatch_WithQuery(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	serverFrontendClient := frontend.NewMockClient(mockCtrl)
+	app := NewCliApp(&clientFactoryMock{
+		serverFrontendClient: serverFrontendClient,
+	})
+
+	set := flag.NewFlagSet("test", 0)
+	c := cli.NewContext(app, set, nil)
+	// missing domain flag
+	err := ResetInBatch(c)
+	assert.Error(t, err)
+
+	set.String(FlagDomain, "test-domain", "domain")
+	set.String("reset_type", "BadBinary", "reset_type")
+	set.String("reset_bad_binary_checksum", "test-bad-binary-checksum", "reset_bad_binary_checksum")
+	set.String(FlagParallismDeprecated, "1", "input parallism")
+	set.String(FlagParallelism, "2", "parallelism")
+	set.String(FlagExcludeWorkflowIDByQuery, "test-workflow-id", "exclude query")
+
+	// missing reason
+	err = ResetInBatch(c)
+	assert.Error(t, err)
+
+	set.String(FlagReason, "test", "reason")
+	//missing query
+	err = ResetInBatch(c)
+	assert.Error(t, err)
+
+	set.String(FlagListQuery, "WorkflowType='test-workflow-type'", "list query")
+	serverFrontendClient.EXPECT().ScanWorkflowExecutions(gomock.Any(), gomock.Any()).Return(&types.ListWorkflowExecutionsResponse{
+		Executions: []*types.WorkflowExecutionInfo{
+			{
+				Execution: &types.WorkflowExecution{
+					WorkflowID: "test-workflow-id",
+					RunID:      "test-run-id",
+				},
+			},
+		},
+	}, nil).Times(2)
+	err = ResetInBatch(c)
+	assert.NoError(t, err)
+}
+
+func Test_ResetInBatch_WithFile(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	serverFrontendClient := frontend.NewMockClient(mockCtrl)
+	app := NewCliApp(&clientFactoryMock{
+		serverFrontendClient: serverFrontendClient,
+	})
+
+	set := flag.NewFlagSet("test", 0)
+	set.String(FlagDomain, "test-domain", "domain")
+	set.String("reset_type", "BadBinary", "reset_type")
+	set.String("reset_bad_binary_checksum", "test-bad-binary-checksum", "reset_bad_binary_checksum")
+	content := "wid1,wid2,wid3\n\nwid4,wid5\nwid6\n"
+	fileName, cleanup := createTempFileWithContent(t, content)
+	defer cleanup()
+	set.String(FlagInputFile, fileName, "input file")
+	set.String(FlagParallismDeprecated, "1", "input parallism")
+	set.String(FlagParallelism, "2", "parallelism")
+	set.String(FlagExcludeFile, fileName, "exclude query")
+	set.String(FlagReason, "test", "reason")
+
+	serverFrontendClient.EXPECT().ScanWorkflowExecutions(gomock.Any(), gomock.Any()).Return(&types.ListWorkflowExecutionsResponse{
+		Executions: []*types.WorkflowExecutionInfo{
+			{
+				Execution: &types.WorkflowExecution{
+					WorkflowID: "test-workflow-id",
+					RunID:      "test-run-id",
+				},
+			},
+		},
+	}, nil).AnyTimes()
+	c := cli.NewContext(app, set, nil)
+	err := ResetInBatch(c)
+	assert.NoError(t, err)
+
+	// error when both exclude query and file are provided
+	set.String(FlagExcludeWorkflowIDByQuery, "test-workflow-id", "exclude query")
+	err = ResetInBatch(c)
+	assert.Error(t, err)
+}
+
+func Test_ResetInBatch_InvalidDescisionOffset(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	serverFrontendClient := frontend.NewMockClient(mockCtrl)
+	app := NewCliApp(&clientFactoryMock{
+		serverFrontendClient: serverFrontendClient,
+	})
+
+	set := flag.NewFlagSet("test", 0)
+	set.String(FlagDomain, "test-domain", "domain")
+	set.String(FlagDecisionOffset, "100", "decision_offset")
+	set.String(FlagResetType, "BadBinary", "reset_type")
+	c := cli.NewContext(app, set, nil)
+	err := ResetInBatch(c)
+	assert.Error(t, err)
+}
+
+func Test_ResetInBatch_InvalidResetType(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	serverFrontendClient := frontend.NewMockClient(mockCtrl)
+	app := NewCliApp(&clientFactoryMock{
+		serverFrontendClient: serverFrontendClient,
+	})
+
+	set := flag.NewFlagSet("test", 0)
+	set.String(FlagDomain, "test-domain", "domain")
+	set.String(FlagDecisionOffset, "-1", "decision_offset")
+	set.String(FlagResetType, "test", "reset_type")
+	c := cli.NewContext(app, set, nil)
+	err := ResetInBatch(c)
+	assert.Error(t, err)
+}
+
+func Test_ResetInBatch_InvalidInputFile(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	serverFrontendClient := frontend.NewMockClient(mockCtrl)
+	app := NewCliApp(&clientFactoryMock{
+		serverFrontendClient: serverFrontendClient,
+	})
+
+	set := flag.NewFlagSet("test", 0)
+	set.String(FlagDomain, "test-domain", "domain")
+	set.String("reset_type", "BadBinary", "reset_type")
+	set.String("reset_bad_binary_checksum", "test-bad-binary-checksum", "reset_bad_binary_checksum")
+	set.String(FlagInputFile, "non exist file", "input file")
+	set.String(FlagParallismDeprecated, "1", "input parallism")
+	set.String(FlagParallelism, "2", "parallelism")
+	set.String(FlagReason, "test", "reason")
+	c := cli.NewContext(app, set, nil)
+	err := ResetInBatch(c)
+	assert.Error(t, err)
+}
+
+func Test_ResetInBatch_InvalidexcludeFile(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	serverFrontendClient := frontend.NewMockClient(mockCtrl)
+	app := NewCliApp(&clientFactoryMock{
+		serverFrontendClient: serverFrontendClient,
+	})
+
+	set := flag.NewFlagSet("test", 0)
+	set.String(FlagDomain, "test-domain", "domain")
+	set.String("reset_type", "BadBinary", "reset_type")
+	set.String("reset_bad_binary_checksum", "test-bad-binary-checksum", "reset_bad_binary_checksum")
+	set.String(FlagExcludeFile, "non exist file", "exclude query")
+	set.String(FlagParallismDeprecated, "1", "input parallism")
+	set.String(FlagParallelism, "2", "parallelism")
+	set.String(FlagReason, "test", "reason")
+	set.String(FlagListQuery, "WorkflowType='test-workflow-type'", "list query")
+	c := cli.NewContext(app, set, nil)
+	err := ResetInBatch(c)
+	assert.Error(t, err)
+}
