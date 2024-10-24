@@ -28,7 +28,6 @@ import (
 	"strings"
 
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -74,22 +73,17 @@ type (
 	}
 
 	defaultLoadBalancer struct {
-		nReadPartitions  dynamicconfig.IntPropertyFnWithTaskListInfoFilters
-		nWritePartitions dynamicconfig.IntPropertyFnWithTaskListInfoFilters
-		domainIDToName   func(string) (string, error)
+		provider PartitionConfigProvider
 	}
 )
 
 // NewLoadBalancer returns an instance of matching load balancer that
 // can help distribute api calls across task list partitions
 func NewLoadBalancer(
-	domainIDToName func(string) (string, error),
-	dc *dynamicconfig.Collection,
+	provider PartitionConfigProvider,
 ) LoadBalancer {
 	return &defaultLoadBalancer{
-		domainIDToName:   domainIDToName,
-		nReadPartitions:  dc.GetIntPropertyFilteredByTaskListInfo(dynamicconfig.MatchingNumTasklistReadPartitions),
-		nWritePartitions: dc.GetIntPropertyFilteredByTaskListInfo(dynamicconfig.MatchingNumTasklistWritePartitions),
+		provider: provider,
 	}
 }
 
@@ -99,16 +93,7 @@ func (lb *defaultLoadBalancer) PickWritePartition(
 	taskListType int,
 	forwardedFrom string,
 ) string {
-	domainName, err := lb.domainIDToName(domainID)
-	if err != nil {
-		return taskList.GetName()
-	}
-	nPartitions := lb.nWritePartitions(domainName, taskList.GetName(), taskListType)
-
-	// checks to make sure number of writes never exceeds number of reads
-	if nRead := lb.nReadPartitions(domainName, taskList.GetName(), taskListType); nPartitions > nRead {
-		nPartitions = nRead
-	}
+	nPartitions := lb.provider.GetNumberOfWritePartitions(domainID, taskList, taskListType)
 	return lb.pickPartition(taskList, forwardedFrom, nPartitions)
 
 }
@@ -119,11 +104,7 @@ func (lb *defaultLoadBalancer) PickReadPartition(
 	taskListType int,
 	forwardedFrom string,
 ) string {
-	domainName, err := lb.domainIDToName(domainID)
-	if err != nil {
-		return taskList.GetName()
-	}
-	n := lb.nReadPartitions(domainName, taskList.GetName(), taskListType)
+	n := lb.provider.GetNumberOfReadPartitions(domainID, taskList, taskListType)
 	return lb.pickPartition(taskList, forwardedFrom, n)
 
 }

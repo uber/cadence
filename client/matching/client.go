@@ -36,6 +36,7 @@ type clientImpl struct {
 	client       Client
 	peerResolver PeerResolver
 	loadBalancer LoadBalancer
+	provider     PartitionConfigProvider
 }
 
 // NewClient creates a new history service TChannel client
@@ -43,11 +44,13 @@ func NewClient(
 	client Client,
 	peerResolver PeerResolver,
 	lb LoadBalancer,
+	provider PartitionConfigProvider,
 ) Client {
 	return &clientImpl{
 		client:       client,
 		peerResolver: peerResolver,
 		loadBalancer: lb,
+		provider:     provider,
 	}
 }
 
@@ -131,6 +134,12 @@ func (c *clientImpl) PollForDecisionTask(
 		return nil, err
 	}
 	request.PollRequest.TaskList.Name = originalTaskListName
+	c.provider.UpdatePartitionConfig(
+		request.GetDomainUUID(),
+		*request.PollRequest.GetTaskList(),
+		persistence.TaskListTypeDecision,
+		resp.PartitionConfig,
+	)
 	c.loadBalancer.UpdateWeight(
 		request.GetDomainUUID(),
 		*request.PollRequest.GetTaskList(),
