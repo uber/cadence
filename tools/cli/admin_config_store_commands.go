@@ -88,7 +88,7 @@ func AdminGetDynamicConfig(c *cli.Context) error {
 				}
 				cliEntries = append(cliEntries, cliEntry)
 			}
-			prettyPrintJSONObject(cliEntries)
+			prettyPrintJSONObject(getDeps(c).Output(), cliEntries)
 		}
 	} else {
 		parsedFilters, err := parseInputFilterArray(filters)
@@ -115,7 +115,7 @@ func AdminGetDynamicConfig(c *cli.Context) error {
 		if umVal == nil {
 			fmt.Printf("No values stored for specified dynamic config.\n")
 		} else {
-			prettyPrintJSONObject(umVal)
+			prettyPrintJSONObject(getDeps(c).Output(), umVal)
 		}
 	}
 	return nil
@@ -241,7 +241,7 @@ func AdminListDynamicConfig(c *cli.Context) error {
 			}
 			cliEntries = append(cliEntries, cliEntry)
 		}
-		prettyPrintJSONObject(cliEntries)
+		prettyPrintJSONObject(getDeps(c).Output(), cliEntries)
 	}
 	return nil
 }

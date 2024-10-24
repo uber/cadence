@@ -132,7 +132,7 @@ func AdminFailoverQuery(c *cli.Context) error {
 	if isWorkflowTerminated(descResp) {
 		result.State = failovermanager.WorkflowAborted
 	}
-	prettyPrintJSONObject(result)
+	prettyPrintJSONObject(getDeps(c).Output(), result)
 	return nil
 }
 

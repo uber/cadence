@@ -190,7 +190,7 @@ zone-4                  Unknown state: 5
 
 	for name, td := range tests {
 		t.Run(name, func(t *testing.T) {
-			assert.Equal(t, td.expectedOutput, renderIsolationGroups(td.input))
+			assert.Equal(t, td.expectedOutput, string(renderIsolationGroups(td.input)))
 		})
 	}
 }

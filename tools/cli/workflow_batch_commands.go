@@ -75,7 +75,7 @@ func TerminateBatchJob(c *cli.Context) error {
 	output := map[string]interface{}{
 		"msg": "batch job is terminated",
 	}
-	prettyPrintJSONObject(output)
+	prettyPrintJSONObject(getDeps(c).Output(), output)
 	return nil
 }
 
@@ -126,7 +126,7 @@ func DescribeBatchJob(c *cli.Context) error {
 			output["progress"] = hbd
 		}
 	}
-	prettyPrintJSONObject(output)
+	prettyPrintJSONObject(getDeps(c).Output(), output)
 	return nil
 }
 
@@ -177,7 +177,7 @@ func ListBatchJobs(c *cli.Context) error {
 
 		output = append(output, job)
 	}
-	prettyPrintJSONObject(output)
+	prettyPrintJSONObject(getDeps(c).Output(), output)
 	return nil
 }
 
@@ -332,7 +332,7 @@ func StartBatchJob(c *cli.Context) error {
 		"msg":   "batch job is started",
 		"jobID": workflowID,
 	}
-	prettyPrintJSONObject(output)
+	prettyPrintJSONObject(getDeps(c).Output(), output)
 	return nil
 }
 

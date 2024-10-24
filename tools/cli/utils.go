@@ -480,14 +480,14 @@ func getCurrentUserFromEnv() string {
 	return "unknown"
 }
 
-func prettyPrintJSONObject(o interface{}) {
+func prettyPrintJSONObject(writer io.Writer, o interface{}) {
 	b, err := json.MarshalIndent(o, "", "  ")
 	if err != nil {
 		fmt.Printf("Error when try to print pretty: %v\n", err)
 		fmt.Println(o)
 	}
-	os.Stdout.Write(b)
-	fmt.Println()
+	writer.Write(b)
+	writer.Write([]byte("\n"))
 }
 
 func mapKeysToArray(m map[string]string) []string {

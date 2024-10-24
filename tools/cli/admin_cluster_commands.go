@@ -102,7 +102,7 @@ func AdminDescribeCluster(c *cli.Context) error {
 		return commoncli.Problem("Operation DescribeCluster failed.", err)
 	}
 
-	prettyPrintJSONObject(response)
+	prettyPrintJSONObject(getDeps(c).Output(), response)
 	return nil
 }
 
