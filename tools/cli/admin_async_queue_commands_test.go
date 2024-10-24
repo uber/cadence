@@ -23,8 +23,10 @@
 package cli
 
 import (
+	"bytes"
 	"flag"
 	"fmt"
+	"os"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -52,7 +54,8 @@ func TestAdminGetAsyncWFConfig(t *testing.T) {
 			setupMocks: func(client *admin.MockClient) {
 				expectedResponse := &types.GetDomainAsyncWorkflowConfiguratonResponse{
 					Configuration: &types.AsyncWorkflowConfiguration{
-						Enabled: true,
+						Enabled:   true,
+						QueueType: "queueType",
 					},
 				}
 				client.EXPECT().
@@ -115,8 +118,29 @@ func TestAdminGetAsyncWFConfig(t *testing.T) {
 			set.String(FlagDomain, tt.flagDomain, "Domain flag")
 			c := cli.NewContext(app, set, nil)
 
+			r, w, _ := os.Pipe()
+
+			// Save the original os.Stdout
+			origStdout := os.Stdout
+			// Defer restoring os.Stdout back to its original state
+			defer func() {
+				os.Stdout = origStdout
+				w.Close()
+			}()
+
+			// Redirect os.Stdout to the pipe
+			os.Stdout = w
+
 			// Call the function under test
 			err := AdminGetAsyncWFConfig(c)
+
+			w.Close()
+			var buf bytes.Buffer
+			_, err2 := buf.ReadFrom(r)
+			if err2 != nil {
+				t.Fatalf("Failed to read from pipe: %v", err)
+			}
+			output := buf.String()
 
 			// Check the expected outcome
 			if tt.expectedError != "" {
@@ -124,6 +148,7 @@ func TestAdminGetAsyncWFConfig(t *testing.T) {
 				assert.Contains(t, err.Error(), tt.expectedError)
 			} else {
 				assert.NoError(t, err)
+				assert.Contains(t, output, "Async workflow queue config")
 			}
 		})
 	}
