@@ -23,6 +23,7 @@
 package cli
 
 import (
+	"bytes"
 	"flag"
 	"fmt"
 	"io"
@@ -168,8 +169,8 @@ func TestAdminDescribeCluster(t *testing.T) {
 				return serverFrontendClient, serverAdminClient
 			},
 			expectedOutput: `{
-  "supportedClientVersions": {
-    "goSdk": "1.5.0"
+  "SupportedClientVersions": {
+    "GoSdk": "1.5.0"
   }
 }
 `,
@@ -202,20 +203,30 @@ func TestAdminDescribeCluster(t *testing.T) {
 			// Set up mock based on the specific test case
 			serverFrontendClient, serverAdminClient := tt.mockSetup(mockCtrl)
 
+			// Set up buffers to capture output and progress
+			inputBuffer := new(bytes.Buffer)
+			outputBuffer := new(bytes.Buffer)
+			progressBuffer := new(bytes.Buffer)
+
+			// Create cliDepsMock to capture output and progress
+			mockCliDeps := &cliDepsMock{
+				ClientFactory: &clientFactoryMock{
+					serverFrontendClient: serverFrontendClient,
+					serverAdminClient:    serverAdminClient,
+				},
+				InputReader:    inputBuffer,
+				OutputWriter:   outputBuffer,
+				ProgressWriter: progressBuffer,
+			}
+
 			// Set up the CLI app and mock dependencies
 			app := NewCliApp(&clientFactoryMock{
 				serverFrontendClient: serverFrontendClient,
 				serverAdminClient:    serverAdminClient,
 			})
-
-			// Create a pipe to capture stdout
-			r, w, _ := os.Pipe()
-			defer r.Close()
-			defer w.Close()
-
-			// Redirect stdout to the pipe
-			stdout := os.Stdout
-			os.Stdout = w
+			app.Metadata = map[string]interface{}{
+				"deps": mockCliDeps,
+			}
 
 			// Set up CLI context
 			set := flag.NewFlagSet("test", 0)
@@ -224,28 +235,38 @@ func TestAdminDescribeCluster(t *testing.T) {
 			// Call AdminDescribeCluster
 			err := AdminDescribeCluster(c)
 
-			// Close the writer to ensure all data is flushed to the reader
-			w.Close()
-
-			// Restore stdout
-			os.Stdout = stdout
-
-			// Read the output from the pipe
-			output, _ := io.ReadAll(r)
-
 			// Check the result based on the expected outcome
 			if tt.expectedError != "" {
 				assert.Error(t, err)
 				assert.Contains(t, err.Error(), tt.expectedError)
 			} else {
 				assert.NoError(t, err)
-				// Validate the output captured from stdout
-				assert.Equal(t, tt.expectedOutput, string(output))
+				// Validate the output captured by cliDepsMock
+				assert.Equal(t, tt.expectedOutput, progressBuffer.String())
 			}
 		})
 	}
 }
 
+// Mock cliDeps implementation to capture output and progress
+type cliDepsMock struct {
+	ClientFactory
+	InputReader    io.Reader
+	OutputWriter   io.Writer
+	ProgressWriter io.Writer
+}
+
+func (m *cliDepsMock) Input() io.Reader {
+	return m.InputReader
+}
+
+func (m *cliDepsMock) Output() io.Writer {
+	return m.OutputWriter
+}
+
+func (m *cliDepsMock) Progress() io.Writer {
+	return m.ProgressWriter
+}
 func TestAdminRebalanceStart(t *testing.T) {
 	tests := []struct {
 		name           string
