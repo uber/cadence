@@ -2312,10 +2312,7 @@ func getFirstDecisionTaskByType(
 			break
 		}
 	}
-	if decisionFinishID == 0 {
-		return 0, printErrorAndReturn("Get DecisionFinishID failed", fmt.Errorf("no DecisionFinishID"))
-	}
-	return
+	return decisionFinishID, printErrorAndReturn("Get DecisionFinishID failed", fmt.Errorf("no DecisionFinishID"))
 }
 
 func getCurrentRunID(ctx context.Context, domain, wid string, frontendClient frontend.Client) (string, error) {
