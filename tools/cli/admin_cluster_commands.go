@@ -157,9 +157,12 @@ func AdminRebalanceStart(c *cli.Context) error {
 	if err != nil {
 		return commoncli.Problem("Failed to start failover workflow", err)
 	}
-	fmt.Println("Rebalance workflow started")
-	fmt.Println("wid: " + workflowID)
-	fmt.Println("rid: " + resp.GetRunID())
+
+	output := getDeps(c).Output()
+	output.Write([]byte("Rebalance workflow started\n"))
+	output.Write([]byte("wid: " + workflowID + "\n"))
+	output.Write([]byte("rid: " + resp.GetRunID() + "\n"))
+
 	return nil
 }
 

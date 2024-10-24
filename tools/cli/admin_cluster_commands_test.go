@@ -26,8 +26,6 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
-	"io"
-	"os"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -169,8 +167,8 @@ func TestAdminDescribeCluster(t *testing.T) {
 				return serverFrontendClient, serverAdminClient
 			},
 			expectedOutput: `{
-  "SupportedClientVersions": {
-    "GoSdk": "1.5.0"
+  "supportedClientVersions": {
+    "goSdk": "1.5.0"
   }
 }
 `,
@@ -202,30 +200,13 @@ func TestAdminDescribeCluster(t *testing.T) {
 			// Set up mock based on the specific test case
 			serverFrontendClient, serverAdminClient := tt.mockSetup(mockCtrl)
 
-			// Set up buffers to capture output and progress
-			inputBuffer := new(bytes.Buffer)
-			outputBuffer := new(bytes.Buffer)
-			progressBuffer := new(bytes.Buffer)
-
-			// Create cliDepsMock to capture output and progress
-			mockCliDeps := &cliDepsMock{
-				ClientFactory: &clientFactoryMock{
-					serverFrontendClient: serverFrontendClient,
-					serverAdminClient:    serverAdminClient,
-				},
-				InputReader:    inputBuffer,
-				OutputWriter:   outputBuffer,
-				ProgressWriter: progressBuffer,
-			}
+			ioHandler := &testIOHandler{}
 
 			// Set up the CLI app and mock dependencies
 			app := NewCliApp(&clientFactoryMock{
 				serverFrontendClient: serverFrontendClient,
 				serverAdminClient:    serverAdminClient,
-			})
-			app.Metadata = map[string]interface{}{
-				"deps": mockCliDeps,
-			}
+			}, WithIOHandler(ioHandler))
 
 			// Set up CLI context
 			set := flag.NewFlagSet("test", 0)
@@ -241,31 +222,12 @@ func TestAdminDescribeCluster(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 				// Validate the output captured by cliDepsMock
-				assert.Equal(t, tt.expectedOutput, progressBuffer.String())
+				assert.Equal(t, tt.expectedOutput, ioHandler.Output().(*bytes.Buffer).String())
 			}
 		})
 	}
 }
 
-// Mock cliDeps implementation to capture output and progress
-type cliDepsMock struct {
-	ClientFactory
-	InputReader    io.Reader
-	OutputWriter   io.Writer
-	ProgressWriter io.Writer
-}
-
-func (m *cliDepsMock) Input() io.Reader {
-	return m.InputReader
-}
-
-func (m *cliDepsMock) Output() io.Writer {
-	return m.OutputWriter
-}
-
-func (m *cliDepsMock) Progress() io.Writer {
-	return m.ProgressWriter
-}
 func TestAdminRebalanceStart(t *testing.T) {
 	tests := []struct {
 		name           string
@@ -328,22 +290,11 @@ func TestAdminRebalanceStart(t *testing.T) {
 			// Set up mock based on the specific test case
 			_, mockClientFactory := tt.mockSetup(mockCtrl)
 
-			// Create a pipe to capture stdout
-			r, w, _ := os.Pipe()
-			defer r.Close()
-			defer w.Close()
+			// Create test IO handler to capture output
+			ioHandler := &testIOHandler{}
 
-			// Redirect stdout to the pipe
-			stdout := os.Stdout
-			os.Stdout = w
-
-			// Set up the CLI app
-			app := cli.NewApp()
-			app.Metadata = map[string]interface{}{
-				"deps": &deps{
-					ClientFactory: mockClientFactory,
-				},
-			}
+			// Set up the CLI app and mock dependencies
+			app := NewCliApp(mockClientFactory, WithIOHandler(ioHandler))
 
 			// Use setContextMock to set the CLI context
 			c := setContextMock(app)
@@ -351,29 +302,20 @@ func TestAdminRebalanceStart(t *testing.T) {
 			// Call AdminRebalanceStart
 			err := AdminRebalanceStart(c)
 
-			// Close the writer to flush the data to the reader
-			w.Close()
-
-			// Restore stdout
-			os.Stdout = stdout
-
-			// Read the output from the pipe
-			output, _ := io.ReadAll(r)
-
 			// Check the result based on the expected outcome
 			if tt.expectedError != "" {
 				assert.Error(t, err)
 				assert.Contains(t, err.Error(), tt.expectedError)
 			} else {
 				assert.NoError(t, err)
-				// Validate the output captured from stdout
-				assert.Equal(t, tt.expectedOutput, string(output))
+				// Validate the output captured by testIOHandler
+				assert.Equal(t, tt.expectedOutput, ioHandler.Output().(*bytes.Buffer).String())
 			}
 		})
 	}
 }
 
-// Helper function to set up the CLI context
+// Helper function to set up the CLI context for AdminRebalanceStart
 func setContextMock(app *cli.App) *cli.Context {
 	set := flag.NewFlagSet("test", 0)
 	set.String(FlagDomain, "test-domain", "Domain flag")
