@@ -1420,9 +1420,9 @@ func Test_GetLastContinueAsNewID(t *testing.T) {
 		MaximumPageSize: 1,
 	}).Return(nil, errors.New("test-error")).Times(1)
 	// get workflow history failed
-	runId, decisionId, err := getLastContinueAsNewID(context.Background(), "test-domain", "test-workflow-id", "test-run-id", serverFrontendClient)
-	assert.Equal(t, "", runId)
-	assert.Equal(t, int64(0), decisionId)
+	runID, decisionID, err := getLastContinueAsNewID(context.Background(), "test-domain", "test-workflow-id", "test-run-id", serverFrontendClient)
+	assert.Equal(t, "", runID)
+	assert.Equal(t, int64(0), decisionID)
 	assert.Error(t, err)
 
 	serverFrontendClient.EXPECT().GetWorkflowExecutionHistory(gomock.Any(), gomock.Any()).Return(&types.GetWorkflowExecutionHistoryResponse{
@@ -1437,9 +1437,9 @@ func Test_GetLastContinueAsNewID(t *testing.T) {
 		},
 	}, nil).Times(1)
 	// cannot get reset base runID
-	runId, decisionId, err = getLastContinueAsNewID(context.Background(), "test-domain", "test-workflow-id", "test-run-id", serverFrontendClient)
-	assert.Equal(t, "", runId)
-	assert.Equal(t, int64(0), decisionId)
+	runID, decisionID, err = getLastContinueAsNewID(context.Background(), "test-domain", "test-workflow-id", "test-run-id", serverFrontendClient)
+	assert.Equal(t, "", runID)
+	assert.Equal(t, int64(0), decisionID)
 	assert.Error(t, err)
 
 	serverFrontendClient.EXPECT().GetWorkflowExecutionHistory(gomock.Any(), gomock.Any()).Return(&types.GetWorkflowExecutionHistoryResponse{
@@ -1470,9 +1470,9 @@ func Test_GetLastContinueAsNewID(t *testing.T) {
 			},
 		},
 	}, nil).Times(1)
-	runId, decisionId, err = getLastContinueAsNewID(context.Background(), "test-domain", "test-workflow-id", "test-run-id", serverFrontendClient)
-	assert.Equal(t, "test-run-id", runId)
-	assert.Equal(t, int64(10), decisionId)
+	runID, decisionID, err = getLastContinueAsNewID(context.Background(), "test-domain", "test-workflow-id", "test-run-id", serverFrontendClient)
+	assert.Equal(t, "test-run-id", runID)
+	assert.Equal(t, int64(10), decisionID)
 	assert.NoError(t, err)
 
 	serverFrontendClient.EXPECT().GetWorkflowExecutionHistory(gomock.Any(), gomock.Any()).Return(&types.GetWorkflowExecutionHistoryResponse{
@@ -1495,9 +1495,9 @@ func Test_GetLastContinueAsNewID(t *testing.T) {
 		MaximumPageSize: 1000,
 	}).Return(nil, errors.New("test-error")).Times(1)
 	// fail to get workflow history after getting the reset base runID
-	runId, decisionId, err = getLastContinueAsNewID(context.Background(), "test-domain", "test-workflow-id", "test-run-id", serverFrontendClient)
-	assert.Equal(t, "", runId)
-	assert.Equal(t, int64(0), decisionId)
+	runID, decisionID, err = getLastContinueAsNewID(context.Background(), "test-domain", "test-workflow-id", "test-run-id", serverFrontendClient)
+	assert.Equal(t, "", runID)
+	assert.Equal(t, int64(0), decisionID)
 	assert.Error(t, err)
 
 	serverFrontendClient.EXPECT().GetWorkflowExecutionHistory(gomock.Any(), gomock.Any()).Return(&types.GetWorkflowExecutionHistoryResponse{
@@ -1523,8 +1523,8 @@ func Test_GetLastContinueAsNewID(t *testing.T) {
 		},
 	}, nil).Times(1)
 	// fail to get workflow history after getting the reset base runID
-	runId, decisionId, err = getLastContinueAsNewID(context.Background(), "test-domain", "test-workflow-id", "test-run-id", serverFrontendClient)
-	assert.Equal(t, "", runId)
-	assert.Equal(t, int64(0), decisionId)
+	runID, decisionID, err = getLastContinueAsNewID(context.Background(), "test-domain", "test-workflow-id", "test-run-id", serverFrontendClient)
+	assert.Equal(t, "", runID)
+	assert.Equal(t, int64(0), decisionID)
 	assert.Error(t, err)
 }
