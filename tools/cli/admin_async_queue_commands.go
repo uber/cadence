@@ -63,7 +63,7 @@ func AdminGetAsyncWFConfig(c *cli.Context) error {
 	}
 
 	fmt.Printf("Async workflow queue config for domain %s:\n", domainName)
-	prettyPrintJSONObject(resp.Configuration)
+	prettyPrintJSONObject(getDeps(c).Output(), resp.Configuration)
 	return nil
 }
 

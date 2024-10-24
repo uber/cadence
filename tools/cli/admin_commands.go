@@ -132,7 +132,7 @@ func AdminDescribeWorkflow(c *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	prettyPrintJSONObject(resp)
+	prettyPrintJSONObject(getDeps(c).Output(), resp)
 
 	if resp != nil {
 		msStr := resp.GetMutableStateInDatabase()
@@ -157,13 +157,13 @@ func AdminDescribeWorkflow(c *cli.Context) error {
 		if err != nil {
 			return commoncli.Problem("thriftrwEncoder.Decode err", err)
 		}
-		prettyPrintJSONObject(branchInfo)
+		prettyPrintJSONObject(getDeps(c).Output(), branchInfo)
 		if ms.ExecutionInfo.AutoResetPoints != nil {
-			fmt.Println("auto-reset-points:")
+			getDeps(c).Output().Write([]byte("auto-reset-points:"))
 			for _, p := range ms.ExecutionInfo.AutoResetPoints.Points {
 				createT := time.Unix(0, p.GetCreatedTimeNano())
 				expireT := time.Unix(0, p.GetExpiringTimeNano())
-				fmt.Println(p.GetBinaryChecksum(), p.GetRunID(), p.GetFirstDecisionCompletedID(), p.GetResettable(), createT, expireT)
+				getDeps(c).Output().Write([]byte(fmt.Sprintln(p.GetBinaryChecksum(), p.GetRunID(), p.GetFirstDecisionCompletedID(), p.GetResettable(), createT, expireT)))
 			}
 		}
 	}
@@ -329,7 +329,7 @@ func AdminDeleteWorkflow(c *cli.Context) error {
 			return commoncli.Problem("thriftrwEncoder.Decode err", err)
 		}
 		fmt.Println("deleting history events for ...")
-		prettyPrintJSONObject(branchInfo)
+		prettyPrintJSONObject(getDeps(c).Output(), branchInfo)
 		err = histV2.DeleteHistoryBranch(ctx, &persistence.DeleteHistoryBranchRequest{
 			BranchToken: branchToken,
 			ShardID:     &shardIDInt,
@@ -497,7 +497,7 @@ func AdminDescribeShard(c *cli.Context) error {
 		return commoncli.Problem("Failed to describe shard.", err)
 	}
 
-	prettyPrintJSONObject(shard)
+	prettyPrintJSONObject(getDeps(c).Output(), shard)
 	return nil
 }
 
@@ -663,7 +663,7 @@ func AdminDescribeHistoryHost(c *cli.Context) error {
 	if !printFully {
 		resp.ShardIDs = nil
 	}
-	prettyPrintJSONObject(resp)
+	prettyPrintJSONObject(getDeps(c).Output(), resp)
 	return nil
 }
 
