@@ -57,7 +57,7 @@ type taskMatcherImpl struct {
 	// ratelimiter that limits the rate at which tasks can be dispatched to consumers
 	limiter *quotas.RateLimiter
 
-	fwdr   *Forwarder
+	fwdr   Forwarder
 	scope  metrics.Scope // domain metric scope
 	config *config.TaskListConfig
 
@@ -76,7 +76,7 @@ var ErrTasklistThrottled = errors.New("tasklist limit exceeded")
 // matches should use this implementation
 func newTaskMatcher(
 	config *config.TaskListConfig,
-	fwdr *Forwarder,
+	fwdr Forwarder,
 	scope metrics.Scope,
 	isolationGroups []string,
 	log log.Logger,
