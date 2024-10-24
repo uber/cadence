@@ -23,7 +23,6 @@
 package cli
 
 import (
-	"bytes"
 	"flag"
 	"fmt"
 	"testing"
@@ -222,7 +221,7 @@ func TestAdminDescribeCluster(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 				// Validate the output captured by cliDepsMock
-				assert.Equal(t, tt.expectedOutput, ioHandler.Output().(*bytes.Buffer).String())
+				assert.Equal(t, tt.expectedOutput, ioHandler.outputBytes.String())
 			}
 		})
 	}
@@ -309,7 +308,7 @@ func TestAdminRebalanceStart(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 				// Validate the output captured by testIOHandler
-				assert.Equal(t, tt.expectedOutput, ioHandler.Output().(*bytes.Buffer).String())
+				assert.Equal(t, tt.expectedOutput, ioHandler.outputBytes.String())
 			}
 		})
 	}
