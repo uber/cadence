@@ -23,9 +23,11 @@
 package cli
 
 import (
+	"bytes"
 	"errors"
 	"flag"
 	"fmt"
+	"os"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -182,7 +184,6 @@ zone-4                  Unknown state: 5
 
 func TestAdminGetGlobalIsolationGroups(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
 
 	// Table of test cases
 	tests := []struct {
@@ -264,7 +265,6 @@ func TestAdminGetGlobalIsolationGroups(t *testing.T) {
 
 func TestAdminUpdateGlobalIsolationGroups(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
 
 	// Define table-driven tests
 	tests := []struct {
@@ -335,7 +335,6 @@ func TestAdminUpdateGlobalIsolationGroups(t *testing.T) {
 
 func TestAdminGetDomainIsolationGroups(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
 
 	// Define table-driven tests
 	tests := []struct {
@@ -428,14 +427,37 @@ func TestAdminGetDomainIsolationGroups(t *testing.T) {
 			set.String(FlagFormat, tt.flagFormat, "Format flag")
 			c := cli.NewContext(app, set, nil)
 
+			r, w, _ := os.Pipe()
+
+			// Save the original os.Stdout
+			origStdout := os.Stdout
+			// Defer restoring os.Stdout back to its original state
+			defer func() {
+				os.Stdout = origStdout
+				w.Close()
+			}()
+
+			// Redirect os.Stdout to the pipe
+			os.Stdout = w
+
 			// Call the function under test
 			err := AdminGetDomainIsolationGroups(c)
+
+			w.Close()
+			var buf bytes.Buffer
+			_, err2 := buf.ReadFrom(r)
+			if err2 != nil {
+				t.Fatalf("Failed to read from pipe: %v", err)
+			}
+			output := buf.String()
 
 			// Check the expected outcome
 			if tt.expectedError != "" {
 				assert.Error(t, err)
 				assert.Contains(t, err.Error(), tt.expectedError)
 			} else {
+				assert.Contains(t, output, "zone-1")
+				assert.Contains(t, output, "zone-2")
 				assert.NoError(t, err)
 			}
 		})
@@ -444,7 +466,6 @@ func TestAdminGetDomainIsolationGroups(t *testing.T) {
 
 func TestAdminUpdateDomainIsolationGroups(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
 
 	// Define table-driven tests
 	tests := []struct {
