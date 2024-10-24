@@ -23,6 +23,7 @@
 package types
 
 import (
+	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -36,92 +37,78 @@ func Test_Error(t *testing.T) {
 		err  error
 	}{
 		{
-			name: "AccessDenied",
 			err: AccessDeniedError{
 				Message: errMessage,
 			},
 		},
 		{
-			name: "BadRequest",
 			err: BadRequestError{
 				Message: errMessage,
 			},
 		},
 		{
-			name: "CancellationAlreadyRequested",
 			err: CancellationAlreadyRequestedError{
 				Message: errMessage,
 			},
 		},
 		{
-			name: "DomainAlreadyExistsError",
 			err: DomainAlreadyExistsError{
 				Message: errMessage,
 			},
 		},
 		{
-			name: "EntityNotExistsError",
 			err: EntityNotExistsError{
 				Message: errMessage,
 			},
 		},
 		{
-			name: "InternalDataInconsistencyError",
 			err: InternalDataInconsistencyError{
 				Message: errMessage,
 			},
 		},
 		{
-			name: "WorkflowExecutionAlreadyCompletedError",
 			err: WorkflowExecutionAlreadyCompletedError{
 				Message: errMessage,
 			},
 		},
 		{
-			name: "LimitExceededError",
 			err: LimitExceededError{
 				Message: errMessage,
 			},
 		},
 		{
-			name: "QueryFailedError",
 			err: QueryFailedError{
 				Message: errMessage,
 			},
 		},
 		{
-			name: "RemoteSyncMatchedError",
 			err: RemoteSyncMatchedError{
 				Message: errMessage,
 			},
 		},
 		{
-			name: "ServiceBusyError",
 			err: ServiceBusyError{
 				Message: errMessage,
 			},
 		},
 		{
-			name: "EventAlreadyStartedError",
 			err: EventAlreadyStartedError{
 				Message: errMessage,
 			},
 		},
 		{
-			name: "StickyWorkerUnavailableError",
 			err: StickyWorkerUnavailableError{
 				Message: errMessage,
 			},
 		},
 		{
-			name: " InternalServiceError",
 			err: InternalServiceError{
 				Message: errMessage,
 			},
 		},
 	}
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+		t.Run(reflect.TypeOf(tt.err).String(), func(t *testing.T) {
 			require.Equal(t, errMessage, tt.err.Error())
 		})
 	}

@@ -20,8 +20,9 @@
 
 package types
 
-var (
-	_eventTypeValues = []EventType{
+// EventTypeValues returns all recognized values of EventType.
+func EventTypeValues() []EventType {
+	return []EventType{
 		EventTypeWorkflowExecutionStarted,
 		EventTypeWorkflowExecutionCompleted,
 		EventTypeWorkflowExecutionFailed,
@@ -65,7 +66,11 @@ var (
 		EventTypeExternalWorkflowExecutionSignaled,
 		EventTypeUpsertWorkflowSearchAttributes,
 	}
-	_decisionTypeValues = []DecisionType{
+}
+
+// DecisionTypeValues returns all recognized values of DecisionType.
+func DecisionTypeValues() []DecisionType {
+	return []DecisionType{
 		DecisionTypeScheduleActivityTask,
 		DecisionTypeRequestCancelActivityTask,
 		DecisionTypeStartTimer,
@@ -80,14 +85,4 @@ var (
 		DecisionTypeSignalExternalWorkflowExecution,
 		DecisionTypeUpsertWorkflowSearchAttributes,
 	}
-)
-
-// EventTypeValues returns all recognized values of EventType.
-func EventTypeValues() []EventType {
-	return _eventTypeValues
-}
-
-// DecisionTypeValues returns all recognized values of DecisionType.
-func DecisionTypeValues() []DecisionType {
-	return _decisionTypeValues
 }
