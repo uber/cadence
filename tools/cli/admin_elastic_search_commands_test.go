@@ -24,6 +24,7 @@ package cli
 
 import (
 	"bufio"
+	"bytes"
 	"flag"
 	"fmt"
 	"net/http"
@@ -121,10 +122,11 @@ func TestTimeValProcess(t *testing.T) {
 
 func TestAdminCatIndices(t *testing.T) {
 	tests := []struct {
-		name          string
-		handler       http.HandlerFunc
-		expectedError string
-		handlerCalled bool
+		name           string
+		handler        http.HandlerFunc
+		expectedOutput string
+		expectedError  string
+		handlerCalled  bool
 	}{
 		{
 			name: "Success",
@@ -137,6 +139,12 @@ func TestAdminCatIndices(t *testing.T) {
 					w.WriteHeader(http.StatusNotFound)
 				}
 			}),
+			expectedOutput: `+--------+--------+------------+-----+-----+------------+--------------+--------------+
+| HEALTH | STATUS |   INDEX    | PRI | REP | DOCS COUNT | DOCS DELETED |  STORE SIZE  |
++--------+--------+------------+-----+-----+------------+--------------+--------------+
+| green  | open   | test-index |   5 |   1 |       1000 |           50 | 10gb         |
++--------+--------+------------+-----+-----+------------+--------------+--------------+
+`,
 			expectedError: "",
 			handlerCalled: true,
 		},
@@ -146,8 +154,9 @@ func TestAdminCatIndices(t *testing.T) {
 				// Simulate an error response
 				w.WriteHeader(http.StatusInternalServerError)
 			}),
-			expectedError: "Unable to cat indices",
-			handlerCalled: true,
+			expectedOutput: "",
+			expectedError:  "Unable to cat indices",
+			handlerCalled:  true,
 		},
 	}
 
@@ -167,18 +176,15 @@ func TestAdminCatIndices(t *testing.T) {
 
 			// Initialize mock controller
 			mockCtrl := gomock.NewController(t)
-			defer mockCtrl.Finish()
 
 			// Create mock Cadence client factory
 			mockClientFactory := NewMockClientFactory(mockCtrl)
 
-			// Set up the CLI app
-			app := cli.NewApp()
-			app.Metadata = map[string]interface{}{
-				"deps": &deps{
-					ClientFactory: mockClientFactory,
-				},
-			}
+			// Create test IO handler to capture output
+			ioHandler := &testIOHandler{}
+
+			// Set up the CLI app and mock dependencies
+			app := NewCliApp(mockClientFactory, WithIOHandler(ioHandler))
 
 			// Expect ElasticSearchClient to return the mock client created by getMockClient
 			mockClientFactory.EXPECT().ElasticSearchClient(gomock.Any()).Return(esClient, nil).Times(1)
@@ -198,6 +204,8 @@ func TestAdminCatIndices(t *testing.T) {
 				assert.Contains(t, err.Error(), tt.expectedError)
 			} else {
 				assert.NoError(t, err)
+				// Validate the output captured by testIOHandler
+				assert.Equal(t, tt.expectedOutput, ioHandler.Output().(*bytes.Buffer).String())
 			}
 		})
 	}
@@ -325,7 +333,6 @@ func TestAdminIndex(t *testing.T) {
 
 			// Initialize mock controller
 			mockCtrl := gomock.NewController(t)
-			defer mockCtrl.Finish()
 
 			// Create mock client factory
 			mockClientFactory := NewMockClientFactory(mockCtrl)
@@ -461,7 +468,6 @@ func TestAdminDelete(t *testing.T) {
 
 			// Initialize mock controller
 			mockCtrl := gomock.NewController(t)
-			defer mockCtrl.Finish()
 
 			// Create mock client factory
 			mockClientFactory := NewMockClientFactory(mockCtrl)
