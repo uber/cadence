@@ -110,7 +110,7 @@ func (s *cliAppSuite) TestDomainRegister() {
 		{
 			"missing flag",
 			"cadence domain register",
-			"Option domain is required",
+			"option domain is required",
 			nil,
 		},
 		{
