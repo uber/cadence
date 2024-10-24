@@ -198,7 +198,6 @@ func TestAdminDescribeCluster(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Initialize mock controller
 			mockCtrl := gomock.NewController(t)
-			defer mockCtrl.Finish()
 
 			// Set up mock based on the specific test case
 			serverFrontendClient, serverAdminClient := tt.mockSetup(mockCtrl)
@@ -325,7 +324,6 @@ func TestAdminRebalanceStart(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Initialize mock controller
 			mockCtrl := gomock.NewController(t)
-			defer mockCtrl.Finish()
 
 			// Set up mock based on the specific test case
 			_, mockClientFactory := tt.mockSetup(mockCtrl)
