@@ -52,9 +52,9 @@ func AdminGetGlobalIsolationGroups(c *cli.Context) error {
 	format := c.String(FlagFormat)
 	switch format {
 	case "json":
-		prettyPrintJSONObject(igs.IsolationGroups.ToPartitionList())
+		prettyPrintJSONObject(getDeps(c).Output(), igs.IsolationGroups.ToPartitionList())
 	default:
-		fmt.Print(renderIsolationGroups(igs.IsolationGroups))
+		getDeps(c).Output().Write(renderIsolationGroups(igs.IsolationGroups))
 	}
 	return nil
 }
@@ -124,9 +124,9 @@ func AdminGetDomainIsolationGroups(c *cli.Context) error {
 	format := c.String(FlagFormat)
 	switch format {
 	case "json":
-		prettyPrintJSONObject(igs.IsolationGroups.ToPartitionList())
+		prettyPrintJSONObject(getDeps(c).Output(), igs.IsolationGroups.ToPartitionList())
 	default:
-		fmt.Print(renderIsolationGroups(igs.IsolationGroups))
+		getDeps(c).Output().Write([]byte(renderIsolationGroups(igs.IsolationGroups)))
 	}
 	return nil
 }
@@ -248,18 +248,18 @@ examples:
 	return &req, nil
 }
 
-func renderIsolationGroups(igs types.IsolationGroupConfiguration) string {
+func renderIsolationGroups(igs types.IsolationGroupConfiguration) []byte {
 	output := &bytes.Buffer{}
 	w := tabwriter.NewWriter(output, 0, 0, 1, ' ', 0)
 	fmt.Fprintln(w, "Isolation Groups\tState")
 	if len(igs) == 0 {
-		return "-- No groups found --\n"
+		return []byte("-- No groups found --\n")
 	}
 	for _, v := range igs.ToPartitionList() {
 		fmt.Fprintf(w, "%s\t%s\n", v.Name, convertIsolationGroupStateToString(v.State))
 	}
 	w.Flush()
-	return output.String()
+	return output.Bytes()
 }
 
 func convertIsolationGroupStateToString(state types.IsolationGroupState) string {
