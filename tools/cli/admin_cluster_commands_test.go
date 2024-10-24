@@ -25,13 +25,15 @@ package cli
 import (
 	"flag"
 	"fmt"
+	"github.com/uber/cadence/client/admin"
+	"io"
+	"os"
 	"testing"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/urfave/cli/v2"
 
-	"github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/types"
@@ -140,31 +142,54 @@ func TestValidSearchAttributeKey(t *testing.T) {
 
 func TestAdminDescribeCluster(t *testing.T) {
 	tests := []struct {
-		name          string
-		mockSetup     func(serverFrontendClient *frontend.MockClient, serverAdminClient *admin.MockClient)
-		expectedError string
+		name           string
+		mockSetup      func(mockCtrl *gomock.Controller) (*frontend.MockClient, *admin.MockClient)
+		expectedOutput string
+		expectedError  string
 	}{
 		{
 			name: "Success",
-			mockSetup: func(serverFrontendClient *frontend.MockClient, serverAdminClient *admin.MockClient) {
+			mockSetup: func(mockCtrl *gomock.Controller) (*frontend.MockClient, *admin.MockClient) {
+				// Create mock frontend and admin clients
+				serverFrontendClient := frontend.NewMockClient(mockCtrl)
+				serverAdminClient := admin.NewMockClient(mockCtrl)
+
 				// Expected response from DescribeCluster
 				expectedResponse := &types.DescribeClusterResponse{
 					SupportedClientVersions: &types.SupportedClientVersions{
 						GoSdk: "1.5.0",
 					},
 				}
+
 				// Mock the DescribeCluster call
 				serverAdminClient.EXPECT().DescribeCluster(gomock.Any()).Return(expectedResponse, nil).Times(1)
+
+				// Return the clients for further usage in the test case
+				return serverFrontendClient, serverAdminClient
 			},
+			expectedOutput: `{
+  "supportedClientVersions": {
+    "goSdk": "1.5.0"
+  }
+}
+`,
 			expectedError: "",
 		},
 		{
 			name: "DescribeClusterError",
-			mockSetup: func(serverFrontendClient *frontend.MockClient, serverAdminClient *admin.MockClient) {
+			mockSetup: func(mockCtrl *gomock.Controller) (*frontend.MockClient, *admin.MockClient) {
+				// Create mock frontend and admin clients
+				serverFrontendClient := frontend.NewMockClient(mockCtrl)
+				serverAdminClient := admin.NewMockClient(mockCtrl)
+
 				// Mock DescribeCluster to return an error
 				serverAdminClient.EXPECT().DescribeCluster(gomock.Any()).Return(nil, fmt.Errorf("DescribeCluster failed")).Times(1)
+
+				// Return the clients for further usage in the test case
+				return serverFrontendClient, serverAdminClient
 			},
-			expectedError: "Operation DescribeCluster failed.",
+			expectedOutput: "",
+			expectedError:  "Operation DescribeCluster failed.",
 		},
 	}
 
@@ -174,9 +199,8 @@ func TestAdminDescribeCluster(t *testing.T) {
 			mockCtrl := gomock.NewController(t)
 			defer mockCtrl.Finish()
 
-			// Create mock frontend and admin clients
-			serverFrontendClient := frontend.NewMockClient(mockCtrl)
-			serverAdminClient := admin.NewMockClient(mockCtrl)
+			// Set up mock based on the specific test case
+			serverFrontendClient, serverAdminClient := tt.mockSetup(mockCtrl)
 
 			// Set up the CLI app and mock dependencies
 			app := NewCliApp(&clientFactoryMock{
@@ -184,8 +208,14 @@ func TestAdminDescribeCluster(t *testing.T) {
 				serverAdminClient:    serverAdminClient,
 			})
 
-			// Set up mock based on the specific test case
-			tt.mockSetup(serverFrontendClient, serverAdminClient)
+			// Create a pipe to capture stdout
+			r, w, _ := os.Pipe()
+			defer r.Close()
+			defer w.Close()
+
+			// Redirect stdout to the pipe
+			stdout := os.Stdout
+			os.Stdout = w
 
 			// Set up CLI context
 			set := flag.NewFlagSet("test", 0)
@@ -194,12 +224,23 @@ func TestAdminDescribeCluster(t *testing.T) {
 			// Call AdminDescribeCluster
 			err := AdminDescribeCluster(c)
 
+			// Close the writer to ensure all data is flushed to the reader
+			w.Close()
+
+			// Restore stdout
+			os.Stdout = stdout
+
+			// Read the output from the pipe
+			output, _ := io.ReadAll(r)
+
 			// Check the result based on the expected outcome
 			if tt.expectedError != "" {
 				assert.Error(t, err)
 				assert.Contains(t, err.Error(), tt.expectedError)
 			} else {
 				assert.NoError(t, err)
+				// Validate the output captured from stdout
+				assert.Equal(t, tt.expectedOutput, string(output))
 			}
 		})
 	}
@@ -207,38 +248,55 @@ func TestAdminDescribeCluster(t *testing.T) {
 
 func TestAdminRebalanceStart(t *testing.T) {
 	tests := []struct {
-		name          string
-		mockSetup     func(mockFrontClient *frontend.MockClient, mockClientFactory *MockClientFactory)
-		expectedError string
+		name           string
+		mockSetup      func(mockCtrl *gomock.Controller) (*frontend.MockClient, *MockClientFactory)
+		expectedOutput string
+		expectedError  string
 	}{
 		{
 			name: "Success",
-			mockSetup: func(mockFrontClient *frontend.MockClient, mockClientFactory *MockClientFactory) {
+			mockSetup: func(mockCtrl *gomock.Controller) (*frontend.MockClient, *MockClientFactory) {
 				// Mock StartWorkflowExecution response
+				mockFrontClient := frontend.NewMockClient(mockCtrl)
+				mockClientFactory := NewMockClientFactory(mockCtrl)
+
 				mockResponse := &types.StartWorkflowExecutionResponse{
 					RunID: "test-run-id",
 				}
 				mockClientFactory.EXPECT().ServerFrontendClient(gomock.Any()).Return(mockFrontClient, nil).Times(1)
 				mockFrontClient.EXPECT().StartWorkflowExecution(gomock.Any(), gomock.Any()).Return(mockResponse, nil).Times(1)
+
+				return mockFrontClient, mockClientFactory
 			},
-			expectedError: "",
+			expectedOutput: "Rebalance workflow started\nwid: cadence-rebalance-workflow\nrid: test-run-id\n",
+			expectedError:  "",
 		},
 		{
 			name: "ServerFrontendClientError",
-			mockSetup: func(mockFrontClient *frontend.MockClient, mockClientFactory *MockClientFactory) {
-				// Mock ServerFrontendClient to return an error
+			mockSetup: func(mockCtrl *gomock.Controller) (*frontend.MockClient, *MockClientFactory) {
+				mockFrontClient := frontend.NewMockClient(mockCtrl)
+				mockClientFactory := NewMockClientFactory(mockCtrl)
+
 				mockClientFactory.EXPECT().ServerFrontendClient(gomock.Any()).Return(nil, fmt.Errorf("failed to get frontend client")).Times(1)
+
+				return mockFrontClient, mockClientFactory
 			},
-			expectedError: "failed to get frontend client",
+			expectedOutput: "",
+			expectedError:  "failed to get frontend client",
 		},
 		{
 			name: "StartWorkflowExecutionError",
-			mockSetup: func(mockFrontClient *frontend.MockClient, mockClientFactory *MockClientFactory) {
-				// Mock StartWorkflowExecution to return an error
+			mockSetup: func(mockCtrl *gomock.Controller) (*frontend.MockClient, *MockClientFactory) {
+				mockFrontClient := frontend.NewMockClient(mockCtrl)
+				mockClientFactory := NewMockClientFactory(mockCtrl)
+
 				mockClientFactory.EXPECT().ServerFrontendClient(gomock.Any()).Return(mockFrontClient, nil).Times(1)
 				mockFrontClient.EXPECT().StartWorkflowExecution(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("failed to start workflow")).Times(1)
+
+				return mockFrontClient, mockClientFactory
 			},
-			expectedError: "Failed to start failover workflow",
+			expectedOutput: "",
+			expectedError:  "Failed to start failover workflow",
 		},
 	}
 
@@ -248,9 +306,17 @@ func TestAdminRebalanceStart(t *testing.T) {
 			mockCtrl := gomock.NewController(t)
 			defer mockCtrl.Finish()
 
-			// Create mock Cadence client and client factory
-			mockFrontClient := frontend.NewMockClient(mockCtrl)
-			mockClientFactory := NewMockClientFactory(mockCtrl)
+			// Set up mock based on the specific test case
+			_, mockClientFactory := tt.mockSetup(mockCtrl)
+
+			// Create a pipe to capture stdout
+			r, w, _ := os.Pipe()
+			defer r.Close()
+			defer w.Close()
+
+			// Redirect stdout to the pipe
+			stdout := os.Stdout
+			os.Stdout = w
 
 			// Set up the CLI app
 			app := cli.NewApp()
@@ -260,14 +326,20 @@ func TestAdminRebalanceStart(t *testing.T) {
 				},
 			}
 
-			// Set up the mocks for the specific test case
-			tt.mockSetup(mockFrontClient, mockClientFactory)
-
 			// Use setContextMock to set the CLI context
 			c := setContextMock(app)
 
 			// Call AdminRebalanceStart
 			err := AdminRebalanceStart(c)
+
+			// Close the writer to flush the data to the reader
+			w.Close()
+
+			// Restore stdout
+			os.Stdout = stdout
+
+			// Read the output from the pipe
+			output, _ := io.ReadAll(r)
 
 			// Check the result based on the expected outcome
 			if tt.expectedError != "" {
@@ -275,17 +347,17 @@ func TestAdminRebalanceStart(t *testing.T) {
 				assert.Contains(t, err.Error(), tt.expectedError)
 			} else {
 				assert.NoError(t, err)
+				// Validate the output captured from stdout
+				assert.Equal(t, tt.expectedOutput, string(output))
 			}
 		})
 	}
 }
 
-// Helper function to set up the CLI context for AdminRebalanceStart
+// Helper function to set up the CLI context
 func setContextMock(app *cli.App) *cli.Context {
 	set := flag.NewFlagSet("test", 0)
-	// You can add any flags relevant to AdminRebalanceStart here
 	set.String(FlagDomain, "test-domain", "Domain flag")
-
 	c := cli.NewContext(app, set, nil)
 	return c
 }
