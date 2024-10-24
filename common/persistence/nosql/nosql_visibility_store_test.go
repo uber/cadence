@@ -23,9 +23,11 @@
 package nosql
 
 import (
-	"github.com/stretchr/testify/assert"
-	"github.com/uber/cadence/common/log"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+
+	"github.com/uber/cadence/common/log"
 )
 
 func TestNewNoSQLVisibilityStore(t *testing.T) {
