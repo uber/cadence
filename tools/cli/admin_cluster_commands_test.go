@@ -25,7 +25,6 @@ package cli
 import (
 	"flag"
 	"fmt"
-	"github.com/uber/cadence/client/admin"
 	"io"
 	"os"
 	"testing"
@@ -34,6 +33,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/urfave/cli/v2"
 
+	"github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/types"
