@@ -57,6 +57,8 @@ func ParseFilter(filterName string) Filter {
 		return WorkflowType
 	case "ratelimitKey":
 		return RatelimitKey
+	case "operation":
+		return Operation
 	default:
 		return UnknownFilter
 	}
@@ -73,6 +75,7 @@ var filters = []string{
 	"workflowID",
 	"workflowType",
 	"ratelimitKey",
+	"operation",
 }
 
 const (
@@ -95,6 +98,8 @@ const (
 	WorkflowType
 	// RatelimitKey is the global ratelimit key (not a local key name)
 	RatelimitKey
+	// Operation refers to the type of RPC operation that's being called
+	Operation
 
 	// LastFilterTypeForTest must be the last one in this const group for testing purpose
 	LastFilterTypeForTest
@@ -163,6 +168,13 @@ func WorkflowTypeFilter(name string) FilterOption {
 func RatelimitKeyFilter(key string) FilterOption {
 	return func(filterMap map[Filter]interface{}) {
 		filterMap[RatelimitKey] = key
+	}
+}
+
+// Operation filters on the provided RPC operation
+func OperationFilter(key string) FilterOption {
+	return func(filterMap map[Filter]interface{}) {
+		filterMap[Operation] = key
 	}
 }
 

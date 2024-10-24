@@ -2081,6 +2081,11 @@ const (
 	PersistenceSampledCounterPerDomain
 	PersistenceEmptyResponseCounterPerDomain
 
+	ShadowerBackgroundRequestHardCutCount
+	ShadowerBackgroundPanicRecoverCount
+	ShadowerComparisonDifferenceCount
+	ShadowerComparisonMatchCount
+
 	CadenceClientRequests
 	CadenceClientFailures
 	CadenceClientLatency
@@ -2832,6 +2837,11 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		VisibilityArchiveSuccessCount:                             {metricName: "visibility_archiver_archive_success", metricType: Counter},
 		MatchingClientForwardedCounter:                            {metricName: "forwarded", metricType: Counter},
 		MatchingClientInvalidTaskListName:                         {metricName: "invalid_task_list_name", metricType: Counter},
+
+		ShadowerBackgroundRequestHardCutCount: {metricName: "shadower_background_hard_cut", metricType: Counter},
+		ShadowerBackgroundPanicRecoverCount:   {metricName: "shadower_background_panic_recover", metricType: Counter},
+		ShadowerComparisonDifferenceCount:     {metricName: "shadower_comparison_difference_count", metricType: Counter},
+		ShadowerComparisonMatchCount:          {metricName: "shadower_comparison_match_count", metricType: Counter},
 
 		// per task list common metrics
 		CadenceRequestsPerTaskList: {
