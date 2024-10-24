@@ -29,7 +29,6 @@ import (
 )
 
 func TestNewNoSQLVisibilityStore(t *testing.T) {
-	registerCassandraMock(t)
 	cfg := getValidShardedNoSQLConfig()
 
 	store, err := newNoSQLVisibilityStore(false, cfg, log.NewNoop(), nil)
