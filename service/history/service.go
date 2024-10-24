@@ -70,8 +70,6 @@ func NewService(
 		params.PersistenceConfig.IsAdvancedVisibilityConfigExist(),
 		params.HostName)
 
-	params.PersistenceConfig.HistoryMaxConns = serviceConfig.HistoryMgrNumConns()
-
 	serviceResource, err := resource.New(
 		params,
 		service.History,

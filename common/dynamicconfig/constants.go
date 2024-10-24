@@ -657,6 +657,7 @@ const (
 	// Value type: Int
 	// Default value: 10
 	// Allowed filters: N/A
+	// Deprecated: not used
 	FrontendHistoryMgrNumConns
 	// FrontendThrottledLogRPS is the rate limit on number of log messages emitted per second for throttled logger
 	// KeyName: frontend.throttledLogRPS
@@ -1064,12 +1065,14 @@ const (
 	// Value type: Int
 	// Default value: 50
 	// Allowed filters: N/A
+	// Deprecated: not used
 	ExecutionMgrNumConns
 	// HistoryMgrNumConns is persistence connections number for HistoryManager
 	// KeyName: history.historyMgrNumConns
 	// Value type: Int
 	// Default value: 50
 	// Allowed filters: N/A
+	// Deprecated: not used
 	HistoryMgrNumConns
 	// MaximumBufferedEventsBatch is max number of buffer event in mutable state
 	// KeyName: history.maximumBufferedEventsBatch
@@ -3130,7 +3133,7 @@ var IntKeys = map[IntKey]DynamicInt{
 	},
 	FrontendHistoryMgrNumConns: {
 		KeyName:      "frontend.historyMgrNumConns",
-		Description:  "FrontendHistoryMgrNumConns is for persistence cluster.NumConns",
+		Description:  "Deprecated: not used. FrontendHistoryMgrNumConns is for persistence cluster.NumConns",
 		DefaultValue: 10,
 	},
 	FrontendThrottledLogRPS: {
@@ -3479,12 +3482,12 @@ var IntKeys = map[IntKey]DynamicInt{
 	},
 	ExecutionMgrNumConns: {
 		KeyName:      "history.executionMgrNumConns",
-		Description:  "ExecutionMgrNumConns is persistence connections number for ExecutionManager",
+		Description:  "Deprecated: not used. ExecutionMgrNumConns is persistence connections number for ExecutionManager",
 		DefaultValue: 50,
 	},
 	HistoryMgrNumConns: {
 		KeyName:      "history.historyMgrNumConns",
-		Description:  "HistoryMgrNumConns is persistence connections number for HistoryManager",
+		Description:  "Deprecated: not used. HistoryMgrNumConns is persistence connections number for HistoryManager",
 		DefaultValue: 50,
 	},
 	MaximumBufferedEventsBatch: {
