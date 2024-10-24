@@ -159,7 +159,7 @@ func (s *adminHandlerSuite) TestMaintainCorruptWorkflow_UnableToGetScheduledEven
 func (s *adminHandlerSuite) TestMaintainCorruptWorkflow_CorruptedHistory() {
 	s.mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return(s.domainName, nil).AnyTimes()
 	err := &types.InternalDataInconsistencyError{
-		Message: "corrupted history event batch, eventID is not continouous",
+		Message: "corrupted history event batch, eventID is not continuous",
 	}
 	s.testMaintainCorruptWorkflow(err, nil, true)
 }

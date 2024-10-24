@@ -403,3 +403,98 @@ func (mr *MockTaskMatcherMockRecorder) UpdateRatelimit(rps interface{}) *gomock.
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateRatelimit", reflect.TypeOf((*MockTaskMatcher)(nil).UpdateRatelimit), rps)
 }
+
+// MockForwarder is a mock of Forwarder interface.
+type MockForwarder struct {
+	ctrl     *gomock.Controller
+	recorder *MockForwarderMockRecorder
+}
+
+// MockForwarderMockRecorder is the mock recorder for MockForwarder.
+type MockForwarderMockRecorder struct {
+	mock *MockForwarder
+}
+
+// NewMockForwarder creates a new mock instance.
+func NewMockForwarder(ctrl *gomock.Controller) *MockForwarder {
+	mock := &MockForwarder{ctrl: ctrl}
+	mock.recorder = &MockForwarderMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockForwarder) EXPECT() *MockForwarderMockRecorder {
+	return m.recorder
+}
+
+// AddReqTokenC mocks base method.
+func (m *MockForwarder) AddReqTokenC() <-chan *ForwarderReqToken {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AddReqTokenC")
+	ret0, _ := ret[0].(<-chan *ForwarderReqToken)
+	return ret0
+}
+
+// AddReqTokenC indicates an expected call of AddReqTokenC.
+func (mr *MockForwarderMockRecorder) AddReqTokenC() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddReqTokenC", reflect.TypeOf((*MockForwarder)(nil).AddReqTokenC))
+}
+
+// ForwardPoll mocks base method.
+func (m *MockForwarder) ForwardPoll(ctx context.Context) (*InternalTask, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ForwardPoll", ctx)
+	ret0, _ := ret[0].(*InternalTask)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ForwardPoll indicates an expected call of ForwardPoll.
+func (mr *MockForwarderMockRecorder) ForwardPoll(ctx interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ForwardPoll", reflect.TypeOf((*MockForwarder)(nil).ForwardPoll), ctx)
+}
+
+// ForwardQueryTask mocks base method.
+func (m *MockForwarder) ForwardQueryTask(ctx context.Context, task *InternalTask) (*types.QueryWorkflowResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ForwardQueryTask", ctx, task)
+	ret0, _ := ret[0].(*types.QueryWorkflowResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ForwardQueryTask indicates an expected call of ForwardQueryTask.
+func (mr *MockForwarderMockRecorder) ForwardQueryTask(ctx, task interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ForwardQueryTask", reflect.TypeOf((*MockForwarder)(nil).ForwardQueryTask), ctx, task)
+}
+
+// ForwardTask mocks base method.
+func (m *MockForwarder) ForwardTask(ctx context.Context, task *InternalTask) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ForwardTask", ctx, task)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ForwardTask indicates an expected call of ForwardTask.
+func (mr *MockForwarderMockRecorder) ForwardTask(ctx, task interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ForwardTask", reflect.TypeOf((*MockForwarder)(nil).ForwardTask), ctx, task)
+}
+
+// PollReqTokenC mocks base method.
+func (m *MockForwarder) PollReqTokenC(isolationGroup string) <-chan *ForwarderReqToken {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PollReqTokenC", isolationGroup)
+	ret0, _ := ret[0].(<-chan *ForwarderReqToken)
+	return ret0
+}
+
+// PollReqTokenC indicates an expected call of PollReqTokenC.
+func (mr *MockForwarderMockRecorder) PollReqTokenC(isolationGroup interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PollReqTokenC", reflect.TypeOf((*MockForwarder)(nil).PollReqTokenC), isolationGroup)
+}

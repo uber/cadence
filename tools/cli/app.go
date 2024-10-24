@@ -32,8 +32,26 @@ import (
 
 const depsKey = "deps"
 
+type CLIAppOptions func(*cli.App)
+
+// WithIOHandler sets the IOHandler for the CLI app. By default the app uses urfave's default Reader/Writer/ErrorWriter.
+func WithIOHandler(h IOHandler) CLIAppOptions {
+	return func(app *cli.App) {
+		if app.Metadata == nil {
+			return
+		}
+
+		d, ok := app.Metadata[depsKey].(*deps)
+		if !ok {
+			return
+		}
+
+		d.IOHandler = h
+	}
+}
+
 // NewCliApp instantiates a new instance of the CLI application
-func NewCliApp(cf ClientFactory) *cli.App {
+func NewCliApp(cf ClientFactory, opts ...CLIAppOptions) *cli.App {
 	version := fmt.Sprintf("CLI feature version: %v \n"+
 		"   Release version: %v\n"+
 		"   Build commit: %v\n"+
@@ -45,7 +63,7 @@ func NewCliApp(cf ClientFactory) *cli.App {
 	app.Usage = "A command-line tool for cadence users"
 	app.Version = version
 	app.Metadata = map[string]any{
-		depsKey: &deps{ClientFactory: cf},
+		depsKey: &deps{ClientFactory: cf, IOHandler: &defaultIOHandler{app: app}},
 	}
 	app.Flags = []cli.Flag{
 		&cli.StringFlag{
@@ -211,6 +229,11 @@ func NewCliApp(cf ClientFactory) *cli.App {
 	app.CommandNotFound = func(context *cli.Context, command string) {
 		printMessage("command not found: " + command)
 	}
+
+	for _, opt := range opts {
+		opt(app)
+	}
+
 	return app
 }
 
@@ -231,7 +254,10 @@ func getDeps(ctx *cli.Context) cliDeps {
 // exposing a struct may be good enough, it just hasn't been done yet.
 type cliDeps interface {
 	ClientFactory
+	IOHandler
+}
 
+type IOHandler interface {
 	// cli.Context does not contain readers/writers, they are only in cli.App.
 	// which isn't passed to commands.
 	//
@@ -260,25 +286,23 @@ type cliDeps interface {
 	Progress() io.Writer
 }
 
+type defaultIOHandler struct {
+	app *cli.App
+}
+
+func (d *defaultIOHandler) Input() io.Reader {
+	return d.app.Reader
+}
+func (d *defaultIOHandler) Output() io.Writer {
+	return d.app.Writer
+}
+func (d *defaultIOHandler) Progress() io.Writer {
+	return d.app.ErrWriter
+}
+
 var _ cliDeps = &deps{}
 
 type deps struct {
 	ClientFactory
-
-	// app is embedded rather than individual readers/writers,
-	// so they can be modified and the changes propagate to uses.
-	//
-	// currently this should only be done in tests or app-constructing funcs,
-	// never inside commands.
-	app *cli.App
-}
-
-func (d *deps) Input() io.Reader {
-	return d.app.Reader
-}
-func (d *deps) Output() io.Writer {
-	return d.app.Writer
-}
-func (d *deps) Progress() io.Writer {
-	return d.app.ErrWriter
+	IOHandler
 }
