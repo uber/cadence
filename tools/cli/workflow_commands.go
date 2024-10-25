@@ -1464,6 +1464,7 @@ func displayAllWorkflows(c *cli.Context, getWorkflowsPage getWorkflowPageFn) err
 func displayWorkflows(c *cli.Context, workflows []*types.WorkflowExecutionInfo) error {
 	printJSON := c.Bool(FlagPrintJSON)
 	printDecodedRaw := c.Bool(FlagPrintFullyDetail)
+
 	if printJSON || printDecodedRaw {
 		fmt.Println("[")
 		printListResults(workflows, printJSON, false)
