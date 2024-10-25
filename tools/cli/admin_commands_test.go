@@ -38,10 +38,12 @@ import (
 )
 
 const (
-	testShardID   = 1234
-	testCluster   = "test-cluster"
-	testDomain    = "test-domain"
-	testQueueType = 2 // transfer queue
+	testShardID      = 1234
+	testCluster      = "test-cluster"
+	testDomain       = "test-domain"
+	testTaskList     = "test-tasklist"
+	testTaskListType = "decision"
+	testQueueType    = 2 // transfer queue
 )
 
 type cliTestData struct {
