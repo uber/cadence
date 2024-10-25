@@ -47,6 +47,7 @@ import (
 	"github.com/uber/cadence/service/frontend/wrappers/metered"
 	"github.com/uber/cadence/service/frontend/wrappers/ratelimited"
 	"github.com/uber/cadence/service/frontend/wrappers/thrift"
+	"github.com/uber/cadence/service/frontend/wrappers/versioncheck"
 )
 
 // Service represents the cadence-frontend service
@@ -154,6 +155,7 @@ func (s *Service) Start() {
 
 	// Additional decorations
 	var handler api.Handler = s.handler
+	handler = versioncheck.NewAPIHandler(handler, s.config, client.NewVersionChecker())
 	handler = ratelimited.NewAPIHandler(handler, s.GetDomainCache(), userRateLimiter, workerRateLimiter, visibilityRateLimiter, asyncRateLimiter)
 	handler = metered.NewAPIHandler(handler, s.GetLogger(), s.GetMetricsClient(), s.GetDomainCache(), s.config)
 	if s.params.ClusterRedirectionPolicy != nil {
