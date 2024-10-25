@@ -24,16 +24,16 @@ package nosql
 
 import (
 	"context"
-	"github.com/golang/mock/gomock"
-	"github.com/uber/cadence/common/definition"
-	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 	"testing"
 	"time"
 
+	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 
+	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 )
 
 const (
