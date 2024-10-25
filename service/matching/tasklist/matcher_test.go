@@ -648,7 +648,7 @@ func (t *MatcherTestSuite) TestOffer_Offer_RateLimited() {
 	matched, err := t.matcher.Offer(ctx, task)
 
 	t.Error(err)
-	t.Equal(ErrTasklistThrottled, err)
+	t.True(errors.Is(err, ErrTasklistThrottled))
 	t.False(matched)
 }
 
@@ -864,7 +864,7 @@ func (t *MatcherTestSuite) TestOfferQuery_ForwardError() {
 	retTask, err := t.matcher.OfferQuery(ctx, task)
 
 	t.Error(err)
-	t.Equal(ErrNoParent, err)
+	t.True(errors.Is(err, ErrNoParent))
 	t.Nil(retTask)
 }
 
@@ -882,7 +882,7 @@ func (t *MatcherTestSuite) TestOfferQuery_ContextExpired() {
 	retTask, err := t.matcher.OfferQuery(ctx, task)
 
 	t.Error(err)
-	t.Equal(context.Canceled, err)
+	t.True(errors.Is(err, context.Canceled))
 	t.Nil(retTask)
 }
 
@@ -1225,7 +1225,7 @@ func (t *MatcherTestSuite) Test_poll_ContextExpired() {
 
 	retTask, err := t.matcher.poll(ctx, startT, nil, nil, nil)
 	t.Error(err)
-	t.Equal(ErrNoTasks, err)
+	t.True(errors.Is(err, ErrNoTasks))
 	t.Nil(retTask)
 }
 
@@ -1279,7 +1279,7 @@ func (t *MatcherTestSuite) Test_pollNonBlocking_NoTasks() {
 
 	retTask, err := t.matcher.pollNonBlocking(ctx, nil, nil, nil)
 	t.Error(err)
-	t.Equal(ErrNoTasks, err)
+	t.True(errors.Is(err, ErrNoTasks))
 	t.Nil(retTask)
 }
 
