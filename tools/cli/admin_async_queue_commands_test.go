@@ -23,10 +23,8 @@
 package cli
 
 import (
-	"bytes"
 	"flag"
 	"fmt"
-	"os"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -45,6 +43,7 @@ func TestAdminGetAsyncWFConfig(t *testing.T) {
 		name             string
 		setupMocks       func(*admin.MockClient)
 		expectedError    string
+		expectedStr      string
 		flagDomain       string
 		mockDepsError    error
 		mockContextError error
@@ -64,6 +63,7 @@ func TestAdminGetAsyncWFConfig(t *testing.T) {
 					Times(1)
 			},
 			expectedError: "",
+			expectedStr:   "PredefinedQueueName",
 			flagDomain:    "test-domain",
 		},
 		{
@@ -107,40 +107,20 @@ func TestAdminGetAsyncWFConfig(t *testing.T) {
 
 			// Set up mocks for the current test case
 			tt.setupMocks(adminClient)
+			ioHandler := &testIOHandler{}
 
 			// Create mock app with clientFactoryMock
 			app := NewCliApp(&clientFactoryMock{
 				serverAdminClient: adminClient,
-			})
+			}, WithIOHandler(ioHandler))
 
 			// Set up CLI context with flags
 			set := flag.NewFlagSet("test", 0)
 			set.String(FlagDomain, tt.flagDomain, "Domain flag")
 			c := cli.NewContext(app, set, nil)
 
-			r, w, _ := os.Pipe()
-
-			// Save the original os.Stdout
-			origStdout := os.Stdout
-			// Defer restoring os.Stdout back to its original state
-			defer func() {
-				os.Stdout = origStdout
-				w.Close()
-			}()
-
-			// Redirect os.Stdout to the pipe
-			os.Stdout = w
-
 			// Call the function under test
 			err := AdminGetAsyncWFConfig(c)
-
-			w.Close()
-			var buf bytes.Buffer
-			_, err2 := buf.ReadFrom(r)
-			if err2 != nil {
-				t.Fatalf("Failed to read from pipe: %v", err)
-			}
-			output := buf.String()
 
 			// Check the expected outcome
 			if tt.expectedError != "" {
@@ -148,7 +128,7 @@ func TestAdminGetAsyncWFConfig(t *testing.T) {
 				assert.Contains(t, err.Error(), tt.expectedError)
 			} else {
 				assert.NoError(t, err)
-				assert.Contains(t, output, "Async workflow queue config")
+				assert.Contains(t, ioHandler.outputBytes.String(), tt.expectedStr)
 			}
 		})
 	}
