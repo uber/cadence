@@ -480,14 +480,14 @@ func getCurrentUserFromEnv() string {
 	return "unknown"
 }
 
-func prettyPrintJSONObject(o interface{}) {
+func prettyPrintJSONObject(writer io.Writer, o interface{}) {
 	b, err := json.MarshalIndent(o, "", "  ")
 	if err != nil {
 		fmt.Printf("Error when try to print pretty: %v\n", err)
 		fmt.Println(o)
 	}
-	os.Stdout.Write(b)
-	fmt.Println()
+	writer.Write(b)
+	writer.Write([]byte("\n"))
 }
 
 func mapKeysToArray(m map[string]string) []string {
@@ -531,21 +531,21 @@ func getWorkflowClient(c *cli.Context) (frontend.Client, error) {
 func getRequiredOption(c *cli.Context, optionName string) (string, error) {
 	value := c.String(optionName)
 	if len(value) == 0 {
-		return "", fmt.Errorf("Option %s is required", optionName)
+		return "", fmt.Errorf("option %s is required", optionName)
 	}
 	return value, nil
 }
 
 func getRequiredInt64Option(c *cli.Context, optionName string) (int64, error) {
 	if !c.IsSet(optionName) {
-		return 0, fmt.Errorf("Option %s is required", optionName)
+		return 0, fmt.Errorf("option %s is required", optionName)
 	}
 	return c.Int64(optionName), nil
 }
 
 func getRequiredIntOption(c *cli.Context, optionName string) (int, error) {
 	if !c.IsSet(optionName) {
-		return 0, fmt.Errorf("Option %s is required", optionName)
+		return 0, fmt.Errorf("option %s is required", optionName)
 	}
 	return c.Int(optionName), nil
 }

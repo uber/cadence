@@ -57,7 +57,7 @@ type MatcherTestSuite struct {
 	suite.Suite
 	controller      *gomock.Controller
 	client          *matching.MockClient
-	fwdr            *Forwarder
+	fwdr            Forwarder
 	cfg             *config.TaskListConfig
 	taskList        *Identifier
 	matcher         *taskMatcherImpl // matcher for child partition

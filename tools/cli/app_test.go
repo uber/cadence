@@ -21,6 +21,9 @@
 package cli
 
 import (
+	"bytes"
+	"io"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -47,6 +50,7 @@ type (
 		mockCtrl             *gomock.Controller
 		serverFrontendClient *frontend.MockClient
 		serverAdminClient    *admin.MockClient
+		testIOHandler        *testIOHandler
 	}
 
 	testcase struct {
@@ -96,6 +100,23 @@ var commands = []string{
 
 var domainName = "cli-test-domain"
 
+// Implements IOHandler to be used for validation in tests
+type testIOHandler struct {
+	outputBytes bytes.Buffer
+}
+
+func (t *testIOHandler) Input() io.Reader {
+	return os.Stdin
+}
+
+func (t *testIOHandler) Output() io.Writer {
+	return &t.outputBytes
+}
+
+func (t *testIOHandler) Progress() io.Writer {
+	return os.Stdout
+}
+
 func TestCLIAppSuite(t *testing.T) {
 	s := new(cliAppSuite)
 	suite.Run(t, s)
@@ -105,10 +126,11 @@ func (s *cliAppSuite) SetupTest() {
 	s.mockCtrl = gomock.NewController(s.T())
 	s.serverFrontendClient = frontend.NewMockClient(s.mockCtrl)
 	s.serverAdminClient = admin.NewMockClient(s.mockCtrl)
+	s.testIOHandler = &testIOHandler{}
 	s.app = NewCliApp(&clientFactoryMock{
 		serverFrontendClient: s.serverFrontendClient,
 		serverAdminClient:    s.serverAdminClient,
-	})
+	}, WithIOHandler(s.testIOHandler))
 }
 
 func (s *cliAppSuite) TearDownTest() {

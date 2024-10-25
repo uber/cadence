@@ -23,7 +23,6 @@
 package cli
 
 import (
-	"flag"
 	"fmt"
 	"testing"
 
@@ -31,19 +30,14 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/urfave/cli/v2"
 
-	"github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/tools/cli/clitest"
 )
 
 func TestAdminDescribeTaskList(t *testing.T) {
-	mockCtrl := gomock.NewController(t)
-	serverFrontendClient := frontend.NewMockClient(mockCtrl)
-	serverAdminClient := admin.NewMockClient(mockCtrl)
-	app := NewCliApp(&clientFactoryMock{
-		serverFrontendClient: serverFrontendClient,
-		serverAdminClient:    serverAdminClient,
-	})
+	td := newCLITestData(t)
+
 	expectedResponse := &types.DescribeTaskListResponse{
 		Pollers: []*types.PollerInfo{
 			{
@@ -54,70 +48,46 @@ func TestAdminDescribeTaskList(t *testing.T) {
 			BacklogCountHint: 10,
 		},
 	}
-	serverFrontendClient.EXPECT().DescribeTaskList(gomock.Any(), gomock.Any()).Return(expectedResponse, nil).Times(1)
+	td.mockFrontendClient.EXPECT().DescribeTaskList(gomock.Any(), gomock.Any()).Return(expectedResponse, nil).Times(1)
 
-	c := setTasklistMock(app)
-	err := AdminDescribeTaskList(c)
+	cliCtx := newTaskListCLIContext(t, td.app)
+	err := AdminDescribeTaskList(cliCtx)
 	assert.NoError(t, err)
 }
 
 func TestAdminDescribeTaskList_DescribeTaskListFails(t *testing.T) {
-	mockCtrl := gomock.NewController(t)
-	serverFrontendClient := frontend.NewMockClient(mockCtrl)
-	serverAdminClient := admin.NewMockClient(mockCtrl)
+	td := newCLITestData(t)
 
-	app := NewCliApp(&clientFactoryMock{
-		serverFrontendClient: serverFrontendClient,
-		serverAdminClient:    serverAdminClient,
-	})
-
-	serverFrontendClient.EXPECT().
+	td.mockFrontendClient.EXPECT().
 		DescribeTaskList(gomock.Any(), gomock.Any()).
 		Return(nil, fmt.Errorf("DescribeTaskList failed")).
 		Times(1)
 
-	c := setTasklistMock(app)
-	err := AdminDescribeTaskList(c)
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "Operation DescribeTaskList failed.")
+	cliCtx := newTaskListCLIContext(t, td.app)
+	err := AdminDescribeTaskList(cliCtx)
+	assert.ErrorContains(t, err, "Operation DescribeTaskList failed.")
 }
 
 func TestAdminDescribeTaskList_NoTaskListStatus(t *testing.T) {
-	mockCtrl := gomock.NewController(t)
-	serverFrontendClient := frontend.NewMockClient(mockCtrl)
-	serverAdminClient := admin.NewMockClient(mockCtrl)
-
-	app := NewCliApp(&clientFactoryMock{
-		serverFrontendClient: serverFrontendClient,
-		serverAdminClient:    serverAdminClient,
-	})
+	td := newCLITestData(t)
 
 	expectedResponse := &types.DescribeTaskListResponse{
 		Pollers:        []*types.PollerInfo{},
 		TaskListStatus: nil,
 	}
 
-	serverFrontendClient.EXPECT().
+	td.mockFrontendClient.EXPECT().
 		DescribeTaskList(gomock.Any(), gomock.Any()).
 		Return(expectedResponse, nil).
 		Times(1)
 
-	c := setTasklistMock(app)
-	err := AdminDescribeTaskList(c)
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "No tasklist status information.")
+	cliCtx := newTaskListCLIContext(t, td.app)
+	err := AdminDescribeTaskList(cliCtx)
+	assert.ErrorContains(t, err, "No tasklist status information.")
 }
 
 func TestAdminDescribeTaskList_NoPollers(t *testing.T) {
-	mockCtrl := gomock.NewController(t)
-	serverFrontendClient := frontend.NewMockClient(mockCtrl)
-	serverAdminClient := admin.NewMockClient(mockCtrl)
-
-	app := NewCliApp(&clientFactoryMock{
-		serverFrontendClient: serverFrontendClient,
-		serverAdminClient:    serverAdminClient,
-	})
-
+	td := newCLITestData(t)
 	expectedResponse := &types.DescribeTaskListResponse{
 		Pollers: []*types.PollerInfo{},
 		TaskListStatus: &types.TaskListStatus{
@@ -125,74 +95,48 @@ func TestAdminDescribeTaskList_NoPollers(t *testing.T) {
 		},
 	}
 
-	serverFrontendClient.EXPECT().
+	td.mockFrontendClient.EXPECT().
 		DescribeTaskList(gomock.Any(), gomock.Any()).
 		Return(expectedResponse, nil).
 		Times(1)
 
-	c := setTasklistMock(app)
-	err := AdminDescribeTaskList(c)
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "No poller for tasklist: test-tasklist")
+	cliCtx := newTaskListCLIContext(t, td.app)
+	err := AdminDescribeTaskList(cliCtx)
+	assert.ErrorContains(t, err, "No poller for tasklist: test-tasklist")
 }
 
 func TestAdminDescribeTaskList_GetRequiredOptionDomainError(t *testing.T) {
-	mockCtrl := gomock.NewController(t)
-	serverFrontendClient := frontend.NewMockClient(mockCtrl)
-	serverAdminClient := admin.NewMockClient(mockCtrl)
+	td := newCLITestData(t)
 
-	app := NewCliApp(&clientFactoryMock{
-		serverFrontendClient: serverFrontendClient,
-		serverAdminClient:    serverAdminClient,
-	})
+	cliCtx := clitest.NewCLIContext(
+		t,
+		td.app,
+		/* omit the domain flag */
+		clitest.StringArgument(FlagTaskList, testTaskList),
+		clitest.StringArgument(FlagTaskListType, testTaskListType),
+	)
 
-	// Omit the Domain flag
-	set := flag.NewFlagSet("test", 0)
-	set.String(FlagTaskList, "test-tasklist", "TaskList flag")
-	set.String(FlagTaskListType, "decision", "TaskListType flag")
-	c := cli.NewContext(app, set, nil)
-
-	err := AdminDescribeTaskList(c)
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "Required flag not found: ")
+	err := AdminDescribeTaskList(cliCtx)
+	assert.ErrorContains(t, err, "Required flag not found: ")
 }
 
 func TestAdminDescribeTaskList_GetRequiredOptionTaskListError(t *testing.T) {
-	mockCtrl := gomock.NewController(t)
-	serverFrontendClient := frontend.NewMockClient(mockCtrl)
-	serverAdminClient := admin.NewMockClient(mockCtrl)
+	td := newCLITestData(t)
 
-	app := NewCliApp(&clientFactoryMock{
-		serverFrontendClient: serverFrontendClient,
-		serverAdminClient:    serverAdminClient,
-	})
+	cliCtx := clitest.NewCLIContext(
+		t,
+		td.app,
+		clitest.StringArgument(FlagDomain, testDomain),
+		/* omit the task-list flag */
+		clitest.StringArgument(FlagTaskListType, testTaskListType),
+	)
 
-	// Omit the TaskList flag
-	set := flag.NewFlagSet("test", 0)
-	set.String(FlagDomain, "test-domain", "Domain flag")
-	set.String(FlagTaskListType, "decision", "TaskListType flag")
-	c := cli.NewContext(app, set, nil)
-
-	err := AdminDescribeTaskList(c)
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "Required flag not found: ")
+	err := AdminDescribeTaskList(cliCtx)
+	assert.ErrorContains(t, err, "Required flag not found: ")
 }
 
 func TestAdminDescribeTaskList_InvalidTaskListType(t *testing.T) {
-	mockCtrl := gomock.NewController(t)
-	serverFrontendClient := frontend.NewMockClient(mockCtrl)
-	serverAdminClient := admin.NewMockClient(mockCtrl)
-	app := NewCliApp(&clientFactoryMock{
-		serverFrontendClient: serverFrontendClient,
-		serverAdminClient:    serverAdminClient,
-	})
-
-	// Set an invalid TaskListType
-	set := flag.NewFlagSet("test", 0)
-	set.String(FlagDomain, "test-domain", "Domain flag")
-	set.String(FlagTaskList, "test-tasklist", "TaskList flag")
-	set.String(FlagTaskListType, "activity", "TaskListType flag")
-	c := cli.NewContext(app, set, nil)
+	td := newCLITestData(t)
 
 	expectedResponse := &types.DescribeTaskListResponse{
 		Pollers: []*types.PollerInfo{
@@ -204,16 +148,20 @@ func TestAdminDescribeTaskList_InvalidTaskListType(t *testing.T) {
 			BacklogCountHint: 10,
 		},
 	}
-	serverFrontendClient.EXPECT().DescribeTaskList(gomock.Any(), gomock.Any()).Return(expectedResponse, nil).Times(1)
+	td.mockFrontendClient.EXPECT().DescribeTaskList(gomock.Any(), gomock.Any()).Return(expectedResponse, nil).Times(1)
 
-	err := AdminDescribeTaskList(c)
+	cliCtx := clitest.NewCLIContext(
+		t,
+		td.app,
+		clitest.StringArgument(FlagDomain, testDomain),
+		clitest.StringArgument(FlagTaskList, testTaskList),
+		clitest.StringArgument(FlagTaskListType, "activity"),
+	)
+	err := AdminDescribeTaskList(cliCtx)
 	assert.NoError(t, err)
 }
 
 func TestAdminListTaskList(t *testing.T) {
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
-
 	// Define table of test cases
 	tests := []struct {
 		name          string
@@ -284,48 +232,42 @@ func TestAdminListTaskList(t *testing.T) {
 	// Loop through test cases
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Mock clients
-			serverFrontendClient := frontend.NewMockClient(mockCtrl)
-			serverAdminClient := admin.NewMockClient(mockCtrl)
-
-			// Create CLI app with mock clients
-			app := NewCliApp(&clientFactoryMock{
-				serverFrontendClient: serverFrontendClient,
-				serverAdminClient:    serverAdminClient,
-			})
+			td := newCLITestData(t)
 
 			// Set up mocks for the current test case
-			tt.setupMocks(serverFrontendClient)
+			tt.setupMocks(td.mockFrontendClient)
 
-			// Set up the CLI context
-			set := flag.NewFlagSet("test", 0)
-			if tt.domainFlag != "" {
-				set.String(FlagDomain, tt.domainFlag, "Domain flag")
-			}
-			set.String(FlagTaskList, tt.taskListFlag, "TaskList flag")
-			set.String(FlagTaskListType, tt.taskListType, "TaskListType flag")
-			c := cli.NewContext(app, set, nil)
-
-			// Call the function under test
-			err := AdminListTaskList(c)
-
-			// Check expected outcomes
-			if tt.expectedError != "" {
-				assert.Error(t, err)
-				assert.Contains(t, err.Error(), tt.expectedError)
+			var cliCtx *cli.Context
+			if tt.domainFlag == "" {
+				cliCtx = clitest.NewCLIContext(
+					t,
+					td.app,
+					clitest.StringArgument(FlagTaskList, testTaskList),
+					/* omit the domain flag */
+					clitest.StringArgument(FlagTaskListType, testTaskListType),
+				)
 			} else {
+				// construct cli context with all the required arguments
+				cliCtx = newTaskListCLIContext(t, td.app)
+			}
+
+			err := AdminListTaskList(cliCtx)
+			if tt.expectedError == "" {
 				assert.NoError(t, err)
+			} else {
+				assert.ErrorContains(t, err, tt.expectedError)
 			}
 		})
 	}
 }
 
 // Helper function to set up the CLI context
-func setTasklistMock(app *cli.App) *cli.Context {
-	set := flag.NewFlagSet("test", 0)
-	set.String(FlagDomain, "test-domain", "Domain flag")
-	set.String(FlagTaskList, "test-tasklist", "TaskList flag")
-	set.String(FlagTaskListType, "decision", "TaskListType flag")
-	c := cli.NewContext(app, set, nil)
-	return c
+func newTaskListCLIContext(t *testing.T, app *cli.App) *cli.Context {
+	return clitest.NewCLIContext(
+		t,
+		app,
+		clitest.StringArgument(FlagDomain, testDomain),
+		clitest.StringArgument(FlagTaskList, testTaskList),
+		clitest.StringArgument(FlagTaskListType, testTaskListType),
+	)
 }

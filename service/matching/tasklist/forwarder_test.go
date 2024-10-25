@@ -45,7 +45,7 @@ type ForwarderTestSuite struct {
 	suite.Suite
 	controller      *gomock.Controller
 	client          *matching.MockClient
-	fwdr            *Forwarder
+	fwdr            *forwarderImpl
 	cfg             *config.ForwarderConfig
 	taskList        *Identifier
 	isolationGroups []string
@@ -68,7 +68,7 @@ func (t *ForwarderTestSuite) SetupTest() {
 	t.NoError(err)
 	t.taskList = id
 	t.isolationGroups = []string{"abc", "xyz"}
-	t.fwdr = newForwarder(t.cfg, t.taskList, types.TaskListKindNormal, t.client, t.isolationGroups, metrics.NoopScope(metrics.Matching))
+	t.fwdr = newForwarder(t.cfg, t.taskList, types.TaskListKindNormal, t.client, t.isolationGroups, metrics.NoopScope(metrics.Matching)).(*forwarderImpl)
 }
 
 func (t *ForwarderTestSuite) TearDownTest() {

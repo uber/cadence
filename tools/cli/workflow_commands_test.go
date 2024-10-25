@@ -1117,3 +1117,414 @@ func TestLoadWorkflowIDsFromFile_Failure(t *testing.T) {
 	_, err := loadWorkflowIDsFromFile("non exist file", ",")
 	assert.Error(t, err)
 }
+
+func Test_ResetInBatch_WithQuery(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	serverFrontendClient := frontend.NewMockClient(mockCtrl)
+	app := NewCliApp(&clientFactoryMock{
+		serverFrontendClient: serverFrontendClient,
+	})
+
+	set := flag.NewFlagSet("test", 0)
+	c := cli.NewContext(app, set, nil)
+	// missing domain flag
+	err := ResetInBatch(c)
+	assert.Error(t, err)
+
+	set.String(FlagDomain, "test-domain", "domain")
+	set.String("reset_type", "BadBinary", "reset_type")
+	set.String("reset_bad_binary_checksum", "test-bad-binary-checksum", "reset_bad_binary_checksum")
+	set.String(FlagParallismDeprecated, "1", "input parallism")
+	set.String(FlagParallelism, "2", "parallelism")
+	set.String(FlagExcludeWorkflowIDByQuery, "test-workflow-id", "exclude query")
+
+	// missing reason
+	err = ResetInBatch(c)
+	assert.Error(t, err)
+
+	set.String(FlagReason, "test", "reason")
+	// missing query
+	err = ResetInBatch(c)
+	assert.Error(t, err)
+
+	set.String(FlagListQuery, "WorkflowType='test-workflow-type'", "list query")
+	serverFrontendClient.EXPECT().ScanWorkflowExecutions(gomock.Any(), gomock.Any()).Return(&types.ListWorkflowExecutionsResponse{
+		Executions: []*types.WorkflowExecutionInfo{
+			{
+				Execution: &types.WorkflowExecution{
+					WorkflowID: "test-workflow-id",
+					RunID:      "test-run-id",
+				},
+			},
+		},
+	}, nil).Times(2)
+	err = ResetInBatch(c)
+	assert.NoError(t, err)
+}
+
+func Test_ResetInBatch_WithFile(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	serverFrontendClient := frontend.NewMockClient(mockCtrl)
+	app := NewCliApp(&clientFactoryMock{
+		serverFrontendClient: serverFrontendClient,
+	})
+
+	set := flag.NewFlagSet("test", 0)
+	set.String(FlagDomain, "test-domain", "domain")
+	set.String("reset_type", "BadBinary", "reset_type")
+	set.String("reset_bad_binary_checksum", "test-bad-binary-checksum", "reset_bad_binary_checksum")
+	content := "wid1,wid2,wid3\n\nwid4,wid5\nwid6\n"
+	fileName, cleanup := createTempFileWithContent(t, content)
+	defer cleanup()
+	set.String(FlagInputFile, fileName, "input file")
+	set.String(FlagParallismDeprecated, "1", "input parallism")
+	set.String(FlagParallelism, "2", "parallelism")
+	set.String(FlagExcludeFile, fileName, "exclude query")
+	set.String(FlagReason, "test", "reason")
+
+	serverFrontendClient.EXPECT().ScanWorkflowExecutions(gomock.Any(), gomock.Any()).Return(&types.ListWorkflowExecutionsResponse{
+		Executions: []*types.WorkflowExecutionInfo{
+			{
+				Execution: &types.WorkflowExecution{
+					WorkflowID: "test-workflow-id",
+					RunID:      "test-run-id",
+				},
+			},
+		},
+	}, nil).AnyTimes()
+	c := cli.NewContext(app, set, nil)
+	err := ResetInBatch(c)
+	assert.NoError(t, err)
+
+	// error when both exclude query and file are provided
+	set.String(FlagExcludeWorkflowIDByQuery, "test-workflow-id", "exclude query")
+	err = ResetInBatch(c)
+	assert.Error(t, err)
+}
+
+func Test_ResetInBatch_InvalidDescisionOffset(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	serverFrontendClient := frontend.NewMockClient(mockCtrl)
+	app := NewCliApp(&clientFactoryMock{
+		serverFrontendClient: serverFrontendClient,
+	})
+
+	set := flag.NewFlagSet("test", 0)
+	set.String(FlagDomain, "test-domain", "domain")
+	set.String(FlagDecisionOffset, "100", "decision_offset")
+	set.String(FlagResetType, "BadBinary", "reset_type")
+	c := cli.NewContext(app, set, nil)
+	err := ResetInBatch(c)
+	assert.Error(t, err)
+}
+
+func Test_ResetInBatch_InvalidResetType(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	serverFrontendClient := frontend.NewMockClient(mockCtrl)
+	app := NewCliApp(&clientFactoryMock{
+		serverFrontendClient: serverFrontendClient,
+	})
+
+	set := flag.NewFlagSet("test", 0)
+	set.String(FlagDomain, "test-domain", "domain")
+	set.String(FlagDecisionOffset, "-1", "decision_offset")
+	set.String(FlagResetType, "test", "reset_type")
+	c := cli.NewContext(app, set, nil)
+	err := ResetInBatch(c)
+	assert.Error(t, err)
+}
+
+func Test_ResetInBatch_InvalidInputFile(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	serverFrontendClient := frontend.NewMockClient(mockCtrl)
+	app := NewCliApp(&clientFactoryMock{
+		serverFrontendClient: serverFrontendClient,
+	})
+
+	set := flag.NewFlagSet("test", 0)
+	set.String(FlagDomain, "test-domain", "domain")
+	set.String("reset_type", "BadBinary", "reset_type")
+	set.String("reset_bad_binary_checksum", "test-bad-binary-checksum", "reset_bad_binary_checksum")
+	set.String(FlagInputFile, "non exist file", "input file")
+	set.String(FlagParallismDeprecated, "1", "input parallism")
+	set.String(FlagParallelism, "2", "parallelism")
+	set.String(FlagReason, "test", "reason")
+	c := cli.NewContext(app, set, nil)
+	err := ResetInBatch(c)
+	assert.Error(t, err)
+}
+
+func Test_ResetInBatch_InvalidexcludeFile(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	serverFrontendClient := frontend.NewMockClient(mockCtrl)
+	app := NewCliApp(&clientFactoryMock{
+		serverFrontendClient: serverFrontendClient,
+	})
+
+	set := flag.NewFlagSet("test", 0)
+	set.String(FlagDomain, "test-domain", "domain")
+	set.String("reset_type", "BadBinary", "reset_type")
+	set.String("reset_bad_binary_checksum", "test-bad-binary-checksum", "reset_bad_binary_checksum")
+	set.String(FlagExcludeFile, "non exist file", "exclude query")
+	set.String(FlagParallismDeprecated, "1", "input parallism")
+	set.String(FlagParallelism, "2", "parallelism")
+	set.String(FlagReason, "test", "reason")
+	set.String(FlagListQuery, "WorkflowType='test-workflow-type'", "list query")
+	c := cli.NewContext(app, set, nil)
+	err := ResetInBatch(c)
+	assert.Error(t, err)
+}
+
+func Test_GetFirstDecisionTaskByType(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	serverFrontendClient := frontend.NewMockClient(mockCtrl)
+	serverFrontendClient.EXPECT().GetWorkflowExecutionHistory(gomock.Any(), &types.GetWorkflowExecutionHistoryRequest{
+		Domain: "test-domain",
+		Execution: &types.WorkflowExecution{
+			WorkflowID: "test-workflow-id",
+			RunID:      "test-run-id",
+		},
+		MaximumPageSize: 1000,
+	}).Return(&types.GetWorkflowExecutionHistoryResponse{
+		History: &types.History{
+			Events: []*types.HistoryEvent{
+				{
+					ID:        1,
+					EventType: types.EventTypeDecisionTaskCompleted.Ptr(),
+				},
+			},
+		},
+	}, nil).Times(1)
+	// get desision type successfully
+	decisionFinishID, err := getFirstDecisionTaskByType(context.Background(), "test-domain", "test-workflow-id", "test-run-id", serverFrontendClient, 6)
+	assert.Equal(t, int64(1), decisionFinishID)
+	assert.NoError(t, err)
+
+	// failed to get workflow history
+	serverFrontendClient.EXPECT().GetWorkflowExecutionHistory(gomock.Any(), gomock.Any()).Return(nil, errors.New("test-error")).Times(1)
+	decisionFinishID, err = getFirstDecisionTaskByType(context.Background(), "test-domain", "test-workflow-id", "test-run-id", serverFrontendClient, 6)
+	assert.Equal(t, int64(0), decisionFinishID)
+	assert.Error(t, err)
+
+	// not found decision task
+	serverFrontendClient.EXPECT().GetWorkflowExecutionHistory(gomock.Any(), &types.GetWorkflowExecutionHistoryRequest{
+		Domain: "test-domain",
+		Execution: &types.WorkflowExecution{
+			WorkflowID: "test-workflow-id",
+			RunID:      "test-run-id",
+		},
+		MaximumPageSize: 1000,
+	}).Return(&types.GetWorkflowExecutionHistoryResponse{}, nil).Times(1)
+	decisionFinishID, err = getFirstDecisionTaskByType(context.Background(), "test-domain", "test-workflow-id", "test-run-id", serverFrontendClient, 6)
+	assert.Equal(t, int64(0), decisionFinishID)
+	assert.Error(t, err)
+
+	// next page token
+	serverFrontendClient.EXPECT().GetWorkflowExecutionHistory(gomock.Any(), &types.GetWorkflowExecutionHistoryRequest{
+		Domain: "test-domain",
+		Execution: &types.WorkflowExecution{
+			WorkflowID: "test-workflow-id",
+			RunID:      "test-run-id",
+		},
+		MaximumPageSize: 1000,
+	}).Return(&types.GetWorkflowExecutionHistoryResponse{
+		NextPageToken: []byte("test-next-page-token"),
+	}, nil).Times(1)
+	serverFrontendClient.EXPECT().GetWorkflowExecutionHistory(gomock.Any(), &types.GetWorkflowExecutionHistoryRequest{
+		Domain: "test-domain",
+		Execution: &types.WorkflowExecution{
+			WorkflowID: "test-workflow-id",
+			RunID:      "test-run-id",
+		},
+		MaximumPageSize: 1000,
+		NextPageToken:   []byte("test-next-page-token"),
+	}).Return(&types.GetWorkflowExecutionHistoryResponse{}, nil).Times(1)
+	decisionFinishID, err = getFirstDecisionTaskByType(context.Background(), "test-domain", "test-workflow-id", "test-run-id", serverFrontendClient, 6)
+	assert.Equal(t, int64(0), decisionFinishID)
+	assert.Error(t, err)
+}
+
+func Test_GetCurrentRunID(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	serverFrontendClient := frontend.NewMockClient(mockCtrl)
+	serverFrontendClient.EXPECT().DescribeWorkflowExecution(gomock.Any(), &types.DescribeWorkflowExecutionRequest{
+		Domain: "test-domain",
+		Execution: &types.WorkflowExecution{
+			WorkflowID: "test-workflow-id",
+		},
+	}).Return(&types.DescribeWorkflowExecutionResponse{
+		WorkflowExecutionInfo: &types.WorkflowExecutionInfo{
+			Execution: &types.WorkflowExecution{
+				RunID: "test-run-id",
+			},
+		},
+	}, nil).Times(1)
+
+	runID, err := getCurrentRunID(context.Background(), "test-domain", "test-workflow-id", serverFrontendClient)
+	assert.NoError(t, err)
+	assert.Equal(t, "test-run-id", runID)
+}
+
+func Test_GetBadDecisionCompletedID(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	serverFrontendClient := frontend.NewMockClient(mockCtrl)
+	serverFrontendClient.EXPECT().DescribeWorkflowExecution(gomock.Any(), &types.DescribeWorkflowExecutionRequest{
+		Domain: "test-domain",
+		Execution: &types.WorkflowExecution{
+			WorkflowID: "test-workflow-id",
+			RunID:      "test-run-id",
+		},
+	}).Return(&types.DescribeWorkflowExecutionResponse{}, errors.New("test-error")).Times(1)
+
+	decision, err := getBadDecisionCompletedID(context.Background(), "test-domain", "test-workflow-id", "test-run-id", "", serverFrontendClient)
+	assert.Equal(t, int64(0), decision)
+	assert.Error(t, err)
+
+	serverFrontendClient.EXPECT().DescribeWorkflowExecution(gomock.Any(), &types.DescribeWorkflowExecutionRequest{
+		Domain: "test-domain",
+		Execution: &types.WorkflowExecution{
+			WorkflowID: "test-workflow-id",
+			RunID:      "test-run-id",
+		},
+	}).Return(&types.DescribeWorkflowExecutionResponse{
+		WorkflowExecutionInfo: &types.WorkflowExecutionInfo{
+			AutoResetPoints: &types.ResetPoints{
+				Points: []*types.ResetPointInfo{
+					{
+						BinaryChecksum:           "test-bad-binary-checksum",
+						FirstDecisionCompletedID: 5,
+						Resettable:               true,
+					},
+				},
+			},
+		},
+	}, nil).Times(2)
+	decision, err = getBadDecisionCompletedID(context.Background(), "test-domain", "test-workflow-id", "test-run-id", "", serverFrontendClient)
+	assert.Equal(t, int64(0), decision)
+	assert.Error(t, err)
+
+	decision, err = getBadDecisionCompletedID(context.Background(), "test-domain", "test-workflow-id", "test-run-id", "test-bad-binary-checksum", serverFrontendClient)
+	assert.Equal(t, int64(5), decision)
+	assert.NoError(t, err)
+}
+
+func Test_GetLastContinueAsNewID(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	serverFrontendClient := frontend.NewMockClient(mockCtrl)
+	serverFrontendClient.EXPECT().GetWorkflowExecutionHistory(gomock.Any(), &types.GetWorkflowExecutionHistoryRequest{
+		Domain: "test-domain",
+		Execution: &types.WorkflowExecution{
+			WorkflowID: "test-workflow-id",
+			RunID:      "test-run-id",
+		},
+		MaximumPageSize: 1,
+	}).Return(nil, errors.New("test-error")).Times(1)
+	// get workflow history failed
+	runID, decisionID, err := getLastContinueAsNewID(context.Background(), "test-domain", "test-workflow-id", "test-run-id", serverFrontendClient)
+	assert.Equal(t, "", runID)
+	assert.Equal(t, int64(0), decisionID)
+	assert.Error(t, err)
+
+	serverFrontendClient.EXPECT().GetWorkflowExecutionHistory(gomock.Any(), gomock.Any()).Return(&types.GetWorkflowExecutionHistoryResponse{
+		History: &types.History{
+			Events: []*types.HistoryEvent{
+				{
+					WorkflowExecutionStartedEventAttributes: &types.WorkflowExecutionStartedEventAttributes{
+						ContinuedExecutionRunID: "",
+					},
+				},
+			},
+		},
+	}, nil).Times(1)
+	// cannot get reset base runID
+	runID, decisionID, err = getLastContinueAsNewID(context.Background(), "test-domain", "test-workflow-id", "test-run-id", serverFrontendClient)
+	assert.Equal(t, "", runID)
+	assert.Equal(t, int64(0), decisionID)
+	assert.Error(t, err)
+
+	serverFrontendClient.EXPECT().GetWorkflowExecutionHistory(gomock.Any(), gomock.Any()).Return(&types.GetWorkflowExecutionHistoryResponse{
+		History: &types.History{
+			Events: []*types.HistoryEvent{
+				{
+					WorkflowExecutionStartedEventAttributes: &types.WorkflowExecutionStartedEventAttributes{
+						ContinuedExecutionRunID: "test-run-id",
+					},
+				},
+			},
+		},
+	}, nil).Times(1)
+	serverFrontendClient.EXPECT().GetWorkflowExecutionHistory(gomock.Any(), &types.GetWorkflowExecutionHistoryRequest{
+		Domain: "test-domain",
+		Execution: &types.WorkflowExecution{
+			WorkflowID: "test-workflow-id",
+			RunID:      "test-run-id",
+		},
+		MaximumPageSize: 1000,
+	}).Return(&types.GetWorkflowExecutionHistoryResponse{
+		History: &types.History{
+			Events: []*types.HistoryEvent{
+				{
+					EventType: types.EventTypeDecisionTaskCompleted.Ptr(),
+					ID:        10,
+				},
+			},
+		},
+	}, nil).Times(1)
+	runID, decisionID, err = getLastContinueAsNewID(context.Background(), "test-domain", "test-workflow-id", "test-run-id", serverFrontendClient)
+	assert.Equal(t, "test-run-id", runID)
+	assert.Equal(t, int64(10), decisionID)
+	assert.NoError(t, err)
+
+	serverFrontendClient.EXPECT().GetWorkflowExecutionHistory(gomock.Any(), gomock.Any()).Return(&types.GetWorkflowExecutionHistoryResponse{
+		History: &types.History{
+			Events: []*types.HistoryEvent{
+				{
+					WorkflowExecutionStartedEventAttributes: &types.WorkflowExecutionStartedEventAttributes{
+						ContinuedExecutionRunID: "test-run-id",
+					},
+				},
+			},
+		},
+	}, nil).Times(1)
+	serverFrontendClient.EXPECT().GetWorkflowExecutionHistory(gomock.Any(), &types.GetWorkflowExecutionHistoryRequest{
+		Domain: "test-domain",
+		Execution: &types.WorkflowExecution{
+			WorkflowID: "test-workflow-id",
+			RunID:      "test-run-id",
+		},
+		MaximumPageSize: 1000,
+	}).Return(nil, errors.New("test-error")).Times(1)
+	// fail to get workflow history after getting the reset base runID
+	runID, decisionID, err = getLastContinueAsNewID(context.Background(), "test-domain", "test-workflow-id", "test-run-id", serverFrontendClient)
+	assert.Equal(t, "", runID)
+	assert.Equal(t, int64(0), decisionID)
+	assert.Error(t, err)
+
+	serverFrontendClient.EXPECT().GetWorkflowExecutionHistory(gomock.Any(), gomock.Any()).Return(&types.GetWorkflowExecutionHistoryResponse{
+		History: &types.History{
+			Events: []*types.HistoryEvent{
+				{
+					WorkflowExecutionStartedEventAttributes: &types.WorkflowExecutionStartedEventAttributes{
+						ContinuedExecutionRunID: "test-run-id",
+					},
+				},
+			},
+		},
+	}, nil).Times(1)
+	serverFrontendClient.EXPECT().GetWorkflowExecutionHistory(gomock.Any(), gomock.Any()).Return(&types.GetWorkflowExecutionHistoryResponse{
+		History: &types.History{
+			Events: []*types.HistoryEvent{},
+		},
+		NextPageToken: []byte("test-next-page-token"),
+	}, nil).Times(1)
+	serverFrontendClient.EXPECT().GetWorkflowExecutionHistory(gomock.Any(), gomock.Any()).Return(&types.GetWorkflowExecutionHistoryResponse{
+		History: &types.History{
+			Events: []*types.HistoryEvent{},
+		},
+	}, nil).Times(1)
+	// fail to get workflow history after getting the reset base runID
+	runID, decisionID, err = getLastContinueAsNewID(context.Background(), "test-domain", "test-workflow-id", "test-run-id", serverFrontendClient)
+	assert.Equal(t, "", runID)
+	assert.Equal(t, int64(0), decisionID)
+	assert.Error(t, err)
+}
