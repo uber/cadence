@@ -222,6 +222,13 @@ func TestAdminCatIndices(t *testing.T) {
 	}
 }
 
+func setContextMock(app *cli.App) *cli.Context {
+	set := flag.NewFlagSet("test", 0)
+	set.String(FlagDomain, "test-domain", "Domain flag")
+	c := cli.NewContext(app, set, nil)
+	return c
+}
+
 // getMockClient creates a mock elastic.Client using the provided HTTP handler and returns the client and the test server
 func getMockClient(t *testing.T, handler http.HandlerFunc) (*elastic.Client, *httptest.Server) {
 	// Create a mock HTTP test server
