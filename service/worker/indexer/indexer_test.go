@@ -22,7 +22,6 @@ package indexer
 
 import (
 	"fmt"
-
 	"sync/atomic"
 	"testing"
 	"time"
