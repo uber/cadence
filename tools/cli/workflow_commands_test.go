@@ -1668,3 +1668,55 @@ func Test_FailActivity_CompleteActivity_Errors(t *testing.T) {
 	err = CompleteActivity(c)
 	assert.Contains(t, err.Error(), "Completing activity failed")
 }
+
+func Test_GetResetEventIDByType(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	serverFrontendClient := frontend.NewMockClient(mockCtrl)
+	app := NewCliApp(&clientFactoryMock{
+		serverFrontendClient: serverFrontendClient,
+	})
+	c := getMockContext(t, nil, app)
+
+	serverFrontendClient.EXPECT().GetWorkflowExecutionHistory(gomock.Any(), gomock.Any()).Return(&types.GetWorkflowExecutionHistoryResponse{
+		History: &types.History{
+			Events: []*types.HistoryEvent{
+				{
+					ID:        15,
+					EventType: types.EventTypeDecisionTaskCompleted.Ptr(),
+					WorkflowExecutionStartedEventAttributes: &types.WorkflowExecutionStartedEventAttributes{
+						ContinuedExecutionRunID: "test-run-id",
+					},
+				},
+			},
+		},
+	}, nil).AnyTimes()
+	// reset type last continued as new
+	runID, decisionID, err := getResetEventIDByType(context.Background(), c, resetTypeLastContinuedAsNew, -1, "test-domain",
+		"test-workflow-id", "test-run-id", serverFrontendClient)
+	assert.Equal(t, "test-run-id", runID)
+	assert.Equal(t, int64(15), decisionID)
+	assert.NoError(t, err)
+	// reset type last decision completed
+	runID, decisionID, err = getResetEventIDByType(context.Background(), c, resetTypeFirstDecisionCompleted, -1, "test-domain",
+		"test-workflow-id", "test-run-id", serverFrontendClient)
+	assert.Equal(t, "test-run-id", runID)
+	assert.Equal(t, int64(15), decisionID)
+	assert.NoError(t, err)
+}
+
+func Test_GetResetEventIDByType_BadBinary(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	serverFrontendClient := frontend.NewMockClient(mockCtrl)
+	app := NewCliApp(&clientFactoryMock{
+		serverFrontendClient: serverFrontendClient,
+	})
+	set := flag.NewFlagSet("test", 0)
+	set.String(FlagResetBadBinaryChecksum, "test-bad-binary-checksum", "reset_bad_binary_checksum")
+	c := getMockContext(t, set, app)
+
+	runID, decisionID, err := getResetEventIDByType(context.Background(), c, resetTypeBadBinary, -1, "test-domain",
+		"test-workflow-id", "test-run-id", serverFrontendClient)
+	assert.Equal(t, "test-run-id", runID)
+	assert.Equal(t, int64(15), decisionID)
+	assert.NoError(t, err)
+}
