@@ -462,14 +462,7 @@ func TestAdminRebalanceList(t *testing.T) {
 
 			// Set up the CLI app and mock dependencies
 			var app *cli.App
-			if mockClientFactory != nil {
-				app = NewCliApp(mockClientFactory, WithIOHandler(ioHandler))
-			} else {
-				app = cli.NewApp()
-				app.Metadata = map[string]interface{}{
-					"deps": WithIOHandler(ioHandler),
-				}
-			}
+			app = NewCliApp(mockClientFactory, WithIOHandler(ioHandler))
 
 			// Set up the context for the specific test case
 			c := tt.contextSetup(app)
