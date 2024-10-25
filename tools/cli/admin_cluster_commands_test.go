@@ -452,7 +452,6 @@ func TestAdminRebalanceList(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Initialize mock controller
 			mockCtrl := gomock.NewController(t)
-			defer mockCtrl.Finish()
 
 			// Set up mock based on the specific test case
 			mockClientFactory := tt.mockSetup(mockCtrl)

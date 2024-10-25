@@ -490,7 +490,6 @@ func TestAdminDelete(t *testing.T) {
 
 			// Initialize mock controller
 			mockCtrl := gomock.NewController(t)
-			defer mockCtrl.Finish()
 
 			// Create mock client factory
 			mockClientFactory := NewMockClientFactory(mockCtrl)
