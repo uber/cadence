@@ -376,80 +376,103 @@ func TestIntValTypeToString(t *testing.T) {
 
 func TestAdminRebalanceList(t *testing.T) {
 	tests := []struct {
-		name          string
-		prepareEnv    func() *cli.Context
-		expectedError string
+		name           string
+		mockSetup      func(mockCtrl *gomock.Controller) *MockClientFactory
+		contextSetup   func(app *cli.App) *cli.Context
+		expectedOutput string
+		expectedError  string
 	}{
 		{
 			name: "Success",
-			prepareEnv: func() *cli.Context {
+			mockSetup: func(mockCtrl *gomock.Controller) *MockClientFactory {
 				// Initialize the mock client factory and frontend client
-				mockFrontClient := frontend.NewMockClient(gomock.NewController(t))
-				mockClientFactory := NewMockClientFactory(gomock.NewController(t))
+				mockFrontClient := frontend.NewMockClient(mockCtrl)
+				mockClientFactory := NewMockClientFactory(mockCtrl)
 
 				// Mock successful ListWorkflow call
 				mockClientFactory.EXPECT().ServerFrontendClient(gomock.Any()).Return(mockFrontClient, nil).Times(1)
 				mockFrontClient.EXPECT().CountWorkflowExecutions(gomock.Any(), gomock.Any()).Return(&types.CountWorkflowExecutionsResponse{}, nil).Times(1)
 				mockFrontClient.EXPECT().ListClosedWorkflowExecutions(gomock.Any(), gomock.Any()).Return(&types.ListClosedWorkflowExecutionsResponse{}, nil).Times(1)
 
-				// Create CLI app and set up flag set
-				app := cli.NewApp()
-				app.Metadata = map[string]interface{}{
-					"deps": &deps{
-						ClientFactory: mockClientFactory,
-					},
-				}
+				return mockClientFactory
+			},
+			contextSetup: func(app *cli.App) *cli.Context {
+				// Set flags for workflow ID and domain
 				set := flag.NewFlagSet("test", 0)
 				set.String(FlagWorkflowID, "", "workflow ID flag")
 				set.String(FlagDomain, "", "domain flag")
 				c := cli.NewContext(app, set, nil)
-
-				// Set flags for workflow ID and domain
 				_ = c.Set(FlagWorkflowID, failovermanager.RebalanceWorkflowID)
 				_ = c.Set(FlagDomain, common.SystemLocalDomainName)
 
 				return c
 			},
-			expectedError: "",
+			expectedOutput: "\n", // Example output for success case
+			expectedError:  "",
 		},
 		{
 			name: "SetWorkflowIDError",
-			prepareEnv: func() *cli.Context {
-				// Create CLI app and set up flag set without FlagWorkflowID
-				app := cli.NewApp()
-				set := flag.NewFlagSet("test", 0)
-				set.String(FlagDomain, "", "domain flag") // Only Domain flag is set
-				c := cli.NewContext(app, set, nil)
-
+			mockSetup: func(mockCtrl *gomock.Controller) *MockClientFactory {
+				// No mock setup required for this test case
+				return nil
+			},
+			contextSetup: func(app *cli.App) *cli.Context {
 				// Set only the domain flag, so setting FlagWorkflowID should trigger an error
+				set := flag.NewFlagSet("test", 0)
+				set.String(FlagDomain, "", "domain flag")
+				c := cli.NewContext(app, set, nil)
 				_ = c.Set(FlagDomain, common.SystemLocalDomainName)
 
 				return c
 			},
-			expectedError: "no such flag -workflow_id",
+			expectedOutput: "",
+			expectedError:  "no such flag -workflow_id",
 		},
 		{
 			name: "SetDomainError",
-			prepareEnv: func() *cli.Context {
-				// Create CLI app and set up flag set without FlagDomain
-				app := cli.NewApp()
-				set := flag.NewFlagSet("test", 0)
-				set.String(FlagWorkflowID, "", "workflow ID flag") // Only Workflow ID flag is set
-				c := cli.NewContext(app, set, nil)
-
+			mockSetup: func(mockCtrl *gomock.Controller) *MockClientFactory {
+				// No mock setup required for this test case
+				return nil
+			},
+			contextSetup: func(app *cli.App) *cli.Context {
 				// Set workflow ID flag, but not the domain flag
+				set := flag.NewFlagSet("test", 0)
+				set.String(FlagWorkflowID, "", "workflow ID flag")
+				c := cli.NewContext(app, set, nil)
 				_ = c.Set(FlagWorkflowID, failovermanager.RebalanceWorkflowID)
 
 				return c
 			},
-			expectedError: "no such flag -domain",
+			expectedOutput: "",
+			expectedError:  "no such flag -domain",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Prepare the test environment for the specific test case
-			c := tt.prepareEnv()
+			// Initialize mock controller
+			mockCtrl := gomock.NewController(t)
+			defer mockCtrl.Finish()
+
+			// Set up mock based on the specific test case
+			mockClientFactory := tt.mockSetup(mockCtrl)
+
+			// Create test IO handler to capture output
+			ioHandler := &testIOHandler{}
+
+			// Set up the CLI app and mock dependencies
+			var app *cli.App
+			if mockClientFactory != nil {
+				app = NewCliApp(mockClientFactory, WithIOHandler(ioHandler))
+			} else {
+				app = cli.NewApp()
+				app.Metadata = map[string]interface{}{
+					"deps": WithIOHandler(ioHandler),
+				}
+			}
+
+			// Set up the context for the specific test case
+			c := tt.contextSetup(app)
 
 			// Call AdminRebalanceList
 			err := AdminRebalanceList(c)
@@ -460,6 +483,8 @@ func TestAdminRebalanceList(t *testing.T) {
 				assert.Contains(t, err.Error(), tt.expectedError)
 			} else {
 				assert.NoError(t, err)
+				// Validate the output captured by testIOHandler
+				assert.Equal(t, tt.expectedOutput, ioHandler.outputBytes.String())
 			}
 		})
 	}
@@ -467,9 +492,10 @@ func TestAdminRebalanceList(t *testing.T) {
 
 func TestAdminAddSearchAttribute_errors(t *testing.T) {
 	tests := []struct {
-		name          string
-		setupContext  func(app *cli.App) *cli.Context
-		expectedError string
+		name           string
+		setupContext   func(app *cli.App) *cli.Context
+		expectedOutput string
+		expectedError  string
 	}{
 		{
 			name: "MissingSearchAttributesKey",
@@ -479,7 +505,8 @@ func TestAdminAddSearchAttribute_errors(t *testing.T) {
 				// No FlagSearchAttributesKey set
 				return cli.NewContext(app, set, nil)
 			},
-			expectedError: "Required flag not present:",
+			expectedOutput: "", // In this case, likely no output
+			expectedError:  "Required flag not present:",
 		},
 		{
 			name: "InvalidSearchAttributeKey",
@@ -489,14 +516,18 @@ func TestAdminAddSearchAttribute_errors(t *testing.T) {
 				set.String(FlagSearchAttributesKey, "123_invalid_key", "Key flag") // Invalid key, starts with number
 				return cli.NewContext(app, set, nil)
 			},
-			expectedError: "Invalid search-attribute key.",
+			expectedOutput: "", // In this case, likely no output
+			expectedError:  "Invalid search-attribute key.",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			// Create test IO handler to capture output
+			ioHandler := &testIOHandler{}
+
 			// Create CLI app
-			app := cli.NewApp()
+			app := NewCliApp(nil, WithIOHandler(ioHandler))
 
 			// Set up the CLI context for the specific test case
 			c := tt.setupContext(app)
@@ -511,6 +542,9 @@ func TestAdminAddSearchAttribute_errors(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 			}
+
+			// Validate the output captured by testIOHandler
+			assert.Equal(t, tt.expectedOutput, ioHandler.outputBytes.String())
 		})
 	}
 }
