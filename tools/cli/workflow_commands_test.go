@@ -231,9 +231,6 @@ func getMockContext(t *testing.T, set *flag.FlagSet, app *cli.App) *cli.Context 
 	}
 
 	c := cli.NewContext(app, set, nil)
-	assert.NoError(t, c.Set(FlagDomain, "test-domain"))
-	assert.NoError(t, c.Set("workflow_id", "test-workflow-id"))
-	assert.NoError(t, c.Set("run_id", "test-run-id"))
 
 	return c
 }
@@ -1527,4 +1524,353 @@ func Test_GetLastContinueAsNewID(t *testing.T) {
 	assert.Equal(t, "", runID)
 	assert.Equal(t, int64(0), decisionID)
 	assert.Error(t, err)
+}
+
+func Test_GetEarliestDecisionID(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	serverFrontendClient := frontend.NewMockClient(mockCtrl)
+	serverFrontendClient.EXPECT().GetWorkflowExecutionHistory(gomock.Any(), &types.GetWorkflowExecutionHistoryRequest{
+		Domain: "test-domain",
+		Execution: &types.WorkflowExecution{
+			WorkflowID: "test-workflow-id",
+			RunID:      "test-run-id",
+		},
+		MaximumPageSize: 1000,
+	}).Return(nil, errors.New("test-error")).Times(1)
+
+	// get workflow execution history failed
+	decisionID, err := getEarliestDecisionID(context.Background(), "test-domain", "test-workflow-id", "test-run-id", int64(100), serverFrontendClient)
+	assert.Equal(t, int64(0), decisionID)
+	assert.Error(t, err)
+
+	serverFrontendClient.EXPECT().GetWorkflowExecutionHistory(gomock.Any(), gomock.Any()).Return(&types.GetWorkflowExecutionHistoryResponse{
+		History: &types.History{
+			Events: []*types.HistoryEvent{},
+		},
+		NextPageToken: []byte("test-next-page-token"),
+	}, nil).Times(1)
+	serverFrontendClient.EXPECT().GetWorkflowExecutionHistory(gomock.Any(), &types.GetWorkflowExecutionHistoryRequest{
+		Domain: "test-domain",
+		Execution: &types.WorkflowExecution{
+			WorkflowID: "test-workflow-id",
+			RunID:      "test-run-id",
+		},
+		MaximumPageSize: 1000,
+		NextPageToken:   []byte("test-next-page-token"),
+	}).Return(&types.GetWorkflowExecutionHistoryResponse{
+		History: &types.History{
+			Events: []*types.HistoryEvent{},
+		},
+	}, nil).Times(1)
+	// no DecisionFinishID
+	decisionID, err = getEarliestDecisionID(context.Background(), "test-domain", "test-workflow-id", "test-run-id", int64(100), serverFrontendClient)
+	assert.Equal(t, int64(0), decisionID)
+	assert.Error(t, err)
+
+	testEarliestTime := int64(110)
+	serverFrontendClient.EXPECT().GetWorkflowExecutionHistory(gomock.Any(), &types.GetWorkflowExecutionHistoryRequest{
+		Domain: "test-domain",
+		Execution: &types.WorkflowExecution{
+			WorkflowID: "test-workflow-id",
+			RunID:      "test-run-id",
+		},
+		MaximumPageSize: 1000,
+	}).Return(&types.GetWorkflowExecutionHistoryResponse{
+		History: &types.History{
+			Events: []*types.HistoryEvent{
+				{
+					EventType: types.EventTypeDecisionTaskCompleted.Ptr(),
+					ID:        10,
+					Timestamp: &testEarliestTime,
+				},
+			},
+		},
+	}, nil).Times(1)
+	// no DecisionFinishID
+	decisionID, err = getEarliestDecisionID(context.Background(), "test-domain", "test-workflow-id", "test-run-id", int64(100), serverFrontendClient)
+	assert.Equal(t, int64(10), decisionID)
+	assert.NoError(t, err)
+}
+
+func Test_FailActivity_CompleteActivity_Errors(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	serverFrontendClient := frontend.NewMockClient(mockCtrl)
+	app := NewCliApp(&clientFactoryMock{
+		serverFrontendClient: serverFrontendClient,
+	})
+	set := flag.NewFlagSet("test", 0)
+	c := cli.NewContext(app, set, nil)
+	// call fail activity and complete activity without required flags, they should return the same error
+	err := FailActivity(c)
+	assert.ErrorContains(t, err, fmt.Sprintf("%s is required", FlagDomain))
+	err = CompleteActivity(c)
+	assert.ErrorContains(t, err, fmt.Sprintf("%s is required", FlagDomain))
+	set.String(FlagDomain, "test-domain", "domain")
+
+	err = FailActivity(c)
+	assert.ErrorContains(t, err, fmt.Sprintf("%s is required", FlagWorkflowID))
+	err = CompleteActivity(c)
+	assert.ErrorContains(t, err, fmt.Sprintf("%s is required", FlagWorkflowID))
+	set.String(FlagWorkflowID, "test-workflow-id", "workflow_id")
+
+	err = FailActivity(c)
+	assert.ErrorContains(t, err, fmt.Sprintf("%s is required", FlagRunID))
+	err = CompleteActivity(c)
+	assert.ErrorContains(t, err, fmt.Sprintf("%s is required", FlagRunID))
+	set.String(FlagRunID, "test-run-id", "run_id")
+
+	err = FailActivity(c)
+	assert.ErrorContains(t, err, fmt.Sprintf("%s is required", FlagActivityID))
+	err = CompleteActivity(c)
+	assert.ErrorContains(t, err, fmt.Sprintf("%s is required", FlagActivityID))
+	set.String(FlagActivityID, "test-activity-id", "activity_id")
+
+	err = FailActivity(c)
+	assert.ErrorContains(t, err, fmt.Sprintf("%s is required", FlagReason))
+	err = CompleteActivity(c)
+	assert.ErrorContains(t, err, fmt.Sprintf("%s is required", FlagResult))
+	set.String(FlagReason, "test", "reason")
+	set.String(FlagResult, "test", "result")
+
+	err = FailActivity(c)
+	assert.ErrorContains(t, err, fmt.Sprintf("%s is required", FlagDetail))
+	set.String(FlagDetail, "test", "detail")
+
+	err = FailActivity(c)
+	assert.ErrorContains(t, err, fmt.Sprintf("%s is required", FlagIdentity))
+	err = CompleteActivity(c)
+	assert.ErrorContains(t, err, fmt.Sprintf("%s is required", FlagIdentity))
+	set.String(FlagIdentity, "test", "indentity")
+
+	serverFrontendClient.EXPECT().RespondActivityTaskFailedByID(gomock.Any(), &types.RespondActivityTaskFailedByIDRequest{
+		Domain:     "test-domain",
+		WorkflowID: "test-workflow-id",
+		RunID:      "test-run-id",
+		ActivityID: "test-activity-id",
+		Reason:     common.StringPtr("test"),
+		Details:    []byte("test"),
+		Identity:   "test",
+	}).Return(errors.New("test-error")).Times(1)
+	err = FailActivity(c)
+	assert.ErrorContains(t, err, "Failing activity failed")
+
+	serverFrontendClient.EXPECT().RespondActivityTaskCompletedByID(gomock.Any(), &types.RespondActivityTaskCompletedByIDRequest{
+		Domain:     "test-domain",
+		WorkflowID: "test-workflow-id",
+		RunID:      "test-run-id",
+		ActivityID: "test-activity-id",
+		Result:     []byte("test"),
+		Identity:   "test",
+	}).Return(errors.New("test-error")).Times(1)
+	err = CompleteActivity(c)
+	assert.ErrorContains(t, err, "Completing activity failed")
+}
+
+func Test_GetResetEventIDByType_LastContinuedAsNew(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	serverFrontendClient := frontend.NewMockClient(mockCtrl)
+	app := NewCliApp(&clientFactoryMock{
+		serverFrontendClient: serverFrontendClient,
+	})
+	c := getMockContext(t, nil, app)
+
+	serverFrontendClient.EXPECT().GetWorkflowExecutionHistory(gomock.Any(), gomock.Any()).Return(&types.GetWorkflowExecutionHistoryResponse{
+		History: &types.History{
+			Events: []*types.HistoryEvent{
+				{
+					ID:        15,
+					EventType: types.EventTypeDecisionTaskCompleted.Ptr(),
+					WorkflowExecutionStartedEventAttributes: &types.WorkflowExecutionStartedEventAttributes{
+						ContinuedExecutionRunID: "test-run-id",
+					},
+				},
+			},
+		},
+	}, nil).Times(2)
+	// reset type last continued as new
+	runID, decisionID, err := getResetEventIDByType(context.Background(), c, resetTypeLastContinuedAsNew, -1, "test-domain",
+		"test-workflow-id", "test-run-id", serverFrontendClient)
+	assert.Equal(t, "test-run-id", runID)
+	assert.Equal(t, int64(15), decisionID)
+	assert.NoError(t, err)
+
+	serverFrontendClient.EXPECT().GetWorkflowExecutionHistory(gomock.Any(), gomock.Any()).Return(&types.GetWorkflowExecutionHistoryResponse{
+		History: &types.History{
+			Events: []*types.HistoryEvent{
+				{
+					ChildWorkflowExecutionFailedEventAttributes: &types.ChildWorkflowExecutionFailedEventAttributes{},
+				},
+			},
+		},
+	}, nil).Times(1)
+	_, _, err = getResetEventIDByType(context.Background(), c, resetTypeLastContinuedAsNew, -1, "test-domain",
+		"test-workflow-id", "test-run-id", serverFrontendClient)
+	assert.ErrorContains(t, err, "cannot get resetBaseRunID")
+}
+
+func Test_GetResetEventIDByType_FirstDecisionCompleted(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	serverFrontendClient := frontend.NewMockClient(mockCtrl)
+	app := NewCliApp(&clientFactoryMock{
+		serverFrontendClient: serverFrontendClient,
+	})
+	c := getMockContext(t, nil, app)
+
+	serverFrontendClient.EXPECT().GetWorkflowExecutionHistory(gomock.Any(), gomock.Any()).Return(&types.GetWorkflowExecutionHistoryResponse{
+		History: &types.History{
+			Events: []*types.HistoryEvent{
+				{
+					ID:        15,
+					EventType: types.EventTypeActivityTaskCompleted.Ptr().Ptr(),
+					WorkflowExecutionStartedEventAttributes: &types.WorkflowExecutionStartedEventAttributes{
+						ContinuedExecutionRunID: "test-run-id",
+					},
+				},
+			},
+		},
+	}, nil).Times(1)
+
+	// reset type last decision completed
+	runID, decisionID, err := getResetEventIDByType(context.Background(), c, resetTypeFirstDecisionCompleted, -1, "test-domain",
+		"test-workflow-id", "test-run-id", serverFrontendClient)
+	assert.Equal(t, "test-run-id", runID)
+	assert.Equal(t, int64(0), decisionID)
+	assert.ErrorContains(t, err, "no DecisionFinishID")
+}
+
+func Test_GetResetEventIDByType_BadBinary(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	serverFrontendClient := frontend.NewMockClient(mockCtrl)
+	app := NewCliApp(&clientFactoryMock{
+		serverFrontendClient: serverFrontendClient,
+	})
+	set := flag.NewFlagSet("test", 0)
+	set.String(FlagResetBadBinaryChecksum, "test-bad-binary-checksum", "reset_bad_binary_checksum")
+	c := getMockContext(t, set, app)
+	serverFrontendClient.EXPECT().DescribeWorkflowExecution(gomock.Any(), &types.DescribeWorkflowExecutionRequest{
+		Domain: "test-domain",
+		Execution: &types.WorkflowExecution{
+			WorkflowID: "test-workflow-id",
+			RunID:      "test-run-id",
+		},
+	}).Return(&types.DescribeWorkflowExecutionResponse{
+		WorkflowExecutionInfo: &types.WorkflowExecutionInfo{},
+	}, nil).Times(1)
+	runID, decisionID, err := getResetEventIDByType(context.Background(), c, resetTypeBadBinary, -1, "test-domain",
+		"test-workflow-id", "test-run-id", serverFrontendClient)
+	assert.Equal(t, "test-run-id", runID)
+	assert.Equal(t, int64(0), decisionID)
+	assert.ErrorContains(t, err, "no DecisionFinishID")
+}
+
+func Test_GetResetEventIDByType_DecisionCompletedTime(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	serverFrontendClient := frontend.NewMockClient(mockCtrl)
+	app := NewCliApp(&clientFactoryMock{
+		serverFrontendClient: serverFrontendClient,
+	})
+	set := flag.NewFlagSet("test", 0)
+	c := getMockContext(t, set, app)
+	serverFrontendClient.EXPECT().GetWorkflowExecutionHistory(gomock.Any(), gomock.Any()).Return(&types.GetWorkflowExecutionHistoryResponse{
+		History: &types.History{
+			Events: []*types.HistoryEvent{
+				{
+					ID: 15,
+				},
+			},
+		},
+	}, nil).Times(1)
+	_, decisionID, err := getResetEventIDByType(context.Background(), c, resetTypeDecisionCompletedTime, -1, "test-domain",
+		"test-workflow-id", "test-run-id", serverFrontendClient)
+	assert.Equal(t, int64(0), decisionID)
+	assert.ErrorContains(t, err, "no DecisionFinishID")
+
+	set.String(FlagEarliestTime, "20201025Test", "earliest_time")
+	_, _, err = getResetEventIDByType(context.Background(), c, resetTypeDecisionCompletedTime, -1, "test-domain",
+		"test-workflow-id", "test-run-id", serverFrontendClient)
+	assert.ErrorContains(t, err, "use UTC format")
+}
+
+func Test_GetResetEventIDByType_FirstDecisionScheduled_LastDecisionScheduled(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	serverFrontendClient := frontend.NewMockClient(mockCtrl)
+	app := NewCliApp(&clientFactoryMock{
+		serverFrontendClient: serverFrontendClient,
+	})
+	c := getMockContext(t, nil, app)
+	serverFrontendClient.EXPECT().GetWorkflowExecutionHistory(gomock.Any(), gomock.Any()).Return(&types.GetWorkflowExecutionHistoryResponse{
+		History: &types.History{
+			Events: []*types.HistoryEvent{
+				{
+					ID: 15,
+				},
+			},
+		},
+	}, nil).Times(2)
+	// reset type first decision scheduled
+	runID, decisionID, err := getResetEventIDByType(context.Background(), c, resetTypeFirstDecisionScheduled, -1, "test-domain",
+		"test-workflow-id", "test-run-id", serverFrontendClient)
+	assert.Equal(t, "test-run-id", runID)
+	assert.Equal(t, int64(0), decisionID)
+	assert.ErrorContains(t, err, "no DecisionFinishID")
+	// reset type Last decision scheduled
+	runID, decisionID, err = getResetEventIDByType(context.Background(), c, resetTypeLastDecisionScheduled, -1, "test-domain",
+		"test-workflow-id", "test-run-id", serverFrontendClient)
+	assert.Equal(t, "test-run-id", runID)
+	assert.Equal(t, int64(0), decisionID)
+	assert.ErrorContains(t, err, "no DecisionFinishID")
+	// unsupported reset type
+	assert.Panics(t, func() {
+		getResetEventIDByType(context.Background(), c, "test reset type", -1, "test-domain", "test-workflow-id", "test-run-id", serverFrontendClient)
+	})
+
+	serverFrontendClient.EXPECT().GetWorkflowExecutionHistory(gomock.Any(), gomock.Any()).Return(&types.GetWorkflowExecutionHistoryResponse{
+		History: &types.History{
+			Events: []*types.HistoryEvent{
+				{
+					ID:        15,
+					EventType: types.EventTypeDecisionTaskScheduled.Ptr(),
+				},
+			},
+		},
+	}, nil).Times(2)
+	_, decisionID, err = getResetEventIDByType(context.Background(), c, resetTypeFirstDecisionScheduled, -1, "test-domain",
+		"test-workflow-id", "test-run-id", serverFrontendClient)
+	assert.Equal(t, "test-run-id", runID)
+	assert.Equal(t, int64(16), decisionID)
+	assert.NoError(t, err)
+
+	_, decisionID, err = getResetEventIDByType(context.Background(), c, resetTypeLastDecisionScheduled, -1, "test-domain",
+		"test-workflow-id", "test-run-id", serverFrontendClient)
+	assert.Equal(t, "test-run-id", runID)
+	assert.Equal(t, int64(16), decisionID)
+	assert.NoError(t, err)
+}
+
+func Test_SignalWorkflow_MissingFlags(t *testing.T) {
+	app := NewCliApp(&clientFactoryMock{})
+	set := flag.NewFlagSet("test", 0)
+	c := cli.NewContext(app, set, nil)
+	err := SignalWorkflow(c)
+	assert.ErrorContains(t, err, fmt.Sprintf("%s is required", FlagDomain))
+
+	set.String(FlagDomain, "test-domain", "domain")
+	err = SignalWorkflow(c)
+	assert.ErrorContains(t, err, fmt.Sprintf("%s is required", FlagWorkflowID))
+
+	set.String(FlagWorkflowID, "test-workflow-id", "workflow_id")
+	err = SignalWorkflow(c)
+	assert.ErrorContains(t, err, fmt.Sprintf("%s is required", FlagName))
+}
+
+func Test_RestartWorkflow_MissingFlags(t *testing.T) {
+	app := NewCliApp(&clientFactoryMock{})
+	set := flag.NewFlagSet("test", 0)
+	c := cli.NewContext(app, set, nil)
+	err := RestartWorkflow(c)
+	assert.ErrorContains(t, err, fmt.Sprintf("%s is required", FlagDomain))
+
+	set.String(FlagDomain, "test-domain", "domain")
+	err = RestartWorkflow(c)
+	assert.ErrorContains(t, err, fmt.Sprintf("%s is required", FlagWorkflowID))
 }
