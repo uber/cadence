@@ -40,13 +40,15 @@ import (
 const (
 	testShardID   = 1234
 	testCluster   = "test-cluster"
+	testDomain    = "test-domain"
 	testQueueType = 2 // transfer queue
 )
 
 type cliTestData struct {
-	serverFrontendClient *frontend.MockClient
-	serverAdminClient    *admin.MockClient
-	app                  *cli.App
+	mockFrontendClient *frontend.MockClient
+	mockAdminClient    *admin.MockClient
+	ioHandler          *testIOHandler
+	app                *cli.App
 }
 
 func newCLITestData(t *testing.T) *cliTestData {
@@ -54,16 +56,23 @@ func newCLITestData(t *testing.T) *cliTestData {
 
 	ctrl := gomock.NewController(t)
 
-	td.serverFrontendClient = frontend.NewMockClient(ctrl)
-	td.serverAdminClient = admin.NewMockClient(ctrl)
+	td.mockFrontendClient = frontend.NewMockClient(ctrl)
+	td.mockAdminClient = admin.NewMockClient(ctrl)
+	td.ioHandler = &testIOHandler{}
 
-	// Set up the CLI app and mock dependencies
-	td.app = NewCliApp(&clientFactoryMock{
-		serverFrontendClient: td.serverFrontendClient,
-		serverAdminClient:    td.serverAdminClient,
-	})
-
+	// make a new CLI App with client factory returning our frontend and admin clients
+	td.app = NewCliApp(
+		&clientFactoryMock{
+			serverFrontendClient: td.mockFrontendClient,
+			serverAdminClient:    td.mockAdminClient,
+		},
+		WithIOHandler(td.ioHandler),
+	)
 	return &td
+}
+
+func (td *cliTestData) consoleOutput() string {
+	return td.ioHandler.outputBytes.String()
 }
 
 func TestAdminResetQueue(t *testing.T) {
@@ -115,7 +124,7 @@ func TestAdminResetQueue(t *testing.T) {
 					clitest.IntArgument(FlagQueueType, testQueueType),
 				)
 
-				td.serverAdminClient.EXPECT().ResetQueue(gomock.Any(), &types.ResetQueueRequest{
+				td.mockAdminClient.EXPECT().ResetQueue(gomock.Any(), &types.ResetQueueRequest{
 					ShardID:     testShardID,
 					ClusterName: testCluster,
 					Type:        common.Int32Ptr(testQueueType),
@@ -136,7 +145,7 @@ func TestAdminResetQueue(t *testing.T) {
 					clitest.IntArgument(FlagQueueType, testQueueType),
 				)
 
-				td.serverAdminClient.EXPECT().ResetQueue(gomock.Any(), &types.ResetQueueRequest{
+				td.mockAdminClient.EXPECT().ResetQueue(gomock.Any(), &types.ResetQueueRequest{
 					ShardID:     testShardID,
 					ClusterName: testCluster,
 					Type:        common.Int32Ptr(testQueueType),
