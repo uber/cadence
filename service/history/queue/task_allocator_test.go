@@ -24,17 +24,19 @@ package queue
 
 import (
 	"errors"
+	"testing"
+	"time"
+
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
+
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/shard"
 	htask "github.com/uber/cadence/service/history/task"
-	"testing"
-	"time"
 )
 
 // TaskAllocatorSuite defines the suite for TaskAllocator tests
