@@ -24,12 +24,12 @@ package cli
 
 import (
 	"bufio"
-	"bytes"
 	"flag"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"regexp"
 	"testing"
 	"time"
 
@@ -120,6 +120,13 @@ func TestTimeValProcess(t *testing.T) {
 	}
 }
 
+// Helper function to remove ANSI color codes from the output
+func removeANSIColors(text string) string {
+	ansiEscapePattern := `\x1b\[[0-9;]*m`
+	re := regexp.MustCompile(ansiEscapePattern)
+	return re.ReplaceAllString(text, "")
+}
+
 func TestAdminCatIndices(t *testing.T) {
 	tests := []struct {
 		name           string
@@ -139,11 +146,12 @@ func TestAdminCatIndices(t *testing.T) {
 					w.WriteHeader(http.StatusNotFound)
 				}
 			}),
-			expectedOutput: `+--------+--------+------------+-----+-----+------------+--------------+--------------+
-| HEALTH | STATUS |   INDEX    | PRI | REP | DOCS COUNT | DOCS DELETED |  STORE SIZE  |
-+--------+--------+------------+-----+-----+------------+--------------+--------------+
-| green  | open   | test-index |   5 |   1 |       1000 |           50 | 10gb         |
-+--------+--------+------------+-----+-----+------------+--------------+--------------+
+			expectedOutput: `+--------+--------+------------+-----+-----+------------+--------------+------------+----------------+
+| HEALTH | STATUS |   INDEX    | PRI | REP | DOCS COUNT | DOCS DELETED | STORE SIZE | PRI STORE SIZE |
++--------+--------+------------+-----+-----+------------+--------------+------------+----------------+
+| green  | open   | test-index |   5 |   1 |       1000 |           50 | 10gb       | 5gb            |
++--------+--------+------------+-----+-----+------------+--------------+------------+----------------+
+
 `,
 			expectedError: "",
 			handlerCalled: true,
@@ -183,7 +191,7 @@ func TestAdminCatIndices(t *testing.T) {
 			// Create test IO handler to capture output
 			ioHandler := &testIOHandler{}
 
-			// Set up the CLI app and mock dependencies
+			// Set up the CLI app
 			app := NewCliApp(mockClientFactory, WithIOHandler(ioHandler))
 
 			// Expect ElasticSearchClient to return the mock client created by getMockClient
@@ -204,8 +212,11 @@ func TestAdminCatIndices(t *testing.T) {
 				assert.Contains(t, err.Error(), tt.expectedError)
 			} else {
 				assert.NoError(t, err)
+				// Remove ANSI color codes from the captured output
+				actualOutput := removeANSIColors(ioHandler.outputBytes.String())
+
 				// Validate the output captured by testIOHandler
-				assert.Equal(t, tt.expectedOutput, ioHandler.Output().(*bytes.Buffer).String())
+				assert.Equal(t, tt.expectedOutput, actualOutput)
 			}
 		})
 	}
@@ -236,6 +247,7 @@ func TestAdminIndex(t *testing.T) {
 		handler         http.HandlerFunc
 		createInputFile bool
 		messageType     indexer.MessageType
+		expectedOutput  string
 		expectedError   string
 	}{
 		{
@@ -250,7 +262,8 @@ func TestAdminIndex(t *testing.T) {
 				}
 			}),
 			createInputFile: true,
-			messageType:     indexer.MessageTypeIndex, // Test MessageTypeIndex case
+			messageType:     indexer.MessageTypeIndex,
+			expectedOutput:  "", // Example output for success case
 			expectedError:   "",
 		},
 		{
@@ -265,7 +278,8 @@ func TestAdminIndex(t *testing.T) {
 				}
 			}),
 			createInputFile: true,
-			messageType:     indexer.MessageTypeCreate, // Test MessageTypeCreate case
+			messageType:     indexer.MessageTypeCreate,
+			expectedOutput:  "", // Example output for create case
 			expectedError:   "",
 		},
 		{
@@ -280,38 +294,42 @@ func TestAdminIndex(t *testing.T) {
 				}
 			}),
 			createInputFile: true,
-			messageType:     indexer.MessageTypeDelete, // Test MessageTypeDelete case
+			messageType:     indexer.MessageTypeDelete,
+			expectedOutput:  "", // Example output for delete case
 			expectedError:   "",
 		},
 		{
 			name: "UnknownMessageType",
 			handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				// In this test case, we are simulating an unknown message type, so no bulk request needed.
+				// No bulk request needed for this case
 				w.WriteHeader(http.StatusOK)
 			}),
 			createInputFile: true,
-			messageType:     indexer.MessageType(9999), // Test unknown message type case
+			messageType:     indexer.MessageType(9999),
+			expectedOutput:  "",
 			expectedError:   "Unknown message type",
 		},
 		{
 			name: "BulkRequestFailure",
 			handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				// Simulate an error in the Bulk request
+				// Simulate a Bulk request failure
 				w.WriteHeader(http.StatusInternalServerError)
 				w.Write([]byte(`{"error": "Bulk request failed"}`))
 			}),
 			createInputFile: true,
 			messageType:     indexer.MessageTypeIndex,
+			expectedOutput:  "",
 			expectedError:   "Bulk failed",
 		},
 		{
 			name: "ParseIndexerMessageError",
 			handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				// In this test case, we are simulating a parse error, so no need to simulate the bulk request.
+				// In this test case, we are simulating a parse error, so no bulk request needed.
 				w.WriteHeader(http.StatusOK)
 			}),
 			createInputFile: false, // No valid input file created
 			messageType:     indexer.MessageTypeIndex,
+			expectedOutput:  "",
 			expectedError:   "Unable to parse indexer message",
 		},
 	}
@@ -337,16 +355,14 @@ func TestAdminIndex(t *testing.T) {
 			// Create mock client factory
 			mockClientFactory := NewMockClientFactory(mockCtrl)
 
-			// Expect ElasticSearchClient to return the mock client created by getMockClient
-			mockClientFactory.EXPECT().ElasticSearchClient(gomock.Any()).Return(esClient, nil).Times(1)
+			// Create test IO handler to capture output
+			ioHandler := &testIOHandler{}
 
 			// Set up the CLI app
-			app := cli.NewApp()
-			app.Metadata = map[string]interface{}{
-				"deps": &deps{
-					ClientFactory: mockClientFactory,
-				},
-			}
+			app := NewCliApp(mockClientFactory, WithIOHandler(ioHandler))
+
+			// Expect ElasticSearchClient to return the mock client created by getMockClient
+			mockClientFactory.EXPECT().ElasticSearchClient(gomock.Any()).Return(esClient, nil).Times(1)
 
 			// Setup flag values for the CLI context
 			set := flag.NewFlagSet("test", 0)
@@ -370,6 +386,8 @@ func TestAdminIndex(t *testing.T) {
 				assert.Contains(t, err.Error(), tt.expectedError)
 			} else {
 				assert.NoError(t, err)
+				// Validate the output captured by testIOHandler
+				assert.Equal(t, tt.expectedOutput, ioHandler.outputBytes.String())
 			}
 		})
 	}
@@ -414,6 +432,7 @@ func TestAdminDelete(t *testing.T) {
 		name            string
 		handler         http.HandlerFunc
 		createInputFile bool
+		expectedOutput  string
 		expectedError   string
 	}{
 		{
@@ -428,6 +447,7 @@ func TestAdminDelete(t *testing.T) {
 				}
 			}),
 			createInputFile: true,
+			expectedOutput:  "", // Example output for delete case
 			expectedError:   "",
 		},
 		{
@@ -438,6 +458,7 @@ func TestAdminDelete(t *testing.T) {
 				w.Write([]byte(`{"error": "Bulk request failed"}`))
 			}),
 			createInputFile: true,
+			expectedOutput:  "",
 			expectedError:   "Bulk failed",
 		},
 		{
@@ -447,6 +468,7 @@ func TestAdminDelete(t *testing.T) {
 				w.WriteHeader(http.StatusOK)
 			}),
 			createInputFile: false, // No valid input file created
+			expectedOutput:  "",
 			expectedError:   "Cannot open input file",
 		},
 	}
@@ -468,6 +490,7 @@ func TestAdminDelete(t *testing.T) {
 
 			// Initialize mock controller
 			mockCtrl := gomock.NewController(t)
+			defer mockCtrl.Finish()
 
 			// Create mock client factory
 			mockClientFactory := NewMockClientFactory(mockCtrl)
@@ -475,13 +498,11 @@ func TestAdminDelete(t *testing.T) {
 			// Expect ElasticSearchClient to return the mock client created by getMockClient
 			mockClientFactory.EXPECT().ElasticSearchClient(gomock.Any()).Return(esClient, nil).Times(1)
 
+			// Create test IO handler to capture output
+			ioHandler := &testIOHandler{}
+
 			// Set up the CLI app
-			app := cli.NewApp()
-			app.Metadata = map[string]interface{}{
-				"deps": &deps{
-					ClientFactory: mockClientFactory,
-				},
-			}
+			app := NewCliApp(mockClientFactory, WithIOHandler(ioHandler))
 
 			// Setup flag values for the CLI context
 			set := flag.NewFlagSet("test", 0)
@@ -509,6 +530,8 @@ func TestAdminDelete(t *testing.T) {
 				}
 			} else {
 				assert.NoError(t, err)
+				// Validate the output captured by testIOHandler
+				assert.Equal(t, tt.expectedOutput, ioHandler.outputBytes.String())
 			}
 		})
 	}
