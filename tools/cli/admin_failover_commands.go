@@ -44,6 +44,11 @@ const (
 	defaultFailoverWorkflowTimeoutInSeconds = 1200
 )
 
+var (
+	uuidFn        = uuid.New
+	getOperatorFn = getOperator
+)
+
 type startParams struct {
 	targetCluster                  string
 	sourceCluster                  string
@@ -290,7 +295,9 @@ func getRunID(c *cli.Context) string {
 }
 
 func failoverStart(c *cli.Context, params *startParams) error {
-	validateStartParams(params)
+	if err := validateStartParams(params); err != nil {
+		return commoncli.Problem("Invalid input parameters", err)
+	}
 
 	workflowID := failovermanager.FailoverWorkflowID
 	targetCluster := params.targetCluster
@@ -314,7 +321,7 @@ func failoverStart(c *cli.Context, params *startParams) error {
 	if err != nil {
 		return commoncli.Problem("Error in creating context: ", err)
 	}
-	op, err := getOperator()
+	op, err := getOperatorFn()
 	if err != nil {
 		return commoncli.Problem("Error in getting operator: ", err)
 	}
@@ -326,7 +333,7 @@ func failoverStart(c *cli.Context, params *startParams) error {
 	}
 	request := &types.StartWorkflowExecutionRequest{
 		Domain:                              common.SystemLocalDomainName,
-		RequestID:                           uuid.New(),
+		RequestID:                           uuidFn(),
 		WorkflowID:                          workflowID,
 		WorkflowIDReusePolicy:               types.WorkflowIDReusePolicyAllowDuplicate.Ptr(),
 		TaskList:                            &types.TaskList{Name: failovermanager.TaskListName},
@@ -351,11 +358,9 @@ func failoverStart(c *cli.Context, params *startParams) error {
 			case *types.WorkflowExecutionAlreadyCompletedError:
 				break
 			default:
-				return commoncli.Problem("Failed to send pase signal to drill workflow", err)
+				return commoncli.Problem("Failed to send pause signal to drill workflow", err)
 			}
 		}
-		fmt.Println("The failover drill workflow is paused. Please run 'cadence admin cluster failover resume --fd'" +
-			" to resume the drill workflow.")
 	}
 
 	foParams := failovermanager.FailoverParams{
@@ -392,7 +397,7 @@ func getFailoverWorkflowID(c *cli.Context) string {
 func getOperator() (string, error) {
 	user, err := user.Current()
 	if err != nil {
-		return "", fmt.Errorf("Unable to get operator info %w", err)
+		return "", fmt.Errorf("failed to get operator info %w", err)
 	}
 
 	return fmt.Sprintf("%s (username: %s)", user.Name, user.Username), nil
