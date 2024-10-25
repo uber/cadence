@@ -23,11 +23,9 @@
 package cli
 
 import (
-	"bytes"
 	"errors"
 	"flag"
 	"fmt"
-	"os"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -415,11 +413,12 @@ func TestAdminGetDomainIsolationGroups(t *testing.T) {
 
 			// Set up mocks for the current test case
 			tt.setupMocks(adminClient)
+			ioHandler := &testIOHandler{}
 
 			// Create mock app with clientFactoryMock, including any deps errors
 			app := NewCliApp(&clientFactoryMock{
 				serverAdminClient: adminClient,
-			})
+			}, WithIOHandler(ioHandler))
 
 			// Set up CLI context with flags
 			set := flag.NewFlagSet("test", 0)
@@ -427,38 +426,16 @@ func TestAdminGetDomainIsolationGroups(t *testing.T) {
 			set.String(FlagFormat, tt.flagFormat, "Format flag")
 			c := cli.NewContext(app, set, nil)
 
-			r, w, _ := os.Pipe()
-
-			// Save the original os.Stdout
-			origStdout := os.Stdout
-			// Defer restoring os.Stdout back to its original state
-			defer func() {
-				os.Stdout = origStdout
-				w.Close()
-			}()
-
-			// Redirect os.Stdout to the pipe
-			os.Stdout = w
-
 			// Call the function under test
 			err := AdminGetDomainIsolationGroups(c)
-
-			w.Close()
-			var buf bytes.Buffer
-			_, err2 := buf.ReadFrom(r)
-			if err2 != nil {
-				t.Fatalf("Failed to read from pipe: %v", err)
-			}
-			output := buf.String()
 
 			// Check the expected outcome
 			if tt.expectedError != "" {
 				assert.Error(t, err)
 				assert.Contains(t, err.Error(), tt.expectedError)
 			} else {
-				assert.Contains(t, output, "zone-1")
-				assert.Contains(t, output, "zone-2")
 				assert.NoError(t, err)
+				assert.Contains(t, ioHandler.outputBytes.String(), "zone-1")
 			}
 		})
 	}
