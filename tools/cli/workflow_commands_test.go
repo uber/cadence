@@ -1528,3 +1528,143 @@ func Test_GetLastContinueAsNewID(t *testing.T) {
 	assert.Equal(t, int64(0), decisionID)
 	assert.Error(t, err)
 }
+
+func Test_GetEarliestDecisionID(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	serverFrontendClient := frontend.NewMockClient(mockCtrl)
+	serverFrontendClient.EXPECT().GetWorkflowExecutionHistory(gomock.Any(), &types.GetWorkflowExecutionHistoryRequest{
+		Domain: "test-domain",
+		Execution: &types.WorkflowExecution{
+			WorkflowID: "test-workflow-id",
+			RunID:      "test-run-id",
+		},
+		MaximumPageSize: 1000,
+	}).Return(nil, errors.New("test-error")).Times(1)
+
+	// get workflow execution history failed
+	decisionID, err := getEarliestDecisionID(context.Background(), "test-domain", "test-workflow-id", "test-run-id", int64(100), serverFrontendClient)
+	assert.Equal(t, int64(0), decisionID)
+	assert.Error(t, err)
+
+	serverFrontendClient.EXPECT().GetWorkflowExecutionHistory(gomock.Any(), gomock.Any()).Return(&types.GetWorkflowExecutionHistoryResponse{
+		History: &types.History{
+			Events: []*types.HistoryEvent{},
+		},
+		NextPageToken: []byte("test-next-page-token"),
+	}, nil).Times(1)
+	serverFrontendClient.EXPECT().GetWorkflowExecutionHistory(gomock.Any(), &types.GetWorkflowExecutionHistoryRequest{
+		Domain: "test-domain",
+		Execution: &types.WorkflowExecution{
+			WorkflowID: "test-workflow-id",
+			RunID:      "test-run-id",
+		},
+		MaximumPageSize: 1000,
+		NextPageToken:   []byte("test-next-page-token"),
+	}).Return(&types.GetWorkflowExecutionHistoryResponse{
+		History: &types.History{
+			Events: []*types.HistoryEvent{},
+		},
+	}, nil).Times(1)
+	// no DecisionFinishID
+	decisionID, err = getEarliestDecisionID(context.Background(), "test-domain", "test-workflow-id", "test-run-id", int64(100), serverFrontendClient)
+	assert.Equal(t, int64(0), decisionID)
+	assert.Error(t, err)
+
+	testEarliestTime := int64(110)
+	serverFrontendClient.EXPECT().GetWorkflowExecutionHistory(gomock.Any(), &types.GetWorkflowExecutionHistoryRequest{
+		Domain: "test-domain",
+		Execution: &types.WorkflowExecution{
+			WorkflowID: "test-workflow-id",
+			RunID:      "test-run-id",
+		},
+		MaximumPageSize: 1000,
+	}).Return(&types.GetWorkflowExecutionHistoryResponse{
+		History: &types.History{
+			Events: []*types.HistoryEvent{
+				{
+					EventType: types.EventTypeDecisionTaskCompleted.Ptr(),
+					ID:        10,
+					Timestamp: &testEarliestTime,
+				},
+			},
+		},
+	}, nil).Times(1)
+	// no DecisionFinishID
+	decisionID, err = getEarliestDecisionID(context.Background(), "test-domain", "test-workflow-id", "test-run-id", int64(100), serverFrontendClient)
+	assert.Equal(t, int64(10), decisionID)
+	assert.NoError(t, err)
+}
+
+func Test_FailActivity_CompleteActivity_Errors(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	serverFrontendClient := frontend.NewMockClient(mockCtrl)
+	app := NewCliApp(&clientFactoryMock{
+		serverFrontendClient: serverFrontendClient,
+	})
+	set := flag.NewFlagSet("test", 0)
+	c := cli.NewContext(app, set, nil)
+	// call fail activity and complete activity without required flags, they should return the same error
+	err := FailActivity(c)
+	assert.Contains(t, err.Error(), fmt.Sprintf("Option %s is required", FlagDomain))
+	err = CompleteActivity(c)
+	assert.Contains(t, err.Error(), fmt.Sprintf("Option %s is required", FlagDomain))
+	set.String(FlagDomain, "test-domain", "domain")
+
+	err = FailActivity(c)
+	assert.Contains(t, err.Error(), fmt.Sprintf("Option %s is required", FlagWorkflowID))
+	err = CompleteActivity(c)
+	assert.Contains(t, err.Error(), fmt.Sprintf("Option %s is required", FlagWorkflowID))
+	set.String(FlagWorkflowID, "test-workflow-id", "workflow_id")
+
+	err = FailActivity(c)
+	assert.Contains(t, err.Error(), fmt.Sprintf("Option %s is required", FlagRunID))
+	err = CompleteActivity(c)
+	assert.Contains(t, err.Error(), fmt.Sprintf("Option %s is required", FlagRunID))
+	set.String(FlagRunID, "test-run-id", "run_id")
+
+	err = FailActivity(c)
+	assert.Contains(t, err.Error(), fmt.Sprintf("Option %s is required", FlagActivityID))
+	err = CompleteActivity(c)
+	assert.Contains(t, err.Error(), fmt.Sprintf("Option %s is required", FlagActivityID))
+	set.String(FlagActivityID, "test-activity-id", "activity_id")
+
+	err = FailActivity(c)
+	assert.Contains(t, err.Error(), fmt.Sprintf("Option %s is required", FlagReason))
+	err = CompleteActivity(c)
+	assert.Contains(t, err.Error(), fmt.Sprintf("Option %s is required", FlagResult))
+	set.String(FlagReason, "test", "reason")
+	set.String(FlagResult, "test", "result")
+
+	err = FailActivity(c)
+	assert.Contains(t, err.Error(), fmt.Sprintf("Option %s is required", FlagDetail))
+	set.String(FlagDetail, "test", "detail")
+
+	err = FailActivity(c)
+	assert.Contains(t, err.Error(), fmt.Sprintf("Option %s is required", FlagIdentity))
+	err = CompleteActivity(c)
+	assert.Contains(t, err.Error(), fmt.Sprintf("Option %s is required", FlagIdentity))
+	set.String(FlagIdentity, "test", "indentity")
+
+	serverFrontendClient.EXPECT().RespondActivityTaskFailedByID(gomock.Any(), &types.RespondActivityTaskFailedByIDRequest{
+		Domain:     "test-domain",
+		WorkflowID: "test-workflow-id",
+		RunID:      "test-run-id",
+		ActivityID: "test-activity-id",
+		Reason:     common.StringPtr("test"),
+		Details:    []byte("test"),
+		Identity:   "test",
+	}).Return(errors.New("test-error")).Times(1)
+	err = FailActivity(c)
+	assert.Contains(t, err.Error(), "Failing activity failed")
+
+	serverFrontendClient.EXPECT().RespondActivityTaskCompletedByID(gomock.Any(), &types.RespondActivityTaskCompletedByIDRequest{
+		Domain:     "test-domain",
+		WorkflowID: "test-workflow-id",
+		RunID:      "test-run-id",
+		ActivityID: "test-activity-id",
+		Result:     []byte("test"),
+		Identity:   "test",
+	}).Return(errors.New("test-error")).Times(1)
+	err = CompleteActivity(c)
+	assert.Contains(t, err.Error(), "Completing activity failed")
+}

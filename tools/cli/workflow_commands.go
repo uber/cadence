@@ -2478,9 +2478,6 @@ func CompleteActivity(c *cli.Context) error {
 	if err != nil {
 		return commoncli.Problem("Required flag not found: ", err)
 	}
-	if len(activityID) == 0 {
-		return commoncli.Problem("Invalid activityID", fmt.Errorf("activityID cannot be empty"))
-	}
 	result, err := getRequiredOption(c, FlagResult)
 	if err != nil {
 		return commoncli.Problem("Required flag not found: ", err)
@@ -2529,8 +2526,8 @@ func FailActivity(c *cli.Context) error {
 		return commoncli.Problem("Required flag not found: ", err)
 	}
 	activityID, err := getRequiredOption(c, FlagActivityID)
-	if len(activityID) == 0 {
-		return commoncli.Problem("Invalid activityID", fmt.Errorf("activityID cannot be empty"))
+	if err != nil {
+		return commoncli.Problem("Required flag not found: ", err)
 	}
 	reason, err := getRequiredOption(c, FlagReason)
 	if err != nil {
