@@ -340,6 +340,8 @@ func toTimeStr(s interface{}) string {
 
 // GenerateReport generate report for an aggregation query to ES
 func GenerateReport(c *cli.Context) error {
+	output := getDeps(c).Output()
+
 	// use url command argument to create client
 	index, err := getRequiredOption(c, FlagIndex)
 	if err != nil {
@@ -380,7 +382,7 @@ func GenerateReport(c *cli.Context) error {
 	}
 
 	// Show result to terminal
-	table := tablewriter.NewWriter(os.Stdout)
+	table := tablewriter.NewWriter(output)
 	var headers []string
 	var groupby, bucket map[string]interface{}
 	var buckets []interface{}
@@ -390,7 +392,7 @@ func GenerateReport(c *cli.Context) error {
 	}
 	buckets = groupby["buckets"].([]interface{})
 	if len(buckets) == 0 {
-		fmt.Println("no matching bucket")
+		output.Write([]byte("no matching bucket"))
 		return nil
 	}
 
