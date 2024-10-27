@@ -781,8 +781,8 @@ func TestGenerateReport(t *testing.T) {
 											"group_DomainID": "domain1",
 											"group_CustomKey": "custom-value"
 										},
-										"CompletionTime": {
-											"value": 1727962032967890000
+										"Attr_CustomStringField": {
+											"value": "test-string"
 										}
 									}
 								]
@@ -810,11 +810,11 @@ func TestGenerateReport(t *testing.T) {
 			setupMocks: func(mockClientFactory *MockClientFactory, esClient *elastic.Client) {
 				mockClientFactory.EXPECT().ElasticSearchClient(gomock.Any()).Return(esClient, nil).Times(1)
 			},
-			expectedOutput: `+-------------+--------------+---------------------------+
-| DOMAINID(*) | CUSTOMKEY(*) |      COMPLETIONTIME       |
-+-------------+--------------+---------------------------+
-| domain1     | custom-value | 2024-10-03T06:27:12-07:00 |
-+-------------+--------------+---------------------------+
+			expectedOutput: `+-------------+--------------+------------------------+
+| DOMAINID(*) | CUSTOMKEY(*) | ATTR CUSTOMSTRINGFIELD |
++-------------+--------------+------------------------+
+| domain1     | custom-value | test-string            |
++-------------+--------------+------------------------+
 `,
 			expectedError: "",
 		},
