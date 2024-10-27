@@ -782,7 +782,7 @@ func TestGenerateReport(t *testing.T) {
 											"group_CustomKey": "custom-value"
 										},
 										"CompletionTime": {
-											"value": 1696203296789
+											"value": 1727962032967890000
 										}
 									}
 								]
@@ -813,7 +813,7 @@ func TestGenerateReport(t *testing.T) {
 			expectedOutput: `+-------------+--------------+---------------------------+
 | DOMAINID(*) | CUSTOMKEY(*) |      COMPLETIONTIME       |
 +-------------+--------------+---------------------------+
-| domain1     | custom-value | 1969-12-31T16:28:16-08:00 |
+| domain1     | custom-value | 2024-10-03T06:27:12-07:00 |
 +-------------+--------------+---------------------------+
 `,
 			expectedError: "",
