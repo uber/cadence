@@ -22,7 +22,6 @@ package tasklist
 
 import (
 	"context"
-	"errors"
 	"math"
 	"math/rand"
 	"sync"
@@ -638,7 +637,7 @@ func (t *MatcherTestSuite) TestIsolationPollFailure() {
 	t.Nil(task)
 }
 
-func (t *MatcherTestSuite) TestOffer_Offer_RateLimited() {
+func (t *MatcherTestSuite) TestOffer_RateLimited() {
 	t.matcher.UpdateRatelimit(common.Float64Ptr(0))
 
 	task := newInternalTask(t.newTaskInfo(), nil, types.TaskSourceHistory, "", false, nil, "")
@@ -647,14 +646,12 @@ func (t *MatcherTestSuite) TestOffer_Offer_RateLimited() {
 
 	matched, err := t.matcher.Offer(ctx, task)
 
-	t.Error(err)
-	t.True(errors.Is(err, ErrTasklistThrottled))
+	t.ErrorIs(err, ErrTasklistThrottled)
 	t.False(matched)
 }
 
 func (t *MatcherTestSuite) TestOffer_NoTimeoutSyncMatchedNoError() {
 	defer goleak.VerifyNone(t.T())
-	defer t.controller.Finish()
 
 	t.matcher.config.LocalTaskWaitTime = func() time.Duration { return 0 }
 
@@ -680,7 +677,6 @@ func (t *MatcherTestSuite) TestOffer_NoTimeoutSyncMatchedNoError() {
 
 func (t *MatcherTestSuite) TestOffer_NoTimeoutSyncMatchedError() {
 	defer goleak.VerifyNone(t.T())
-	defer t.controller.Finish()
 
 	t.matcher.config.LocalTaskWaitTime = func() time.Duration { return 0 }
 
@@ -707,7 +703,6 @@ func (t *MatcherTestSuite) TestOffer_NoTimeoutSyncMatchedError() {
 
 func (t *MatcherTestSuite) TestOffer_NoTimeoutAsyncMatchedNoError() {
 	defer goleak.VerifyNone(t.T())
-	defer t.controller.Finish()
 
 	t.matcher.config.LocalTaskWaitTime = func() time.Duration { return 0 }
 
@@ -733,7 +728,6 @@ func (t *MatcherTestSuite) TestOffer_NoTimeoutAsyncMatchedNoError() {
 
 func (t *MatcherTestSuite) TestOffer_AsyncMatchedNoError() {
 	defer goleak.VerifyNone(t.T())
-	defer t.controller.Finish()
 
 	wait := ensureAsyncReady(time.Second, func(ctx context.Context) {
 		task, err := t.matcher.Poll(ctx, "")
@@ -757,7 +751,6 @@ func (t *MatcherTestSuite) TestOffer_AsyncMatchedNoError() {
 
 func (t *MatcherTestSuite) TestOfferOrTimeout_SyncMatchTimedOut() {
 	defer goleak.VerifyNone(t.T())
-	defer t.controller.Finish()
 
 	t.disableRemoteForwarding("")
 
@@ -781,7 +774,6 @@ func (t *MatcherTestSuite) TestOfferOrTimeout_SyncMatchTimedOut() {
 
 func (t *MatcherTestSuite) TestOfferOrTimeout_AsyncMatchNotMatched() {
 	defer goleak.VerifyNone(t.T())
-	defer t.controller.Finish()
 
 	t.disableRemoteForwarding("")
 
@@ -805,7 +797,6 @@ func (t *MatcherTestSuite) TestOfferOrTimeout_AsyncMatchNotMatched() {
 
 func (t *MatcherTestSuite) TestOfferOrTimeout_AsyncMatchMatched() {
 	defer goleak.VerifyNone(t.T())
-	defer t.controller.Finish()
 
 	t.disableRemoteForwarding("")
 
@@ -828,8 +819,6 @@ func (t *MatcherTestSuite) TestOfferOrTimeout_AsyncMatchMatched() {
 }
 
 func (t *MatcherTestSuite) TestOfferOrTimeout_TimedOut() {
-	defer t.controller.Finish()
-
 	t.disableRemoteForwarding("")
 
 	task := newInternalTask(t.newTaskInfo(), nil, types.TaskSourceHistory, "", false, &types.ActivityTaskDispatchInfo{}, "")
@@ -863,8 +852,7 @@ func (t *MatcherTestSuite) TestOfferQuery_ForwardError() {
 
 	retTask, err := t.matcher.OfferQuery(ctx, task)
 
-	t.Error(err)
-	t.True(errors.Is(err, ErrNoParent))
+	t.ErrorIs(err, ErrNoParent)
 	t.Nil(retTask)
 }
 
@@ -881,8 +869,7 @@ func (t *MatcherTestSuite) TestOfferQuery_ContextExpired() {
 
 	retTask, err := t.matcher.OfferQuery(ctx, task)
 
-	t.Error(err)
-	t.True(errors.Is(err, context.Canceled))
+	t.ErrorIs(err, context.Canceled)
 	t.Nil(retTask)
 }
 
@@ -923,8 +910,7 @@ func (t *MatcherTestSuite) TestMustOffer_RateLimited() {
 
 	err := t.matcher.MustOffer(ctx, task)
 
-	t.Error(err)
-	t.True(errors.Is(err, ErrTasklistThrottled))
+	t.ErrorIs(err, ErrTasklistThrottled)
 }
 
 func (t *MatcherTestSuite) TestMustOffer_ContextExpiredFirstAttempt() {
@@ -935,8 +921,7 @@ func (t *MatcherTestSuite) TestMustOffer_ContextExpiredFirstAttempt() {
 
 	err := t.matcher.MustOffer(ctx, task)
 
-	t.Error(err)
-	t.True(errors.Is(err, context.DeadlineExceeded))
+	t.ErrorIs(err, context.DeadlineExceeded)
 }
 
 func (t *MatcherTestSuite) TestMustOffer_ContextExpiredAfterFirstAttempt() {
@@ -952,8 +937,7 @@ func (t *MatcherTestSuite) TestMustOffer_ContextExpiredAfterFirstAttempt() {
 
 	err := t.matcher.MustOffer(ctx, task)
 
-	t.Error(err)
-	t.True(errors.Is(err, context.DeadlineExceeded))
+	t.ErrorIs(err, context.DeadlineExceeded)
 }
 
 func (t *MatcherTestSuite) TestMustOffer_LocalMatchAfterChildCtxExpired() {
@@ -1224,8 +1208,8 @@ func (t *MatcherTestSuite) Test_poll_ContextExpired() {
 	startT := time.Now()
 
 	retTask, err := t.matcher.poll(ctx, startT, nil, nil, nil)
-	t.Error(err)
-	t.True(errors.Is(err, ErrNoTasks))
+
+	t.ErrorIs(err, ErrNoTasks)
 	t.Nil(retTask)
 }
 
@@ -1278,8 +1262,8 @@ func (t *MatcherTestSuite) Test_pollNonBlocking_NoTasks() {
 	ctx := context.Background()
 
 	retTask, err := t.matcher.pollNonBlocking(ctx, nil, nil, nil)
-	t.Error(err)
-	t.True(errors.Is(err, ErrNoTasks))
+
+	t.ErrorIs(err, ErrNoTasks)
 	t.Nil(retTask)
 }
 
