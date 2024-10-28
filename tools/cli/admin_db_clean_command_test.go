@@ -98,7 +98,7 @@ func TestAdminDBClean_errorCases(t *testing.T) {
 				_ = set.Set(FlagInputFile, "input.json")
 				return cli.NewContext(app, set, nil)
 			},
-			inputFileData:  `[{"Execution": {"ShardID": 1}}]`, // Simulate the content of input file
+			inputFileData:  `[{"Execution": {"ShardID": 1}}]`,
 			expectedOutput: "",
 			expectedError:  "no invariants for scantype",
 		},
