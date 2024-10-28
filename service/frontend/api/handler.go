@@ -201,10 +201,6 @@ func (wh *WorkflowHandler) DiagnoseWorkflowExecution(ctx context.Context, reques
 		return nil, validate.ErrShuttingDown
 	}
 
-	if err := wh.versionChecker.ClientSupported(ctx, wh.config.EnableClientVersionCheck()); err != nil {
-		return nil, err
-	}
-
 	if request == nil {
 		return nil, validate.ErrRequestNotSet
 	}
@@ -270,10 +266,6 @@ func (wh *WorkflowHandler) RegisterDomain(ctx context.Context, registerRequest *
 		return validate.ErrShuttingDown
 	}
 
-	if err := wh.versionChecker.ClientSupported(ctx, wh.config.EnableClientVersionCheck()); err != nil {
-		return err
-	}
-
 	if registerRequest == nil {
 		return validate.ErrRequestNotSet
 	}
@@ -306,10 +298,6 @@ func (wh *WorkflowHandler) ListDomains(
 		return nil, validate.ErrShuttingDown
 	}
 
-	if err := wh.versionChecker.ClientSupported(ctx, wh.config.EnableClientVersionCheck()); err != nil {
-		return nil, err
-	}
-
 	if listRequest == nil {
 		return nil, validate.ErrRequestNotSet
 	}
@@ -324,10 +312,6 @@ func (wh *WorkflowHandler) DescribeDomain(
 ) (response *types.DescribeDomainResponse, retError error) {
 	if wh.isShuttingDown() {
 		return nil, validate.ErrShuttingDown
-	}
-
-	if err := wh.versionChecker.ClientSupported(ctx, wh.config.EnableClientVersionCheck()); err != nil {
-		return nil, err
 	}
 
 	if describeRequest == nil {
@@ -396,12 +380,6 @@ func (wh *WorkflowHandler) UpdateDomain(
 		return nil, validate.ErrShuttingDown
 	}
 
-	if err := wh.versionChecker.ClientSupported(ctx, wh.config.EnableClientVersionCheck()); err != nil {
-		logger.Error("Won't apply the domain update since client version is not supported.",
-			tag.Error(err))
-		return nil, err
-	}
-
 	// don't require permission for failover request
 	if isFailover {
 		// reject the failover if the cluster is in lockdown
@@ -453,10 +431,6 @@ func (wh *WorkflowHandler) DeprecateDomain(ctx context.Context, deprecateRequest
 		return validate.ErrShuttingDown
 	}
 
-	if err := wh.versionChecker.ClientSupported(ctx, wh.config.EnableClientVersionCheck()); err != nil {
-		return err
-	}
-
 	if deprecateRequest == nil {
 		return validate.ErrRequestNotSet
 	}
@@ -481,10 +455,6 @@ func (wh *WorkflowHandler) PollForActivityTask(
 
 	if wh.isShuttingDown() {
 		return nil, validate.ErrShuttingDown
-	}
-
-	if err := wh.versionChecker.ClientSupported(ctx, wh.config.EnableClientVersionCheck()); err != nil {
-		return nil, err
 	}
 
 	if pollRequest == nil {
@@ -611,10 +581,6 @@ func (wh *WorkflowHandler) PollForDecisionTask(
 
 	if wh.isShuttingDown() {
 		return nil, validate.ErrShuttingDown
-	}
-
-	if err := wh.versionChecker.ClientSupported(ctx, wh.config.EnableClientVersionCheck()); err != nil {
-		return nil, err
 	}
 
 	if pollRequest == nil {
@@ -828,10 +794,6 @@ func (wh *WorkflowHandler) RecordActivityTaskHeartbeat(
 		return nil, validate.ErrShuttingDown
 	}
 
-	if err := wh.versionChecker.ClientSupported(ctx, wh.config.EnableClientVersionCheck()); err != nil {
-		return nil, err
-	}
-
 	if heartbeatRequest == nil {
 		return nil, validate.ErrRequestNotSet
 	}
@@ -907,10 +869,6 @@ func (wh *WorkflowHandler) RecordActivityTaskHeartbeatByID(
 ) (resp *types.RecordActivityTaskHeartbeatResponse, retError error) {
 	if wh.isShuttingDown() {
 		return nil, validate.ErrShuttingDown
-	}
-
-	if err := wh.versionChecker.ClientSupported(ctx, wh.config.EnableClientVersionCheck()); err != nil {
-		return nil, err
 	}
 
 	if heartbeatRequest == nil {
@@ -1012,10 +970,6 @@ func (wh *WorkflowHandler) RespondActivityTaskCompleted(
 		return validate.ErrShuttingDown
 	}
 
-	if err := wh.versionChecker.ClientSupported(ctx, wh.config.EnableClientVersionCheck()); err != nil {
-		return err
-	}
-
 	if completeRequest == nil {
 		return validate.ErrRequestNotSet
 	}
@@ -1101,10 +1055,6 @@ func (wh *WorkflowHandler) RespondActivityTaskCompletedByID(
 ) (retError error) {
 	if wh.isShuttingDown() {
 		return validate.ErrShuttingDown
-	}
-
-	if err := wh.versionChecker.ClientSupported(ctx, wh.config.EnableClientVersionCheck()); err != nil {
-		return err
 	}
 
 	if completeRequest == nil {
@@ -1215,10 +1165,6 @@ func (wh *WorkflowHandler) RespondActivityTaskFailed(
 		return validate.ErrShuttingDown
 	}
 
-	if err := wh.versionChecker.ClientSupported(ctx, wh.config.EnableClientVersionCheck()); err != nil {
-		return err
-	}
-
 	if failedRequest == nil {
 		return validate.ErrRequestNotSet
 	}
@@ -1292,10 +1238,6 @@ func (wh *WorkflowHandler) RespondActivityTaskFailedByID(
 ) (retError error) {
 	if wh.isShuttingDown() {
 		return validate.ErrShuttingDown
-	}
-
-	if err := wh.versionChecker.ClientSupported(ctx, wh.config.EnableClientVersionCheck()); err != nil {
-		return err
 	}
 
 	if failedRequest == nil {
@@ -1396,10 +1338,6 @@ func (wh *WorkflowHandler) RespondActivityTaskCanceled(
 		return validate.ErrShuttingDown
 	}
 
-	if err := wh.versionChecker.ClientSupported(ctx, wh.config.EnableClientVersionCheck()); err != nil {
-		return err
-	}
-
 	if cancelRequest == nil {
 		return validate.ErrRequestNotSet
 	}
@@ -1487,10 +1425,6 @@ func (wh *WorkflowHandler) RespondActivityTaskCanceledByID(
 ) (retError error) {
 	if wh.isShuttingDown() {
 		return validate.ErrShuttingDown
-	}
-
-	if err := wh.versionChecker.ClientSupported(ctx, wh.config.EnableClientVersionCheck()); err != nil {
-		return err
 	}
 
 	if cancelRequest == nil {
@@ -1601,10 +1535,6 @@ func (wh *WorkflowHandler) RespondDecisionTaskCompleted(
 		return nil, validate.ErrShuttingDown
 	}
 
-	if err := wh.versionChecker.ClientSupported(ctx, wh.config.EnableClientVersionCheck()); err != nil {
-		return nil, err
-	}
-
 	if completeRequest == nil {
 		return nil, validate.ErrRequestNotSet
 	}
@@ -1692,10 +1622,6 @@ func (wh *WorkflowHandler) RespondDecisionTaskFailed(
 		return validate.ErrShuttingDown
 	}
 
-	if err := wh.versionChecker.ClientSupported(ctx, wh.config.EnableClientVersionCheck()); err != nil {
-		return err
-	}
-
 	if failedRequest == nil {
 		return validate.ErrRequestNotSet
 	}
@@ -1768,10 +1694,6 @@ func (wh *WorkflowHandler) RespondQueryTaskCompleted(
 ) (retError error) {
 	if wh.isShuttingDown() {
 		return validate.ErrShuttingDown
-	}
-
-	if err := wh.versionChecker.ClientSupported(ctx, wh.config.EnableClientVersionCheck()); err != nil {
-		return err
 	}
 
 	if completeRequest == nil {
@@ -1952,9 +1874,6 @@ func (wh *WorkflowHandler) validateStartWorkflowExecutionRequest(ctx context.Con
 	if startRequest.WorkflowType == nil || startRequest.WorkflowType.GetName() == "" {
 		return validate.ErrWorkflowTypeNotSet
 	}
-	if err := wh.versionChecker.ClientSupported(ctx, wh.config.EnableClientVersionCheck()); err != nil {
-		return err
-	}
 	idLengthWarnLimit := wh.config.MaxIDLengthWarnLimit()
 	if !common.IsValidIDLength(
 		domainName,
@@ -2084,10 +2003,6 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 ) (resp *types.GetWorkflowExecutionHistoryResponse, retError error) {
 	if wh.isShuttingDown() {
 		return nil, validate.ErrShuttingDown
-	}
-
-	if err := wh.versionChecker.ClientSupported(ctx, wh.config.EnableClientVersionCheck()); err != nil {
-		return nil, err
 	}
 
 	if getRequest == nil {
@@ -2340,10 +2255,6 @@ func (wh *WorkflowHandler) SignalWorkflowExecution(
 		return validate.ErrShuttingDown
 	}
 
-	if err := wh.versionChecker.ClientSupported(ctx, wh.config.EnableClientVersionCheck()); err != nil {
-		return err
-	}
-
 	if signalRequest == nil {
 		return validate.ErrRequestNotSet
 	}
@@ -2523,10 +2434,6 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecution(
 }
 
 func (wh *WorkflowHandler) validateSignalWithStartWorkflowExecutionRequest(ctx context.Context, signalWithStartRequest *types.SignalWithStartWorkflowExecutionRequest, scope metrics.Scope) error {
-	if err := wh.versionChecker.ClientSupported(ctx, wh.config.EnableClientVersionCheck()); err != nil {
-		return err
-	}
-
 	if signalWithStartRequest == nil {
 		return validate.ErrRequestNotSet
 	}
@@ -2688,10 +2595,6 @@ func (wh *WorkflowHandler) TerminateWorkflowExecution(
 		return validate.ErrShuttingDown
 	}
 
-	if err := wh.versionChecker.ClientSupported(ctx, wh.config.EnableClientVersionCheck()); err != nil {
-		return err
-	}
-
 	if terminateRequest == nil {
 		return validate.ErrRequestNotSet
 	}
@@ -2729,10 +2632,6 @@ func (wh *WorkflowHandler) ResetWorkflowExecution(
 ) (resp *types.ResetWorkflowExecutionResponse, retError error) {
 	if wh.isShuttingDown() {
 		return nil, validate.ErrShuttingDown
-	}
-
-	if err := wh.versionChecker.ClientSupported(ctx, wh.config.EnableClientVersionCheck()); err != nil {
-		return nil, err
 	}
 
 	if resetRequest == nil {
@@ -2773,10 +2672,6 @@ func (wh *WorkflowHandler) RequestCancelWorkflowExecution(
 		return validate.ErrShuttingDown
 	}
 
-	if err := wh.versionChecker.ClientSupported(ctx, wh.config.EnableClientVersionCheck()); err != nil {
-		return err
-	}
-
 	if cancelRequest == nil {
 		return validate.ErrRequestNotSet
 	}
@@ -2813,10 +2708,6 @@ func (wh *WorkflowHandler) ListOpenWorkflowExecutions(
 ) (resp *types.ListOpenWorkflowExecutionsResponse, retError error) {
 	if wh.isShuttingDown() {
 		return nil, validate.ErrShuttingDown
-	}
-
-	if err := wh.versionChecker.ClientSupported(ctx, wh.config.EnableClientVersionCheck()); err != nil {
-		return nil, err
 	}
 
 	if listRequest == nil {
@@ -2923,10 +2814,6 @@ func (wh *WorkflowHandler) ListArchivedWorkflowExecutions(
 		return nil, validate.ErrShuttingDown
 	}
 
-	if err := wh.versionChecker.ClientSupported(ctx, wh.config.EnableClientVersionCheck()); err != nil {
-		return nil, err
-	}
-
 	if listRequest == nil {
 		return nil, validate.ErrRequestNotSet
 	}
@@ -3004,10 +2891,6 @@ func (wh *WorkflowHandler) ListClosedWorkflowExecutions(
 ) (resp *types.ListClosedWorkflowExecutionsResponse, retError error) {
 	if wh.isShuttingDown() {
 		return nil, validate.ErrShuttingDown
-	}
-
-	if err := wh.versionChecker.ClientSupported(ctx, wh.config.EnableClientVersionCheck()); err != nil {
-		return nil, err
 	}
 
 	if listRequest == nil {
@@ -3137,10 +3020,6 @@ func (wh *WorkflowHandler) ListWorkflowExecutions(
 		return nil, validate.ErrShuttingDown
 	}
 
-	if err := wh.versionChecker.ClientSupported(ctx, wh.config.EnableClientVersionCheck()); err != nil {
-		return nil, err
-	}
-
 	if listRequest == nil {
 		return nil, validate.ErrRequestNotSet
 	}
@@ -3191,10 +3070,6 @@ func (wh *WorkflowHandler) ListWorkflowExecutions(
 func (wh *WorkflowHandler) RestartWorkflowExecution(ctx context.Context, request *types.RestartWorkflowExecutionRequest) (resp *types.RestartWorkflowExecutionResponse, retError error) {
 	if wh.isShuttingDown() {
 		return nil, validate.ErrShuttingDown
-	}
-
-	if err := wh.versionChecker.ClientSupported(ctx, wh.config.EnableClientVersionCheck()); err != nil {
-		return nil, err
 	}
 
 	if request == nil {
@@ -3259,10 +3134,6 @@ func (wh *WorkflowHandler) ScanWorkflowExecutions(
 		return nil, validate.ErrShuttingDown
 	}
 
-	if err := wh.versionChecker.ClientSupported(ctx, wh.config.EnableClientVersionCheck()); err != nil {
-		return nil, err
-	}
-
 	if listRequest == nil {
 		return nil, validate.ErrRequestNotSet
 	}
@@ -3318,10 +3189,6 @@ func (wh *WorkflowHandler) CountWorkflowExecutions(
 		return nil, validate.ErrShuttingDown
 	}
 
-	if err := wh.versionChecker.ClientSupported(ctx, wh.config.EnableClientVersionCheck()); err != nil {
-		return nil, err
-	}
-
 	if countRequest == nil {
 		return nil, validate.ErrRequestNotSet
 	}
@@ -3363,10 +3230,6 @@ func (wh *WorkflowHandler) GetSearchAttributes(ctx context.Context) (resp *types
 		return nil, validate.ErrShuttingDown
 	}
 
-	if err := wh.versionChecker.ClientSupported(ctx, wh.config.EnableClientVersionCheck()); err != nil {
-		return nil, err
-	}
-
 	keys := wh.config.ValidSearchAttributes()
 	resp = &types.GetSearchAttributesResponse{
 		Keys: wh.convertIndexedKeyToThrift(keys),
@@ -3381,10 +3244,6 @@ func (wh *WorkflowHandler) ResetStickyTaskList(
 ) (resp *types.ResetStickyTaskListResponse, retError error) {
 	if wh.isShuttingDown() {
 		return nil, validate.ErrShuttingDown
-	}
-
-	if err := wh.versionChecker.ClientSupported(ctx, wh.config.EnableClientVersionCheck()); err != nil {
-		return nil, err
 	}
 
 	if resetRequest == nil {
@@ -3424,10 +3283,6 @@ func (wh *WorkflowHandler) QueryWorkflow(
 ) (resp *types.QueryWorkflowResponse, retError error) {
 	if wh.isShuttingDown() {
 		return nil, validate.ErrShuttingDown
-	}
-
-	if err := wh.versionChecker.ClientSupported(ctx, wh.config.EnableClientVersionCheck()); err != nil {
-		return nil, err
 	}
 
 	if queryRequest == nil {
@@ -3500,10 +3355,6 @@ func (wh *WorkflowHandler) DescribeWorkflowExecution(
 		return nil, validate.ErrShuttingDown
 	}
 
-	if err := wh.versionChecker.ClientSupported(ctx, wh.config.EnableClientVersionCheck()); err != nil {
-		return nil, err
-	}
-
 	if request == nil {
 		return nil, validate.ErrRequestNotSet
 	}
@@ -3546,10 +3397,6 @@ func (wh *WorkflowHandler) DescribeTaskList(
 ) (resp *types.DescribeTaskListResponse, retError error) {
 	if wh.isShuttingDown() {
 		return nil, validate.ErrShuttingDown
-	}
-
-	if err := wh.versionChecker.ClientSupported(ctx, wh.config.EnableClientVersionCheck()); err != nil {
-		return nil, err
 	}
 
 	if request == nil {
