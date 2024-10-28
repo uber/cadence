@@ -29,6 +29,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"go.uber.org/goleak"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/dynamicconfig"
@@ -100,10 +101,11 @@ func TestIndexerStart(t *testing.T) {
 	mockConsumer := messaging.NewMockConsumer(ctrl)
 	mockConsumer.EXPECT().Start().Return(nil).Times(1)
 	messageChan := make(chan messaging.Message)
-	defer close(messageChan)
-	mockConsumer.EXPECT().Messages().Return((<-chan messaging.Message)(messageChan)).AnyTimes()
+	mockConsumer.EXPECT().Messages().Return((<-chan messaging.Message)(messageChan)).Times(1)
+	mockConsumer.EXPECT().Stop().Return().Times(1)
 	mockvisibiltyProcessor := NewMockESProcessor(ctrl)
 	mockvisibiltyProcessor.EXPECT().Start().Return().Times(1)
+	mockvisibiltyProcessor.EXPECT().Stop().Return().Times(1)
 
 	indexer := &Indexer{
 		config:              config,
@@ -117,6 +119,10 @@ func TestIndexerStart(t *testing.T) {
 	}
 	err := indexer.Start()
 	assert.NoError(t, err)
+	close(messageChan)
+
+	indexer.Stop()
+	defer goleak.VerifyNone(t)
 }
 
 // TestIndexerStart_ConsumerError tests the Start method when consumer.Start returns an error
@@ -210,5 +216,6 @@ func TestIndexerStop(t *testing.T) {
 
 	// Call Stop again to ensure idempotency
 	indexer.Stop()
-	// No further expectations since the indexer is already stopped
+	defer goleak.VerifyNone(t)
+
 }
