@@ -295,6 +295,9 @@ func (c *staleWorkflowCheck) checkRunningAge(workflow *persistence.GetWorkflowEx
 
 	timesOutAt := startedAt.Add(timeout).Add(backoff)
 	cleansUpAt := timesOutAt.Add(maxLifespan)
+	timesOutAtStr := timesOutAt.Format(time.RFC1123Z)
+	cleansUpAtStr := cleansUpAt.Format(time.RFC1123Z)
+	c.log.Debug("Timesout at: %s, cleansUpAt: %s", zap.Any("s", timesOutAtStr), zap.Any("s", cleansUpAtStr))
 	// sanity checks on calculated times
 	if ok, result := c.checkTimeInSaneRange(timesOutAt, "workflow timeout"); !ok {
 		return false, expected, result
