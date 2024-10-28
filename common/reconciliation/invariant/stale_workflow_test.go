@@ -33,22 +33,34 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/log/testlogger"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 )
 
-func setup(t *testing.T, retentionDays int) (pr *persistence.MockRetryer, impl *staleWorkflowCheck) {
+func setup(t *testing.T, retentionDays int) (*persistence.MockRetryer, *staleWorkflowCheck) {
 	ctrl := gomock.NewController(t)
-	m := persistence.NewMockRetryer(ctrl)
-	impl = &staleWorkflowCheck{
-		pr:       m,
-		dc:       nil, // not used by these tests
-		log:      testlogger.NewZap(t),
-		testable: &mocked{},
+	pr := persistence.NewMockRetryer(ctrl)
+	dc := cache.NewMockDomainCache(ctrl)
+	domainEntry := cache.NewDomainCacheEntryForTest(
+		&persistence.DomainInfo{ID: "test-domain-id", Name: "test-domain-name"},
+		&persistence.DomainConfig{Retention: int32(retentionDays)},
+		true,
+		nil,
+		0,
+		nil,
+		0,
+		0,
+		0)
+	dc.EXPECT().GetDomainByID(gomock.Any()).Return(domainEntry, nil).AnyTimes()
+
+	invariant := NewStaleWorkflow(pr, dc, testlogger.NewZap(t))
+	impl, ok := invariant.(*staleWorkflowCheck)
+	if !ok {
+		t.Fatalf("NewStaleWorkflowVersion returned invariant of type %T but want *staleWorkflowCheck", invariant)
 	}
-	withDomain(retentionDays, impl)
-	return m, impl
+	return pr, impl
 }
 
 // some acceptable defaults for tests that don't care about precise windows
@@ -376,14 +388,6 @@ func withOpenHistoryFallback(start time.Time, backoff time.Duration, pr *persist
 	withOpenHistory(start, backoff, pr)
 }
 
-func withDomain(retentionDays int, check *staleWorkflowCheck) {
-	check.testable.(*mocked).domaininfo = mockdomaininfo{
-		retention: int32(retentionDays),
-		name:      "test-domain",
-		err:       nil,
-	}
-}
-
 type requestMaxEvent struct {
 	max   int64
 	token string
@@ -445,19 +449,4 @@ func execution(domainid string, state workflowstate, created time.Time, timeout 
 		}
 	}
 	return res
-}
-
-type mocked struct {
-	domaininfo mockdomaininfo
-}
-type mockdomaininfo struct {
-	retention int32
-	name      string
-	err       error
-}
-
-var _ testable = (*mocked)(nil) // needs to be mutable
-
-func (m *mocked) getDomainInfo(*persistence.WorkflowExecutionInfo) (retention int32, name string, err error) {
-	return m.domaininfo.retention, m.domaininfo.name, m.domaininfo.err
 }
