@@ -106,7 +106,7 @@ func AdminDBClean(c *cli.Context) error {
 	}
 
 	for _, e := range data {
-		result, err := fixExecution(c, invariants, e)
+		result, err := fixExecution(c, invariants, e, initializeExecutionStore, initializeHistoryManager)
 		if err != nil {
 			return commoncli.Problem("Error in fix execution: ", err)
 		}
@@ -130,14 +130,20 @@ func fixExecution(
 	c *cli.Context,
 	invariants []executions.InvariantFactory,
 	execution *store.ScanOutputEntity,
+	initializeExecutionStoreFn func(c *cli.Context, shardID int) (persistence.ExecutionManager, error),
+	initializeHistoryManagerFn func(c *cli.Context) (persistence.HistoryManager, error),
 ) (invariant.ManagerFixResult, error) {
-	execManager, err := initializeExecutionStore(c, execution.Execution.(entity.Entity).GetShardID())
-	defer execManager.Close()
+	execManager, err := initializeExecutionStoreFn(c, execution.Execution.(entity.Entity).GetShardID())
+	if execManager != nil {
+		defer execManager.Close()
+	}
 	if err != nil {
 		return invariant.ManagerFixResult{}, fmt.Errorf("Error in fix execution: %w", err)
 	}
-	historyV2Mgr, err := initializeHistoryManager(c)
-	defer historyV2Mgr.Close()
+	historyV2Mgr, err := initializeHistoryManagerFn(c)
+	if historyV2Mgr != nil {
+		defer historyV2Mgr.Close()
+	}
 	if err != nil {
 		return invariant.ManagerFixResult{}, fmt.Errorf("Error in fix execution: %w", err)
 	}
