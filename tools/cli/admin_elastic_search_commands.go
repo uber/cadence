@@ -392,7 +392,7 @@ func GenerateReport(c *cli.Context) error {
 	}
 	buckets = groupby["buckets"].([]interface{})
 	if len(buckets) == 0 {
-		output.Write([]byte("no matching bucket"))
+		output.Write([]byte("no matching bucket\n"))
 		return nil
 	}
 

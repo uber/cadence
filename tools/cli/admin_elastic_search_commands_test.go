@@ -904,8 +904,9 @@ func TestGenerateReport(t *testing.T) {
 			setupMocks: func(mockClientFactory *MockClientFactory, esClient *elastic.Client) {
 				mockClientFactory.EXPECT().ElasticSearchClient(gomock.Any()).Return(esClient, nil).Times(1)
 			},
-			expectedOutput: `no matching bucket`,
-			expectedError:  "",
+			expectedOutput: `no matching bucket
+`,
+			expectedError: "",
 		},
 		{
 			name: "UnsupportedReportFormat",
