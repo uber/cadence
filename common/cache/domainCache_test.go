@@ -41,6 +41,7 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/testing/testdatagen"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -633,28 +634,16 @@ func (s *domainCacheSuite) TestStart_Stop() {
 	domainID := uuid.New()
 	domainName := "some random domain name"
 
-	testCache := newDomainCache()
-	domainEntry := &DomainCacheEntry{
-		info: &persistence.DomainInfo{ID: domainID, Name: domainName, Data: make(map[string]string)},
-		config: &persistence.DomainConfig{
-			BadBinaries: types.BadBinaries{
-				Binaries: map[string]*types.BadBinaryInfo{},
-			},
-		},
-		replicationConfig: &persistence.DomainReplicationConfig{
-			ActiveClusterName: cluster.TestCurrentClusterName,
-		},
-		failoverVersion:     123,
-		initialized:         true,
-		notificationVersion: 2,
-	}
-	testCache.Put(domainID, domainEntry)
-
-	s.domainCache.cacheByID.Store(testCache)
-
-	s.domainCache.cacheNameToID.Store(testCache)
-
 	s.Equal(domainCacheInitialized, s.domainCache.status)
+
+	s.Equal(0, len(s.domainCache.GetAllDomain()))
+
+	s.domainCache.Start()
+
+	// testing noop
+	s.domainCache.Start()
+
+	mockTimeSource.BlockUntil(1)
 
 	s.metadataMgr.On("GetMetadata", mock.Anything).Return(&persistence.GetMetadataResponse{NotificationVersion: 4}, nil).Once()
 
@@ -675,14 +664,15 @@ func (s *domainCacheSuite) TestStart_Stop() {
 	listDomainsResponse := &persistence.ListDomainsResponse{
 		Domains: []*persistence.GetDomainResponse{domainResponse},
 	}
+
 	s.metadataMgr.On("ListDomains", mock.Anything, mock.Anything).Return(listDomainsResponse, nil).Once()
 
-	mockTimeSource.Advance(domainCacheMinRefreshInterval)
-	s.domainCache.Start()
+	mockTimeSource.Advance(DomainCacheRefreshInterval)
+
 	s.Equal(domainCacheStarted, s.domainCache.status)
 
-	// verifying noop on second start
-	s.domainCache.Start()
+	// need to wait for the go routine to make progress and update the cache
+	time.Sleep(200 * time.Millisecond)
 
 	allDomains := s.domainCache.GetAllDomain()
 	s.Equal(1, len(allDomains))
@@ -861,16 +851,22 @@ func (s *domainCacheSuite) Test_getDomain_cacheHitAfterRefreshLockLocked() {
 	testCache.Put(domainName, domainID)
 	testCache.Put(domainID, domainEntry)
 
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+
 	go func() {
 		// to test the cache hit after refresh lock is locked, need to ensure that the domain cache is added after the first cache hit check
 		// force a lock to ensure that the code will block on the lock, wait for the first cache hit check, add the domain cache
 		// and then release the lock
 		s.domainCache.refreshLock.Lock()
+		wg.Done()
 		defer s.domainCache.refreshLock.Unlock()
 		time.Sleep(200 * time.Millisecond)
 		s.domainCache.cacheByID.Store(testCache)
 		s.domainCache.cacheNameToID.Store(testCache)
 	}()
+
+	wg.Wait()
 
 	s.metadataMgr.On("GetDomain", mock.Anything, &persistence.GetDomainRequest{Name: domainName, ID: ""}).Return(nil, nil).Once()
 
@@ -934,54 +930,22 @@ func (s *domainCacheSuite) Test_refreshDomainsLocked_ListDomainsError() {
 }
 
 func (s *domainCacheSuite) TestDomainCacheEntry_Getters() {
-	info := &persistence.DomainInfo{
-		ID:   uuid.New(),
-		Name: "testDomain",
-	}
+	gen := testdatagen.New(s.T())
 
-	config := &persistence.DomainConfig{
-		Retention: 1,
-	}
+	entry := DomainCacheEntry{}
 
-	replicationConfig := &persistence.DomainReplicationConfig{
-		ActiveClusterName: cluster.TestCurrentClusterName,
-	}
+	gen.Fuzz(&entry)
 
-	configVersion := int64(5)
-
-	failoverNotificationVersion := int64(10)
-
-	notificationVersion := int64(20)
-
-	failoverVersion := int64(30)
-
-	previousFailoverVersion := int64(29)
-
-	failoverEndTime := common.Int64Ptr(40)
-
-	entry := &DomainCacheEntry{
-		info:                        info,
-		config:                      config,
-		configVersion:               configVersion,
-		replicationConfig:           replicationConfig,
-		failoverNotificationVersion: failoverNotificationVersion,
-		notificationVersion:         notificationVersion,
-		isGlobalDomain:              true,
-		failoverVersion:             failoverVersion,
-		previousFailoverVersion:     previousFailoverVersion,
-		failoverEndTime:             failoverEndTime,
-	}
-
-	s.Equal(info, entry.GetInfo())
-	s.Equal(config, entry.GetConfig())
-	s.Equal(replicationConfig, entry.GetReplicationConfig())
-	s.Equal(failoverNotificationVersion, entry.GetFailoverNotificationVersion())
-	s.Equal(notificationVersion, entry.GetNotificationVersion())
-	s.Equal(failoverVersion, entry.GetFailoverVersion())
-	s.Equal(previousFailoverVersion, entry.GetPreviousFailoverVersion())
-	s.Equal(failoverEndTime, entry.GetFailoverEndTime())
-	s.Equal(true, entry.IsGlobalDomain())
-	s.Equal(configVersion, entry.GetConfigVersion())
+	s.Equal(entry.info, entry.GetInfo())
+	s.Equal(entry.config, entry.GetConfig())
+	s.Equal(entry.replicationConfig, entry.GetReplicationConfig())
+	s.Equal(entry.failoverNotificationVersion, entry.GetFailoverNotificationVersion())
+	s.Equal(entry.notificationVersion, entry.GetNotificationVersion())
+	s.Equal(entry.failoverVersion, entry.GetFailoverVersion())
+	s.Equal(entry.previousFailoverVersion, entry.GetPreviousFailoverVersion())
+	s.Equal(entry.failoverEndTime, entry.GetFailoverEndTime())
+	s.Equal(entry.isGlobalDomain, entry.IsGlobalDomain())
+	s.Equal(entry.configVersion, entry.GetConfigVersion())
 }
 
 func (s *domainCacheSuite) TestDomainCacheEntry_IsDomainPendingActive() {
