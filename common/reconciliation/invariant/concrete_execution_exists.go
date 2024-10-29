@@ -116,7 +116,15 @@ func (c *concreteExecutionExists) Fix(ctx context.Context, execution interface{}
 		return *fixResult
 	}
 
-	currentExecution, _ := execution.(*entity.CurrentExecution)
+	currentExecution, ok := execution.(*entity.CurrentExecution)
+	if !ok {
+		return FixResult{
+			FixResultType: FixResultTypeFailed,
+			InvariantName: c.Name(),
+			Info:          "failed to fix: expected current execution",
+		}
+	}
+
 	var runIDCheckResult *CheckResult
 	if len(currentExecution.CurrentRunID) == 0 {
 		// this is to set the current run ID prior to the check and fix operations
@@ -175,7 +183,7 @@ func (c *concreteExecutionExists) validateCurrentRunID(
 		return nil, &CheckResult{
 			CheckResultType: CheckResultTypeFailed,
 			InvariantName:   c.Name(),
-			Info:            "Failed to fetch domainName",
+			Info:            "failed to fetch domainName",
 			InfoDetails:     err.Error(),
 		}
 	}
