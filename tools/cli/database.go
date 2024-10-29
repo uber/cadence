@@ -150,19 +150,28 @@ func getDBFlags() []cli.Flag {
 	}
 }
 
-func initializeExecutionStore(c *cli.Context, shardID int) (persistence.ExecutionManager, error) {
+type PersistenceManagerFactory interface {
+	initializeExecutionStore(c *cli.Context, shardID int) (persistence.ExecutionManager, error)
+	initializeHistoryManager(c *cli.Context) (persistence.HistoryManager, error)
+	initializeShardManager(c *cli.Context) (persistence.ShardManager, error)
+	initializeDomainManager(c *cli.Context) (persistence.DomainManager, error)
+}
+
+type DefaultPersistenceManagerFactory struct{}
+
+func (f *DefaultPersistenceManagerFactory) initializeExecutionStore(c *cli.Context, shardID int) (persistence.ExecutionManager, error) {
 	factory, err := getPersistenceFactory(c)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to get persistence factory: %w", err)
 	}
-	historyManager, err := factory.NewExecutionManager(shardID)
+	executionManager, err := factory.NewExecutionManager(shardID)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to initialize history manager %w", err)
 	}
-	return historyManager, nil
+	return executionManager, nil
 }
 
-func initializeHistoryManager(c *cli.Context) (persistence.HistoryManager, error) {
+func (f *DefaultPersistenceManagerFactory) initializeHistoryManager(c *cli.Context) (persistence.HistoryManager, error) {
 	factory, err := getPersistenceFactory(c)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to get persistence factory: %w", err)
@@ -174,7 +183,7 @@ func initializeHistoryManager(c *cli.Context) (persistence.HistoryManager, error
 	return historyManager, nil
 }
 
-func initializeShardManager(c *cli.Context) (persistence.ShardManager, error) {
+func (f *DefaultPersistenceManagerFactory) initializeShardManager(c *cli.Context) (persistence.ShardManager, error) {
 	factory, err := getPersistenceFactory(c)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to get persistence factory: %w", err)
@@ -186,7 +195,7 @@ func initializeShardManager(c *cli.Context) (persistence.ShardManager, error) {
 	return shardManager, nil
 }
 
-func initializeDomainManager(c *cli.Context) (persistence.DomainManager, error) {
+func (f *DefaultPersistenceManagerFactory) initializeDomainManager(c *cli.Context) (persistence.DomainManager, error) {
 	factory, err := getPersistenceFactory(c)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to get persistence factory: %w", err)

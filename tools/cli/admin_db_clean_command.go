@@ -131,12 +131,12 @@ func fixExecution(
 	invariants []executions.InvariantFactory,
 	execution *store.ScanOutputEntity,
 ) (invariant.ManagerFixResult, error) {
-	execManager, err := initializeExecutionStore(c, execution.Execution.(entity.Entity).GetShardID())
+	execManager, err := getDeps(c).initializeExecutionStore(c, execution.Execution.(entity.Entity).GetShardID())
 	defer execManager.Close()
 	if err != nil {
 		return invariant.ManagerFixResult{}, fmt.Errorf("Error in fix execution: %w", err)
 	}
-	historyV2Mgr, err := initializeHistoryManager(c)
+	historyV2Mgr, err := getDeps(c).initializeHistoryManager(c)
 	defer historyV2Mgr.Close()
 	if err != nil {
 		return invariant.ManagerFixResult{}, fmt.Errorf("Error in fix execution: %w", err)
