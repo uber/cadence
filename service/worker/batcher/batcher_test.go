@@ -33,9 +33,7 @@ import (
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common/log/testlogger"
 	"github.com/uber/cadence/common/metrics"
-	mmocks "github.com/uber/cadence/common/metrics/mocks"
 	"github.com/uber/cadence/common/resource"
-	"github.com/uber/cadence/common/types"
 )
 
 func Test__Start(t *testing.T) {
@@ -50,30 +48,17 @@ func setuptest(t *testing.T) (*Batcher, *resource.Test) {
 	mockResource := resource.NewTest(t, ctrl, metrics.Worker)
 
 	mockClientBean := client.NewMockBean(ctrl)
-	mockResource.FrontendClient.EXPECT().DescribeDomain(gomock.Any(), gomock.Any()).Return(&types.DescribeDomainResponse{}, nil).AnyTimes()
-	mockResource.FrontendClient.EXPECT().ScanWorkflowExecutions(gomock.Any(), gomock.Any()).Return(&types.ListWorkflowExecutionsResponse{
-		Executions:    []*types.WorkflowExecutionInfo{{Execution: &types.WorkflowExecution{WorkflowID: "wid", RunID: "rid"}}},
-		NextPageToken: nil,
-	}, nil).AnyTimes()
-	mockResource.FrontendClient.EXPECT().CountWorkflowExecutions(gomock.Any(), gomock.Any()).Return(&types.CountWorkflowExecutionsResponse{
-		Count: 1,
-	}, nil).AnyTimes()
-	mockClientBean.EXPECT().GetFrontendClient().Return(mockResource.FrontendClient).AnyTimes()
-
-	mockClientBean.EXPECT().GetRemoteAdminClient(gomock.Any()).Return(mockResource.RemoteAdminClient).AnyTimes()
-
 	mockResource.SDKClient.EXPECT().DescribeDomain(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&shared.DescribeDomainResponse{}, nil).AnyTimes()
 	mockResource.SDKClient.EXPECT().PollForDecisionTask(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&shared.PollForDecisionTaskResponse{}, nil).AnyTimes()
 	mockResource.SDKClient.EXPECT().PollForActivityTask(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&shared.PollForActivityTaskResponse{}, nil).AnyTimes()
 	sdkClient := mockResource.GetSDKClient()
+	mockClientBean.EXPECT().GetFrontendClient().Return(mockResource.FrontendClient).AnyTimes()
+	mockClientBean.EXPECT().GetRemoteAdminClient(gomock.Any()).Return(mockResource.RemoteAdminClient).AnyTimes()
 
-	metricsMock := &mmocks.Client{}
-	metricsMock.On("IncCounter", metrics.BatcherScope, metrics.BatcherProcessorFailures).Once()
 	return New(&BootstrapParams{
 		Logger:        testlogger.New(t),
 		ServiceClient: sdkClient,
 		ClientBean:    mockClientBean,
-		MetricsClient: metricsMock,
 		TallyScope:    tally.TestScope(nil),
 	}), mockResource
 }
