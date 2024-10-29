@@ -2017,21 +2017,7 @@ func TestMutableStateBuilder_closeTransactionHandleWorkflowReset(t *testing.T) {
 				}
 			},
 			shardContextExpectations: func(mockCache *events.MockCache, shardContext *shardCtx.MockContext, mockDomainCache *cache.MockDomainCache) {
-				shardContext.EXPECT().GetClusterMetadata().Return(cluster.TestActiveClusterMetadata).Times(2)
-				shardContext.EXPECT().GetEventsCache().Return(mockCache)
-				shardContext.EXPECT().GetConfig().Return(&config.Config{
-					NumberOfShards:                        2,
-					IsAdvancedVisConfigExist:              false,
-					MaxResponseSize:                       0,
-					MutableStateChecksumInvalidateBefore:  dynamicconfig.GetFloatPropertyFn(10),
-					MutableStateChecksumVerifyProbability: dynamicconfig.GetIntPropertyFilteredByDomain(0.0),
-					HostName:                              "test-host",
-				}).Times(1)
-
-				shardContext.EXPECT().GetTimeSource().Return(clock.NewMockedTimeSource())
-				shardContext.EXPECT().GetMetricsClient().Return(metrics.NewNoopMetricsClient())
-
-				shardContext.EXPECT().GetDomainCache().Return(mockDomainCache).Times(2)
+				shardContext.EXPECT().GetDomainCache().Return(mockDomainCache).Times(1)
 				mockDomainCache.EXPECT().GetDomainByID("some-domain-id").Return(mockDomainEntryWithBadBinary, nil)
 			},
 			expectedEndState: func(t *testing.T, m *mutableStateBuilder) {
@@ -2068,22 +2054,7 @@ func TestMutableStateBuilder_closeTransactionHandleWorkflowReset(t *testing.T) {
 				}
 			},
 			shardContextExpectations: func(mockCache *events.MockCache, shardContext *shardCtx.MockContext, mockDomainCache *cache.MockDomainCache) {
-				shardContext.EXPECT().GetClusterMetadata().Return(cluster.TestActiveClusterMetadata).Times(2)
-				shardContext.EXPECT().GetEventsCache().Return(mockCache)
-				shardContext.EXPECT().GetConfig().Return(&config.Config{
-					NumberOfShards:                        2,
-					IsAdvancedVisConfigExist:              false,
-					MaxResponseSize:                       0,
-					MutableStateChecksumInvalidateBefore:  dynamicconfig.GetFloatPropertyFn(10),
-					MutableStateChecksumVerifyProbability: dynamicconfig.GetIntPropertyFilteredByDomain(0.0),
-					HostName:                              "test-host",
-				}).Times(1)
-
-				shardContext.EXPECT().GetTimeSource().Return(clock.NewMockedTimeSource())
-				shardContext.EXPECT().GetMetricsClient().Return(metrics.NewNoopMetricsClient())
-
-				shardContext.EXPECT().GetDomainCache().Return(mockDomainCache).Times(2)
-
+				shardContext.EXPECT().GetDomainCache().Return(mockDomainCache).Times(1)
 				mockDomainCache.EXPECT().GetDomainByID("some-domain-id").Return(mockDomainEntryWithoutBadBinary, nil)
 			},
 			expectedEndState: func(t *testing.T, m *mutableStateBuilder) {
@@ -2102,22 +2073,7 @@ func TestMutableStateBuilder_closeTransactionHandleWorkflowReset(t *testing.T) {
 				}
 			},
 			shardContextExpectations: func(mockCache *events.MockCache, shardContext *shardCtx.MockContext, mockDomainCache *cache.MockDomainCache) {
-				shardContext.EXPECT().GetClusterMetadata().Return(cluster.TestActiveClusterMetadata).Times(2)
-				shardContext.EXPECT().GetEventsCache().Return(mockCache)
-				shardContext.EXPECT().GetConfig().Return(&config.Config{
-					NumberOfShards:                        2,
-					IsAdvancedVisConfigExist:              false,
-					MaxResponseSize:                       0,
-					MutableStateChecksumInvalidateBefore:  dynamicconfig.GetFloatPropertyFn(10),
-					MutableStateChecksumVerifyProbability: dynamicconfig.GetIntPropertyFilteredByDomain(0.0),
-					HostName:                              "test-host",
-				}).Times(1)
-
-				shardContext.EXPECT().GetTimeSource().Return(clock.NewMockedTimeSource())
-				shardContext.EXPECT().GetMetricsClient().Return(metrics.NewNoopMetricsClient())
-
-				shardContext.EXPECT().GetDomainCache().Return(mockDomainCache).Times(2)
-
+				shardContext.EXPECT().GetDomainCache().Return(mockDomainCache).Times(1)
 				mockDomainCache.EXPECT().GetDomainByID("some-domain-id").Return(mockDomainEntryWithoutBadBinary, nil)
 			},
 			expectedEndState: func(t *testing.T, m *mutableStateBuilder) {
@@ -2127,20 +2083,6 @@ func TestMutableStateBuilder_closeTransactionHandleWorkflowReset(t *testing.T) {
 		"a workflow with reset point which is running but which has child workflows": {
 			policyIn: TransactionPolicyActive,
 			shardContextExpectations: func(mockCache *events.MockCache, shardContext *shardCtx.MockContext, mockDomainCache *cache.MockDomainCache) {
-				shardContext.EXPECT().GetClusterMetadata().Return(cluster.TestActiveClusterMetadata).Times(2)
-				shardContext.EXPECT().GetEventsCache().Return(mockCache)
-				shardContext.EXPECT().GetConfig().Return(&config.Config{
-					NumberOfShards:                        2,
-					IsAdvancedVisConfigExist:              false,
-					MaxResponseSize:                       0,
-					MutableStateChecksumInvalidateBefore:  dynamicconfig.GetFloatPropertyFn(10),
-					MutableStateChecksumVerifyProbability: dynamicconfig.GetIntPropertyFilteredByDomain(0.0),
-					HostName:                              "test-host",
-				}).Times(1)
-				shardContext.EXPECT().GetTimeSource().Return(clock.NewMockedTimeSource())
-				shardContext.EXPECT().GetMetricsClient().Return(metrics.NewNoopMetricsClient())
-
-				shardContext.EXPECT().GetDomainCache().Return(mockDomainCache).Times(1)
 			},
 			mutableStateBuilderStartingState: func(m *mutableStateBuilder) {
 				// the workflow's running
@@ -2160,19 +2102,6 @@ func TestMutableStateBuilder_closeTransactionHandleWorkflowReset(t *testing.T) {
 		"Transaction policy passive - no expected resets": {
 			policyIn: TransactionPolicyPassive,
 			shardContextExpectations: func(mockCache *events.MockCache, shardContext *shardCtx.MockContext, mockDomainCache *cache.MockDomainCache) {
-				shardContext.EXPECT().GetClusterMetadata().Return(cluster.TestActiveClusterMetadata).Times(2)
-				shardContext.EXPECT().GetEventsCache().Return(mockCache)
-				shardContext.EXPECT().GetConfig().Return(&config.Config{
-					NumberOfShards:                        2,
-					IsAdvancedVisConfigExist:              false,
-					MaxResponseSize:                       0,
-					MutableStateChecksumInvalidateBefore:  dynamicconfig.GetFloatPropertyFn(10),
-					MutableStateChecksumVerifyProbability: dynamicconfig.GetIntPropertyFilteredByDomain(0.0),
-					HostName:                              "test-host",
-				}).Times(1)
-				shardContext.EXPECT().GetTimeSource().Return(clock.NewMockedTimeSource())
-				shardContext.EXPECT().GetMetricsClient().Return(metrics.NewNoopMetricsClient())
-				shardContext.EXPECT().GetDomainCache().Return(mockDomainCache).Times(1)
 			},
 			mutableStateBuilderStartingState: func(m *mutableStateBuilder) {
 				// the workflow's running
@@ -2204,7 +2133,8 @@ func TestMutableStateBuilder_closeTransactionHandleWorkflowReset(t *testing.T) {
 
 			nowClock := clock.NewMockedTimeSourceAt(now)
 
-			msb := newMutableStateBuilder(shardContext, log.NewNoop(), constants.TestGlobalDomainEntry)
+			msb := createMSBWithMocks(mockCache, shardContext, mockDomainCache)
+
 			td.mutableStateBuilderStartingState(msb)
 
 			msb.timeSource = nowClock
@@ -2213,4 +2143,136 @@ func TestMutableStateBuilder_closeTransactionHandleWorkflowReset(t *testing.T) {
 			td.expectedEndState(t, msb)
 		})
 	}
+}
+
+func TestMutableStateBuilder_GetVersionHistoriesStart(t *testing.T) {
+
+	tests := map[string]struct {
+		mutableStateBuilderStartingState func(m *mutableStateBuilder)
+
+		expectedVersion int64
+		expectedErr     error
+	}{
+		"A mutable state with version history": {
+			mutableStateBuilderStartingState: func(m *mutableStateBuilder) {
+				m.versionHistories = &persistence.VersionHistories{
+					CurrentVersionHistoryIndex: 0,
+					Histories: []*persistence.VersionHistory{
+						{
+							BranchToken: []byte("branch-token1"),
+							Items: []*persistence.VersionHistoryItem{
+								{
+									EventID: 100,
+									Version: 23,
+								},
+								{
+									EventID: 401,
+									Version: 424,
+								},
+							},
+						},
+						{
+							BranchToken: []byte("branch-token1"),
+							Items: []*persistence.VersionHistoryItem{
+								{
+									EventID: 200,
+									Version: 123,
+								},
+								{
+									EventID: 201,
+									Version: 124,
+								},
+							},
+						},
+					},
+				}
+			},
+			expectedVersion: 23,
+		},
+		"invalid / partial version history ": {
+			mutableStateBuilderStartingState: func(m *mutableStateBuilder) {
+				m.versionHistories = &persistence.VersionHistories{
+					CurrentVersionHistoryIndex: 0,
+					Histories: []*persistence.VersionHistory{
+						{
+							BranchToken: []byte("branch-token1"),
+							Items:       []*persistence.VersionHistoryItem{},
+						},
+						{
+							BranchToken: []byte("branch-token2"),
+							Items:       []*persistence.VersionHistoryItem{},
+						},
+					},
+				}
+			},
+			expectedErr:     &types.BadRequestError{Message: "version history is empty."},
+			expectedVersion: 0,
+		},
+		"invalid / partial version history - branch not available": {
+			mutableStateBuilderStartingState: func(m *mutableStateBuilder) {
+				m.versionHistories = &persistence.VersionHistories{
+					CurrentVersionHistoryIndex: 10,
+					Histories: []*persistence.VersionHistory{
+						{
+							BranchToken: []byte("branch-token1"),
+							Items:       []*persistence.VersionHistoryItem{},
+						},
+						{
+							BranchToken: []byte("branch-token1"),
+							Items:       []*persistence.VersionHistoryItem{},
+						},
+					},
+				}
+			},
+			expectedErr:     &types.BadRequestError{Message: "getting branch index: 10, available branch count: 2"},
+			expectedVersion: 0,
+		},
+		"nil version history": {
+			mutableStateBuilderStartingState: func(m *mutableStateBuilder) {
+			},
+			expectedVersion: common.EmptyVersion,
+		},
+	}
+
+	for name, td := range tests {
+		t.Run(name, func(t *testing.T) {
+
+			ctrl := gomock.NewController(t)
+
+			shardContext := shard.NewMockContext(ctrl)
+			mockCache := events.NewMockCache(ctrl)
+			mockDomainCache := cache.NewMockDomainCache(ctrl)
+
+			msb := createMSBWithMocks(mockCache, shardContext, mockDomainCache)
+
+			td.mutableStateBuilderStartingState(msb)
+
+			res, err := msb.GetStartVersion()
+			assert.Equal(t, td.expectedErr, err)
+			assert.Equal(t, td.expectedVersion, res)
+		})
+	}
+}
+
+func createMSBWithMocks(mockCache *events.MockCache, shardContext *shardCtx.MockContext, mockDomainCache *cache.MockDomainCache) *mutableStateBuilder {
+	// the MSB constructor calls a bunch of endpoints on the mocks, so
+	// put them in here as a set of fixed expectations so the actual mocking
+	// code can just make expectations on the calls on the returned MSB object
+	// and not get cluttered with constructor calls
+	shardContext.EXPECT().GetClusterMetadata().Return(cluster.TestActiveClusterMetadata).Times(2)
+	shardContext.EXPECT().GetEventsCache().Return(mockCache)
+	shardContext.EXPECT().GetConfig().Return(&config.Config{
+		NumberOfShards:                        2,
+		IsAdvancedVisConfigExist:              false,
+		MaxResponseSize:                       0,
+		MutableStateChecksumInvalidateBefore:  dynamicconfig.GetFloatPropertyFn(10),
+		MutableStateChecksumVerifyProbability: dynamicconfig.GetIntPropertyFilteredByDomain(0.0),
+		HostName:                              "test-host",
+	}).Times(1)
+	shardContext.EXPECT().GetTimeSource().Return(clock.NewMockedTimeSource())
+	shardContext.EXPECT().GetMetricsClient().Return(metrics.NewNoopMetricsClient())
+	shardContext.EXPECT().GetDomainCache().Return(mockDomainCache).Times(1)
+
+	msb := newMutableStateBuilder(shardContext, log.NewNoop(), constants.TestGlobalDomainEntry)
+	return msb
 }
