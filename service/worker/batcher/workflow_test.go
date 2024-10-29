@@ -24,18 +24,20 @@ package batcher
 
 import (
 	"context"
+	"testing"
+
 	"github.com/golang/mock/gomock"
 	"github.com/opentracing/opentracing-go"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-go/tally"
+	"go.uber.org/cadence/testsuite"
+	"go.uber.org/cadence/worker"
+
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/metrics"
 	mmocks "github.com/uber/cadence/common/metrics/mocks"
 	"github.com/uber/cadence/common/types"
-	"go.uber.org/cadence/testsuite"
-	"go.uber.org/cadence/worker"
-	"testing"
 )
 
 type workflowSuite struct {
