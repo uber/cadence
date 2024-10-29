@@ -87,6 +87,7 @@ func (s *workflowSuite) TestActivity_BatchCancel() {
 		Tracer:                    opentracing.GlobalTracer(),
 	}
 	s.activityEnv.SetWorkerOptions(workerOpts)
+	s.activityEnv.SetHeartbeatDetails(HeartBeatDetails{})
 
 	params := BatchParams{
 		DomainName:               "test-domain",
