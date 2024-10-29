@@ -1039,6 +1039,8 @@ func TestGenerateReport(t *testing.T) {
 				// Validate the output captured by testIOHandler
 				assert.Equal(t, tt.expectedOutput, ioHandler.outputBytes.String())
 			}
+
+			os.Remove("test-report.csv")
 		})
 	}
 }

@@ -588,7 +588,7 @@ func (wh *WorkflowHandler) PollForDecisionTask(
 	}
 
 	domainName := pollRequest.GetDomain()
-	tags := getDomainWfIDRunIDTags(domainName, nil)
+	tags := []tag.Tag{tag.WorkflowDomainName(domainName)}
 
 	if domainName == "" {
 		return nil, validate.ErrDomainNotSet
@@ -4048,21 +4048,6 @@ func (wh *WorkflowHandler) emitDescribeWorkflowExecutionMetrics(domain string, r
 
 	scope = scope.Tagged(metrics.WorkflowCloseStatusTag(status))
 	scope.IncCounter(metrics.DescribeWorkflowStatusCount)
-}
-
-func getDomainWfIDRunIDTags(
-	domainName string,
-	wf *types.WorkflowExecution,
-) []tag.Tag {
-	tags := []tag.Tag{tag.WorkflowDomainName(domainName)}
-	if wf == nil {
-		return tags
-	}
-	return append(
-		tags,
-		tag.WorkflowID(wf.GetWorkflowID()),
-		tag.WorkflowRunID(wf.GetRunID()),
-	)
 }
 
 func checkRequiredDomainDataKVs(requiredDomainDataKeys map[string]interface{}, domainData map[string]string) error {

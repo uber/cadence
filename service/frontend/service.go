@@ -79,7 +79,6 @@ func NewService(
 		isAdvancedVisExistInConfig,
 		params.HostName,
 	)
-	params.PersistenceConfig.HistoryMaxConns = serviceConfig.HistoryMgrNumConns()
 
 	serviceResource, err := resource.New(
 		params,
