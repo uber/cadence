@@ -160,10 +160,12 @@ type PersistenceManagerFactory interface {
 	initPersistenceFactory(c *cli.Context) (client.Factory, error)
 }
 
-type defaultPersistenceManagerFactory struct{}
+type defaultPersistenceManagerFactory struct {
+	persistenceFactory client.Factory
+}
 
 func (f *defaultPersistenceManagerFactory) initializeExecutionStore(c *cli.Context, shardID int) (persistence.ExecutionManager, error) {
-	factory, err := getPersistenceFactory(c)
+	factory, err := f.getPersistenceFactory(c)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to get persistence factory: %w", err)
 	}
@@ -175,7 +177,7 @@ func (f *defaultPersistenceManagerFactory) initializeExecutionStore(c *cli.Conte
 }
 
 func (f *defaultPersistenceManagerFactory) initializeHistoryManager(c *cli.Context) (persistence.HistoryManager, error) {
-	factory, err := getPersistenceFactory(c)
+	factory, err := f.getPersistenceFactory(c)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to get persistence factory: %w", err)
 	}
@@ -187,7 +189,7 @@ func (f *defaultPersistenceManagerFactory) initializeHistoryManager(c *cli.Conte
 }
 
 func (f *defaultPersistenceManagerFactory) initializeShardManager(c *cli.Context) (persistence.ShardManager, error) {
-	factory, err := getPersistenceFactory(c)
+	factory, err := f.getPersistenceFactory(c)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to get persistence factory: %w", err)
 	}
@@ -199,7 +201,7 @@ func (f *defaultPersistenceManagerFactory) initializeShardManager(c *cli.Context
 }
 
 func (f *defaultPersistenceManagerFactory) initializeDomainManager(c *cli.Context) (persistence.DomainManager, error) {
-	factory, err := getPersistenceFactory(c)
+	factory, err := f.getPersistenceFactory(c)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to get persistence factory: %w", err)
 	}
@@ -210,17 +212,15 @@ func (f *defaultPersistenceManagerFactory) initializeDomainManager(c *cli.Contex
 	return domainManager, nil
 }
 
-var persistenceFactory client.Factory
-
-func getPersistenceFactory(c *cli.Context) (client.Factory, error) {
+func (f *defaultPersistenceManagerFactory) getPersistenceFactory(c *cli.Context) (client.Factory, error) {
 	var err error
-	if persistenceFactory == nil {
-		persistenceFactory, err = getDeps(c).initPersistenceFactory(c)
+	if f.persistenceFactory == nil {
+		f.persistenceFactory, err = getDeps(c).initPersistenceFactory(c)
 		if err != nil {
-			return persistenceFactory, fmt.Errorf("%w", err)
+			return f.persistenceFactory, fmt.Errorf("%w", err)
 		}
 	}
-	return persistenceFactory, nil
+	return f.persistenceFactory, nil
 }
 
 func (f *defaultPersistenceManagerFactory) initPersistenceFactory(c *cli.Context) (client.Factory, error) {
