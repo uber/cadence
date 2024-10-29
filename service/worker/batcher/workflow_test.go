@@ -23,17 +23,22 @@
 package batcher
 
 import (
+	"context"
 	"testing"
 
+	"github.com/opentracing/opentracing-go"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
+	"github.com/uber-go/tally"
 	"go.uber.org/cadence/testsuite"
+	"go.uber.org/cadence/worker"
 )
 
 type workflowSuite struct {
 	suite.Suite
 	testsuite.WorkflowTestSuite
 	workflowEnv *testsuite.TestWorkflowEnvironment
+	activityEnv *testsuite.TestActivityEnvironment
 }
 
 func TestWorkflowSuite(t *testing.T) {
@@ -44,6 +49,8 @@ func (s *workflowSuite) SetupTest() {
 	s.workflowEnv = s.NewTestWorkflowEnvironment()
 	s.workflowEnv.RegisterWorkflow(BatchWorkflow)
 
+	s.activityEnv = s.NewTestActivityEnvironment()
+	s.activityEnv.RegisterActivity(BatchActivity)
 }
 
 func (s *workflowSuite) TestWorkflow() {
@@ -69,6 +76,134 @@ func (s *workflowSuite) TestWorkflow() {
 	s.workflowEnv.ExecuteWorkflow(BatchWorkflow, params)
 	s.True(s.workflowEnv.IsWorkflowCompleted())
 	s.NoError(s.workflowEnv.GetWorkflowError())
+}
+
+func (s *workflowSuite) TestActivity_BatchCancel() {
+	batcher, _ := setuptest(s.T())
+	ctx := context.WithValue(context.Background(), batcherContextKey, batcher)
+	workerOpts := worker.Options{
+		MetricsScope:              tally.TestScope(nil),
+		BackgroundActivityContext: ctx,
+		Tracer:                    opentracing.GlobalTracer(),
+	}
+	s.activityEnv.SetWorkerOptions(workerOpts)
+
+	params := BatchParams{
+		DomainName:               "test-domain",
+		Query:                    "Closetime=missing",
+		Reason:                   "unit-test",
+		BatchType:                BatchTypeCancel,
+		TerminateParams:          TerminateParams{},
+		CancelParams:             CancelParams{},
+		SignalParams:             SignalParams{},
+		ReplicateParams:          ReplicateParams{},
+		RPS:                      0,
+		Concurrency:              5,
+		PageSize:                 10,
+		AttemptsOnRetryableError: 0,
+		ActivityHeartBeatTimeout: 0,
+		NonRetryableErrors:       []string{"HeartbeatTimeoutError"},
+		_nonRetryableErrors:      nil,
+	}
+
+	_, err := s.activityEnv.ExecuteActivity(BatchActivity, params)
+	s.NoError(err)
+}
+
+func (s *workflowSuite) TestActivity_BatchTerminate() {
+	batcher, _ := setuptest(s.T())
+	ctx := context.WithValue(context.Background(), batcherContextKey, batcher)
+	workerOpts := worker.Options{
+		MetricsScope:              tally.TestScope(nil),
+		BackgroundActivityContext: ctx,
+		Tracer:                    opentracing.GlobalTracer(),
+	}
+	s.activityEnv.SetWorkerOptions(workerOpts)
+
+	params := BatchParams{
+		DomainName:               "test-domain",
+		Query:                    "Closetime=missing",
+		Reason:                   "unit-test",
+		BatchType:                BatchTypeTerminate,
+		TerminateParams:          TerminateParams{},
+		CancelParams:             CancelParams{},
+		SignalParams:             SignalParams{},
+		ReplicateParams:          ReplicateParams{},
+		RPS:                      0,
+		Concurrency:              5,
+		PageSize:                 10,
+		AttemptsOnRetryableError: 0,
+		ActivityHeartBeatTimeout: 0,
+		NonRetryableErrors:       []string{"HeartbeatTimeoutError"},
+		_nonRetryableErrors:      nil,
+	}
+
+	_, err := s.activityEnv.ExecuteActivity(BatchActivity, params)
+	s.NoError(err)
+}
+
+func (s *workflowSuite) TestActivity_BatchSignal() {
+	batcher, _ := setuptest(s.T())
+	ctx := context.WithValue(context.Background(), batcherContextKey, batcher)
+	workerOpts := worker.Options{
+		MetricsScope:              tally.TestScope(nil),
+		BackgroundActivityContext: ctx,
+		Tracer:                    opentracing.GlobalTracer(),
+	}
+	s.activityEnv.SetWorkerOptions(workerOpts)
+
+	params := BatchParams{
+		DomainName:               "test-domain",
+		Query:                    "Closetime=missing",
+		Reason:                   "unit-test",
+		BatchType:                BatchTypeSignal,
+		TerminateParams:          TerminateParams{},
+		CancelParams:             CancelParams{},
+		SignalParams:             SignalParams{},
+		ReplicateParams:          ReplicateParams{},
+		RPS:                      0,
+		Concurrency:              5,
+		PageSize:                 10,
+		AttemptsOnRetryableError: 0,
+		ActivityHeartBeatTimeout: 0,
+		NonRetryableErrors:       []string{"HeartbeatTimeoutError"},
+		_nonRetryableErrors:      nil,
+	}
+
+	_, err := s.activityEnv.ExecuteActivity(BatchActivity, params)
+	s.NoError(err)
+}
+
+func (s *workflowSuite) TestActivity_BatchReplicate() {
+	batcher, _ := setuptest(s.T())
+	ctx := context.WithValue(context.Background(), batcherContextKey, batcher)
+	workerOpts := worker.Options{
+		MetricsScope:              tally.TestScope(nil),
+		BackgroundActivityContext: ctx,
+		Tracer:                    opentracing.GlobalTracer(),
+	}
+	s.activityEnv.SetWorkerOptions(workerOpts)
+
+	params := BatchParams{
+		DomainName:               "test-domain",
+		Query:                    "Closetime=missing",
+		Reason:                   "unit-test",
+		BatchType:                BatchTypeReplicate,
+		TerminateParams:          TerminateParams{},
+		CancelParams:             CancelParams{},
+		SignalParams:             SignalParams{},
+		ReplicateParams:          ReplicateParams{},
+		RPS:                      0,
+		Concurrency:              5,
+		PageSize:                 10,
+		AttemptsOnRetryableError: 0,
+		ActivityHeartBeatTimeout: 0,
+		NonRetryableErrors:       []string{"HeartbeatTimeoutError"},
+		_nonRetryableErrors:      nil,
+	}
+
+	_, err := s.activityEnv.ExecuteActivity(BatchActivity, params)
+	s.NoError(err)
 }
 
 func (s *workflowSuite) TestWorkflow_ValidationError() {
