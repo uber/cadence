@@ -171,3 +171,596 @@ func TestAsyncWorkflowConfigurationDeepCopy(t *testing.T) {
 		})
 	}
 }
+
+func TestAddSearchAttributeRequest_SerializeForLogging(t *testing.T) {
+	tests := []struct {
+		name    string
+		request *AddSearchAttributeRequest
+		want    string
+		wantErr bool
+	}{
+		{
+			name:    "Nil request",
+			request: nil,
+			want:    "",
+			wantErr: false,
+		},
+		{
+			name: "Empty SearchAttribute",
+			request: &AddSearchAttributeRequest{
+				SearchAttribute: nil,
+				SecurityToken:   "",
+			},
+			want:    `{}`,
+			wantErr: false,
+		},
+		{
+			name: "With SearchAttribute",
+			request: &AddSearchAttributeRequest{
+				SearchAttribute: map[string]IndexedValueType{
+					"attr1": 1,
+				},
+				SecurityToken: "token",
+			},
+			want:    `{"searchAttribute":{"attr1":"KEYWORD"},"securityToken":"token"}`,
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := tt.request.SerializeForLogging()
+			if tt.wantErr {
+				assert.Error(t, err, "SerializeForLogging() error expected")
+			} else {
+				assert.NoError(t, err, "SerializeForLogging() error unexpected")
+			}
+			assert.Equal(t, tt.want, got, "SerializeForLogging() result mismatch")
+		})
+	}
+}
+
+func TestAddSearchAttributeRequest_GetSearchAttribute(t *testing.T) {
+	tests := []struct {
+		name    string
+		request *AddSearchAttributeRequest
+		want    map[string]IndexedValueType
+	}{
+		{
+			name:    "Nil request",
+			request: nil,
+			want:    nil,
+		},
+		{
+			name: "Nil SearchAttribute",
+			request: &AddSearchAttributeRequest{
+				SearchAttribute: nil,
+			},
+			want: nil,
+		},
+		{
+			name: "With SearchAttribute",
+			request: &AddSearchAttributeRequest{
+				SearchAttribute: map[string]IndexedValueType{
+					"attr1": 1,
+					"attr2": 2,
+				},
+			},
+			want: map[string]IndexedValueType{
+				"attr1": 1,
+				"attr2": 2,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.request.GetSearchAttribute()
+			assert.Equal(t, tt.want, got, "GetSearchAttribute() result mismatch")
+		})
+	}
+}
+
+func TestAdminDescribeWorkflowExecutionRequest_SerializeForLogging(t *testing.T) {
+	tests := []struct {
+		name    string
+		request *AdminDescribeWorkflowExecutionRequest
+		want    string
+		wantErr bool
+	}{
+		{
+			name:    "Nil request",
+			request: nil,
+			want:    "",
+			wantErr: false,
+		},
+		{
+			name:    "Empty request",
+			request: &AdminDescribeWorkflowExecutionRequest{},
+			want:    `{}`,
+			wantErr: false,
+		},
+		{
+			name: "With Domain and Execution",
+			request: &AdminDescribeWorkflowExecutionRequest{
+				Domain: "test-domain",
+				Execution: &WorkflowExecution{
+					WorkflowID: "test-workflow",
+					RunID:      "test-run",
+				},
+			},
+			want:    `{"domain":"test-domain","execution":{"workflowId":"test-workflow","runId":"test-run"}}`,
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := tt.request.SerializeForLogging()
+			if tt.wantErr {
+				assert.Error(t, err, "SerializeForLogging() error expected")
+			} else {
+				assert.NoError(t, err, "SerializeForLogging() error unexpected")
+			}
+			assert.Equal(t, tt.want, got, "SerializeForLogging() result mismatch")
+		})
+	}
+}
+
+func TestAdminDescribeWorkflowExecutionRequest_GetDomain(t *testing.T) {
+	tests := []struct {
+		name    string
+		request *AdminDescribeWorkflowExecutionRequest
+		want    string
+	}{
+		{
+			name:    "Nil request",
+			request: nil,
+			want:    "",
+		},
+		{
+			name:    "Empty Domain",
+			request: &AdminDescribeWorkflowExecutionRequest{},
+			want:    "",
+		},
+		{
+			name: "With Domain",
+			request: &AdminDescribeWorkflowExecutionRequest{
+				Domain: "test-domain",
+			},
+			want: "test-domain",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.request.GetDomain()
+			assert.Equal(t, tt.want, got, "GetDomain() result mismatch")
+		})
+	}
+}
+
+func TestAdminDescribeWorkflowExecutionResponse_GetShardID(t *testing.T) {
+	tests := []struct {
+		name     string
+		response *AdminDescribeWorkflowExecutionResponse
+		want     string
+	}{
+		{
+			name:     "Nil response",
+			response: nil,
+			want:     "",
+		},
+		{
+			name:     "Empty ShardID",
+			response: &AdminDescribeWorkflowExecutionResponse{},
+			want:     "",
+		},
+		{
+			name: "With ShardID",
+			response: &AdminDescribeWorkflowExecutionResponse{
+				ShardID: "shard-123",
+			},
+			want: "shard-123",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.response.GetShardID()
+			assert.Equal(t, tt.want, got, "GetShardID() result mismatch")
+		})
+	}
+}
+
+func TestAdminDescribeWorkflowExecutionResponse_GetMutableStateInDatabase(t *testing.T) {
+	tests := []struct {
+		name     string
+		response *AdminDescribeWorkflowExecutionResponse
+		want     string
+	}{
+		{
+			name:     "Nil response",
+			response: nil,
+			want:     "",
+		},
+		{
+			name:     "Empty MutableStateInDatabase",
+			response: &AdminDescribeWorkflowExecutionResponse{},
+			want:     "",
+		},
+		{
+			name: "With MutableStateInDatabase",
+			response: &AdminDescribeWorkflowExecutionResponse{
+				MutableStateInDatabase: "state-data",
+			},
+			want: "state-data",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.response.GetMutableStateInDatabase()
+			assert.Equal(t, tt.want, got, "GetMutableStateInDatabase() result mismatch")
+		})
+	}
+}
+
+func TestGetWorkflowExecutionRawHistoryV2Request_SerializeForLogging(t *testing.T) {
+	tests := []struct {
+		name    string
+		request *GetWorkflowExecutionRawHistoryV2Request
+		want    string
+		wantErr bool
+	}{
+		{
+			name:    "Nil request",
+			request: nil,
+			want:    "",
+			wantErr: false,
+		},
+		{
+			name:    "Empty request",
+			request: &GetWorkflowExecutionRawHistoryV2Request{},
+			want:    `{}`,
+			wantErr: false,
+		},
+		{
+			name: "Full request",
+			request: &GetWorkflowExecutionRawHistoryV2Request{
+				Domain: "test-domain",
+				Execution: &WorkflowExecution{
+					WorkflowID: "workflow-id",
+					RunID:      "run-id",
+				},
+				StartEventID:      ptrInt64(100),
+				StartEventVersion: ptrInt64(1),
+				EndEventID:        ptrInt64(200),
+				EndEventVersion:   ptrInt64(2),
+				MaximumPageSize:   50,
+				NextPageToken:     []byte("token"),
+			},
+			want:    `{"domain":"test-domain","execution":{"workflowId":"workflow-id","runId":"run-id"},"startEventId":100,"startEventVersion":1,"endEventId":200,"endEventVersion":2,"maximumPageSize":50,"nextPageToken":"dG9rZW4="}`,
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := tt.request.SerializeForLogging()
+			if tt.wantErr {
+				assert.Error(t, err, "SerializeForLogging() error expected")
+			} else {
+				assert.NoError(t, err, "SerializeForLogging() error unexpected")
+			}
+			assert.Equal(t, tt.want, got, "SerializeForLogging() result mismatch")
+		})
+	}
+}
+
+func TestGetWorkflowExecutionRawHistoryV2Request_GetDomain(t *testing.T) {
+	tests := []struct {
+		name    string
+		request *GetWorkflowExecutionRawHistoryV2Request
+		want    string
+	}{
+		{
+			name:    "Nil request",
+			request: nil,
+			want:    "",
+		},
+		{
+			name:    "Empty Domain",
+			request: &GetWorkflowExecutionRawHistoryV2Request{},
+			want:    "",
+		},
+		{
+			name: "With Domain",
+			request: &GetWorkflowExecutionRawHistoryV2Request{
+				Domain: "test-domain",
+			},
+			want: "test-domain",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.request.GetDomain()
+			assert.Equal(t, tt.want, got, "GetDomain() result mismatch")
+		})
+	}
+}
+
+func TestGetWorkflowExecutionRawHistoryV2Request_GetStartEventID(t *testing.T) {
+	tests := []struct {
+		name    string
+		request *GetWorkflowExecutionRawHistoryV2Request
+		want    int64
+	}{
+		{
+			name:    "Nil request",
+			request: nil,
+			want:    0,
+		},
+		{
+			name:    "Nil StartEventID",
+			request: &GetWorkflowExecutionRawHistoryV2Request{},
+			want:    0,
+		},
+		{
+			name: "With StartEventID",
+			request: &GetWorkflowExecutionRawHistoryV2Request{
+				StartEventID: ptrInt64(100),
+			},
+			want: 100,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.request.GetStartEventID()
+			assert.Equal(t, tt.want, got, "GetStartEventID() result mismatch")
+		})
+	}
+}
+
+func TestGetWorkflowExecutionRawHistoryV2Request_GetMaximumPageSize(t *testing.T) {
+	tests := []struct {
+		name    string
+		request *GetWorkflowExecutionRawHistoryV2Request
+		want    int32
+	}{
+		{
+			name:    "Nil request",
+			request: nil,
+			want:    0,
+		},
+		{
+			name:    "Default MaximumPageSize",
+			request: &GetWorkflowExecutionRawHistoryV2Request{},
+			want:    0,
+		},
+		{
+			name: "With MaximumPageSize",
+			request: &GetWorkflowExecutionRawHistoryV2Request{
+				MaximumPageSize: 100,
+			},
+			want: 100,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.request.GetMaximumPageSize()
+			assert.Equal(t, tt.want, got, "GetMaximumPageSize() result mismatch")
+		})
+	}
+}
+
+func TestGetWorkflowExecutionRawHistoryV2Request_GetStartEventVersion(t *testing.T) {
+	tests := []struct {
+		name    string
+		request *GetWorkflowExecutionRawHistoryV2Request
+		want    int64
+	}{
+		{
+			name:    "Nil request",
+			request: nil,
+			want:    0,
+		},
+		{
+			name:    "Nil StartEventVersion",
+			request: &GetWorkflowExecutionRawHistoryV2Request{},
+			want:    0,
+		},
+		{
+			name: "With StartEventVersion",
+			request: &GetWorkflowExecutionRawHistoryV2Request{
+				StartEventVersion: ptrInt64(123),
+			},
+			want: 123,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.request.GetStartEventVersion()
+			assert.Equal(t, tt.want, got, "GetStartEventVersion() result mismatch")
+		})
+	}
+}
+
+func TestGetWorkflowExecutionRawHistoryV2Request_GetEndEventID(t *testing.T) {
+	tests := []struct {
+		name    string
+		request *GetWorkflowExecutionRawHistoryV2Request
+		want    int64
+	}{
+		{
+			name:    "Nil request",
+			request: nil,
+			want:    0,
+		},
+		{
+			name:    "Nil EndEventID",
+			request: &GetWorkflowExecutionRawHistoryV2Request{},
+			want:    0,
+		},
+		{
+			name: "With EndEventID",
+			request: &GetWorkflowExecutionRawHistoryV2Request{
+				EndEventID: ptrInt64(200),
+			},
+			want: 200,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.request.GetEndEventID()
+			assert.Equal(t, tt.want, got, "GetEndEventID() result mismatch")
+		})
+	}
+}
+
+func TestGetWorkflowExecutionRawHistoryV2Request_GetEndEventVersion(t *testing.T) {
+	tests := []struct {
+		name    string
+		request *GetWorkflowExecutionRawHistoryV2Request
+		want    int64
+	}{
+		{
+			name:    "Nil request",
+			request: nil,
+			want:    0,
+		},
+		{
+			name:    "Nil EndEventVersion",
+			request: &GetWorkflowExecutionRawHistoryV2Request{},
+			want:    0,
+		},
+		{
+			name: "With EndEventVersion",
+			request: &GetWorkflowExecutionRawHistoryV2Request{
+				EndEventVersion: ptrInt64(456),
+			},
+			want: 456,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.request.GetEndEventVersion()
+			assert.Equal(t, tt.want, got, "GetEndEventVersion() result mismatch")
+		})
+	}
+}
+func TestGetWorkflowExecutionRawHistoryV2Response_GetHistoryBatches(t *testing.T) {
+	tests := []struct {
+		name     string
+		response *GetWorkflowExecutionRawHistoryV2Response
+		want     []*DataBlob
+	}{
+		{
+			name:     "Nil response",
+			response: nil,
+			want:     nil,
+		},
+		{
+			name:     "Empty HistoryBatches",
+			response: &GetWorkflowExecutionRawHistoryV2Response{},
+			want:     nil,
+		},
+		{
+			name: "With HistoryBatches",
+			response: &GetWorkflowExecutionRawHistoryV2Response{
+				HistoryBatches: []*DataBlob{
+					{
+						EncodingType: EncodingTypeJSON.Ptr(),
+						Data:         []byte("data1"),
+					},
+					{
+						EncodingType: EncodingTypeThriftRW.Ptr(),
+						Data:         []byte("data2"),
+					},
+				},
+			},
+			want: []*DataBlob{
+				{
+					EncodingType: EncodingTypeJSON.Ptr(),
+					Data:         []byte("data1"),
+				},
+				{
+					EncodingType: EncodingTypeThriftRW.Ptr(),
+					Data:         []byte("data2"),
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.response.GetHistoryBatches()
+			assert.Equal(t, tt.want, got, "GetHistoryBatches() result mismatch")
+		})
+	}
+}
+
+func TestGetWorkflowExecutionRawHistoryV2Response_GetVersionHistory(t *testing.T) {
+	tests := []struct {
+		name     string
+		response *GetWorkflowExecutionRawHistoryV2Response
+		want     *VersionHistory
+	}{
+		{
+			name:     "Nil response",
+			response: nil,
+			want:     nil,
+		},
+		{
+			name:     "Empty VersionHistory",
+			response: &GetWorkflowExecutionRawHistoryV2Response{},
+			want:     nil,
+		},
+		{
+			name: "With VersionHistory",
+			response: &GetWorkflowExecutionRawHistoryV2Response{
+				VersionHistory: &VersionHistory{
+					Items: []*VersionHistoryItem{
+						{
+							EventID: 1,
+							Version: 1,
+						},
+						{
+							EventID: 2,
+							Version: 2,
+						},
+					},
+				},
+			},
+			want: &VersionHistory{
+				Items: []*VersionHistoryItem{
+					{
+						EventID: 1,
+						Version: 1,
+					},
+					{
+						EventID: 2,
+						Version: 2,
+					},
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.response.GetVersionHistory()
+			assert.Equal(t, tt.want, got, "GetVersionHistory() result mismatch")
+		})
+	}
+}
+
+func ptrInt64(i int64) *int64 {
+	return &i
+}

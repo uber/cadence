@@ -24,6 +24,7 @@ package queue
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -72,6 +73,8 @@ func (s *TaskAllocatorSuite) SetupTest() {
 
 	s.taskDomainID = "testDomainID"
 	s.task = "testTask"
+	s.allocator.Lock()
+	s.allocator.Unlock()
 }
 
 func (s *TaskAllocatorSuite) TearDownTest() {
@@ -362,6 +365,57 @@ func (s *TaskAllocatorSuite) TestVerifyStandbyTask() {
 				assert.Contains(s.T(), err.Error(), tt.expectedErrorString)
 			} else {
 				assert.NoError(s.T(), err)
+			}
+		})
+	}
+}
+
+func (s *TaskAllocatorSuite) TestIsDomainNotRegistered() {
+	tests := []struct {
+		name                string
+		domainID            string
+		mockFn              func()
+		expectedErrorString string
+	}{
+		{
+			name: "domainID return error",
+			mockFn: func() {
+				s.mockDomainCache.EXPECT().GetDomainByID("").Return(nil, fmt.Errorf("testError"))
+			},
+			domainID:            "",
+			expectedErrorString: "testError",
+		},
+		{
+			name:     "cannot get info",
+			domainID: "testDomainID",
+			mockFn: func() {
+				domainEntry := cache.NewDomainCacheEntryForTest(nil, nil, false, nil, 0, nil, 0, 0, 0)
+				s.mockDomainCache.EXPECT().GetDomainByID("testDomainID").Return(domainEntry, nil)
+			},
+			expectedErrorString: "domain info is nil in cache",
+		},
+		{
+			name:     "domain is deprecated",
+			domainID: "testDomainID",
+			mockFn: func() {
+				domainEntry := cache.NewDomainCacheEntryForTest(
+					&persistence.DomainInfo{Status: persistence.DomainStatusDeprecated}, nil, false, nil, 0, nil, 0, 0, 0)
+				s.mockDomainCache.EXPECT().GetDomainByID("testDomainID").Return(domainEntry, nil)
+			},
+			expectedErrorString: "",
+		},
+	}
+
+	for _, tt := range tests {
+		s.Run(tt.name, func() {
+			tt.mockFn()
+			res, err := isDomainNotRegistered(s.mockShard, tt.domainID)
+			if tt.expectedErrorString != "" {
+				assert.ErrorContains(s.T(), err, tt.expectedErrorString)
+				assert.False(s.T(), res)
+			} else {
+				assert.NoError(s.T(), err)
+				assert.True(s.T(), res)
 			}
 		})
 	}
