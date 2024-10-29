@@ -33,6 +33,7 @@ import (
 	cli "github.com/urfave/cli/v2"
 
 	persistence "github.com/uber/cadence/common/persistence"
+	client "github.com/uber/cadence/common/persistence/client"
 )
 
 // MockPersistenceManagerFactory is a mock of PersistenceManagerFactory interface.
@@ -56,6 +57,21 @@ func NewMockPersistenceManagerFactory(ctrl *gomock.Controller) *MockPersistenceM
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockPersistenceManagerFactory) EXPECT() *MockPersistenceManagerFactoryMockRecorder {
 	return m.recorder
+}
+
+// initPersistenceFactory mocks base method.
+func (m *MockPersistenceManagerFactory) initPersistenceFactory(c *cli.Context) (client.Factory, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "initPersistenceFactory", c)
+	ret0, _ := ret[0].(client.Factory)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// initPersistenceFactory indicates an expected call of initPersistenceFactory.
+func (mr *MockPersistenceManagerFactoryMockRecorder) initPersistenceFactory(c interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "initPersistenceFactory", reflect.TypeOf((*MockPersistenceManagerFactory)(nil).initPersistenceFactory), c)
 }
 
 // initializeDomainManager mocks base method.

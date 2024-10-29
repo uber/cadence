@@ -63,7 +63,7 @@ func NewCliApp(cf ClientFactory, opts ...CLIAppOptions) *cli.App {
 	app.Usage = "A command-line tool for cadence users"
 	app.Version = version
 	app.Metadata = map[string]any{
-		depsKey: &deps{ClientFactory: cf, IOHandler: &defaultIOHandler{app: app}, PersistenceManagerFactory: &DefaultPersistenceManagerFactory{}},
+		depsKey: &deps{ClientFactory: cf, IOHandler: &defaultIOHandler{app: app}, PersistenceManagerFactory: &defaultPersistenceManagerFactory{}},
 	}
 	app.Flags = []cli.Flag{
 		&cli.StringFlag{
