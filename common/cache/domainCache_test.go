@@ -625,22 +625,69 @@ func (s *domainCacheSuite) TestGetCacheSize() {
 }
 
 func (s *domainCacheSuite) TestStart_Stop() {
-	s.Equal(domainCacheInitialized, s.domainCache.status)
+	mockTimeSource := clock.NewMockedTimeSource()
+	s.domainCache.timeSource = mockTimeSource
 
-	s.metadataMgr.On("GetMetadata", mock.Anything).Return(&persistence.GetMetadataResponse{NotificationVersion: 0}, nil).Once()
+	s.domainCache.lastRefreshTime = mockTimeSource.Now()
 
 	domainID := uuid.New()
 	domainName := "some random domain name"
+
+	testCache := newDomainCache()
+	domainEntry := &DomainCacheEntry{
+		info: &persistence.DomainInfo{ID: domainID, Name: domainName, Data: make(map[string]string)},
+		config: &persistence.DomainConfig{
+			BadBinaries: types.BadBinaries{
+				Binaries: map[string]*types.BadBinaryInfo{},
+			},
+		},
+		replicationConfig: &persistence.DomainReplicationConfig{
+			ActiveClusterName: cluster.TestCurrentClusterName,
+		},
+		failoverVersion:     123,
+		initialized:         true,
+		notificationVersion: 2,
+	}
+	testCache.Put(domainID, domainEntry)
+
+	s.domainCache.cacheByID.Store(testCache)
+
+	s.domainCache.cacheNameToID.Store(testCache)
+
+	s.Equal(domainCacheInitialized, s.domainCache.status)
+
+	s.metadataMgr.On("GetMetadata", mock.Anything).Return(&persistence.GetMetadataResponse{NotificationVersion: 4}, nil).Once()
+
+	domainResponse := &persistence.GetDomainResponse{
+		Info: &persistence.DomainInfo{ID: domainID, Name: domainName, Data: make(map[string]string)},
+		Config: &persistence.DomainConfig{
+			BadBinaries: types.BadBinaries{
+				Binaries: map[string]*types.BadBinaryInfo{},
+			},
+		},
+		ReplicationConfig: &persistence.DomainReplicationConfig{
+			ActiveClusterName: cluster.TestCurrentClusterName,
+		},
+		FailoverVersion:     124,
+		NotificationVersion: 3,
+	}
+
 	listDomainsResponse := &persistence.ListDomainsResponse{
-		Domains: []*persistence.GetDomainResponse{{Info: &persistence.DomainInfo{ID: domainID, Name: domainName, Data: make(map[string]string)}}},
+		Domains: []*persistence.GetDomainResponse{domainResponse},
 	}
 	s.metadataMgr.On("ListDomains", mock.Anything, mock.Anything).Return(listDomainsResponse, nil).Once()
 
+	mockTimeSource.Advance(domainCacheMinRefreshInterval)
 	s.domainCache.Start()
 	s.Equal(domainCacheStarted, s.domainCache.status)
 
 	// verifying noop on second start
 	s.domainCache.Start()
+
+	allDomains := s.domainCache.GetAllDomain()
+	s.Equal(1, len(allDomains))
+	s.Equal(domainID, allDomains[domainID].GetInfo().ID)
+	s.Equal(int64(124), allDomains[domainID].GetFailoverVersion())
 
 	s.domainCache.Stop()
 	s.Equal(domainCacheStopped, s.domainCache.status)
