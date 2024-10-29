@@ -2157,6 +2157,38 @@ func TestMutableStateBuilder_closeTransactionHandleWorkflowReset(t *testing.T) {
 				assert.Equal(t, []persistence.Task(nil), m.insertTransferTasks)
 			},
 		},
+		"Transaction policy passive - no expected resets": {
+			policyIn: TransactionPolicyPassive,
+			shardContextExpectations: func(mockCache *events.MockCache, shardContext *shardCtx.MockContext, mockDomainCache *cache.MockDomainCache) {
+				shardContext.EXPECT().GetClusterMetadata().Return(cluster.TestActiveClusterMetadata).Times(2)
+				shardContext.EXPECT().GetEventsCache().Return(mockCache)
+				shardContext.EXPECT().GetConfig().Return(&config.Config{
+					NumberOfShards:                        2,
+					IsAdvancedVisConfigExist:              false,
+					MaxResponseSize:                       0,
+					MutableStateChecksumInvalidateBefore:  dynamicconfig.GetFloatPropertyFn(10),
+					MutableStateChecksumVerifyProbability: dynamicconfig.GetIntPropertyFilteredByDomain(0.0),
+					HostName:                              "test-host",
+				}).Times(1)
+				shardContext.EXPECT().GetTimeSource().Return(clock.NewMockedTimeSource())
+				shardContext.EXPECT().GetMetricsClient().Return(metrics.NewNoopMetricsClient())
+				shardContext.EXPECT().GetDomainCache().Return(mockDomainCache).Times(1)
+			},
+			mutableStateBuilderStartingState: func(m *mutableStateBuilder) {
+				// the workflow's running
+				m.executionInfo = &persistence.WorkflowExecutionInfo{
+					CloseStatus: persistence.WorkflowCloseStatusNone,
+				}
+
+				// there's some child workflow that's due to be updated
+				m.pendingChildExecutionInfoIDs = map[int64]*persistence.ChildExecutionInfo{
+					1: &persistence.ChildExecutionInfo{},
+				}
+			},
+			expectedEndState: func(t *testing.T, m *mutableStateBuilder) {
+				assert.Equal(t, []persistence.Task(nil), m.insertTransferTasks)
+			},
+		},
 	}
 
 	for name, td := range tests {
