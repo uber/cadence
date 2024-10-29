@@ -291,7 +291,7 @@ func initializeAdminDomainHandler(c *cli.Context) (domain.Handler, error) {
 		return nil, fmt.Errorf("Error in init admin domain handler: %w", err)
 	}
 	clusterMetadata := initializeClusterMetadata(configuration, metricsClient, logger)
-	metadataMgr, err := initializeDomainManager(c)
+	metadataMgr, err := getDeps(c).initializeDomainManager(c)
 	if err != nil {
 		return nil, fmt.Errorf("Error in init admin domain handler: %w", err)
 	}
