@@ -24,6 +24,7 @@ package cli
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -1872,5 +1873,105 @@ func Test_RestartWorkflow_MissingFlags(t *testing.T) {
 
 	set.String(FlagDomain, "test-domain", "domain")
 	err = RestartWorkflow(c)
+	assert.ErrorContains(t, err, fmt.Sprintf("%s is required", FlagWorkflowID))
+}
+
+func Test_DiagnoseWorkflow_MissingFlags(t *testing.T) {
+	app := NewCliApp(&clientFactoryMock{})
+	set := flag.NewFlagSet("test", 0)
+	c := cli.NewContext(app, set, nil)
+	err := DiagnoseWorkflow(c)
+	assert.ErrorContains(t, err, fmt.Sprintf("%s is required", FlagDomain))
+
+	set.String(FlagDomain, "test-domain", "domain")
+	err = DiagnoseWorkflow(c)
+	assert.ErrorContains(t, err, fmt.Sprintf("%s is required", FlagWorkflowID))
+
+	set.String(FlagWorkflowID, "test-workflow-id", "workflow_id")
+	err = DiagnoseWorkflow(c)
+	assert.ErrorContains(t, err, fmt.Sprintf("%s is required", FlagRunID))
+}
+
+func Test_ShowHistory_MissingWorkflowID(t *testing.T) {
+	app := NewCliApp(&clientFactoryMock{})
+	set := flag.NewFlagSet("test", 0)
+	c := cli.NewContext(app, set, nil)
+	err := ShowHistory(c)
+	assert.ErrorContains(t, err, fmt.Sprintf("%s is required", FlagWorkflowID))
+}
+
+func Test_ShowHistoryWithID_MissingWorkflowID(t *testing.T) {
+	app := NewCliApp(&clientFactoryMock{})
+	set := flag.NewFlagSet("test", 0)
+	c := cli.NewContext(app, set, nil)
+	err := ShowHistoryWithWID(c)
+	assert.ErrorContains(t, err, fmt.Sprintf("%s is required", FlagWorkflowID))
+
+	set.Parse([]string{"test-workflow-id", "test-run-id"})
+	err = ShowHistoryWithWID(c)
+	assert.ErrorContains(t, err, fmt.Sprintf("%s is required", FlagDomain))
+}
+
+func Test_ConstructStartWorkflowRequest_MissingFlags(t *testing.T) {
+	app := NewCliApp(&clientFactoryMock{})
+	set := flag.NewFlagSet("test", 0)
+	c := cli.NewContext(app, set, nil)
+	_, err := constructStartWorkflowRequest(c)
+	assert.ErrorContains(t, err, fmt.Sprintf("%s is required", FlagDomain))
+
+	set.String(FlagDomain, "test-domain", "domain")
+	_, err = constructStartWorkflowRequest(c)
+	assert.ErrorContains(t, err, fmt.Sprintf("%s is required", FlagTaskList))
+
+	set.String(FlagTaskList, "test-tasklist", "tasklist")
+	_, err = constructStartWorkflowRequest(c)
+	assert.ErrorContains(t, err, fmt.Sprintf("%s is required", FlagWorkflowType))
+
+	set.String(FlagWorkflowType, "test-workflow-type", "workflow_type")
+	_, err = constructStartWorkflowRequest(c)
+	assert.ErrorContains(t, err, fmt.Sprintf("%s format is invalid", FlagExecutionTimeout))
+
+	set.String(FlagExecutionTimeout, "10", "execution_timeout")
+	set.Int(FlagWorkflowIDReusePolicy, 1, "workflowidreusepolicy")
+	set.String(FlagCronSchedule, "* * * * *", "cron")
+	_, err = constructStartWorkflowRequest(c)
+	assert.NoError(t, err)
+
+	set2 := flag.NewFlagSet("test", 0)
+	set2.String(FlagDomain, "test-domain", "domain")
+	set2.String(FlagTaskList, "test-tasklist", "tasklist")
+	set2.String(FlagWorkflowType, "test-workflow-type", "workflow_type")
+	set2.String(FlagExecutionTimeout, "10", "execution_timeout")
+	set2.Int(FlagWorkflowIDReusePolicy, -2, "workflowidreusepolicy")
+	c2 := cli.NewContext(app, set2, nil)
+	_, err2 := constructStartWorkflowRequest(c2)
+	assert.ErrorContains(t, err2, "value is not in supported range")
+}
+
+func Test_ProcessSearchAttr(t *testing.T) {
+	app := NewCliApp(&clientFactoryMock{})
+	set := flag.NewFlagSet("test", 0)
+	set.String(FlagSearchAttributesKey, "key", "search attribute key")
+	c := cli.NewContext(app, set, nil)
+	_, err := processSearchAttr(c)
+	assert.ErrorContains(t, err, "keys and values are not equal")
+
+	set.String(FlagSearchAttributesVal, "value", "search attribute value")
+	resp, err := processSearchAttr(c)
+	assert.NoError(t, err)
+	expectedVal, _ := json.Marshal("value")
+	expectedResp := map[string][]byte{"key": expectedVal}
+	assert.Equal(t, expectedResp, resp)
+}
+
+func Test_CancelWorkflow_MissingFlags(t *testing.T) {
+	app := NewCliApp(&clientFactoryMock{})
+	set := flag.NewFlagSet("test", 0)
+	c := cli.NewContext(app, set, nil)
+	err := CancelWorkflow(c)
+	assert.ErrorContains(t, err, fmt.Sprintf("%s is required", FlagDomain))
+
+	set.String(FlagDomain, "test-domain", "domain")
+	err = CancelWorkflow(c)
 	assert.ErrorContains(t, err, fmt.Sprintf("%s is required", FlagWorkflowID))
 }
