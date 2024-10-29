@@ -1959,3 +1959,226 @@ func TestMutableStateBuilder_CopyToPersistence_roundtrip(t *testing.T) {
 
 	}
 }
+
+func TestMutableStateBuilder_closeTransactionHandleWorkflowReset(t *testing.T) {
+
+	t1 := time.Unix(123, 0)
+	now := time.Unix(500, 0)
+
+	badBinaryID := "bad-binary-id"
+
+	mockDomainEntryWithBadBinary := cache.NewLocalDomainCacheEntryForTest(&persistence.DomainInfo{Name: "domain"}, &persistence.DomainConfig{
+		BadBinaries: types.BadBinaries{
+			Binaries: map[string]*types.BadBinaryInfo{
+				badBinaryID: &types.BadBinaryInfo{
+					Reason:          "some-reason",
+					Operator:        "",
+					CreatedTimeNano: common.Ptr(t1.UnixNano()),
+				},
+			},
+		},
+	}, "cluster0")
+
+	mockDomainEntryWithoutBadBinary := cache.NewLocalDomainCacheEntryForTest(nil, &persistence.DomainConfig{
+		BadBinaries: types.BadBinaries{
+			Binaries: map[string]*types.BadBinaryInfo{},
+		},
+	}, "cluster0")
+
+	tests := map[string]struct {
+		policyIn                         TransactionPolicy
+		shardContextExpectations         func(mockCache *events.MockCache, shard *shardCtx.MockContext, mockDomainCache *cache.MockDomainCache)
+		mutableStateBuilderStartingState func(m *mutableStateBuilder)
+
+		expectedEndState func(t *testing.T, m *mutableStateBuilder)
+		expectedErr      error
+	}{
+		"a workflow with reset point which is running - the expectation is that this should be able to successfully find the domain to reset and add a transfer task": {
+
+			policyIn: TransactionPolicyActive,
+			mutableStateBuilderStartingState: func(m *mutableStateBuilder) {
+				// the workflow's running
+				m.executionInfo = &persistence.WorkflowExecutionInfo{
+					CloseStatus: persistence.WorkflowCloseStatusNone,
+					DomainID:    "some-domain-id",
+					WorkflowID:  "wf-id",
+					AutoResetPoints: &types.ResetPoints{
+						Points: []*types.ResetPointInfo{
+							{
+								BinaryChecksum:           badBinaryID,
+								RunID:                    "",
+								FirstDecisionCompletedID: 0,
+								CreatedTimeNano:          common.Ptr(t1.UnixNano()),
+								ExpiringTimeNano:         nil,
+								Resettable:               true,
+							},
+						},
+					},
+				}
+			},
+			shardContextExpectations: func(mockCache *events.MockCache, shardContext *shardCtx.MockContext, mockDomainCache *cache.MockDomainCache) {
+				shardContext.EXPECT().GetClusterMetadata().Return(cluster.TestActiveClusterMetadata).Times(2)
+				shardContext.EXPECT().GetEventsCache().Return(mockCache)
+				shardContext.EXPECT().GetConfig().Return(&config.Config{
+					NumberOfShards:                        2,
+					IsAdvancedVisConfigExist:              false,
+					MaxResponseSize:                       0,
+					MutableStateChecksumInvalidateBefore:  dynamicconfig.GetFloatPropertyFn(10),
+					MutableStateChecksumVerifyProbability: dynamicconfig.GetIntPropertyFilteredByDomain(0.0),
+					HostName:                              "test-host",
+				}).Times(1)
+
+				shardContext.EXPECT().GetTimeSource().Return(clock.NewMockedTimeSource())
+				shardContext.EXPECT().GetMetricsClient().Return(metrics.NewNoopMetricsClient())
+
+				shardContext.EXPECT().GetDomainCache().Return(mockDomainCache).Times(2)
+				mockDomainCache.EXPECT().GetDomainByID("some-domain-id").Return(mockDomainEntryWithBadBinary, nil)
+			},
+			expectedEndState: func(t *testing.T, m *mutableStateBuilder) {
+				assert.Equal(t, []persistence.Task{
+					&persistence.ResetWorkflowTask{
+						TaskData: persistence.TaskData{
+							Version: common.EmptyVersion,
+						},
+					},
+				}, m.insertTransferTasks)
+			},
+		},
+		"a workflow with reset point which is running for a domain without a bad binary - the expectation is this will not add any transfer tasks": {
+
+			policyIn: TransactionPolicyActive,
+			mutableStateBuilderStartingState: func(m *mutableStateBuilder) {
+				// the workflow's running
+				m.executionInfo = &persistence.WorkflowExecutionInfo{
+					CloseStatus: persistence.WorkflowCloseStatusNone,
+					DomainID:    "some-domain-id",
+					WorkflowID:  "wf-id",
+					AutoResetPoints: &types.ResetPoints{
+						Points: []*types.ResetPointInfo{
+							{
+								BinaryChecksum:           badBinaryID,
+								RunID:                    "",
+								FirstDecisionCompletedID: 0,
+								CreatedTimeNano:          common.Ptr(t1.UnixNano()),
+								ExpiringTimeNano:         nil,
+								Resettable:               true,
+							},
+						},
+					},
+				}
+			},
+			shardContextExpectations: func(mockCache *events.MockCache, shardContext *shardCtx.MockContext, mockDomainCache *cache.MockDomainCache) {
+				shardContext.EXPECT().GetClusterMetadata().Return(cluster.TestActiveClusterMetadata).Times(2)
+				shardContext.EXPECT().GetEventsCache().Return(mockCache)
+				shardContext.EXPECT().GetConfig().Return(&config.Config{
+					NumberOfShards:                        2,
+					IsAdvancedVisConfigExist:              false,
+					MaxResponseSize:                       0,
+					MutableStateChecksumInvalidateBefore:  dynamicconfig.GetFloatPropertyFn(10),
+					MutableStateChecksumVerifyProbability: dynamicconfig.GetIntPropertyFilteredByDomain(0.0),
+					HostName:                              "test-host",
+				}).Times(1)
+
+				shardContext.EXPECT().GetTimeSource().Return(clock.NewMockedTimeSource())
+				shardContext.EXPECT().GetMetricsClient().Return(metrics.NewNoopMetricsClient())
+
+				shardContext.EXPECT().GetDomainCache().Return(mockDomainCache).Times(2)
+
+				mockDomainCache.EXPECT().GetDomainByID("some-domain-id").Return(mockDomainEntryWithoutBadBinary, nil)
+			},
+			expectedEndState: func(t *testing.T, m *mutableStateBuilder) {
+				assert.Equal(t, []persistence.Task(nil), m.insertTransferTasks)
+			},
+		},
+		"a workflow withithout auto-reset point which is running for a domain": {
+
+			policyIn: TransactionPolicyActive,
+			mutableStateBuilderStartingState: func(m *mutableStateBuilder) {
+				// the workflow's running
+				m.executionInfo = &persistence.WorkflowExecutionInfo{
+					CloseStatus: persistence.WorkflowCloseStatusNone,
+					DomainID:    "some-domain-id",
+					WorkflowID:  "wf-id",
+				}
+			},
+			shardContextExpectations: func(mockCache *events.MockCache, shardContext *shardCtx.MockContext, mockDomainCache *cache.MockDomainCache) {
+				shardContext.EXPECT().GetClusterMetadata().Return(cluster.TestActiveClusterMetadata).Times(2)
+				shardContext.EXPECT().GetEventsCache().Return(mockCache)
+				shardContext.EXPECT().GetConfig().Return(&config.Config{
+					NumberOfShards:                        2,
+					IsAdvancedVisConfigExist:              false,
+					MaxResponseSize:                       0,
+					MutableStateChecksumInvalidateBefore:  dynamicconfig.GetFloatPropertyFn(10),
+					MutableStateChecksumVerifyProbability: dynamicconfig.GetIntPropertyFilteredByDomain(0.0),
+					HostName:                              "test-host",
+				}).Times(1)
+
+				shardContext.EXPECT().GetTimeSource().Return(clock.NewMockedTimeSource())
+				shardContext.EXPECT().GetMetricsClient().Return(metrics.NewNoopMetricsClient())
+
+				shardContext.EXPECT().GetDomainCache().Return(mockDomainCache).Times(2)
+
+				mockDomainCache.EXPECT().GetDomainByID("some-domain-id").Return(mockDomainEntryWithoutBadBinary, nil)
+			},
+			expectedEndState: func(t *testing.T, m *mutableStateBuilder) {
+				assert.Equal(t, []persistence.Task(nil), m.insertTransferTasks)
+			},
+		},
+		"a workflow with reset point which is running but which has child workflows": {
+			policyIn: TransactionPolicyActive,
+			shardContextExpectations: func(mockCache *events.MockCache, shardContext *shardCtx.MockContext, mockDomainCache *cache.MockDomainCache) {
+				shardContext.EXPECT().GetClusterMetadata().Return(cluster.TestActiveClusterMetadata).Times(2)
+				shardContext.EXPECT().GetEventsCache().Return(mockCache)
+				shardContext.EXPECT().GetConfig().Return(&config.Config{
+					NumberOfShards:                        2,
+					IsAdvancedVisConfigExist:              false,
+					MaxResponseSize:                       0,
+					MutableStateChecksumInvalidateBefore:  dynamicconfig.GetFloatPropertyFn(10),
+					MutableStateChecksumVerifyProbability: dynamicconfig.GetIntPropertyFilteredByDomain(0.0),
+					HostName:                              "test-host",
+				}).Times(1)
+				shardContext.EXPECT().GetTimeSource().Return(clock.NewMockedTimeSource())
+				shardContext.EXPECT().GetMetricsClient().Return(metrics.NewNoopMetricsClient())
+
+				shardContext.EXPECT().GetDomainCache().Return(mockDomainCache).Times(1)
+			},
+			mutableStateBuilderStartingState: func(m *mutableStateBuilder) {
+				// the workflow's running
+				m.executionInfo = &persistence.WorkflowExecutionInfo{
+					CloseStatus: persistence.WorkflowCloseStatusNone,
+				}
+
+				// there's some child workflow that's due to be updated
+				m.pendingChildExecutionInfoIDs = map[int64]*persistence.ChildExecutionInfo{
+					1: &persistence.ChildExecutionInfo{},
+				}
+			},
+			expectedEndState: func(t *testing.T, m *mutableStateBuilder) {
+				assert.Equal(t, []persistence.Task(nil), m.insertTransferTasks)
+			},
+		},
+	}
+
+	for name, td := range tests {
+		t.Run(name, func(t *testing.T) {
+
+			ctrl := gomock.NewController(t)
+
+			shardContext := shard.NewMockContext(ctrl)
+			mockCache := events.NewMockCache(ctrl)
+			mockDomainCache := cache.NewMockDomainCache(ctrl)
+
+			td.shardContextExpectations(mockCache, shardContext, mockDomainCache)
+
+			nowClock := clock.NewMockedTimeSourceAt(now)
+
+			msb := newMutableStateBuilder(shardContext, log.NewNoop(), constants.TestGlobalDomainEntry)
+			td.mutableStateBuilderStartingState(msb)
+
+			msb.timeSource = nowClock
+			err := msb.closeTransactionHandleWorkflowReset(td.policyIn)
+			assert.Equal(t, td.expectedErr, err)
+			td.expectedEndState(t, msb)
+		})
+	}
+}
