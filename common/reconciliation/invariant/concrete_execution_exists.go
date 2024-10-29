@@ -32,27 +32,20 @@ import (
 	"github.com/uber/cadence/common/types"
 )
 
-type (
-	concreteExecutionExists struct {
-		pr    persistence.Retryer
-		cache cache.DomainCache
-	}
-)
+type concreteExecutionExists struct {
+	pr    persistence.Retryer
+	cache cache.DomainCache
+}
 
 // NewConcreteExecutionExists returns a new invariant for checking concrete execution
-func NewConcreteExecutionExists(
-	pr persistence.Retryer, cache cache.DomainCache,
-) Invariant {
+func NewConcreteExecutionExists(pr persistence.Retryer, cache cache.DomainCache) Invariant {
 	return &concreteExecutionExists{
 		pr:    pr,
 		cache: cache,
 	}
 }
 
-func (c *concreteExecutionExists) Check(
-	ctx context.Context,
-	execution interface{},
-) CheckResult {
+func (c *concreteExecutionExists) Check(ctx context.Context, execution interface{}) CheckResult {
 	if checkResult := validateCheckContext(ctx, c.Name()); checkResult != nil {
 		return *checkResult
 	}
@@ -118,10 +111,7 @@ func (c *concreteExecutionExists) Check(
 	}
 }
 
-func (c *concreteExecutionExists) Fix(
-	ctx context.Context,
-	execution interface{},
-) FixResult {
+func (c *concreteExecutionExists) Fix(ctx context.Context, execution interface{}) FixResult {
 	if fixResult := validateFixContext(ctx, c.Name()); fixResult != nil {
 		return *fixResult
 	}

@@ -56,9 +56,10 @@ func (s *ConcreteExecutionExistsSuite) SetupTest() {
 }
 
 func (s *ConcreteExecutionExistsSuite) TestCheck() {
-	existsError := types.EntityNotExistsError{}
+	notExistsError := types.EntityNotExistsError{}
 	unknownError := types.BadRequestError{}
 	testCases := []struct {
+		desc            string
 		execution       *entity.CurrentExecution
 		getConcreteResp *persistence.IsWorkflowExecutionExistsResponse
 		getConcreteErr  error
@@ -67,6 +68,7 @@ func (s *ConcreteExecutionExistsSuite) TestCheck() {
 		expectedResult  CheckResult
 	}{
 		{
+			desc:            "closed execution with concrete execution",
 			execution:       getClosedCurrentExecution(),
 			getConcreteResp: &persistence.IsWorkflowExecutionExistsResponse{Exists: true},
 			getCurrentResp: &persistence.GetCurrentExecutionResponse{
@@ -78,6 +80,7 @@ func (s *ConcreteExecutionExistsSuite) TestCheck() {
 			},
 		},
 		{
+			desc:           "failed to get concrete execution",
 			execution:      getOpenCurrentExecution(),
 			getConcreteErr: errors.New("error getting concrete execution"),
 			getCurrentResp: &persistence.GetCurrentExecutionResponse{
@@ -91,6 +94,7 @@ func (s *ConcreteExecutionExistsSuite) TestCheck() {
 			},
 		},
 		{
+			desc:            "open execution without concrete execution",
 			execution:       getOpenCurrentExecution(),
 			getConcreteResp: &persistence.IsWorkflowExecutionExistsResponse{Exists: false},
 			getCurrentResp: &persistence.GetCurrentExecutionResponse{
@@ -105,6 +109,7 @@ func (s *ConcreteExecutionExistsSuite) TestCheck() {
 			},
 		},
 		{
+			desc:            "open execution with concrete execution",
 			execution:       getOpenCurrentExecution(),
 			getConcreteErr:  nil,
 			getConcreteResp: &persistence.IsWorkflowExecutionExistsResponse{Exists: true},
@@ -117,6 +122,7 @@ func (s *ConcreteExecutionExistsSuite) TestCheck() {
 			},
 		},
 		{
+			desc:            "open execution that is not current",
 			execution:       getOpenCurrentExecution(),
 			getConcreteErr:  nil,
 			getConcreteResp: &persistence.IsWorkflowExecutionExistsResponse{Exists: true},
@@ -129,17 +135,19 @@ func (s *ConcreteExecutionExistsSuite) TestCheck() {
 			},
 		},
 		{
+			desc:            "concrete exists but current doesn't",
 			execution:       getOpenCurrentExecution(),
 			getConcreteErr:  nil,
 			getConcreteResp: &persistence.IsWorkflowExecutionExistsResponse{Exists: true},
 			getCurrentResp:  nil,
-			getCurrentErr:   &existsError,
+			getCurrentErr:   &notExistsError,
 			expectedResult: CheckResult{
 				CheckResultType: CheckResultTypeHealthy,
 				InvariantName:   ConcreteExecutionExists,
 			},
 		},
 		{
+			desc:            "concrete exists but failed to get current",
 			execution:       getOpenCurrentExecution(),
 			getConcreteErr:  nil,
 			getConcreteResp: &persistence.IsWorkflowExecutionExistsResponse{Exists: false},
@@ -152,6 +160,17 @@ func (s *ConcreteExecutionExistsSuite) TestCheck() {
 				InfoDetails:     unknownError.Error(),
 			},
 		},
+		// {
+
+		// 	getConcreteErr:  nil,
+		// 	getConcreteResp: &persistence.IsWorkflowExecutionExistsResponse{Exists: true},
+		// 	getCurrentResp:  nil,
+		// 	getCurrentErr:   &existsError,
+		// 	expectedResult: CheckResult{
+		// 		CheckResultType: CheckResultTypeHealthy,
+		// 		InvariantName:   ConcreteExecutionExists,
+		// 	},
+		// },
 	}
 	ctrl := gomock.NewController(s.T())
 	mockDomainCache := cache.NewMockDomainCache(ctrl)
