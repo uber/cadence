@@ -855,12 +855,12 @@ func (s *domainCacheSuite) Test_getDomain_cacheHitAfterRefreshLockLocked() {
 	wg.Add(1)
 
 	go func() {
+		defer s.domainCache.refreshLock.Unlock()
 		// to test the cache hit after refresh lock is locked, need to ensure that the domain cache is added after the first cache hit check
 		// force a lock to ensure that the code will block on the lock, wait for the first cache hit check, add the domain cache
 		// and then release the lock
 		s.domainCache.refreshLock.Lock()
 		wg.Done()
-		defer s.domainCache.refreshLock.Unlock()
 		time.Sleep(200 * time.Millisecond)
 		s.domainCache.cacheByID.Store(testCache)
 		s.domainCache.cacheNameToID.Store(testCache)
