@@ -2255,7 +2255,6 @@ func TestMutableStateBuilder_GetVersionHistoriesStart(t *testing.T) {
 	}
 }
 
-
 func TestIsCurrentWorkflowGuaranteed(t *testing.T) {
 	tests := []struct {
 		name           string
@@ -2303,10 +2302,10 @@ func TestIsCurrentWorkflowGuaranteed(t *testing.T) {
 		})
 	}
 
-	assert.Panics(t, func(){
-			msb := mutableStateBuilder{}
-			msb.stateInDB = 123
-			msb.IsCurrentWorkflowGuaranteed()
+	assert.Panics(t, func() {
+		msb := mutableStateBuilder{}
+		msb.stateInDB = 123
+		msb.IsCurrentWorkflowGuaranteed()
 	})
 }
 
@@ -2315,10 +2314,10 @@ func TestIsCurrentWorkflowGuaranteed(t *testing.T) {
 func TestGetRetryBackoffDuration(t *testing.T) {
 
 	tests := []struct {
-		name               string
-		retryPolicy        *persistence.WorkflowExecutionInfo
-		errorReason        string
-		expectedBackoff    time.Duration
+		name            string
+		retryPolicy     *persistence.WorkflowExecutionInfo
+		errorReason     string
+		expectedBackoff time.Duration
 	}{
 		{
 			name: "NoRetryPolicy",
@@ -2331,12 +2330,12 @@ func TestGetRetryBackoffDuration(t *testing.T) {
 		{
 			name: "WithRetryPolicy",
 			retryPolicy: &persistence.WorkflowExecutionInfo{
-				HasRetryPolicy:    true,
-				ExpirationTime:    time.Now().Add(time.Hour),
-				Attempt:           1,
-				MaximumAttempts:   5,
+				HasRetryPolicy:     true,
+				ExpirationTime:     time.Now().Add(time.Hour),
+				Attempt:            1,
+				MaximumAttempts:    5,
 				BackoffCoefficient: 2.0,
-				InitialInterval:   12,
+				InitialInterval:    12,
 				NonRetriableErrors: []string{"non-retriable-error"},
 			},
 			errorReason:     "some error reason",
@@ -2397,24 +2396,22 @@ func TestGetCronRetryBackoffDuration(t *testing.T) {
 	}
 
 	startEvent := &types.HistoryEvent{
-		ID:   1,
-		WorkflowExecutionStartedEventAttributes: &types.WorkflowExecutionStartedEventAttributes{
-
-		},
+		ID:                                      1,
+		WorkflowExecutionStartedEventAttributes: &types.WorkflowExecutionStartedEventAttributes{},
 	}
 
 	tests := map[string]struct {
-		startingExecutionInfo        *persistence.WorkflowExecutionInfo
-		expectedErr bool
-		shardContextExpectations  func(mockCache *events.MockCache, shardContext *shardCtx.MockContext, mockDomainCache *cache.MockDomainCache)
-		expectedBackoff    time.Duration
+		startingExecutionInfo    *persistence.WorkflowExecutionInfo
+		expectedErr              bool
+		shardContextExpectations func(mockCache *events.MockCache, shardContext *shardCtx.MockContext, mockDomainCache *cache.MockDomainCache)
+		expectedBackoff          time.Duration
 	}{
-		"with simple, valid cron schedule" : {
+		"with simple, valid cron schedule": {
 			startingExecutionInfo: &persistence.WorkflowExecutionInfo{
-				DomainID: "domain-id",
-				CronSchedule: "* * * * *",
-				RunID: "run-id",
-				WorkflowID: "wid",
+				DomainID:       "domain-id",
+				CronSchedule:   "* * * * *",
+				RunID:          "run-id",
+				WorkflowID:     "wid",
 				StartTimestamp: t1,
 			},
 			shardContextExpectations: func(mockCache *events.MockCache, shardContext *shardCtx.MockContext, mockDomainCache *cache.MockDomainCache) {
@@ -2423,23 +2420,23 @@ func TestGetCronRetryBackoffDuration(t *testing.T) {
 			},
 			expectedBackoff: 45 * time.Second,
 		},
-		"with no cron schedule" : {
+		"with no cron schedule": {
 			startingExecutionInfo: &persistence.WorkflowExecutionInfo{
-				DomainID: "domain-id",
-				RunID: "run-id",
-				WorkflowID: "wid",
+				DomainID:       "domain-id",
+				RunID:          "run-id",
+				WorkflowID:     "wid",
 				StartTimestamp: t1,
 			},
 			shardContextExpectations: func(mockCache *events.MockCache, shardContext *shardCtx.MockContext, mockDomainCache *cache.MockDomainCache) {
 			},
 			expectedBackoff: backoff.NoBackoff,
 		},
-		"with invalid start event" : {
+		"with invalid start event": {
 			startingExecutionInfo: &persistence.WorkflowExecutionInfo{
-				DomainID: "domain-id",
-				RunID: "run-id",
-				WorkflowID: "wid",
-				CronSchedule: "* * * * *",
+				DomainID:       "domain-id",
+				RunID:          "run-id",
+				WorkflowID:     "wid",
+				CronSchedule:   "* * * * *",
 				StartTimestamp: t1,
 			},
 			shardContextExpectations: func(mockCache *events.MockCache, shardContext *shardCtx.MockContext, mockDomainCache *cache.MockDomainCache) {
@@ -2447,7 +2444,7 @@ func TestGetCronRetryBackoffDuration(t *testing.T) {
 				mockCache.EXPECT().GetEvent(gomock.Any(), 12, "domain-id", "wid", "run-id", int64(1), int64(1), []byte("branch-token1")).Return(nil, assert.AnError)
 			},
 			expectedBackoff: backoff.NoBackoff,
-			expectedErr: true,
+			expectedErr:     true,
 		},
 	}
 
@@ -2478,8 +2475,6 @@ func TestGetCronRetryBackoffDuration(t *testing.T) {
 		})
 	}
 }
-
-
 
 func createMSBWithMocks(mockCache *events.MockCache, shardContext *shardCtx.MockContext, mockDomainCache *cache.MockDomainCache) *mutableStateBuilder {
 	// the MSB constructor calls a bunch of endpoints on the mocks, so
