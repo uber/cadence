@@ -25,17 +25,32 @@ package clitest
 import (
 	"testing"
 
-	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/assert"
 	"github.com/urfave/cli/v2"
 )
 
 func TestNewCLIContext(t *testing.T) {
 	app := cli.NewApp()
-	ctx := NewCLIContext(t, app, StringArgument("region", "dca"), IntArgument("shards", 1024))
+	ctx := NewCLIContext(
+		t,
+		app,
+		StringArgument("region", "dca"),
+		IntArgument("shards", 1024),
+		BoolArgument("verbose", true),
+		BoolArgument("exit-if-error", false),
+	)
 
-	require.True(t, ctx.IsSet("region"))
-	require.Equal(t, "dca", ctx.String("region"))
+	assert.True(t, ctx.IsSet("region"))
+	assert.Equal(t, "dca", ctx.String("region"))
 
-	require.True(t, ctx.IsSet("shards"))
-	require.Equal(t, 1024, ctx.Int("shards"))
+	assert.True(t, ctx.IsSet("shards"))
+	assert.Equal(t, 1024, ctx.Int("shards"))
+
+	assert.True(t, ctx.IsSet("verbose"))
+	assert.True(t, ctx.Bool("verbose"))
+
+	assert.True(t, ctx.IsSet("exit-if-error"))
+	assert.False(t, ctx.Bool("exit-if-error"))
+
+	assert.False(t, ctx.IsSet("should-not-exist"))
 }
