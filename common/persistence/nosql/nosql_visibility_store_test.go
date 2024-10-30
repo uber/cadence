@@ -25,7 +25,6 @@ package nosql
 import (
 	"context"
 	"fmt"
-	"github.com/uber/cadence/common/types"
 	"testing"
 	"time"
 
@@ -36,6 +35,7 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
+	"github.com/uber/cadence/common/types"
 )
 
 const (
