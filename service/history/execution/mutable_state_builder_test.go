@@ -2476,6 +2476,316 @@ func TestGetCronRetryBackoffDuration(t *testing.T) {
 	}
 }
 
+func TestMutableStateBuilder_GetTransferTasks(t *testing.T) {
+	msb := &mutableStateBuilder{
+		insertTransferTasks: []persistence.Task{
+			&persistence.ActivityTask{},
+			&persistence.DecisionTask{},
+		},
+	}
+	tasks := msb.GetTransferTasks()
+	assert.Equal(t, 2, len(tasks))
+	assert.IsType(t, &persistence.ActivityTask{}, tasks[0])
+	assert.IsType(t, &persistence.DecisionTask{}, tasks[1])
+}
+
+
+func TestMutableStateBuilder_GetTimerTasks(t *testing.T) {
+	msb := &mutableStateBuilder{
+		insertTimerTasks: []persistence.Task{
+			&persistence.UserTimerTask{},
+		},
+	}
+	tasks := msb.GetTimerTasks()
+	assert.Equal(t, 1, len(tasks))
+	assert.IsType(t, &persistence.UserTimerTask{}, tasks[0])
+}
+
+func TestMutableStateBuilder_DeleteTransferTasks(t *testing.T) {
+	msb := &mutableStateBuilder{
+		insertTransferTasks: []persistence.Task{
+			&persistence.ActivityTask{},
+		},
+	}
+	msb.DeleteTransferTasks()
+	assert.Nil(t, msb.insertTransferTasks)
+}
+
+
+func TestMutableStateBuilder_DeleteTimerTasks(t *testing.T) {
+	msb := &mutableStateBuilder{
+		insertTimerTasks: []persistence.Task{
+			&persistence.UserTimerTask{},
+		},
+	}
+	msb.DeleteTimerTasks()
+	assert.Nil(t, msb.insertTimerTasks)
+}
+
+func TestMutableStateBuilder_SetUpdateCondition(t *testing.T) {
+	msb := &mutableStateBuilder{}
+	msb.SetUpdateCondition(123)
+	assert.Equal(t, int64(123), msb.nextEventIDInDB)
+}
+
+func TestMutableStateBuilder_GetUpdateCondition(t *testing.T) {
+	msb := &mutableStateBuilder{
+		nextEventIDInDB: 123,
+	}
+	assert.Equal(t, int64(123), msb.GetUpdateCondition())
+}
+
+func TestCheckAndClearTimerFiredEvent(t *testing.T) {
+	tests := []struct {
+		name                  string
+		timerID               string
+		bufferedEvents        []*types.HistoryEvent
+		updateBufferedEvents  []*types.HistoryEvent
+		history               []*types.HistoryEvent
+		expectedTimerEvent    *types.HistoryEvent
+		expectedBufferedEvents []*types.HistoryEvent
+		expectedUpdateBufferedEvents []*types.HistoryEvent
+		expectedHistory       []*types.HistoryEvent
+	}{
+		{
+			name:   "TimerFiredEventInBufferedEvents",
+			timerID: "timer1",
+			bufferedEvents: []*types.HistoryEvent{
+				{
+					EventType: types.EventTypeTimerFired.Ptr(),
+					TimerFiredEventAttributes: &types.TimerFiredEventAttributes{
+						TimerID: "timer1",
+					},
+				},
+				{
+					EventType: types.EventTypeTimerFired.Ptr(),
+					TimerFiredEventAttributes: &types.TimerFiredEventAttributes{
+						TimerID: "timer2",
+					},
+				},
+			},
+			updateBufferedEvents: []*types.HistoryEvent{},
+			history: []*types.HistoryEvent{},
+			expectedTimerEvent: &types.HistoryEvent{
+				EventType: types.EventTypeTimerFired.Ptr(),
+				TimerFiredEventAttributes: &types.TimerFiredEventAttributes{
+					TimerID: "timer1",
+				},
+			},
+			expectedBufferedEvents: []*types.HistoryEvent{
+				{
+					EventType: types.EventTypeTimerFired.Ptr(),
+					TimerFiredEventAttributes: &types.TimerFiredEventAttributes{
+						TimerID: "timer2",
+					},
+				},
+			},
+			expectedUpdateBufferedEvents: []*types.HistoryEvent{},
+			expectedHistory: []*types.HistoryEvent{},
+		},
+		{
+			name:   "TimerFiredEventInUpdateBufferedEvents",
+			timerID: "timer2",
+			bufferedEvents: []*types.HistoryEvent{},
+			updateBufferedEvents: []*types.HistoryEvent{
+				{
+					EventType: types.EventTypeTimerFired.Ptr(),
+					TimerFiredEventAttributes: &types.TimerFiredEventAttributes{
+						TimerID: "timer1",
+					},
+				},
+				{
+					EventType: types.EventTypeTimerFired.Ptr(),
+					TimerFiredEventAttributes: &types.TimerFiredEventAttributes{
+						TimerID: "timer2",
+					},
+				},
+				{
+					EventType: types.EventTypeTimerFired.Ptr(),
+					TimerFiredEventAttributes: &types.TimerFiredEventAttributes{
+						TimerID: "timer3",
+					},
+				},
+			},
+			history: []*types.HistoryEvent{},
+			expectedTimerEvent: &types.HistoryEvent{
+				EventType: types.EventTypeTimerFired.Ptr(),
+				TimerFiredEventAttributes: &types.TimerFiredEventAttributes{
+					TimerID: "timer2",
+				},
+			},
+			expectedBufferedEvents: []*types.HistoryEvent{
+			},
+			expectedUpdateBufferedEvents: []*types.HistoryEvent{
+				{
+					EventType: types.EventTypeTimerFired.Ptr(),
+					TimerFiredEventAttributes: &types.TimerFiredEventAttributes{
+						TimerID: "timer1",
+					},
+				},
+				{
+					EventType: types.EventTypeTimerFired.Ptr(),
+					TimerFiredEventAttributes: &types.TimerFiredEventAttributes{
+						TimerID: "timer3",
+					},
+				},
+			},
+			expectedHistory: []*types.HistoryEvent{
+			},
+		},
+		{
+			name:   "TimerFiredEventInHistory",
+			timerID: "timer3",
+			bufferedEvents: []*types.HistoryEvent{},
+			updateBufferedEvents: []*types.HistoryEvent{},
+			history: []*types.HistoryEvent{
+				{
+					EventType: types.EventTypeTimerFired.Ptr(),
+					TimerFiredEventAttributes: &types.TimerFiredEventAttributes{
+						TimerID: "timer1",
+					},
+				},
+				{
+					EventType: types.EventTypeTimerFired.Ptr(),
+					TimerFiredEventAttributes: &types.TimerFiredEventAttributes{
+						TimerID: "timer3",
+					},
+				},
+			},
+			expectedTimerEvent: &types.HistoryEvent{
+				EventType: types.EventTypeTimerFired.Ptr(),
+				TimerFiredEventAttributes: &types.TimerFiredEventAttributes{
+					TimerID: "timer3",
+				},
+			},
+			expectedBufferedEvents: []*types.HistoryEvent{},
+			expectedUpdateBufferedEvents: []*types.HistoryEvent{},
+			expectedHistory: []*types.HistoryEvent{
+				{
+					EventType: types.EventTypeTimerFired.Ptr(),
+					TimerFiredEventAttributes: &types.TimerFiredEventAttributes{
+						TimerID: "timer1",
+					},
+				},
+			},
+		},
+		{
+			name:   "NoTimerFiredEvent",
+			timerID: "timer4",
+			bufferedEvents: []*types.HistoryEvent{},
+			updateBufferedEvents: []*types.HistoryEvent{},
+			history: []*types.HistoryEvent{},
+			expectedTimerEvent: nil,
+			expectedBufferedEvents: []*types.HistoryEvent{},
+			expectedUpdateBufferedEvents: []*types.HistoryEvent{},
+			expectedHistory: []*types.HistoryEvent{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			msb := &mutableStateBuilder{
+				bufferedEvents:       tt.bufferedEvents,
+				updateBufferedEvents: tt.updateBufferedEvents,
+				hBuilder:             &HistoryBuilder{history: tt.history},
+			}
+
+			timerEvent := msb.checkAndClearTimerFiredEvent(tt.timerID)
+
+			assert.Equal(t, tt.expectedTimerEvent, timerEvent)
+			assert.Equal(t, tt.expectedBufferedEvents, msb.bufferedEvents)
+			assert.Equal(t, tt.expectedUpdateBufferedEvents, msb.updateBufferedEvents)
+			assert.Equal(t, tt.expectedHistory, msb.hBuilder.history)
+		})
+	}
+}
+
+
+func TestAssignTaskIDToEvents(t *testing.T) {
+
+	tests := map[string]struct {
+		transientHistory []*types.HistoryEvent
+		taskID        int64
+		shardContextExpectations func(mockCache *events.MockCache, shardContext *shardCtx.MockContext, mockDomainCache *cache.MockDomainCache)
+		expectedEvents []*types.HistoryEvent
+		expectedErr error
+	}{
+		"AssignTaskIDToSingleEvent": {
+			transientHistory: []*types.HistoryEvent{
+				{
+					ID:        1,
+					EventType: types.EventTypeWorkflowExecutionStarted.Ptr(),
+				},
+			},
+			taskID: 123,
+			shardContextExpectations: func(mockCache *events.MockCache, shardContext *shardCtx.MockContext, mockDomainCache *cache.MockDomainCache) {
+				shardContext.EXPECT().GenerateTransferTaskIDs(1).Return([]int64{123}, nil).Times(1)
+			},
+			expectedEvents: []*types.HistoryEvent{
+				{
+					ID:        1,
+					EventType: types.EventTypeWorkflowExecutionStarted.Ptr(),
+					TaskID:    123,
+				},
+			},
+		},
+		// "AssignTaskIDToMultipleEvents": {
+		// 	transientHistory: []*types.HistoryEvent{
+		// 		{
+		// 			ID:        1,
+		// 			EventType: types.EventTypeWorkflowExecutionStarted.Ptr(),
+		// 		},
+		// 		{
+		// 			ID:        2,
+		// 			EventType: types.EventTypeDecisionTaskScheduled.Ptr(),
+		// 		},
+		// 	},
+		// 	taskID: 456,
+		// 	expectedEvents: []*types.HistoryEvent{
+		// 		{
+		// 			ID:        1,
+		// 			EventType: types.EventTypeWorkflowExecutionStarted.Ptr(),
+		// 			TaskID:    456,
+		// 		},
+		// 		{
+		// 			ID:        2,
+		// 			EventType: types.EventTypeDecisionTaskScheduled.Ptr(),
+		// 			TaskID:    456,
+		// 		},
+		// 	},
+		// },
+		// "NoEvents": {
+		// 	transientHistory: []*types.HistoryEvent{},
+		// 	taskID:        789,
+		// 	expectedEvents: []*types.HistoryEvent{},
+		// },
+	}
+
+	for name, td := range tests {
+		t.Run(name, func(t *testing.T) {
+
+			ctrl := gomock.NewController(t)
+
+			shardContext := shard.NewMockContext(ctrl)
+			mockCache := events.NewMockCache(ctrl)
+			mockDomainCache := cache.NewMockDomainCache(ctrl)
+
+			td.shardContextExpectations(mockCache, shardContext, mockDomainCache)
+
+			msb := createMSBWithMocks(mockCache, shardContext, mockDomainCache)
+
+			msb.hBuilder.history = td.transientHistory
+
+			err := msb.assignTaskIDToEvents()
+
+			assert.Equal(t, td.expectedEvents, msb.hBuilder.history)
+			assert.Equal(t, td.expectedErr, err)
+		})
+	}
+}
+
+
+
 func createMSBWithMocks(mockCache *events.MockCache, shardContext *shardCtx.MockContext, mockDomainCache *cache.MockDomainCache) *mutableStateBuilder {
 	// the MSB constructor calls a bunch of endpoints on the mocks, so
 	// put them in here as a set of fixed expectations so the actual mocking

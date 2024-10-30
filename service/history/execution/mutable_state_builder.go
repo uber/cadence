@@ -144,7 +144,6 @@ type (
 		appliedEvents map[string]struct{}
 
 		insertTransferTasks     []persistence.Task
-		insertCrossClusterTasks []persistence.Task
 		insertReplicationTasks  []persistence.Task
 		insertTimerTasks        []persistence.Task
 
@@ -1347,12 +1346,6 @@ func (e *mutableStateBuilder) AddTransferTasks(
 	e.insertTransferTasks = append(e.insertTransferTasks, transferTasks...)
 }
 
-func (e *mutableStateBuilder) AddCrossClusterTasks(
-	crossClusterTasks ...persistence.Task,
-) {
-	e.insertCrossClusterTasks = append(e.insertCrossClusterTasks, crossClusterTasks...)
-}
-
 // TODO convert AddTimerTasks to prepareTimerTasks
 func (e *mutableStateBuilder) AddTimerTasks(
 	timerTasks ...persistence.Task,
@@ -1365,20 +1358,12 @@ func (e *mutableStateBuilder) GetTransferTasks() []persistence.Task {
 	return e.insertTransferTasks
 }
 
-func (e *mutableStateBuilder) GetCrossClusterTasks() []persistence.Task {
-	return e.insertCrossClusterTasks
-}
-
 func (e *mutableStateBuilder) GetTimerTasks() []persistence.Task {
 	return e.insertTimerTasks
 }
 
 func (e *mutableStateBuilder) DeleteTransferTasks() {
 	e.insertTransferTasks = nil
-}
-
-func (e *mutableStateBuilder) DeleteCrossClusterTasks() {
-	e.insertCrossClusterTasks = nil
 }
 
 func (e *mutableStateBuilder) DeleteTimerTasks() {
@@ -1487,7 +1472,6 @@ func (e *mutableStateBuilder) CloseTransactionAsMutation(
 		ClearBufferedEvents:       e.clearBufferedEvents,
 
 		TransferTasks:     e.insertTransferTasks,
-		CrossClusterTasks: e.insertCrossClusterTasks,
 		ReplicationTasks:  e.insertReplicationTasks,
 		TimerTasks:        e.insertTimerTasks,
 
@@ -1567,7 +1551,6 @@ func (e *mutableStateBuilder) CloseTransactionAsSnapshot(
 		SignalRequestedIDs:  convertStringSetToSlice(e.pendingSignalRequestedIDs),
 
 		TransferTasks:     e.insertTransferTasks,
-		CrossClusterTasks: e.insertCrossClusterTasks,
 		ReplicationTasks:  e.insertReplicationTasks,
 		TimerTasks:        e.insertTimerTasks,
 
@@ -1678,7 +1661,6 @@ func (e *mutableStateBuilder) cleanupTransaction() error {
 	e.nextEventIDInDB = e.GetNextEventID()
 
 	e.insertTransferTasks = nil
-	e.insertCrossClusterTasks = nil
 	e.insertReplicationTasks = nil
 	e.insertTimerTasks = nil
 
