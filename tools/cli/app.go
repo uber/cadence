@@ -50,8 +50,8 @@ func WithIOHandler(h IOHandler) CLIAppOptions {
 	}
 }
 
-// WithPersistenceManagerFactory sets the PersistenceManagerFactory for the CLI app.
-func WithPersistenceManagerFactory(factory PersistenceManagerFactory) CLIAppOptions {
+// WithPersistenceManagerFactory sets the ManagerFactory for the CLI app.
+func WithPersistenceManagerFactory(factory ManagerFactory) CLIAppOptions {
 	return func(app *cli.App) {
 		if app.Metadata == nil {
 			return
@@ -62,7 +62,7 @@ func WithPersistenceManagerFactory(factory PersistenceManagerFactory) CLIAppOpti
 			return
 		}
 
-		d.PersistenceManagerFactory = factory
+		d.ManagerFactory = factory
 	}
 }
 
@@ -79,7 +79,7 @@ func NewCliApp(cf ClientFactory, opts ...CLIAppOptions) *cli.App {
 	app.Usage = "A command-line tool for cadence users"
 	app.Version = version
 	app.Metadata = map[string]any{
-		depsKey: &deps{ClientFactory: cf, IOHandler: &defaultIOHandler{app: app}, PersistenceManagerFactory: &defaultPersistenceManagerFactory{}},
+		depsKey: &deps{ClientFactory: cf, IOHandler: &defaultIOHandler{app: app}, ManagerFactory: &defaultManagerFactory{}},
 	}
 	app.Flags = []cli.Flag{
 		&cli.StringFlag{
@@ -271,7 +271,7 @@ func getDeps(ctx *cli.Context) cliDeps {
 type cliDeps interface {
 	ClientFactory
 	IOHandler
-	PersistenceManagerFactory
+	ManagerFactory
 }
 
 type IOHandler interface {
@@ -322,5 +322,5 @@ var _ cliDeps = &deps{}
 type deps struct {
 	ClientFactory
 	IOHandler
-	PersistenceManagerFactory
+	ManagerFactory
 }

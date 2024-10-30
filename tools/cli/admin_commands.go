@@ -308,7 +308,7 @@ func AdminDeleteWorkflow(c *cli.Context) error {
 	if err != nil {
 		return commoncli.Problem("Error in Admin delete WF: ", err)
 	}
-	exeStore, err := getDeps(c).initializeExecutionStore(c, shardIDInt)
+	exeStore, err := getDeps(c).initializeExecutionManager(c, shardIDInt)
 	if err != nil {
 		return commoncli.Problem("Error in Admin delete WF: ", err)
 	}

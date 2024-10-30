@@ -24,18 +24,19 @@ package cli
 
 import (
 	"flag"
-	"github.com/golang/mock/gomock"
-	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/reconciliation/invariant"
-	"github.com/uber/cadence/common/types"
+	"fmt"
 	"os"
 	"testing"
 
+	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/urfave/cli/v2"
+
+	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/reconciliation/invariant"
 )
 
-func TestAdminDBClean_errorCases(t *testing.T) {
+func TestAdminDBClean_noFixExecution(t *testing.T) {
 	tests := []struct {
 		name           string
 		setupContext   func(app *cli.App) *cli.Context
@@ -43,6 +44,26 @@ func TestAdminDBClean_errorCases(t *testing.T) {
 		expectedOutput string
 		expectedError  string
 	}{
+		{
+			name: "SuccessCase_emptyResult",
+			setupContext: func(app *cli.App) *cli.Context {
+				set := flag.NewFlagSet("test", 0)
+				// Define flags
+				set.String(FlagScanType, "", "scan type flag")
+				set.String(FlagInputFile, "", "Input file flag")
+				// Use a StringSliceFlag to simulate multiple collection values
+				set.Var(cli.NewStringSlice("CollectionHistory", "CollectionDomain"), FlagInvariantCollection, "invariant collection flag")
+
+				// Set actual values for the flags
+				_ = set.Set(FlagScanType, "ConcreteExecutionType")
+				_ = set.Set(FlagInputFile, "input.json")
+
+				return cli.NewContext(app, set, nil)
+			},
+			inputFileData:  `[{"Execution": {"ShardID": 1}}]`, // Simulate the content of input file
+			expectedOutput: ``,
+			expectedError:  "",
+		},
 		{
 			name: "MissingRequiredFlagScanType",
 			setupContext: func(app *cli.App) *cli.Context {
@@ -149,10 +170,10 @@ func TestAdminDBClean_errorCases(t *testing.T) {
 	}
 }
 
-func TestAdminDBClean(t *testing.T) {
+func TestAdminDBClean_inFixExecution(t *testing.T) {
 	tests := []struct {
 		name           string
-		contextSetup   func(td *cliTestData) *cli.Context
+		contextSetup   func(td *cliTestData, inputFilePath string) *cli.Context
 		mockSetup      func(td *cliTestData)
 		inputFileData  string
 		expectedError  string
@@ -160,71 +181,132 @@ func TestAdminDBClean(t *testing.T) {
 	}{
 		{
 			name: "Success",
-			contextSetup: func(td *cliTestData) *cli.Context {
+			contextSetup: func(td *cliTestData, inputFilePath string) *cli.Context {
 				set := flag.NewFlagSet("test", 0)
-				// Define flags
 				set.String(FlagScanType, "", "scan type flag")
-				set.String(FlagInvariantCollection, "", "invariant collection flag")
 				set.String(FlagInputFile, "", "Input file flag")
+				set.Var(cli.NewStringSlice("CollectionHistory", "CollectionDomain"), FlagInvariantCollection, "invariant collection flag")
 
-				// Set values for flags
 				_ = set.Set(FlagScanType, "ConcreteExecutionType")
-				_ = set.Set(FlagInvariantCollection, "CollectionHistory") // Valid collection to ensure invariants are generated
-				_ = set.Set(FlagInputFile, "input.json")
+				_ = set.Set(FlagInputFile, inputFilePath) // 传递临时文件路径
 
 				return cli.NewContext(td.app, set, nil)
 			},
 			mockSetup: func(td *cliTestData) {
-				// Mock the PersistenceManagerFactory
+				ctrl := gomock.NewController(t)
+				mockExecManager := persistence.NewMockExecutionManager(ctrl)
+				mockHistoryManager := persistence.NewMockHistoryManager(ctrl)
+				mockInvariantManager := invariant.NewMockManager(ctrl)
+
+				mockExecManager.EXPECT().Close().Times(1)
+				mockHistoryManager.EXPECT().Close().Times(1)
+
+				mockInvariantManager.EXPECT().RunFixes(gomock.Any(), gomock.Any()).Return(invariant.ManagerFixResult{}).Times(1)
+
+				td.mockManagerFactory.EXPECT().initializeExecutionManager(gomock.Any(), gomock.Any()).Return(mockExecManager, nil).Times(1)
+				td.mockManagerFactory.EXPECT().initializeHistoryManager(gomock.Any()).Return(mockHistoryManager, nil).Times(1)
+				td.mockManagerFactory.EXPECT().initializeInvariantManager(gomock.Any()).Return(mockInvariantManager, nil).Times(1)
+
+			},
+			inputFileData: `{"Execution": {"ShardID": 1}, "Result": {}}`,
+			expectedOutput: `{"Execution":{"BranchToken":null,"TreeID":"","BranchID":"","ShardID":1,"DomainID":"","WorkflowID":"","RunID":"","State":0},"Input":{"Execution":{"BranchToken":null,"TreeID":"","BranchID":"","ShardID":1,"DomainID":"","WorkflowID":"","RunID":"","State":0},"Result":{"CheckResultType":"","DeterminingInvariantType":null,"CheckResults":null}},"Result":{"FixResultType":"","DeterminingInvariantName":null,"FixResults":null}}
+`,
+			expectedError: "",
+		},
+		{
+			name: "init invariant manager error",
+			contextSetup: func(td *cliTestData, inputFilePath string) *cli.Context {
+				set := flag.NewFlagSet("test", 0)
+				set.String(FlagScanType, "", "scan type flag")
+				set.String(FlagInputFile, "", "Input file flag")
+				set.Var(cli.NewStringSlice("CollectionHistory", "CollectionDomain"), FlagInvariantCollection, "invariant collection flag")
+
+				_ = set.Set(FlagScanType, "ConcreteExecutionType")
+				_ = set.Set(FlagInputFile, inputFilePath) // 传递临时文件路径
+
+				return cli.NewContext(td.app, set, nil)
+			},
+			mockSetup: func(td *cliTestData) {
 				ctrl := gomock.NewController(t)
 				mockExecManager := persistence.NewMockExecutionManager(ctrl)
 				mockHistoryManager := persistence.NewMockHistoryManager(ctrl)
 
-				// Mock ExecutionManager and HistoryManager close methods
 				mockExecManager.EXPECT().Close().Times(1)
 				mockHistoryManager.EXPECT().Close().Times(1)
 
-				// Mock initializeExecutionStore and initializeHistoryManager correctly
-				td.mockPersistenceManagerFactory.EXPECT().initializeExecutionStore(gomock.Any(), gomock.Any()).Return(mockExecManager, nil).AnyTimes()
-				td.mockPersistenceManagerFactory.EXPECT().initializeHistoryManager(gomock.Any()).Return(mockHistoryManager, nil).AnyTimes()
+				td.mockManagerFactory.EXPECT().initializeExecutionManager(gomock.Any(), gomock.Any()).Return(mockExecManager, nil).Times(1)
+				td.mockManagerFactory.EXPECT().initializeHistoryManager(gomock.Any()).Return(mockHistoryManager, nil).Times(1)
+				td.mockManagerFactory.EXPECT().initializeInvariantManager(gomock.Any()).Return(nil, fmt.Errorf("init invariant manager error")).Times(1)
 
-				// Mock fixExecution by setting up a valid InvariantFactory
-				mockInvariant := invariant.NewMockInvariant(ctrl)
-				mockInvariant.EXPECT().Fix(gomock.Any(), gomock.Any()).Return(invariant.FixResult{
-					FixResultType: invariant.FixResultTypeFixed,
-				}).Times(1)
-
-				// Ensure that ToInvariants returns a non-empty list of factories
-				td.mockFrontendClient.EXPECT().StartWorkflowExecution(gomock.Any(), gomock.Any()).Return(&types.StartWorkflowExecutionResponse{RunID: "test-run-id"}, nil).AnyTimes()
 			},
 			inputFileData:  `{"Execution": {"ShardID": 1}, "Result": {}}`,
-			expectedOutput: `{"Execution":{"ShardID":1},"Input":{"Execution":{"ShardID":1}},"Result":{}}`,
-			expectedError:  "",
+			expectedOutput: ``,
+			expectedError:  "Error in fix execution: : init invariant manager error",
+		},
+		{
+			name: "init execution manager error",
+			contextSetup: func(td *cliTestData, inputFilePath string) *cli.Context {
+				set := flag.NewFlagSet("test", 0)
+				set.String(FlagScanType, "", "scan type flag")
+				set.String(FlagInputFile, "", "Input file flag")
+				set.Var(cli.NewStringSlice("CollectionHistory", "CollectionDomain"), FlagInvariantCollection, "invariant collection flag")
+
+				_ = set.Set(FlagScanType, "ConcreteExecutionType")
+				_ = set.Set(FlagInputFile, inputFilePath) // 传递临时文件路径
+
+				return cli.NewContext(td.app, set, nil)
+			},
+			mockSetup: func(td *cliTestData) {
+				td.mockManagerFactory.EXPECT().initializeExecutionManager(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("init execution manager error")).Times(1)
+			},
+			inputFileData:  `{"Execution": {"ShardID": 1}, "Result": {}}`,
+			expectedOutput: ``,
+			expectedError:  "Error in fix execution: : init execution manager error",
+		},
+		{
+			name: "init history manager error",
+			contextSetup: func(td *cliTestData, inputFilePath string) *cli.Context {
+				set := flag.NewFlagSet("test", 0)
+				set.String(FlagScanType, "", "scan type flag")
+				set.String(FlagInputFile, "", "Input file flag")
+				set.Var(cli.NewStringSlice("CollectionHistory", "CollectionDomain"), FlagInvariantCollection, "invariant collection flag")
+
+				_ = set.Set(FlagScanType, "ConcreteExecutionType")
+				_ = set.Set(FlagInputFile, inputFilePath) // 传递临时文件路径
+
+				return cli.NewContext(td.app, set, nil)
+			},
+			mockSetup: func(td *cliTestData) {
+				ctrl := gomock.NewController(t)
+				mockExecManager := persistence.NewMockExecutionManager(ctrl)
+				mockExecManager.EXPECT().Close().Times(1)
+
+				td.mockManagerFactory.EXPECT().initializeExecutionManager(gomock.Any(), gomock.Any()).Return(mockExecManager, nil).Times(1)
+				td.mockManagerFactory.EXPECT().initializeHistoryManager(gomock.Any()).Return(nil, fmt.Errorf("init history manager error")).Times(1)
+			},
+			inputFileData:  `{"Execution": {"ShardID": 1}, "Result": {}}`,
+			expectedOutput: ``,
+			expectedError:  "Error in fix execution: : init history manager error",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Create test data and set up mocks
 			td := newCLITestData(t)
 			tt.mockSetup(td)
 
-			// Create temp input file
 			inputFile, err := os.CreateTemp("", "test_input_*.json")
 			assert.NoError(t, err)
-			defer os.Remove(inputFile.Name()) // Clean up after test
+			defer os.Remove(inputFile.Name())
 
-			// Write input data to the temp file
 			if tt.inputFileData != "" {
 				_, err = inputFile.WriteString(tt.inputFileData)
 				assert.NoError(t, err)
 			}
 			inputFile.Close()
 
-			// Prepare the CLI context
-			c := tt.contextSetup(td)
+			c := tt.contextSetup(td, inputFile.Name())
 
-			// Run AdminDBClean
 			err = AdminDBClean(c)
 			if tt.expectedError != "" {
 				assert.ErrorContains(t, err, tt.expectedError)
@@ -232,7 +314,6 @@ func TestAdminDBClean(t *testing.T) {
 				assert.NoError(t, err)
 			}
 
-			// Validate output
 			assert.Equal(t, tt.expectedOutput, td.consoleOutput())
 		})
 	}

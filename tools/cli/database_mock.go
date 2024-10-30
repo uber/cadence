@@ -34,33 +34,34 @@ import (
 
 	persistence "github.com/uber/cadence/common/persistence"
 	client "github.com/uber/cadence/common/persistence/client"
+	invariant "github.com/uber/cadence/common/reconciliation/invariant"
 )
 
-// MockPersistenceManagerFactory is a mock of PersistenceManagerFactory interface.
-type MockPersistenceManagerFactory struct {
+// MockManagerFactory is a mock of ManagerFactory interface.
+type MockManagerFactory struct {
 	ctrl     *gomock.Controller
-	recorder *MockPersistenceManagerFactoryMockRecorder
+	recorder *MockManagerFactoryMockRecorder
 }
 
-// MockPersistenceManagerFactoryMockRecorder is the mock recorder for MockPersistenceManagerFactory.
-type MockPersistenceManagerFactoryMockRecorder struct {
-	mock *MockPersistenceManagerFactory
+// MockManagerFactoryMockRecorder is the mock recorder for MockManagerFactory.
+type MockManagerFactoryMockRecorder struct {
+	mock *MockManagerFactory
 }
 
-// NewMockPersistenceManagerFactory creates a new mock instance.
-func NewMockPersistenceManagerFactory(ctrl *gomock.Controller) *MockPersistenceManagerFactory {
-	mock := &MockPersistenceManagerFactory{ctrl: ctrl}
-	mock.recorder = &MockPersistenceManagerFactoryMockRecorder{mock}
+// NewMockManagerFactory creates a new mock instance.
+func NewMockManagerFactory(ctrl *gomock.Controller) *MockManagerFactory {
+	mock := &MockManagerFactory{ctrl: ctrl}
+	mock.recorder = &MockManagerFactoryMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockPersistenceManagerFactory) EXPECT() *MockPersistenceManagerFactoryMockRecorder {
+func (m *MockManagerFactory) EXPECT() *MockManagerFactoryMockRecorder {
 	return m.recorder
 }
 
 // initPersistenceFactory mocks base method.
-func (m *MockPersistenceManagerFactory) initPersistenceFactory(c *cli.Context) (client.Factory, error) {
+func (m *MockManagerFactory) initPersistenceFactory(c *cli.Context) (client.Factory, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "initPersistenceFactory", c)
 	ret0, _ := ret[0].(client.Factory)
@@ -69,13 +70,13 @@ func (m *MockPersistenceManagerFactory) initPersistenceFactory(c *cli.Context) (
 }
 
 // initPersistenceFactory indicates an expected call of initPersistenceFactory.
-func (mr *MockPersistenceManagerFactoryMockRecorder) initPersistenceFactory(c interface{}) *gomock.Call {
+func (mr *MockManagerFactoryMockRecorder) initPersistenceFactory(c interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "initPersistenceFactory", reflect.TypeOf((*MockPersistenceManagerFactory)(nil).initPersistenceFactory), c)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "initPersistenceFactory", reflect.TypeOf((*MockManagerFactory)(nil).initPersistenceFactory), c)
 }
 
 // initializeDomainManager mocks base method.
-func (m *MockPersistenceManagerFactory) initializeDomainManager(c *cli.Context) (persistence.DomainManager, error) {
+func (m *MockManagerFactory) initializeDomainManager(c *cli.Context) (persistence.DomainManager, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "initializeDomainManager", c)
 	ret0, _ := ret[0].(persistence.DomainManager)
@@ -84,28 +85,28 @@ func (m *MockPersistenceManagerFactory) initializeDomainManager(c *cli.Context) 
 }
 
 // initializeDomainManager indicates an expected call of initializeDomainManager.
-func (mr *MockPersistenceManagerFactoryMockRecorder) initializeDomainManager(c interface{}) *gomock.Call {
+func (mr *MockManagerFactoryMockRecorder) initializeDomainManager(c interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "initializeDomainManager", reflect.TypeOf((*MockPersistenceManagerFactory)(nil).initializeDomainManager), c)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "initializeDomainManager", reflect.TypeOf((*MockManagerFactory)(nil).initializeDomainManager), c)
 }
 
-// initializeExecutionStore mocks base method.
-func (m *MockPersistenceManagerFactory) initializeExecutionStore(c *cli.Context, shardID int) (persistence.ExecutionManager, error) {
+// initializeExecutionManager mocks base method.
+func (m *MockManagerFactory) initializeExecutionManager(c *cli.Context, shardID int) (persistence.ExecutionManager, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "initializeExecutionStore", c, shardID)
+	ret := m.ctrl.Call(m, "initializeExecutionManager", c, shardID)
 	ret0, _ := ret[0].(persistence.ExecutionManager)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// initializeExecutionStore indicates an expected call of initializeExecutionStore.
-func (mr *MockPersistenceManagerFactoryMockRecorder) initializeExecutionStore(c, shardID interface{}) *gomock.Call {
+// initializeExecutionManager indicates an expected call of initializeExecutionManager.
+func (mr *MockManagerFactoryMockRecorder) initializeExecutionManager(c, shardID interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "initializeExecutionStore", reflect.TypeOf((*MockPersistenceManagerFactory)(nil).initializeExecutionStore), c, shardID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "initializeExecutionManager", reflect.TypeOf((*MockManagerFactory)(nil).initializeExecutionManager), c, shardID)
 }
 
 // initializeHistoryManager mocks base method.
-func (m *MockPersistenceManagerFactory) initializeHistoryManager(c *cli.Context) (persistence.HistoryManager, error) {
+func (m *MockManagerFactory) initializeHistoryManager(c *cli.Context) (persistence.HistoryManager, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "initializeHistoryManager", c)
 	ret0, _ := ret[0].(persistence.HistoryManager)
@@ -114,13 +115,28 @@ func (m *MockPersistenceManagerFactory) initializeHistoryManager(c *cli.Context)
 }
 
 // initializeHistoryManager indicates an expected call of initializeHistoryManager.
-func (mr *MockPersistenceManagerFactoryMockRecorder) initializeHistoryManager(c interface{}) *gomock.Call {
+func (mr *MockManagerFactoryMockRecorder) initializeHistoryManager(c interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "initializeHistoryManager", reflect.TypeOf((*MockPersistenceManagerFactory)(nil).initializeHistoryManager), c)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "initializeHistoryManager", reflect.TypeOf((*MockManagerFactory)(nil).initializeHistoryManager), c)
+}
+
+// initializeInvariantManager mocks base method.
+func (m *MockManagerFactory) initializeInvariantManager(ivs []invariant.Invariant) (invariant.Manager, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "initializeInvariantManager", ivs)
+	ret0, _ := ret[0].(invariant.Manager)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// initializeInvariantManager indicates an expected call of initializeInvariantManager.
+func (mr *MockManagerFactoryMockRecorder) initializeInvariantManager(ivs interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "initializeInvariantManager", reflect.TypeOf((*MockManagerFactory)(nil).initializeInvariantManager), ivs)
 }
 
 // initializeShardManager mocks base method.
-func (m *MockPersistenceManagerFactory) initializeShardManager(c *cli.Context) (persistence.ShardManager, error) {
+func (m *MockManagerFactory) initializeShardManager(c *cli.Context) (persistence.ShardManager, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "initializeShardManager", c)
 	ret0, _ := ret[0].(persistence.ShardManager)
@@ -129,7 +145,7 @@ func (m *MockPersistenceManagerFactory) initializeShardManager(c *cli.Context) (
 }
 
 // initializeShardManager indicates an expected call of initializeShardManager.
-func (mr *MockPersistenceManagerFactoryMockRecorder) initializeShardManager(c interface{}) *gomock.Call {
+func (mr *MockManagerFactoryMockRecorder) initializeShardManager(c interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "initializeShardManager", reflect.TypeOf((*MockPersistenceManagerFactory)(nil).initializeShardManager), c)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "initializeShardManager", reflect.TypeOf((*MockManagerFactory)(nil).initializeShardManager), c)
 }

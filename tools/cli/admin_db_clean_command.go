@@ -121,7 +121,8 @@ func AdminDBClean(c *cli.Context) error {
 			continue
 		}
 
-		fmt.Println(string(data))
+		output := getDeps(c).Output()
+		output.Write([]byte(string(data) + "\n"))
 	}
 	return nil
 }
@@ -131,19 +132,19 @@ func fixExecution(
 	invariants []executions.InvariantFactory,
 	execution *store.ScanOutputEntity,
 ) (invariant.ManagerFixResult, error) {
-	execManager, err := getDeps(c).initializeExecutionStore(c, execution.Execution.(entity.Entity).GetShardID())
+	execManager, err := getDeps(c).initializeExecutionManager(c, execution.Execution.(entity.Entity).GetShardID())
 	if execManager != nil {
 		defer execManager.Close()
 	}
 	if err != nil {
-		return invariant.ManagerFixResult{}, fmt.Errorf("Error in fix execution: %w", err)
+		return invariant.ManagerFixResult{}, err
 	}
 	historyV2Mgr, err := getDeps(c).initializeHistoryManager(c)
 	if historyV2Mgr != nil {
 		defer historyV2Mgr.Close()
 	}
 	if err != nil {
-		return invariant.ManagerFixResult{}, fmt.Errorf("Error in fix execution: %w", err)
+		return invariant.ManagerFixResult{}, err
 	}
 	pr := persistence.NewPersistenceRetryer(
 		execManager,
@@ -160,7 +161,12 @@ func fixExecution(
 	ctx, cancel, err := newContext(c)
 	defer cancel()
 	if err != nil {
-		return invariant.ManagerFixResult{}, fmt.Errorf("Context not created: %w", err)
+		return invariant.ManagerFixResult{}, err
 	}
-	return invariant.NewInvariantManager(ivs).RunFixes(ctx, execution.Execution), nil
+	invariantManager, err := getDeps(c).initializeInvariantManager(ivs)
+	if err != nil {
+		return invariant.ManagerFixResult{}, err
+	}
+
+	return invariantManager.RunFixes(ctx, execution.Execution.(entity.Entity)), nil
 }
