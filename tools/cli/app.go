@@ -50,6 +50,22 @@ func WithIOHandler(h IOHandler) CLIAppOptions {
 	}
 }
 
+// WithPersistenceManagerFactory sets the PersistenceManagerFactory for the CLI app.
+func WithPersistenceManagerFactory(factory PersistenceManagerFactory) CLIAppOptions {
+	return func(app *cli.App) {
+		if app.Metadata == nil {
+			return
+		}
+
+		d, ok := app.Metadata[depsKey].(*deps)
+		if !ok {
+			return
+		}
+
+		d.PersistenceManagerFactory = factory
+	}
+}
+
 // NewCliApp instantiates a new instance of the CLI application
 func NewCliApp(cf ClientFactory, opts ...CLIAppOptions) *cli.App {
 	version := fmt.Sprintf("CLI feature version: %v \n"+

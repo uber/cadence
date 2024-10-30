@@ -47,10 +47,11 @@ const (
 )
 
 type cliTestData struct {
-	mockFrontendClient *frontend.MockClient
-	mockAdminClient    *admin.MockClient
-	ioHandler          *testIOHandler
-	app                *cli.App
+	mockFrontendClient            *frontend.MockClient
+	mockAdminClient               *admin.MockClient
+	ioHandler                     *testIOHandler
+	app                           *cli.App
+	mockPersistenceManagerFactory *MockPersistenceManagerFactory
 }
 
 func newCLITestData(t *testing.T) *cliTestData {
@@ -60,15 +61,17 @@ func newCLITestData(t *testing.T) *cliTestData {
 
 	td.mockFrontendClient = frontend.NewMockClient(ctrl)
 	td.mockAdminClient = admin.NewMockClient(ctrl)
+	td.mockPersistenceManagerFactory = NewMockPersistenceManagerFactory(ctrl)
 	td.ioHandler = &testIOHandler{}
 
-	// make a new CLI App with client factory returning our frontend and admin clients
+	// Create a new CLI app with client factory and persistence manager factory
 	td.app = NewCliApp(
 		&clientFactoryMock{
 			serverFrontendClient: td.mockFrontendClient,
 			serverAdminClient:    td.mockAdminClient,
 		},
 		WithIOHandler(td.ioHandler),
+		WithPersistenceManagerFactory(td.mockPersistenceManagerFactory), // Inject the mocked persistence manager factory
 	)
 	return &td
 }
