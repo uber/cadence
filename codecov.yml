@@ -55,6 +55,7 @@ ignore:
   - "common/persistence/nosql/nosqlplugin/cassandra/admin.go"
   - "common/persistence/nosql/nosqlplugin/dynamodb/**"
   - "common/persistence/nosql/nosqlplugin/mongodb/**"
+  - "common/persistence/sql/**"
   - "common/types/shared.go" # 8k lines of getters. Not worth testing manually but consider switching to generated code.
   - "host/**"
   - "idls/**"
