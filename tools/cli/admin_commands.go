@@ -61,7 +61,7 @@ func AdminShowWorkflow(c *cli.Context) error {
 	var history []*persistence.DataBlob
 	if len(tid) != 0 {
 		thriftrwEncoder := codec.NewThriftRWEncoder()
-		histV2, err := initializeHistoryManager(c)
+		histV2, err := getDeps(c).initializeHistoryManager(c)
 		if err != nil {
 			return commoncli.Problem("Error in Admin delete WF: ", err)
 		}
@@ -303,12 +303,12 @@ func AdminDeleteWorkflow(c *cli.Context) error {
 	if err != nil {
 		return commoncli.Problem("strconv.Atoi(shardID) err", err)
 	}
-	histV2, err := initializeHistoryManager(c)
+	histV2, err := getDeps(c).initializeHistoryManager(c)
 	defer histV2.Close()
 	if err != nil {
 		return commoncli.Problem("Error in Admin delete WF: ", err)
 	}
-	exeStore, err := initializeExecutionStore(c, shardIDInt)
+	exeStore, err := getDeps(c).initializeExecutionStore(c, shardIDInt)
 	if err != nil {
 		return commoncli.Problem("Error in Admin delete WF: ", err)
 	}
@@ -387,7 +387,7 @@ func AdminGetDomainIDOrName(c *cli.Context) error {
 		return commoncli.Problem("Need either domainName or domainID", nil)
 	}
 
-	domainManager, err := initializeDomainManager(c)
+	domainManager, err := getDeps(c).initializeDomainManager(c)
 	if err != nil {
 		return commoncli.Problem("Error in Admin delete WF: ", err)
 	}
@@ -487,7 +487,7 @@ func AdminDescribeShard(c *cli.Context) error {
 	if err != nil {
 		return commoncli.Problem("Error in creating context: ", err)
 	}
-	shardManager, err := initializeShardManager(c)
+	shardManager, err := getDeps(c).initializeShardManager(c)
 	if err != nil {
 		return commoncli.Problem("Error in Admin delete WF: ", err)
 	}
@@ -516,7 +516,7 @@ func AdminSetShardRangeID(c *cli.Context) error {
 	if err != nil {
 		return commoncli.Problem("Error in creating context: ", err)
 	}
-	shardManager, err := initializeShardManager(c)
+	shardManager, err := getDeps(c).initializeShardManager(c)
 	if err != nil {
 		return commoncli.Problem("Error in Admin delete WF: ", err)
 	}

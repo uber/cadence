@@ -71,48 +71,25 @@ var (
 	maxRetentionDays = 200
 )
 
+type staleWorkflowCheck struct {
+	pr  persistence.Retryer
+	dc  cache.DomainCache
+	log *zap.Logger
+}
+
 // NewStaleWorkflow checks to see if a workflow has out-lived its retention window.
 // This primarily asserts that that now < (min(start + execution timeout, min) + (domain retention*2)).
 // If a workflow fails this check, its data is still lingering well beyond when it should have been cleaned up.
 func NewStaleWorkflow(
-	pr persistence.Retryer, dc cache.DomainCache, log *zap.Logger,
+	pr persistence.Retryer,
+	dc cache.DomainCache,
+	log *zap.Logger,
 ) Invariant {
 	return &staleWorkflowCheck{
-		pr:       pr,
-		dc:       dc,
-		log:      log,
-		testable: actual{dc: dc},
+		pr:  pr,
+		dc:  dc,
+		log: log,
 	}
-}
-
-// small wrapper for testable things.
-type testable interface {
-	getDomainInfo(*persistence.WorkflowExecutionInfo) (retention int32, name string, err error)
-}
-
-// non-test implementation of testable
-type actual struct {
-	dc cache.DomainCache
-}
-
-var _ testable = actual{}
-
-func (a actual) getDomainInfo(info *persistence.WorkflowExecutionInfo) (retention int32, name string, err error) {
-	// domain cache entries have private fields, hence this testable method is necessary to avoid using them
-
-	domain, err := a.dc.GetDomainByID(info.DomainID)
-	if err != nil {
-		return -1, "", err
-	}
-	retentionNum := domain.GetRetentionDays(info.WorkflowID) // takes retention-sampling into account
-	return retentionNum, domain.GetInfo().Name, nil
-}
-
-type staleWorkflowCheck struct {
-	pr       persistence.Retryer
-	dc       cache.DomainCache
-	log      *zap.Logger
-	testable testable
 }
 
 func (c *staleWorkflowCheck) Check(
@@ -163,10 +140,7 @@ func (c *staleWorkflowCheck) check(
 	// TODO: ^ similar check for current record?  Bad-current can sometimes block a different concrete.
 }
 
-func (c *staleWorkflowCheck) Fix(
-	ctx context.Context,
-	execution interface{},
-) FixResult {
+func (c *staleWorkflowCheck) Fix(ctx context.Context, execution interface{}) FixResult {
 	// essentially checkBeforeFix
 	deleteConcrete, checkResult := c.check(ctx, execution)
 	if checkResult.CheckResultType == CheckResultTypeHealthy {
@@ -210,7 +184,7 @@ func (c *staleWorkflowCheck) Name() Name {
 
 func (c *staleWorkflowCheck) CheckAge(workflow *persistence.GetWorkflowExecutionResponse) (pastExpiration bool, result CheckResult) {
 	info := workflow.State.ExecutionInfo
-	retentionNum, domainName, err := c.testable.getDomainInfo(info)
+	retentionNum, domainName, err := c.getDomainInfo(info)
 	if err != nil {
 		return false, c.failed(
 			"unable to get domain retention",
@@ -633,4 +607,15 @@ func (c *staleWorkflowCheck) getLastEvent(branchToken []byte, domainName string)
 
 	// should be unreachable, assuming our limits work
 	return nil, fmt.Errorf("exceeded max history requests (%v), failing for branch token: %s", iter, branchToken)
+}
+
+func (c *staleWorkflowCheck) getDomainInfo(info *persistence.WorkflowExecutionInfo) (retention int32, name string, err error) {
+	// domain cache entries have private fields, hence this testable method is necessary to avoid using them
+
+	domain, err := c.dc.GetDomainByID(info.DomainID)
+	if err != nil {
+		return -1, "", err
+	}
+	retentionNum := domain.GetRetentionDays(info.WorkflowID) // takes retention-sampling into account
+	return retentionNum, domain.GetInfo().Name, nil
 }

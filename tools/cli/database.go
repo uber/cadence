@@ -18,6 +18,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+//go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination database_mock.go -self_package github.com/uber/cadence/tools/cli
+
 package cli
 
 import (
@@ -150,20 +152,32 @@ func getDBFlags() []cli.Flag {
 	}
 }
 
-func initializeExecutionStore(c *cli.Context, shardID int) (persistence.ExecutionManager, error) {
-	factory, err := getPersistenceFactory(c)
+type PersistenceManagerFactory interface {
+	initializeExecutionStore(c *cli.Context, shardID int) (persistence.ExecutionManager, error)
+	initializeHistoryManager(c *cli.Context) (persistence.HistoryManager, error)
+	initializeShardManager(c *cli.Context) (persistence.ShardManager, error)
+	initializeDomainManager(c *cli.Context) (persistence.DomainManager, error)
+	initPersistenceFactory(c *cli.Context) (client.Factory, error)
+}
+
+type defaultPersistenceManagerFactory struct {
+	persistenceFactory client.Factory
+}
+
+func (f *defaultPersistenceManagerFactory) initializeExecutionStore(c *cli.Context, shardID int) (persistence.ExecutionManager, error) {
+	factory, err := f.getPersistenceFactory(c)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to get persistence factory: %w", err)
 	}
-	historyManager, err := factory.NewExecutionManager(shardID)
+	executionManager, err := factory.NewExecutionManager(shardID)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to initialize history manager %w", err)
 	}
-	return historyManager, nil
+	return executionManager, nil
 }
 
-func initializeHistoryManager(c *cli.Context) (persistence.HistoryManager, error) {
-	factory, err := getPersistenceFactory(c)
+func (f *defaultPersistenceManagerFactory) initializeHistoryManager(c *cli.Context) (persistence.HistoryManager, error) {
+	factory, err := f.getPersistenceFactory(c)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to get persistence factory: %w", err)
 	}
@@ -174,8 +188,8 @@ func initializeHistoryManager(c *cli.Context) (persistence.HistoryManager, error
 	return historyManager, nil
 }
 
-func initializeShardManager(c *cli.Context) (persistence.ShardManager, error) {
-	factory, err := getPersistenceFactory(c)
+func (f *defaultPersistenceManagerFactory) initializeShardManager(c *cli.Context) (persistence.ShardManager, error) {
+	factory, err := f.getPersistenceFactory(c)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to get persistence factory: %w", err)
 	}
@@ -186,8 +200,8 @@ func initializeShardManager(c *cli.Context) (persistence.ShardManager, error) {
 	return shardManager, nil
 }
 
-func initializeDomainManager(c *cli.Context) (persistence.DomainManager, error) {
-	factory, err := getPersistenceFactory(c)
+func (f *defaultPersistenceManagerFactory) initializeDomainManager(c *cli.Context) (persistence.DomainManager, error) {
+	factory, err := f.getPersistenceFactory(c)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to get persistence factory: %w", err)
 	}
@@ -198,20 +212,18 @@ func initializeDomainManager(c *cli.Context) (persistence.DomainManager, error) 
 	return domainManager, nil
 }
 
-var persistenceFactory client.Factory
-
-func getPersistenceFactory(c *cli.Context) (client.Factory, error) {
+func (f *defaultPersistenceManagerFactory) getPersistenceFactory(c *cli.Context) (client.Factory, error) {
 	var err error
-	if persistenceFactory == nil {
-		persistenceFactory, err = initPersistenceFactory(c)
+	if f.persistenceFactory == nil {
+		f.persistenceFactory, err = getDeps(c).initPersistenceFactory(c)
 		if err != nil {
-			return persistenceFactory, fmt.Errorf("%w", err)
+			return f.persistenceFactory, fmt.Errorf("%w", err)
 		}
 	}
-	return persistenceFactory, nil
+	return f.persistenceFactory, nil
 }
 
-func initPersistenceFactory(c *cli.Context) (client.Factory, error) {
+func (f *defaultPersistenceManagerFactory) initPersistenceFactory(c *cli.Context) (client.Factory, error) {
 	cfg, err := getDeps(c).ServerConfig(c)
 
 	if err != nil {

@@ -23,32 +23,46 @@
 package invariant
 
 import (
+	"context"
 	"fmt"
 	"math/rand"
 	"testing"
 	"time"
 
 	"github.com/golang/mock/gomock"
-	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/log/testlogger"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/reconciliation/entity"
 	"github.com/uber/cadence/common/types"
 )
 
-func setup(t *testing.T, retentionDays int) (pr *persistence.MockRetryer, impl *staleWorkflowCheck) {
+func setup(t *testing.T, retentionDays int) (*persistence.MockRetryer, *staleWorkflowCheck) {
 	ctrl := gomock.NewController(t)
-	m := persistence.NewMockRetryer(ctrl)
-	impl = &staleWorkflowCheck{
-		pr:       m,
-		dc:       nil, // not used by these tests
-		log:      testlogger.NewZap(t),
-		testable: &mocked{},
+	pr := persistence.NewMockRetryer(ctrl)
+	dc := cache.NewMockDomainCache(ctrl)
+	domainEntry := cache.NewDomainCacheEntryForTest(
+		&persistence.DomainInfo{ID: domainID, Name: domainName},
+		&persistence.DomainConfig{Retention: int32(retentionDays)},
+		true,
+		nil,
+		0,
+		nil,
+		0,
+		0,
+		0)
+	dc.EXPECT().GetDomainByID(domainID).Return(domainEntry, nil).AnyTimes()
+	dc.EXPECT().GetDomainName(domainID).Return(domainName, nil).AnyTimes()
+
+	invariant := NewStaleWorkflow(pr, dc, testlogger.NewZap(t))
+	impl, ok := invariant.(*staleWorkflowCheck)
+	if !ok {
+		t.Fatalf("NewStaleWorkflowVersion returned invariant of type %T but want *staleWorkflowCheck", invariant)
 	}
-	withDomain(retentionDays, impl)
-	return m, impl
+	return pr, impl
 }
 
 // some acceptable defaults for tests that don't care about precise windows
@@ -57,6 +71,291 @@ const (
 	testRetentionAfterSafetyMargin = (time.Duration(testRetentionDays) * 24 * time.Hour) + retentionSafetyMargin
 	oneDay                         = 24 * time.Hour
 )
+
+// This test case validates the Check method for stale workflow invariant is doing the correct thing at high level.
+// Rest of the tests in this file covers the internals of CheckAge which is called by Check.
+func TestCheck(t *testing.T) {
+	tests := []struct {
+		desc       string
+		execution  any
+		mockFn     func(*persistence.MockRetryer)
+		wantResult CheckResult
+	}{
+		{
+			desc: "corrupted workflow past expiration",
+			execution: &entity.ConcreteExecution{
+				Execution: entity.Execution{
+					WorkflowID: workflowID,
+					RunID:      runID,
+					DomainID:   domainID,
+				},
+			},
+			mockFn: func(pr *persistence.MockRetryer) {
+				pr.EXPECT().GetWorkflowExecution(gomock.Any(), &persistence.GetWorkflowExecutionRequest{
+					DomainID: domainID,
+					Execution: types.WorkflowExecution{
+						WorkflowID: workflowID,
+						RunID:      runID,
+					},
+				}).Return(execution(domainID, running, time.Now().Add(-testRetentionAfterSafetyMargin-2*time.Hour), time.Hour, nil), nil).Times(1)
+
+				pr.EXPECT().GetShardID().Return(123).Times(1)
+				pr.EXPECT().ReadHistoryBranch(gomock.Any(), gomock.Any()).
+					Return(&persistence.ReadHistoryBranchResponse{
+						HistoryEvents: []*types.HistoryEvent{
+							{
+								WorkflowExecutionStartedEventAttributes: &types.WorkflowExecutionStartedEventAttributes{},
+							},
+						},
+					}, nil).Times(1)
+			},
+			wantResult: CheckResult{
+				CheckResultType: CheckResultTypeCorrupted,
+				InvariantName:   "stale_workflow",
+				Info:            "stale running workflow",
+			},
+		},
+		{
+			desc: "normal healthy workflow",
+			execution: &entity.ConcreteExecution{
+				Execution: entity.Execution{
+					WorkflowID: workflowID,
+					RunID:      runID,
+					DomainID:   domainID,
+				},
+			},
+			mockFn: func(pr *persistence.MockRetryer) {
+				pr.EXPECT().GetWorkflowExecution(gomock.Any(), &persistence.GetWorkflowExecutionRequest{
+					DomainID: domainID,
+					Execution: types.WorkflowExecution{
+						WorkflowID: workflowID,
+						RunID:      runID,
+					},
+				}).Return(execution(domainID, running, time.Now().Add(-2*time.Hour), time.Hour, nil), nil).Times(1)
+
+				pr.EXPECT().GetShardID().Return(123).Times(1)
+				pr.EXPECT().ReadHistoryBranch(gomock.Any(), gomock.Any()).
+					Return(&persistence.ReadHistoryBranchResponse{
+						HistoryEvents: []*types.HistoryEvent{
+							{
+								WorkflowExecutionStartedEventAttributes: &types.WorkflowExecutionStartedEventAttributes{},
+							},
+						},
+					}, nil).Times(1)
+			},
+			wantResult: CheckResult{
+				CheckResultType: CheckResultTypeHealthy,
+				InvariantName:   "stale_workflow",
+				Info:            "running workflow is within expiration window",
+			},
+		},
+		{
+			desc: "zombie healthy workflow",
+			execution: &entity.ConcreteExecution{
+				Execution: entity.Execution{
+					WorkflowID: workflowID,
+					RunID:      runID,
+					DomainID:   domainID,
+				},
+			},
+			mockFn: func(pr *persistence.MockRetryer) {
+				pr.EXPECT().GetWorkflowExecution(gomock.Any(), &persistence.GetWorkflowExecutionRequest{
+					DomainID: domainID,
+					Execution: types.WorkflowExecution{
+						WorkflowID: workflowID,
+						RunID:      runID,
+					},
+				}).Return(execution(domainID, zombie, time.Now().Add(-2*time.Hour), time.Hour, nil), nil).Times(1)
+
+				pr.EXPECT().GetShardID().Return(123).Times(1)
+				pr.EXPECT().ReadHistoryBranch(gomock.Any(), gomock.Any()).
+					Return(&persistence.ReadHistoryBranchResponse{
+						HistoryEvents: []*types.HistoryEvent{
+							{
+								WorkflowExecutionStartedEventAttributes: &types.WorkflowExecutionStartedEventAttributes{},
+							},
+						},
+					}, nil).Times(1)
+			},
+			wantResult: CheckResult{
+				CheckResultType: CheckResultTypeHealthy,
+				InvariantName:   "stale_workflow",
+				Info:            "zombie workflow is within expiration window",
+			},
+		},
+		{
+			desc:      "invalid execution object type",
+			execution: &entity.Timer{}, // invalid object type
+			mockFn:    func(pr *persistence.MockRetryer) {},
+			wantResult: CheckResult{
+				CheckResultType: CheckResultTypeFailed,
+				InvariantName:   "stale_workflow",
+				Info:            "expected concrete execution",
+			},
+		},
+		{
+			desc: "missing workflow id",
+			execution: &entity.ConcreteExecution{
+				Execution: entity.Execution{
+					WorkflowID: "", // missing workflow id
+					RunID:      runID,
+					DomainID:   domainID,
+				},
+			},
+			mockFn: func(pr *persistence.MockRetryer) {},
+			wantResult: CheckResult{
+				CheckResultType: CheckResultTypeFailed,
+				InvariantName:   "stale_workflow",
+				Info:            "missing critical data",
+			},
+		},
+		{
+			desc: "get workflow execution failed",
+			execution: &entity.ConcreteExecution{
+				Execution: entity.Execution{
+					WorkflowID: workflowID,
+					RunID:      runID,
+					DomainID:   domainID,
+				},
+			},
+			mockFn: func(pr *persistence.MockRetryer) {
+				pr.EXPECT().GetWorkflowExecution(gomock.Any(), &persistence.GetWorkflowExecutionRequest{
+					DomainID: domainID,
+					Execution: types.WorkflowExecution{
+						WorkflowID: workflowID,
+						RunID:      runID,
+					},
+				}).Return(nil, fmt.Errorf("failed")).Times(1)
+			},
+			wantResult: CheckResult{
+				CheckResultType: CheckResultTypeFailed,
+				InvariantName:   "stale_workflow",
+				Info:            "failed to get concrete execution record",
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.desc, func(t *testing.T) {
+			pr, impl := setup(t, testRetentionDays)
+
+			tc.mockFn(pr)
+
+			gotResult := impl.Check(context.Background(), tc.execution)
+			gotResult.InfoDetails = "" // ignore details for now
+			assert.Equal(t, tc.wantResult, gotResult)
+		})
+	}
+}
+
+func TestFix(t *testing.T) {
+	tests := []struct {
+		desc       string
+		execution  any
+		mockFn     func(*persistence.MockRetryer)
+		wantResult FixResult
+	}{
+		{
+			desc: "healthy workflow skipped",
+			execution: &entity.ConcreteExecution{
+				Execution: entity.Execution{
+					WorkflowID: workflowID,
+					RunID:      runID,
+					DomainID:   domainID,
+				},
+			},
+			mockFn: func(pr *persistence.MockRetryer) {
+				pr.EXPECT().GetWorkflowExecution(gomock.Any(), &persistence.GetWorkflowExecutionRequest{
+					DomainID: domainID,
+					Execution: types.WorkflowExecution{
+						WorkflowID: workflowID,
+						RunID:      runID,
+					},
+				}).Return(execution(domainID, running, time.Now().Add(-2*time.Hour), time.Hour, nil), nil).Times(1)
+
+				pr.EXPECT().GetShardID().Return(123).Times(1)
+				pr.EXPECT().ReadHistoryBranch(gomock.Any(), gomock.Any()).
+					Return(&persistence.ReadHistoryBranchResponse{
+						HistoryEvents: []*types.HistoryEvent{
+							{
+								WorkflowExecutionStartedEventAttributes: &types.WorkflowExecutionStartedEventAttributes{},
+							},
+						},
+					}, nil).Times(1)
+			},
+			wantResult: FixResult{
+				FixResultType: FixResultTypeSkipped,
+				InvariantName: "stale_workflow",
+				Info:          "no need to fix: running workflow is within expiration window",
+			},
+		},
+		{
+			desc: "corrupted workflow deleted",
+			execution: &entity.ConcreteExecution{
+				Execution: entity.Execution{
+					WorkflowID: workflowID,
+					RunID:      runID,
+					DomainID:   domainID,
+				},
+			},
+			mockFn: func(pr *persistence.MockRetryer) {
+				pr.EXPECT().GetWorkflowExecution(gomock.Any(), &persistence.GetWorkflowExecutionRequest{
+					DomainID: domainID,
+					Execution: types.WorkflowExecution{
+						WorkflowID: workflowID,
+						RunID:      runID,
+					},
+				}).Return(execution(domainID, running, time.Now().Add(-testRetentionAfterSafetyMargin-2*time.Hour), time.Hour, nil), nil).Times(1)
+
+				pr.EXPECT().GetShardID().Return(123).Times(1)
+				pr.EXPECT().ReadHistoryBranch(gomock.Any(), gomock.Any()).
+					Return(&persistence.ReadHistoryBranchResponse{
+						HistoryEvents: []*types.HistoryEvent{
+							{
+								WorkflowExecutionStartedEventAttributes: &types.WorkflowExecutionStartedEventAttributes{},
+							},
+						},
+					}, nil).Times(1)
+
+				pr.EXPECT().DeleteWorkflowExecution(gomock.Any(), &persistence.DeleteWorkflowExecutionRequest{
+					DomainID:   domainID,
+					WorkflowID: workflowID,
+					RunID:      runID,
+					DomainName: domainName,
+				}).Return(nil).Times(1)
+
+				pr.EXPECT().DeleteCurrentWorkflowExecution(gomock.Any(), &persistence.DeleteCurrentWorkflowExecutionRequest{
+					DomainID:   domainID,
+					WorkflowID: workflowID,
+					RunID:      runID,
+					DomainName: domainName,
+				}).Return(nil).Times(1)
+			},
+			wantResult: FixResult{
+				FixResultType: FixResultTypeFixed,
+				InvariantName: "stale_workflow",
+				CheckResult: CheckResult{
+					CheckResultType: CheckResultTypeCorrupted,
+					InvariantName:   "stale_workflow",
+					Info:            "stale running workflow",
+				},
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.desc, func(t *testing.T) {
+			pr, impl := setup(t, testRetentionDays)
+
+			tc.mockFn(pr)
+
+			gotResult := impl.Fix(context.Background(), tc.execution)
+			gotResult.CheckResult.InfoDetails = "" // ignore details for now
+			gotResult.InfoDetails = ""             // ignore details for now
+			assert.Equal(t, tc.wantResult, gotResult)
+		})
+	}
+}
 
 func TestStillRunning(t *testing.T) {
 	// lots of similarity in these tests, abstract it a bit.
@@ -79,7 +378,7 @@ func TestStillRunning(t *testing.T) {
 			pr,
 		)
 		wf := execution(
-			uuid.New().String(),
+			domainID,
 			running,
 			created,
 			timeout,
@@ -208,7 +507,7 @@ func TestComplete(t *testing.T) {
 			t.Log("leaving completed time as nil")
 		}
 
-		wf := execution(uuid.New().String(), closed, created, timeout, maybeCompleted)
+		wf := execution(domainID, closed, created, timeout, maybeCompleted)
 
 		return impl.CheckAge(wf)
 	}
@@ -278,7 +577,7 @@ func TestCompleteWithRunningFallback(t *testing.T) {
 	startTime := time.Now().Add(-testRetentionAfterSafetyMargin).Add(-2 * oneDay) // started long ago
 	withOpenHistoryFallback(startTime, 0, pr)
 	wf := execution(
-		uuid.New().String(),
+		domainID,
 		closed,
 		startTime,
 		time.Hour, // would have timed out 1 hour after starting, outside retention
@@ -376,14 +675,6 @@ func withOpenHistoryFallback(start time.Time, backoff time.Duration, pr *persist
 	withOpenHistory(start, backoff, pr)
 }
 
-func withDomain(retentionDays int, check *staleWorkflowCheck) {
-	check.testable.(*mocked).domaininfo = mockdomaininfo{
-		retention: int32(retentionDays),
-		name:      "test-domain",
-		err:       nil,
-	}
-}
-
 type requestMaxEvent struct {
 	max   int64
 	token string
@@ -445,19 +736,4 @@ func execution(domainid string, state workflowstate, created time.Time, timeout 
 		}
 	}
 	return res
-}
-
-type mocked struct {
-	domaininfo mockdomaininfo
-}
-type mockdomaininfo struct {
-	retention int32
-	name      string
-	err       error
-}
-
-var _ testable = (*mocked)(nil) // needs to be mutable
-
-func (m *mocked) getDomainInfo(*persistence.WorkflowExecutionInfo) (retention int32, name string, err error) {
-	return m.domaininfo.retention, m.domaininfo.name, m.domaininfo.err
 }
