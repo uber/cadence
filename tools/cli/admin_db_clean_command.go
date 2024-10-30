@@ -133,19 +133,17 @@ func fixExecution(
 	execution *store.ScanOutputEntity,
 ) (invariant.ManagerFixResult, error) {
 	execManager, err := getDeps(c).initializeExecutionManager(c, execution.Execution.(entity.Entity).GetShardID())
-	if execManager != nil {
-		defer execManager.Close()
-	}
 	if err != nil {
 		return invariant.ManagerFixResult{}, err
 	}
+	defer execManager.Close()
+
 	historyV2Mgr, err := getDeps(c).initializeHistoryManager(c)
-	if historyV2Mgr != nil {
-		defer historyV2Mgr.Close()
-	}
 	if err != nil {
 		return invariant.ManagerFixResult{}, err
 	}
+	defer historyV2Mgr.Close()
+
 	pr := persistence.NewPersistenceRetryer(
 		execManager,
 		historyV2Mgr,

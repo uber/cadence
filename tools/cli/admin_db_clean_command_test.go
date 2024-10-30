@@ -25,6 +25,7 @@ package cli
 import (
 	"flag"
 	"fmt"
+	"github.com/stretchr/testify/require"
 	"os"
 	"testing"
 
@@ -55,8 +56,8 @@ func TestAdminDBClean_noFixExecution(t *testing.T) {
 				set.Var(cli.NewStringSlice("CollectionHistory", "CollectionDomain"), FlagInvariantCollection, "invariant collection flag")
 
 				// Set actual values for the flags
-				_ = set.Set(FlagScanType, "ConcreteExecutionType")
-				_ = set.Set(FlagInputFile, "input.json")
+				require.NoError(t, set.Set(FlagScanType, "ConcreteExecutionType"))
+				require.NoError(t, set.Set(FlagInputFile, "input.json"))
 
 				return cli.NewContext(app, set, nil)
 			},
@@ -83,8 +84,8 @@ func TestAdminDBClean_noFixExecution(t *testing.T) {
 				set := flag.NewFlagSet("test", 0)
 				set.String(FlagScanType, "", "scan type flag")
 				set.String(FlagInputFile, "", "Input file flag")
-				_ = set.Set(FlagScanType, "unknown")
-				_ = set.Set(FlagInputFile, "input.json")
+				require.NoError(t, set.Set(FlagScanType, "unknown"))
+				require.NoError(t, set.Set(FlagInputFile, "input.json"))
 				return cli.NewContext(app, set, nil)
 			},
 			inputFileData:  ``,
@@ -103,8 +104,9 @@ func TestAdminDBClean_noFixExecution(t *testing.T) {
 				set.Var(cli.NewStringSlice("invalid_collection", "history"), FlagInvariantCollection, "invariant collection flag")
 
 				// Set actual values for the flags
-				_ = set.Set(FlagScanType, "ConcreteExecutionType")
-				_ = set.Set(FlagInputFile, "input.json")
+				require.NoError(t, set.Set(FlagScanType, "ConcreteExecutionType"))
+				require.NoError(t, set.Set(FlagInputFile, "input.json"))
+
 				return cli.NewContext(app, set, nil)
 			},
 			inputFileData:  ``,
@@ -118,9 +120,11 @@ func TestAdminDBClean_noFixExecution(t *testing.T) {
 				set.String(FlagScanType, "", "scan type flag")
 				set.String(FlagInvariantCollection, "", "invariant collection flag")
 				set.String(FlagInputFile, "", "Input file flag")
-				_ = set.Set(FlagScanType, "ConcreteExecutionType")
-				_ = set.Set(FlagInvariantCollection, "invalid_collection") // Collection will trigger no invariants
-				_ = set.Set(FlagInputFile, "input.json")
+
+				require.NoError(t, set.Set(FlagScanType, "ConcreteExecutionType"))
+				require.NoError(t, set.Set(FlagInputFile, "input.json"))
+				require.NoError(t, set.Set(FlagInvariantCollection, "invalid_collection"))
+
 				return cli.NewContext(app, set, nil)
 			},
 			inputFileData:  `[{"Execution": {"ShardID": 1}}]`,
@@ -187,8 +191,8 @@ func TestAdminDBClean_inFixExecution(t *testing.T) {
 				set.String(FlagInputFile, "", "Input file flag")
 				set.Var(cli.NewStringSlice("CollectionHistory", "CollectionDomain"), FlagInvariantCollection, "invariant collection flag")
 
-				_ = set.Set(FlagScanType, "ConcreteExecutionType")
-				_ = set.Set(FlagInputFile, inputFilePath) // 传递临时文件路径
+				require.NoError(t, set.Set(FlagScanType, "ConcreteExecutionType"))
+				require.NoError(t, set.Set(FlagInputFile, inputFilePath))
 
 				return cli.NewContext(td.app, set, nil)
 			},
@@ -221,8 +225,8 @@ func TestAdminDBClean_inFixExecution(t *testing.T) {
 				set.String(FlagInputFile, "", "Input file flag")
 				set.Var(cli.NewStringSlice("CollectionHistory", "CollectionDomain"), FlagInvariantCollection, "invariant collection flag")
 
-				_ = set.Set(FlagScanType, "ConcreteExecutionType")
-				_ = set.Set(FlagInputFile, inputFilePath) // 传递临时文件路径
+				require.NoError(t, set.Set(FlagScanType, "ConcreteExecutionType"))
+				require.NoError(t, set.Set(FlagInputFile, inputFilePath))
 
 				return cli.NewContext(td.app, set, nil)
 			},
@@ -251,8 +255,8 @@ func TestAdminDBClean_inFixExecution(t *testing.T) {
 				set.String(FlagInputFile, "", "Input file flag")
 				set.Var(cli.NewStringSlice("CollectionHistory", "CollectionDomain"), FlagInvariantCollection, "invariant collection flag")
 
-				_ = set.Set(FlagScanType, "ConcreteExecutionType")
-				_ = set.Set(FlagInputFile, inputFilePath) // 传递临时文件路径
+				require.NoError(t, set.Set(FlagScanType, "ConcreteExecutionType"))
+				require.NoError(t, set.Set(FlagInputFile, inputFilePath))
 
 				return cli.NewContext(td.app, set, nil)
 			},
@@ -271,8 +275,8 @@ func TestAdminDBClean_inFixExecution(t *testing.T) {
 				set.String(FlagInputFile, "", "Input file flag")
 				set.Var(cli.NewStringSlice("CollectionHistory", "CollectionDomain"), FlagInvariantCollection, "invariant collection flag")
 
-				_ = set.Set(FlagScanType, "ConcreteExecutionType")
-				_ = set.Set(FlagInputFile, inputFilePath) // 传递临时文件路径
+				require.NoError(t, set.Set(FlagScanType, "ConcreteExecutionType"))
+				require.NoError(t, set.Set(FlagInputFile, inputFilePath))
 
 				return cli.NewContext(td.app, set, nil)
 			},
