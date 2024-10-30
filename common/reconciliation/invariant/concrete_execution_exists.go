@@ -32,27 +32,20 @@ import (
 	"github.com/uber/cadence/common/types"
 )
 
-type (
-	concreteExecutionExists struct {
-		pr    persistence.Retryer
-		cache cache.DomainCache
-	}
-)
+type concreteExecutionExists struct {
+	pr    persistence.Retryer
+	cache cache.DomainCache
+}
 
 // NewConcreteExecutionExists returns a new invariant for checking concrete execution
-func NewConcreteExecutionExists(
-	pr persistence.Retryer, cache cache.DomainCache,
-) Invariant {
+func NewConcreteExecutionExists(pr persistence.Retryer, cache cache.DomainCache) Invariant {
 	return &concreteExecutionExists{
 		pr:    pr,
 		cache: cache,
 	}
 }
 
-func (c *concreteExecutionExists) Check(
-	ctx context.Context,
-	execution interface{},
-) CheckResult {
+func (c *concreteExecutionExists) Check(ctx context.Context, execution interface{}) CheckResult {
 	if checkResult := validateCheckContext(ctx, c.Name()); checkResult != nil {
 		return *checkResult
 	}
@@ -118,15 +111,20 @@ func (c *concreteExecutionExists) Check(
 	}
 }
 
-func (c *concreteExecutionExists) Fix(
-	ctx context.Context,
-	execution interface{},
-) FixResult {
+func (c *concreteExecutionExists) Fix(ctx context.Context, execution interface{}) FixResult {
 	if fixResult := validateFixContext(ctx, c.Name()); fixResult != nil {
 		return *fixResult
 	}
 
-	currentExecution, _ := execution.(*entity.CurrentExecution)
+	currentExecution, ok := execution.(*entity.CurrentExecution)
+	if !ok {
+		return FixResult{
+			FixResultType: FixResultTypeFailed,
+			InvariantName: c.Name(),
+			Info:          "failed to fix: expected current execution",
+		}
+	}
+
 	var runIDCheckResult *CheckResult
 	if len(currentExecution.CurrentRunID) == 0 {
 		// this is to set the current run ID prior to the check and fix operations
@@ -185,7 +183,7 @@ func (c *concreteExecutionExists) validateCurrentRunID(
 		return nil, &CheckResult{
 			CheckResultType: CheckResultTypeFailed,
 			InvariantName:   c.Name(),
-			Info:            "Failed to fetch domainName",
+			Info:            "failed to fetch domainName",
 			InfoDetails:     err.Error(),
 		}
 	}
