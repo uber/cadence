@@ -52,6 +52,15 @@ func IntArgument(name string, value int) CliArgument {
 	}
 }
 
+// BoolArgument introduces a new boolean argument for cli context
+func BoolArgument(name string, value bool) CliArgument {
+	return func(t *testing.T, flags *flag.FlagSet, c *cli.Context) {
+		t.Helper()
+		flags.Bool(name, value, "")
+		require.NoError(t, c.Set(name, strconv.FormatBool(value)))
+	}
+}
+
 // NewCLIContext creates a new cli context with optional arguments
 // this is a useful to make testing of commands compact
 func NewCLIContext(t *testing.T, app *cli.App, args ...CliArgument) *cli.Context {
