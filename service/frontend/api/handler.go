@@ -83,6 +83,7 @@ type (
 		throttleRetry             *backoff.ThrottleRetry
 		producerManager           ProducerManager
 		thriftrwEncoder           codec.BinaryEncoder
+		requestValidator          RequestValidator
 	}
 
 	getHistoryContinuationToken struct {
@@ -143,7 +144,8 @@ func NewWorkflowHandler(
 			resource.GetLogger(),
 			resource.GetMetricsClient(),
 		),
-		thriftrwEncoder: codec.NewThriftRWEncoder(),
+		thriftrwEncoder:  codec.NewThriftRWEncoder(),
+		requestValidator: NewRequestValidator(resource.GetLogger(), resource.GetMetricsClient(), config),
 	}
 }
 
@@ -3237,45 +3239,6 @@ func (wh *WorkflowHandler) GetSearchAttributes(ctx context.Context) (resp *types
 	return resp, nil
 }
 
-// ResetStickyTaskList reset the volatile information in mutable state of a given workflow.
-func (wh *WorkflowHandler) ResetStickyTaskList(
-	ctx context.Context,
-	resetRequest *types.ResetStickyTaskListRequest,
-) (resp *types.ResetStickyTaskListResponse, retError error) {
-	if wh.isShuttingDown() {
-		return nil, validate.ErrShuttingDown
-	}
-
-	if resetRequest == nil {
-		return nil, validate.ErrRequestNotSet
-	}
-
-	domainName := resetRequest.GetDomain()
-	wfExecution := resetRequest.GetExecution()
-
-	if domainName == "" {
-		return nil, validate.ErrDomainNotSet
-	}
-
-	if err := validate.CheckExecution(wfExecution); err != nil {
-		return nil, err
-	}
-
-	domainID, err := wh.GetDomainCache().GetDomainID(resetRequest.GetDomain())
-	if err != nil {
-		return nil, err
-	}
-
-	_, err = wh.GetHistoryClient().ResetStickyTaskList(ctx, &types.HistoryResetStickyTaskListRequest{
-		DomainUUID: domainID,
-		Execution:  resetRequest.Execution,
-	})
-	if err != nil {
-		return nil, wh.normalizeVersionedErrors(ctx, err)
-	}
-	return &types.ResetStickyTaskListResponse{}, nil
-}
-
 // QueryWorkflow returns query result for a specified workflow execution
 func (wh *WorkflowHandler) QueryWorkflow(
 	ctx context.Context,
@@ -3386,128 +3349,6 @@ func (wh *WorkflowHandler) DescribeWorkflowExecution(
 	}
 
 	return response, nil
-}
-
-// DescribeTaskList returns information about the target tasklist, right now this API returns the
-// pollers which polled this tasklist in last few minutes. If includeTaskListStatus field is true,
-// it will also return status of tasklist's ackManager (readLevel, ackLevel, backlogCountHint and taskIDBlock).
-func (wh *WorkflowHandler) DescribeTaskList(
-	ctx context.Context,
-	request *types.DescribeTaskListRequest,
-) (resp *types.DescribeTaskListResponse, retError error) {
-	if wh.isShuttingDown() {
-		return nil, validate.ErrShuttingDown
-	}
-
-	if request == nil {
-		return nil, validate.ErrRequestNotSet
-	}
-
-	if request.GetDomain() == "" {
-		return nil, validate.ErrDomainNotSet
-	}
-
-	domainID, err := wh.GetDomainCache().GetDomainID(request.GetDomain())
-	if err != nil {
-		return nil, err
-	}
-
-	scope := getMetricsScopeWithDomain(metrics.FrontendDescribeTaskListScope, request, wh.GetMetricsClient()).Tagged(metrics.GetContextTags(ctx)...)
-	if err := wh.validateTaskList(request.TaskList, scope, request.GetDomain()); err != nil {
-		return nil, err
-	}
-
-	if request.TaskListType == nil {
-		return nil, validate.ErrTaskListTypeNotSet
-	}
-
-	response, err := wh.GetMatchingClient().DescribeTaskList(ctx, &types.MatchingDescribeTaskListRequest{
-		DomainUUID:  domainID,
-		DescRequest: request,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	return response, nil
-}
-
-// ListTaskListPartitions returns all the partition and host for a taskList
-func (wh *WorkflowHandler) ListTaskListPartitions(
-	ctx context.Context,
-	request *types.ListTaskListPartitionsRequest,
-) (resp *types.ListTaskListPartitionsResponse, retError error) {
-	if wh.isShuttingDown() {
-		return nil, validate.ErrShuttingDown
-	}
-
-	if request == nil {
-		return nil, validate.ErrRequestNotSet
-	}
-
-	if request.GetDomain() == "" {
-		return nil, validate.ErrDomainNotSet
-	}
-
-	scope := getMetricsScopeWithDomain(metrics.FrontendListTaskListPartitionsScope, request, wh.GetMetricsClient()).Tagged(metrics.GetContextTags(ctx)...)
-	if err := wh.validateTaskList(request.TaskList, scope, request.GetDomain()); err != nil {
-		return nil, err
-	}
-
-	resp, err := wh.GetMatchingClient().ListTaskListPartitions(ctx, &types.MatchingListTaskListPartitionsRequest{
-		Domain:   request.Domain,
-		TaskList: request.TaskList,
-	})
-	return resp, err
-}
-
-// GetTaskListsByDomain returns all the partition and host for a taskList
-func (wh *WorkflowHandler) GetTaskListsByDomain(
-	ctx context.Context,
-	request *types.GetTaskListsByDomainRequest,
-) (resp *types.GetTaskListsByDomainResponse, retError error) {
-	if wh.isShuttingDown() {
-		return nil, validate.ErrShuttingDown
-	}
-
-	if request == nil {
-		return nil, validate.ErrRequestNotSet
-	}
-
-	if request.GetDomain() == "" {
-		return nil, validate.ErrDomainNotSet
-	}
-
-	resp, err := wh.GetMatchingClient().GetTaskListsByDomain(ctx, &types.GetTaskListsByDomainRequest{
-		Domain: request.Domain,
-	})
-	return resp, err
-}
-
-// RefreshWorkflowTasks re-generates the workflow tasks
-func (wh *WorkflowHandler) RefreshWorkflowTasks(
-	ctx context.Context,
-	request *types.RefreshWorkflowTasksRequest,
-) (err error) {
-	if request == nil {
-		return validate.ErrRequestNotSet
-	}
-	if err := validate.CheckExecution(request.Execution); err != nil {
-		return err
-	}
-	domainEntry, err := wh.GetDomainCache().GetDomain(request.GetDomain())
-	if err != nil {
-		return err
-	}
-
-	err = wh.GetHistoryClient().RefreshWorkflowTasks(ctx, &types.HistoryRefreshWorkflowTasksRequest{
-		DomainUIID: domainEntry.GetInfo().ID,
-		Request:    request,
-	})
-	if err != nil {
-		return err
-	}
-	return nil
 }
 
 func (wh *WorkflowHandler) getRawHistory(
