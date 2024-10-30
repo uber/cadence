@@ -71,7 +71,7 @@ func newCLITestData(t *testing.T) *cliTestData {
 			serverAdminClient:    td.mockAdminClient,
 		},
 		WithIOHandler(td.ioHandler),
-		WithPersistenceManagerFactory(td.mockManagerFactory), // Inject the mocked persistence manager factory
+		WithManagerFactory(td.mockManagerFactory), // Inject the mocked persistence manager factory
 	)
 	return &td
 }

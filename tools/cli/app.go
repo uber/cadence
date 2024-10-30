@@ -50,8 +50,8 @@ func WithIOHandler(h IOHandler) CLIAppOptions {
 	}
 }
 
-// WithPersistenceManagerFactory sets the ManagerFactory for the CLI app.
-func WithPersistenceManagerFactory(factory ManagerFactory) CLIAppOptions {
+// WithManagerFactory sets the ManagerFactory for the CLI app.
+func WithManagerFactory(factory ManagerFactory) CLIAppOptions {
 	return func(app *cli.App) {
 		if app.Metadata == nil {
 			return
