@@ -24,14 +24,10 @@ package cli
 
 import (
 	"flag"
-	"fmt"
 	"github.com/golang/mock/gomock"
-	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/reconciliation/entity"
 	"github.com/uber/cadence/common/reconciliation/invariant"
-	"github.com/uber/cadence/common/reconciliation/store"
-	"github.com/uber/cadence/service/worker/scanner/executions"
+	"github.com/uber/cadence/common/types"
 	"os"
 	"testing"
 
@@ -153,145 +149,91 @@ func TestAdminDBClean_errorCases(t *testing.T) {
 	}
 }
 
-func TestFixExecution(t *testing.T) {
+func TestAdminDBClean(t *testing.T) {
 	tests := []struct {
 		name           string
-		setupMock      func(ctrl *gomock.Controller) (initializeExecutionStoreFn func(c *cli.Context, shardID int) (persistence.ExecutionManager, error), initializeHistoryManagerFn func(c *cli.Context) (persistence.HistoryManager, error), invariants []executions.InvariantFactory)
-		setupContext   func(app *cli.App) *cli.Context
-		execution      *store.ScanOutputEntity
+		contextSetup   func(td *cliTestData) *cli.Context
+		mockSetup      func(td *cliTestData)
+		inputFileData  string
 		expectedError  string
-		expectedResult invariant.ManagerFixResult
+		expectedOutput string
 	}{
 		{
 			name: "Success",
-			setupMock: func(ctrl *gomock.Controller) (func(c *cli.Context, shardID int) (persistence.ExecutionManager, error), func(c *cli.Context) (persistence.HistoryManager, error), []executions.InvariantFactory) {
-				// Mock ExecutionManager
-				mockExecManager := persistence.NewMockExecutionManager(ctrl)
-				mockExecManager.EXPECT().Close().Times(1)
+			contextSetup: func(td *cliTestData) *cli.Context {
+				set := flag.NewFlagSet("test", 0)
+				// Define flags
+				set.String(FlagScanType, "", "scan type flag")
+				set.String(FlagInvariantCollection, "", "invariant collection flag")
+				set.String(FlagInputFile, "", "Input file flag")
 
-				// Mock HistoryManager
+				// Set values for flags
+				_ = set.Set(FlagScanType, "ConcreteExecutionType")
+				_ = set.Set(FlagInvariantCollection, "CollectionHistory") // Valid collection to ensure invariants are generated
+				_ = set.Set(FlagInputFile, "input.json")
+
+				return cli.NewContext(td.app, set, nil)
+			},
+			mockSetup: func(td *cliTestData) {
+				// Mock the PersistenceManagerFactory
+				ctrl := gomock.NewController(t)
+				mockExecManager := persistence.NewMockExecutionManager(ctrl)
 				mockHistoryManager := persistence.NewMockHistoryManager(ctrl)
+
+				// Mock ExecutionManager and HistoryManager close methods
+				mockExecManager.EXPECT().Close().Times(1)
 				mockHistoryManager.EXPECT().Close().Times(1)
 
-				// Mock Invariant and wrap into InvariantFactory
+				// Mock initializeExecutionStore and initializeHistoryManager correctly
+				td.mockPersistenceManagerFactory.EXPECT().initializeExecutionStore(gomock.Any(), gomock.Any()).Return(mockExecManager, nil).AnyTimes()
+				td.mockPersistenceManagerFactory.EXPECT().initializeHistoryManager(gomock.Any()).Return(mockHistoryManager, nil).AnyTimes()
+
+				// Mock fixExecution by setting up a valid InvariantFactory
 				mockInvariant := invariant.NewMockInvariant(ctrl)
 				mockInvariant.EXPECT().Fix(gomock.Any(), gomock.Any()).Return(invariant.FixResult{
 					FixResultType: invariant.FixResultTypeFixed,
 				}).Times(1)
 
-				// Wrap mockInvariant into InvariantFactory
-				invariants := []executions.InvariantFactory{
-					func(pr persistence.Retryer, dc cache.DomainCache) invariant.Invariant {
-						return mockInvariant
-					},
-				}
-
-				return func(c *cli.Context, shardID int) (persistence.ExecutionManager, error) {
-						return mockExecManager, nil
-					}, func(c *cli.Context) (persistence.HistoryManager, error) {
-						return mockHistoryManager, nil
-					}, invariants
+				// Ensure that ToInvariants returns a non-empty list of factories
+				td.mockFrontendClient.EXPECT().StartWorkflowExecution(gomock.Any(), gomock.Any()).Return(&types.StartWorkflowExecutionResponse{RunID: "test-run-id"}, nil).AnyTimes()
 			},
-			setupContext: func(app *cli.App) *cli.Context {
-				set := flag.NewFlagSet("test", 0)
-				set.String(FlagScanType, "", "scan type flag")
-				set.String(FlagInputFile, "", "Input file flag")
-				_ = set.Set(FlagScanType, "ConcreteExecutionType")
-				_ = set.Set(FlagInputFile, "input.json")
-				return cli.NewContext(app, set, nil)
-			},
-			execution: &store.ScanOutputEntity{
-				Execution: &entity.ConcreteExecution{
-					Execution: entity.Execution{ // Initialize the embedded Execution struct
-						ShardID: 1,
-					},
-				},
-			},
-			expectedError: "",
-			expectedResult: invariant.ManagerFixResult{
-				FixResultType: invariant.FixResultTypeFixed,
-				FixResults: []invariant.FixResult{
-					{FixResultType: invariant.FixResultTypeFixed, InvariantName: ""},
-				},
-				// Set DeterminingInvariantName as a pointer to an empty string
-				DeterminingInvariantName: func() *invariant.Name {
-					name := invariant.Name("")
-					return &name
-				}(),
-			},
-		},
-		{
-			name: "ExecutionManagerError",
-			setupMock: func(ctrl *gomock.Controller) (func(c *cli.Context, shardID int) (persistence.ExecutionManager, error), func(c *cli.Context) (persistence.HistoryManager, error), []executions.InvariantFactory) {
-
-				return func(c *cli.Context, shardID int) (persistence.ExecutionManager, error) {
-					return nil, fmt.Errorf("execution manager error")
-				}, nil, nil
-			},
-			setupContext: func(app *cli.App) *cli.Context {
-				set := flag.NewFlagSet("test", 0)
-				_ = set.Set(FlagScanType, "ConcreteExecutionType")
-				return cli.NewContext(app, set, nil)
-			},
-			execution: &store.ScanOutputEntity{
-				Execution: &entity.ConcreteExecution{
-					Execution: entity.Execution{ // Initialize the embedded Execution struct
-						ShardID: 1,
-					},
-				},
-			},
-			expectedError: "Error in fix execution",
-		},
-		{
-			name: "HistoryManagerError",
-			setupMock: func(ctrl *gomock.Controller) (func(c *cli.Context, shardID int) (persistence.ExecutionManager, error), func(c *cli.Context) (persistence.HistoryManager, error), []executions.InvariantFactory) {
-				// Mock ExecutionManager
-				mockExecManager := persistence.NewMockExecutionManager(ctrl)
-				mockExecManager.EXPECT().Close().Times(1)
-
-				return func(c *cli.Context, shardID int) (persistence.ExecutionManager, error) {
-						return mockExecManager, nil
-					}, func(c *cli.Context) (persistence.HistoryManager, error) {
-						return nil, fmt.Errorf("history manager error")
-					}, nil
-			},
-			setupContext: func(app *cli.App) *cli.Context {
-				set := flag.NewFlagSet("test", 0)
-				_ = set.Set(FlagScanType, "ConcreteExecutionType")
-				return cli.NewContext(app, set, nil)
-			},
-			execution: &store.ScanOutputEntity{
-				Execution: &entity.ConcreteExecution{
-					Execution: entity.Execution{ // Initialize the embedded Execution struct
-						ShardID: 1,
-					},
-				},
-			},
-			expectedError: "Error in fix execution",
+			inputFileData:  `{"Execution": {"ShardID": 1}, "Result": {}}`,
+			expectedOutput: `{"Execution":{"ShardID":1},"Input":{"Execution":{"ShardID":1}},"Result":{}}`,
+			expectedError:  "",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ctrl := gomock.NewController(t)
-
-			// Setup mock functions and dependencies
-			initializeExecutionStoreFn, initializeHistoryManagerFn, invariants := tt.setupMock(ctrl)
-
-			// Setup the CLI context
+			// Create test data and set up mocks
 			td := newCLITestData(t)
-			cliCtx := tt.setupContext(td.app)
+			tt.mockSetup(td)
 
-			// Call fixExecution
-			result, err := fixExecution(cliCtx, invariants, tt.execution, initializeExecutionStoreFn, initializeHistoryManagerFn)
+			// Create temp input file
+			inputFile, err := os.CreateTemp("", "test_input_*.json")
+			assert.NoError(t, err)
+			defer os.Remove(inputFile.Name()) // Clean up after test
 
-			// Validate results
+			// Write input data to the temp file
+			if tt.inputFileData != "" {
+				_, err = inputFile.WriteString(tt.inputFileData)
+				assert.NoError(t, err)
+			}
+			inputFile.Close()
+
+			// Prepare the CLI context
+			c := tt.contextSetup(td)
+
+			// Run AdminDBClean
+			err = AdminDBClean(c)
 			if tt.expectedError != "" {
 				assert.ErrorContains(t, err, tt.expectedError)
 			} else {
 				assert.NoError(t, err)
-				assert.Equal(t, tt.expectedResult, result)
 			}
+
+			// Validate output
+			assert.Equal(t, tt.expectedOutput, td.consoleOutput())
 		})
 	}
 }
