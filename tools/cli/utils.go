@@ -29,7 +29,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"reflect"
 	"regexp"
@@ -814,7 +813,7 @@ func processJSONInputHelper(c *cli.Context, jType jsonType) (string, error) {
 		inputFile := c.String(flagNameOfInputFileName)
 		// This method is purely used to parse input from the CLI. The input comes from a trusted user
 		// #nosec
-		data, err := ioutil.ReadFile(inputFile)
+		data, err := os.ReadFile(inputFile)
 		if err != nil {
 			return "", fmt.Errorf("error reading input file: %w", err)
 		}
