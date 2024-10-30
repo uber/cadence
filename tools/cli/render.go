@@ -24,7 +24,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"os"
 	"reflect"
 	"sort"
 	"strconv"
@@ -82,7 +81,7 @@ func Render(c *cli.Context, data interface{}, opts RenderOptions) (err error) {
 	}()
 
 	// For now always output to stdout
-	w := os.Stdout
+	w := getDeps(c).Output()
 
 	template := opts.DefaultTemplate
 

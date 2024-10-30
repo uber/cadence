@@ -30,6 +30,31 @@ import (
 	"github.com/uber/cadence/common/types"
 )
 
+func Test_JSONHistorySerializer(t *testing.T) {
+	serializer := JSONHistorySerializer{}
+	h := &types.History{
+		Events: []*types.HistoryEvent{
+			{
+				ID:        1,
+				Version:   1,
+				EventType: types.EventTypeWorkflowExecutionStarted.Ptr(),
+			},
+			{
+				ID:        2,
+				Version:   1,
+				EventType: types.EventTypeDecisionTaskScheduled.Ptr(),
+			},
+		},
+	}
+	data, err := serializer.Serialize(h)
+	assert.NoError(t, err)
+	assert.NotNil(t, data)
+
+	h2, err := serializer.Deserialize(data)
+	assert.NoError(t, err)
+	assert.Equal(t, h, h2)
+}
+
 func Test_ParseIntMultiRange(t *testing.T) {
 	tests := []struct {
 		name         string

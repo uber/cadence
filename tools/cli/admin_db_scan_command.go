@@ -139,12 +139,12 @@ func checkExecution(
 	invariants []executions.InvariantFactory,
 	fetcher executions.ExecutionFetcher,
 ) (interface{}, invariant.ManagerCheckResult, error) {
-	execManager, err := initializeExecutionStore(c, common.WorkflowIDToHistoryShard(req.WorkflowID, numberOfShards))
+	execManager, err := getDeps(c).initializeExecutionManager(c, common.WorkflowIDToHistoryShard(req.WorkflowID, numberOfShards))
 	defer execManager.Close()
 	if err != nil {
 		return nil, invariant.ManagerCheckResult{}, fmt.Errorf("Error in execution check: %w", err)
 	}
-	historyV2Mgr, err := initializeHistoryManager(c)
+	historyV2Mgr, err := getDeps(c).initializeHistoryManager(c)
 	defer historyV2Mgr.Close()
 	if err != nil {
 		return nil, invariant.ManagerCheckResult{}, fmt.Errorf("Error in execution check: %w", err)
@@ -200,7 +200,7 @@ func listExecutionsByShardID(
 	outputFile *os.File,
 ) error {
 
-	client, err := initializeExecutionStore(c, shardID)
+	client, err := getDeps(c).initializeExecutionManager(c, shardID)
 	defer client.Close()
 	if err != nil {
 		commoncli.Problem("Error in Admin DB unsupported WF scan: ", err)

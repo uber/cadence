@@ -21,6 +21,9 @@
 package cli
 
 import (
+	"bytes"
+	"io"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -29,6 +32,7 @@ import (
 	"github.com/olekukonko/tablewriter"
 	"github.com/olivere/elastic"
 	"github.com/pborman/uuid"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 	"github.com/urfave/cli/v2"
 
@@ -39,13 +43,23 @@ import (
 	"github.com/uber/cadence/common/types"
 )
 
-type cliAppSuite struct {
-	suite.Suite
-	app                  *cli.App
-	mockCtrl             *gomock.Controller
-	serverFrontendClient *frontend.MockClient
-	serverAdminClient    *admin.MockClient
-}
+type (
+	cliAppSuite struct {
+		suite.Suite
+		app                  *cli.App
+		mockCtrl             *gomock.Controller
+		serverFrontendClient *frontend.MockClient
+		serverAdminClient    *admin.MockClient
+		testIOHandler        *testIOHandler
+	}
+
+	testcase struct {
+		name    string
+		command string
+		err     string
+		mock    func()
+	}
+)
 
 var _ ClientFactory = (*clientFactoryMock)(nil)
 
@@ -86,6 +100,23 @@ var commands = []string{
 
 var domainName = "cli-test-domain"
 
+// Implements IOHandler to be used for validation in tests
+type testIOHandler struct {
+	outputBytes bytes.Buffer
+}
+
+func (t *testIOHandler) Input() io.Reader {
+	return os.Stdin
+}
+
+func (t *testIOHandler) Output() io.Writer {
+	return &t.outputBytes
+}
+
+func (t *testIOHandler) Progress() io.Writer {
+	return os.Stdout
+}
+
 func TestCLIAppSuite(t *testing.T) {
 	s := new(cliAppSuite)
 	suite.Run(t, s)
@@ -95,14 +126,31 @@ func (s *cliAppSuite) SetupTest() {
 	s.mockCtrl = gomock.NewController(s.T())
 	s.serverFrontendClient = frontend.NewMockClient(s.mockCtrl)
 	s.serverAdminClient = admin.NewMockClient(s.mockCtrl)
+	s.testIOHandler = &testIOHandler{}
 	s.app = NewCliApp(&clientFactoryMock{
 		serverFrontendClient: s.serverFrontendClient,
 		serverAdminClient:    s.serverAdminClient,
-	})
+	}, WithIOHandler(s.testIOHandler))
 }
 
 func (s *cliAppSuite) TearDownTest() {
 	s.mockCtrl.Finish() // assert mock’s expectations
+}
+
+func (s *cliAppSuite) testcaseHelper(testcases []testcase) {
+	for _, tt := range testcases {
+		s.T().Run(tt.name, func(t *testing.T) {
+			if tt.mock != nil {
+				tt.mock()
+			}
+			err := s.app.Run(strings.Split(tt.command, " "))
+			if tt.err != "" {
+				assert.ErrorContains(t, err, tt.err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
 }
 
 func (s *cliAppSuite) TestAppCommands() {
@@ -110,29 +158,6 @@ func (s *cliAppSuite) TestAppCommands() {
 		cmd := s.app.Command(test)
 		s.NotNil(cmd)
 	}
-}
-
-func (s *cliAppSuite) TestDomainRegister_LocalDomain() {
-	s.serverFrontendClient.EXPECT().RegisterDomain(gomock.Any(), gomock.Any()).Return(nil)
-	s.NoError(s.app.Run([]string{"", "--do", domainName, "domain", "register", "--global_domain", "false"}))
-}
-
-func (s *cliAppSuite) TestDomainRegister_GlobalDomain() {
-	s.serverFrontendClient.EXPECT().RegisterDomain(gomock.Any(), gomock.Any()).Return(nil)
-	s.NoError(s.app.Run([]string{"", "--do", domainName, "domain", "register", "--global_domain", "true"}))
-}
-
-func (s *cliAppSuite) TestDomainRegister_DomainExist() {
-	s.serverFrontendClient.EXPECT().RegisterDomain(gomock.Any(), gomock.Any()).Return(&types.DomainAlreadyExistsError{})
-	s.Error(s.app.Run([]string{"", "--do", domainName, "domain", "register", "--global_domain", "true"}))
-}
-
-func (s *cliAppSuite) TestDomainRegister_Failed() {
-	s.serverFrontendClient.EXPECT().RegisterDomain(gomock.Any(), gomock.Any()).Return(&types.BadRequestError{"fake error"})
-	// TODO check error message for all s.Error use cases
-	s.ErrorContains(
-		s.app.Run(([]string{"", "--do", domainName, "domain", "register", "--global_domain", "true"})),
-		"Register Domain operation failed.")
 }
 
 var describeDomainResponseServer = &types.DescribeDomainResponse{
@@ -156,35 +181,6 @@ var describeDomainResponseServer = &types.DescribeDomainResponse{
 			},
 		},
 	},
-}
-
-func (s *cliAppSuite) TestDomainUpdate() {
-	resp := describeDomainResponseServer
-	s.serverFrontendClient.EXPECT().DescribeDomain(gomock.Any(), gomock.Any()).Return(resp, nil).Times(2)
-	s.serverFrontendClient.EXPECT().UpdateDomain(gomock.Any(), gomock.Any()).Return(nil, nil).Times(2)
-	err := s.app.Run([]string{"", "--do", domainName, "domain", "update"})
-	s.Nil(err)
-	err = s.app.Run([]string{"", "--do", domainName, "domain", "update", "--desc", "another desc", "--oe", "another@uber.com", "--rd", "1"})
-	s.Nil(err)
-}
-
-func (s *cliAppSuite) TestDomainUpdate_DomainNotExist() {
-	resp := describeDomainResponseServer
-	s.serverFrontendClient.EXPECT().DescribeDomain(gomock.Any(), gomock.Any()).Return(resp, nil)
-	s.serverFrontendClient.EXPECT().UpdateDomain(gomock.Any(), gomock.Any()).Return(nil, &types.EntityNotExistsError{})
-	s.Error(s.app.Run([]string{"", "--do", domainName, "domain", "update"}))
-}
-
-func (s *cliAppSuite) TestDomainUpdate_ActiveClusterFlagNotSet_DomainNotExist() {
-	s.serverFrontendClient.EXPECT().DescribeDomain(gomock.Any(), gomock.Any()).Return(nil, &types.EntityNotExistsError{})
-	s.Error(s.app.Run([]string{"", "--do", domainName, "domain", "update"}))
-}
-
-func (s *cliAppSuite) TestDomainUpdate_Failed() {
-	resp := describeDomainResponseServer
-	s.serverFrontendClient.EXPECT().DescribeDomain(gomock.Any(), gomock.Any()).Return(resp, nil)
-	s.serverFrontendClient.EXPECT().UpdateDomain(gomock.Any(), gomock.Any()).Return(nil, &types.BadRequestError{"faked error"})
-	s.Error(s.app.Run([]string{"", "--do", domainName, "domain", "update"}))
 }
 
 func (s *cliAppSuite) TestDomainDeprecate() {
@@ -417,15 +413,6 @@ func (s *cliAppSuite) TestSignalWorkflow_Failed() {
 	s.Error(s.app.Run([]string{"", "--do", domainName, "workflow", "signal", "-w", "wid", "-n", "signal-name"}))
 }
 
-func (s *cliAppSuite) TestQueryWorkflow() {
-	resp := &types.QueryWorkflowResponse{
-		QueryResult: []byte("query-result"),
-	}
-	s.serverFrontendClient.EXPECT().QueryWorkflow(gomock.Any(), gomock.Any()).Return(resp, nil)
-	err := s.app.Run([]string{"", "--do", domainName, "workflow", "query", "-w", "wid", "-qt", "query-type-test"})
-	s.Nil(err)
-}
-
 func (s *cliAppSuite) TestQueryWorkflowUsingStackTrace() {
 	resp := &types.QueryWorkflowResponse{
 		QueryResult: []byte("query-result"),
@@ -433,14 +420,6 @@ func (s *cliAppSuite) TestQueryWorkflowUsingStackTrace() {
 	s.serverFrontendClient.EXPECT().QueryWorkflow(gomock.Any(), gomock.Any()).Return(resp, nil)
 	err := s.app.Run([]string{"", "--do", domainName, "workflow", "stack", "-w", "wid"})
 	s.Nil(err)
-}
-
-func (s *cliAppSuite) TestQueryWorkflow_Failed() {
-	resp := &types.QueryWorkflowResponse{
-		QueryResult: []byte("query-result"),
-	}
-	s.serverFrontendClient.EXPECT().QueryWorkflow(gomock.Any(), gomock.Any()).Return(resp, &types.BadRequestError{"faked error"})
-	s.Error(s.app.Run([]string{"", "--do", domainName, "workflow", "query", "-w", "wid", "-qt", "query-type-test"}))
 }
 
 var (
@@ -944,5 +923,134 @@ func (s *cliAppSuite) TestConvertArray() {
 		res, err := parseArray(testCase.input)
 		s.NotNil(err)
 		s.Nil(res)
+	}
+}
+
+func TestWithManagerFactory(t *testing.T) {
+	tests := []struct {
+		name           string
+		app            *cli.App
+		expectFactory  bool
+		expectNilMeta  bool
+		expectDepsType bool
+	}{
+		{
+			name: "Valid Metadata with deps key",
+			app: &cli.App{
+				Metadata: map[string]interface{}{
+					depsKey: &deps{},
+				},
+			},
+			expectFactory:  true,
+			expectNilMeta:  false,
+			expectDepsType: true,
+		},
+		{
+			name:           "No Metadata",
+			app:            &cli.App{Metadata: nil},
+			expectFactory:  false,
+			expectNilMeta:  true,
+			expectDepsType: false,
+		},
+		{
+			name: "Incorrect deps key type",
+			app: &cli.App{
+				Metadata: map[string]interface{}{
+					depsKey: "invalid_type",
+				},
+			},
+			expectFactory:  false,
+			expectNilMeta:  false,
+			expectDepsType: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockFactory := NewMockManagerFactory(ctrl)
+
+			option := WithManagerFactory(mockFactory)
+			option(tt.app)
+
+			if tt.expectNilMeta {
+				assert.Nil(t, tt.app.Metadata, "Expected Metadata to be nil")
+			} else {
+				d, ok := tt.app.Metadata[depsKey].(*deps)
+				if tt.expectDepsType {
+					assert.True(t, ok, "Expected depsKey to be of type *deps")
+					if tt.expectFactory {
+						assert.Equal(t, mockFactory, d.ManagerFactory, "Expected ManagerFactory to be set correctly")
+					}
+				} else {
+					assert.False(t, ok, "Expected depsKey not to be of type *deps")
+				}
+			}
+		})
+	}
+}
+
+func TestWithIOHandler(t *testing.T) {
+	tests := []struct {
+		name           string
+		app            *cli.App
+		expectHandler  bool
+		expectNilMeta  bool
+		expectDepsType bool
+	}{
+		{
+			name: "Valid Metadata with deps key",
+			app: &cli.App{
+				Metadata: map[string]interface{}{
+					depsKey: &deps{},
+				},
+			},
+			expectHandler:  true,
+			expectNilMeta:  false,
+			expectDepsType: true,
+		},
+		{
+			name:           "No Metadata",
+			app:            &cli.App{Metadata: nil},
+			expectHandler:  false,
+			expectNilMeta:  true,
+			expectDepsType: false,
+		},
+		{
+			name: "Incorrect deps key type",
+			app: &cli.App{
+				Metadata: map[string]interface{}{
+					depsKey: "invalid_type",
+				},
+			},
+			expectHandler:  false,
+			expectNilMeta:  false,
+			expectDepsType: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			testHandler := testIOHandler{}
+
+			option := WithIOHandler(&testHandler)
+			option(tt.app)
+
+			if tt.expectNilMeta {
+				assert.Nil(t, tt.app.Metadata, "Expected Metadata to be nil")
+			} else {
+				d, ok := tt.app.Metadata[depsKey].(*deps)
+				if tt.expectDepsType {
+					assert.True(t, ok, "Expected depsKey to be of type *deps")
+					if tt.expectHandler {
+						assert.Equal(t, &testHandler, d.IOHandler, "Expected IOHandler to be set correctly")
+					}
+				} else {
+					assert.False(t, ok, "Expected depsKey not to be of type *deps")
+				}
+			}
+		})
 	}
 }

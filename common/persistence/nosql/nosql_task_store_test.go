@@ -42,6 +42,7 @@ const (
 	TestDomainID     = "test-domain-id"
 	TestDomainName   = "test-domain"
 	TestTaskListName = "test-tasklist"
+	TestTaskType     = persistence.TaskListTypeDecision
 	TestWorkflowID   = "test-workflow-id"
 	TestRunID        = "test-run-id"
 )
@@ -69,7 +70,7 @@ func setupNoSQLStoreMocks(t *testing.T) (*nosqlTaskStore, *nosqlplugin.MockDB) {
 		GetStoreShardByTaskList(
 			TestDomainID,
 			TestTaskListName,
-			int(types.TaskListTypeDecision)).
+			TestTaskType).
 		Return(&nosqlSt, nil).
 		AnyTimes()
 
@@ -444,6 +445,140 @@ func TestCompleteTasksLessThan(t *testing.T) {
 	assert.Equal(t, 13, resp.TasksCompleted)
 }
 
+func TestCreateTasks(t *testing.T) {
+	testCases := []struct {
+		name          string
+		setupMock     func(*nosqlplugin.MockDB)
+		request       *persistence.CreateTasksRequest
+		expectError   bool
+		expectedError string
+	}{
+		{
+			name: "success",
+			setupMock: func(dbMock *nosqlplugin.MockDB) {
+				dbMock.EXPECT().InsertTasks(gomock.Any(), gomock.Any(), &nosqlplugin.TaskListRow{
+					DomainID:     TestDomainID,
+					TaskListName: TestTaskListName,
+					TaskListType: TestTaskType,
+					RangeID:      1,
+				}).Do(func(_ context.Context, tasks []*nosqlplugin.TaskRowForInsert, _ *nosqlplugin.TaskListRow) {
+					assert.Len(t, tasks, 1)
+					assert.Equal(t, TestDomainID, tasks[0].DomainID)
+					assert.Equal(t, "workflow1", tasks[0].WorkflowID)
+					assert.Equal(t, "run1", tasks[0].RunID)
+					assert.Equal(t, int64(100), tasks[0].TaskID)
+					assert.Equal(t, int64(10), tasks[0].ScheduledID)
+					assert.Equal(t, TestTaskType, tasks[0].TaskListType)
+					assert.Equal(t, TestTaskListName, tasks[0].TaskListName)
+					assert.Equal(t, 30, tasks[0].TTLSeconds)
+				}).Return(nil).Times(1)
+			},
+			request: &persistence.CreateTasksRequest{
+				TaskListInfo: &persistence.TaskListInfo{
+					DomainID: TestDomainID,
+					Name:     TestTaskListName,
+					TaskType: TestTaskType,
+					RangeID:  1,
+				},
+				Tasks: []*persistence.CreateTaskInfo{
+					{
+						TaskID: 100,
+						Data: &persistence.TaskInfo{
+							WorkflowID:                    "workflow1",
+							RunID:                         "run1",
+							ScheduleID:                    10,
+							PartitionConfig:               nil,
+							ScheduleToStartTimeoutSeconds: 30,
+						},
+					},
+				},
+			},
+			expectError: false,
+		},
+		{
+			name: "condition failure",
+			setupMock: func(dbMock *nosqlplugin.MockDB) {
+				dbMock.EXPECT().InsertTasks(gomock.Any(), gomock.Any(), gomock.Any()).Return(&nosqlplugin.TaskOperationConditionFailure{
+					Details: "rangeID mismatch",
+				}).Times(1)
+			},
+			request: &persistence.CreateTasksRequest{
+				TaskListInfo: &persistence.TaskListInfo{
+					DomainID: TestDomainID,
+					Name:     TestTaskListName,
+					TaskType: TestTaskType,
+					RangeID:  1,
+				},
+				Tasks: []*persistence.CreateTaskInfo{
+					{
+						TaskID: 100,
+						Data: &persistence.TaskInfo{
+							WorkflowID:                    "workflow1",
+							RunID:                         "run1",
+							ScheduleID:                    10,
+							PartitionConfig:               nil,
+							ScheduleToStartTimeoutSeconds: 30,
+						},
+					},
+				},
+			},
+			expectError:   true,
+			expectedError: "Failed to insert tasks. name: test-tasklist, type: 0, rangeID: 1, columns: (rangeID mismatch)",
+		},
+		{
+			name: "generic db error",
+			setupMock: func(dbMock *nosqlplugin.MockDB) {
+				dbMock.EXPECT().InsertTasks(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("db error")).Times(1)
+				dbMock.EXPECT().IsNotFoundError(gomock.Any()).Return(true).Times(1)
+			},
+			request: &persistence.CreateTasksRequest{
+				TaskListInfo: &persistence.TaskListInfo{
+					DomainID: TestDomainID,
+					Name:     TestTaskListName,
+					TaskType: TestTaskType,
+					RangeID:  1,
+				},
+				Tasks: []*persistence.CreateTaskInfo{
+					{
+						TaskID: 100,
+						Data: &persistence.TaskInfo{
+							WorkflowID:                    "workflow1",
+							RunID:                         "run1",
+							ScheduleID:                    10,
+							PartitionConfig:               nil,
+							ScheduleToStartTimeoutSeconds: 30,
+						},
+					},
+				},
+			},
+			expectError:   true,
+			expectedError: "CreateTasks failed. Error: db error",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Setup mocks for each test case individually
+			store, dbMock := setupNoSQLStoreMocks(t)
+
+			// Setup test-specific mock behavior
+			tc.setupMock(dbMock)
+
+			// Execute the method under test
+			resp, err := store.CreateTasks(context.Background(), tc.request)
+
+			// Validate results
+			if tc.expectError {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tc.expectedError)
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, resp)
+			}
+		})
+	}
+}
+
 func getValidLeaseTaskListRequest() *persistence.LeaseTaskListRequest {
 	return &persistence.LeaseTaskListRequest{
 		DomainID:     TestDomainID,
@@ -474,7 +609,7 @@ func checkTaskListInfoExpected(t *testing.T, taskListInfo *persistence.TaskListI
 	assert.WithinDuration(t, time.Now(), taskListInfo.LastUpdated, time.Second)
 }
 
-func taskRowEqualTaskInfo(t *testing.T, taskrow1 nosqlplugin.TaskRow, taskInfo1 *persistence.InternalTaskInfo) {
+func taskRowEqualTaskInfo(t *testing.T, taskrow1 nosqlplugin.TaskRow, taskInfo1 *persistence.TaskInfo) {
 	assert.Equal(t, taskrow1.DomainID, taskInfo1.DomainID)
 	assert.Equal(t, taskrow1.WorkflowID, taskInfo1.WorkflowID)
 	assert.Equal(t, taskrow1.RunID, taskInfo1.RunID)

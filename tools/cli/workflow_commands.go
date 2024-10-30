@@ -274,9 +274,9 @@ func showHistoryHelper(c *cli.Context, wid, rid string) error {
 		return commoncli.Problem("Error in convert describe wf: ", err)
 	}
 	if len(descOutput.PendingActivities) > 0 {
-		fmt.Println("============Workflow Pending activities============")
-		prettyPrintJSONObject(descOutput.PendingActivities)
-		fmt.Println("NOTE: ActivityStartedEvent with retry policy will be written into history when the activity is finished.")
+		getDeps(c).Output().Write([]byte("============Workflow Pending activities============\n"))
+		prettyPrintJSONObject(getDeps(c).Output(), descOutput.PendingActivities)
+		getDeps(c).Output().Write([]byte("NOTE: ActivityStartedEvent with retry policy will be written into history when the activity is finished.\n"))
 	}
 	return nil
 }
@@ -1079,10 +1079,12 @@ func describeWorkflowHelper(c *cli.Context, wid, rid string) error {
 		o = resp
 	} else {
 		o, err = convertDescribeWorkflowExecutionResponse(resp, frontendClient, c)
-		return commoncli.Problem("WF helper describe failed: ", err)
+		if err != nil {
+			return commoncli.Problem("convert describe workflow response failed: ", err)
+		}
 	}
 
-	prettyPrintJSONObject(o)
+	prettyPrintJSONObject(getDeps(c).Output(), o)
 	return nil
 }
 
@@ -1462,6 +1464,7 @@ func displayAllWorkflows(c *cli.Context, getWorkflowsPage getWorkflowPageFn) err
 func displayWorkflows(c *cli.Context, workflows []*types.WorkflowExecutionInfo) error {
 	printJSON := c.Bool(FlagPrintJSON)
 	printDecodedRaw := c.Bool(FlagPrintFullyDetail)
+
 	if printJSON || printDecodedRaw {
 		fmt.Println("[")
 		printListResults(workflows, printJSON, false)
@@ -1843,7 +1846,7 @@ func ResetWorkflow(c *cli.Context) error {
 	if err != nil {
 		return commoncli.Problem("reset failed", err)
 	}
-	prettyPrintJSONObject(resp)
+	prettyPrintJSONObject(getDeps(c).Output(), resp)
 	return nil
 }
 
@@ -2310,10 +2313,7 @@ func getFirstDecisionTaskByType(
 			break
 		}
 	}
-	if decisionFinishID == 0 {
-		return 0, printErrorAndReturn("Get DecisionFinishID failed", fmt.Errorf("no DecisionFinishID"))
-	}
-	return
+	return decisionFinishID, printErrorAndReturn("Get DecisionFinishID failed", fmt.Errorf("no DecisionFinishID"))
 }
 
 func getCurrentRunID(ctx context.Context, domain, wid string, frontendClient frontend.Client) (string, error) {
@@ -2478,9 +2478,6 @@ func CompleteActivity(c *cli.Context) error {
 	if err != nil {
 		return commoncli.Problem("Required flag not found: ", err)
 	}
-	if len(activityID) == 0 {
-		return commoncli.Problem("Invalid activityID", fmt.Errorf("activityID cannot be empty"))
-	}
 	result, err := getRequiredOption(c, FlagResult)
 	if err != nil {
 		return commoncli.Problem("Required flag not found: ", err)
@@ -2529,8 +2526,8 @@ func FailActivity(c *cli.Context) error {
 		return commoncli.Problem("Required flag not found: ", err)
 	}
 	activityID, err := getRequiredOption(c, FlagActivityID)
-	if len(activityID) == 0 {
-		return commoncli.Problem("Invalid activityID", fmt.Errorf("activityID cannot be empty"))
+	if err != nil {
+		return commoncli.Problem("Required flag not found: ", err)
 	}
 	reason, err := getRequiredOption(c, FlagReason)
 	if err != nil {

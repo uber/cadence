@@ -20,7 +20,7 @@
 // THE SOFTWARE.
 
 // Geneate rate limiter wrappers.
-//go:generate mockgen -package $GOPACKAGE -destination dataManagerInterfaces_mock.go -self_package github.com/uber/cadence/common/persistence github.com/uber/cadence/common/persistence Task,ShardManager,ExecutionManager,ExecutionManagerFactory,TaskManager,HistoryManager,DomainManager,QueueManager,ConfigStoreManager
+//go:generate mockgen -package $GOPACKAGE -destination data_manager_interfaces_mock.go -self_package github.com/uber/cadence/common/persistence github.com/uber/cadence/common/persistence Task,ShardManager,ExecutionManager,ExecutionManagerFactory,TaskManager,HistoryManager,DomainManager,QueueManager,ConfigStoreManager
 //go:generate gowrap gen -g -p . -i ConfigStoreManager -t ./wrappers/templates/ratelimited.tmpl -o wrappers/ratelimited/configstore_generated.go
 //go:generate gowrap gen -g -p . -i DomainManager -t ./wrappers/templates/ratelimited.tmpl -o wrappers/ratelimited/domain_generated.go
 //go:generate gowrap gen -g -p . -i HistoryManager -t ./wrappers/templates/ratelimited.tmpl -o wrappers/ratelimited/history_generated.go
@@ -468,15 +468,15 @@ type (
 
 	// TaskInfo describes either activity or decision task
 	TaskInfo struct {
-		DomainID               string
-		WorkflowID             string
-		RunID                  string
-		TaskID                 int64
-		ScheduleID             int64
-		ScheduleToStartTimeout int32
-		Expiry                 time.Time
-		CreatedTime            time.Time
-		PartitionConfig        map[string]string
+		DomainID                      string
+		WorkflowID                    string
+		RunID                         string
+		TaskID                        int64
+		ScheduleID                    int64
+		ScheduleToStartTimeoutSeconds int32
+		Expiry                        time.Time
+		CreatedTime                   time.Time
+		PartitionConfig               map[string]string
 	}
 
 	// TaskKey gives primary key info for a specific task

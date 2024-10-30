@@ -27,6 +27,7 @@ import (
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/clock"
+	"github.com/uber/cadence/common/codec"
 	"github.com/uber/cadence/common/config"
 	es "github.com/uber/cadence/common/elasticsearch"
 	"github.com/uber/cadence/common/log"
@@ -210,7 +211,7 @@ func (f *factoryImpl) NewHistoryManager() (p.HistoryManager, error) {
 	if err != nil {
 		return nil, err
 	}
-	result := p.NewHistoryV2ManagerImpl(store, f.logger, f.config.TransactionSizeLimit)
+	result := p.NewHistoryV2ManagerImpl(store, f.logger, p.NewPayloadSerializer(), codec.NewThriftRWEncoder(), f.config.TransactionSizeLimit)
 	if errorRate := f.config.ErrorInjectionRate(); errorRate != 0 {
 		result = errorinjectors.NewHistoryManager(result, errorRate, f.logger)
 	}
@@ -232,7 +233,7 @@ func (f *factoryImpl) NewDomainManager() (p.DomainManager, error) {
 	if err != nil {
 		return nil, err
 	}
-	result := p.NewDomainManagerImpl(store, f.logger)
+	result := p.NewDomainManagerImpl(store, f.logger, p.NewPayloadSerializer())
 	if errorRate := f.config.ErrorInjectionRate(); errorRate != 0 {
 		result = errorinjectors.NewDomainManager(result, errorRate, f.logger)
 	}

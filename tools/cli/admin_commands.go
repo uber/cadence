@@ -61,7 +61,7 @@ func AdminShowWorkflow(c *cli.Context) error {
 	var history []*persistence.DataBlob
 	if len(tid) != 0 {
 		thriftrwEncoder := codec.NewThriftRWEncoder()
-		histV2, err := initializeHistoryManager(c)
+		histV2, err := getDeps(c).initializeHistoryManager(c)
 		if err != nil {
 			return commoncli.Problem("Error in Admin delete WF: ", err)
 		}
@@ -132,7 +132,7 @@ func AdminDescribeWorkflow(c *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	prettyPrintJSONObject(resp)
+	prettyPrintJSONObject(getDeps(c).Output(), resp)
 
 	if resp != nil {
 		msStr := resp.GetMutableStateInDatabase()
@@ -157,13 +157,13 @@ func AdminDescribeWorkflow(c *cli.Context) error {
 		if err != nil {
 			return commoncli.Problem("thriftrwEncoder.Decode err", err)
 		}
-		prettyPrintJSONObject(branchInfo)
+		prettyPrintJSONObject(getDeps(c).Output(), branchInfo)
 		if ms.ExecutionInfo.AutoResetPoints != nil {
-			fmt.Println("auto-reset-points:")
+			getDeps(c).Output().Write([]byte("auto-reset-points:"))
 			for _, p := range ms.ExecutionInfo.AutoResetPoints.Points {
 				createT := time.Unix(0, p.GetCreatedTimeNano())
 				expireT := time.Unix(0, p.GetExpiringTimeNano())
-				fmt.Println(p.GetBinaryChecksum(), p.GetRunID(), p.GetFirstDecisionCompletedID(), p.GetResettable(), createT, expireT)
+				getDeps(c).Output().Write([]byte(fmt.Sprintln(p.GetBinaryChecksum(), p.GetRunID(), p.GetFirstDecisionCompletedID(), p.GetResettable(), createT, expireT)))
 			}
 		}
 	}
@@ -303,12 +303,12 @@ func AdminDeleteWorkflow(c *cli.Context) error {
 	if err != nil {
 		return commoncli.Problem("strconv.Atoi(shardID) err", err)
 	}
-	histV2, err := initializeHistoryManager(c)
+	histV2, err := getDeps(c).initializeHistoryManager(c)
 	defer histV2.Close()
 	if err != nil {
 		return commoncli.Problem("Error in Admin delete WF: ", err)
 	}
-	exeStore, err := initializeExecutionStore(c, shardIDInt)
+	exeStore, err := getDeps(c).initializeExecutionManager(c, shardIDInt)
 	if err != nil {
 		return commoncli.Problem("Error in Admin delete WF: ", err)
 	}
@@ -329,7 +329,7 @@ func AdminDeleteWorkflow(c *cli.Context) error {
 			return commoncli.Problem("thriftrwEncoder.Decode err", err)
 		}
 		fmt.Println("deleting history events for ...")
-		prettyPrintJSONObject(branchInfo)
+		prettyPrintJSONObject(getDeps(c).Output(), branchInfo)
 		err = histV2.DeleteHistoryBranch(ctx, &persistence.DeleteHistoryBranchRequest{
 			BranchToken: branchToken,
 			ShardID:     &shardIDInt,
@@ -387,7 +387,7 @@ func AdminGetDomainIDOrName(c *cli.Context) error {
 		return commoncli.Problem("Need either domainName or domainID", nil)
 	}
 
-	domainManager, err := initializeDomainManager(c)
+	domainManager, err := getDeps(c).initializeDomainManager(c)
 	if err != nil {
 		return commoncli.Problem("Error in Admin delete WF: ", err)
 	}
@@ -487,7 +487,7 @@ func AdminDescribeShard(c *cli.Context) error {
 	if err != nil {
 		return commoncli.Problem("Error in creating context: ", err)
 	}
-	shardManager, err := initializeShardManager(c)
+	shardManager, err := getDeps(c).initializeShardManager(c)
 	if err != nil {
 		return commoncli.Problem("Error in Admin delete WF: ", err)
 	}
@@ -497,7 +497,7 @@ func AdminDescribeShard(c *cli.Context) error {
 		return commoncli.Problem("Failed to describe shard.", err)
 	}
 
-	prettyPrintJSONObject(shard)
+	prettyPrintJSONObject(getDeps(c).Output(), shard)
 	return nil
 }
 
@@ -516,7 +516,7 @@ func AdminSetShardRangeID(c *cli.Context) error {
 	if err != nil {
 		return commoncli.Problem("Error in creating context: ", err)
 	}
-	shardManager, err := initializeShardManager(c)
+	shardManager, err := getDeps(c).initializeShardManager(c)
 	if err != nil {
 		return commoncli.Problem("Error in Admin delete WF: ", err)
 	}
@@ -663,7 +663,7 @@ func AdminDescribeHistoryHost(c *cli.Context) error {
 	if !printFully {
 		resp.ShardIDs = nil
 	}
-	prettyPrintJSONObject(resp)
+	prettyPrintJSONObject(getDeps(c).Output(), resp)
 	return nil
 }
 
@@ -699,7 +699,7 @@ func AdminRefreshWorkflowTasks(c *cli.Context) error {
 	if err != nil {
 		return commoncli.Problem("Refresh workflow task failed", err)
 	}
-	fmt.Println("Refresh workflow task succeeded.")
+	fmt.Fprintln(getDeps(c).Output(), "Refresh workflow task succeeded.")
 	return nil
 }
 
@@ -737,7 +737,8 @@ func AdminResetQueue(c *cli.Context) error {
 	if err != nil {
 		return commoncli.Problem("Failed to reset queue", err)
 	}
-	fmt.Println("Reset queue state succeeded")
+
+	fmt.Fprintln(getDeps(c).Output(), "Reset queue state succeeded")
 	return nil
 }
 
@@ -777,8 +778,9 @@ func AdminDescribeQueue(c *cli.Context) error {
 		return commoncli.Problem("Failed to describe queue", err)
 	}
 
+	output := getDeps(c).Output()
 	for _, state := range resp.ProcessingQueueStates {
-		fmt.Println(state)
+		fmt.Fprintln(output, state)
 	}
 	return nil
 }

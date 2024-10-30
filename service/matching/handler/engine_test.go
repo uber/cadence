@@ -487,7 +487,7 @@ func TestWaitForQueryResult(t *testing.T) {
 	testCases := []struct {
 		name      string
 		result    *queryResult
-		mockSetup func(*client.VersionCheckerMock)
+		mockSetup func(*client.MockVersionChecker)
 		wantErr   bool
 		assertErr func(*testing.T, error)
 		want      *types.QueryWorkflowResponse
@@ -497,7 +497,7 @@ func TestWaitForQueryResult(t *testing.T) {
 			result: &queryResult{
 				internalError: errors.New("some error"),
 			},
-			mockSetup: func(mockVersionChecker *client.VersionCheckerMock) {},
+			mockSetup: func(mockVersionChecker *client.MockVersionChecker) {},
 			assertErr: func(t *testing.T, err error) {
 				assert.Equal(t, "some error", err.Error())
 			},
@@ -515,7 +515,7 @@ func TestWaitForQueryResult(t *testing.T) {
 					},
 				},
 			},
-			mockSetup: func(mockVersionChecker *client.VersionCheckerMock) {
+			mockSetup: func(mockVersionChecker *client.MockVersionChecker) {
 				mockVersionChecker.EXPECT().SupportsConsistentQuery("uber-go", "1.0.0").Return(errors.New("version error"))
 			},
 			assertErr: func(t *testing.T, err error) {
@@ -537,7 +537,7 @@ func TestWaitForQueryResult(t *testing.T) {
 					},
 				},
 			},
-			mockSetup: func(mockVersionChecker *client.VersionCheckerMock) {
+			mockSetup: func(mockVersionChecker *client.MockVersionChecker) {
 				mockVersionChecker.EXPECT().SupportsConsistentQuery("uber-go", "1.0.0").Return(nil)
 			},
 			wantErr: false,
@@ -559,7 +559,7 @@ func TestWaitForQueryResult(t *testing.T) {
 					},
 				},
 			},
-			mockSetup: func(mockVersionChecker *client.VersionCheckerMock) {
+			mockSetup: func(mockVersionChecker *client.MockVersionChecker) {
 				mockVersionChecker.EXPECT().SupportsConsistentQuery("uber-go", "1.0.0").Return(nil)
 			},
 			assertErr: func(t *testing.T, err error) {
@@ -582,7 +582,7 @@ func TestWaitForQueryResult(t *testing.T) {
 					},
 				},
 			},
-			mockSetup: func(mockVersionChecker *client.VersionCheckerMock) {
+			mockSetup: func(mockVersionChecker *client.MockVersionChecker) {
 				mockVersionChecker.EXPECT().SupportsConsistentQuery("uber-go", "1.0.0").Return(nil)
 			},
 			assertErr: func(t *testing.T, err error) {

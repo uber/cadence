@@ -370,6 +370,7 @@ func (s *BeanImpl) Close() {
 	s.shardManager.Close()
 	s.historyManager.Close()
 	s.executionManagerFactory.Close()
+	s.configStoreManager.Close()
 	for _, executionMgr := range s.shardIDToExecutionManager {
 		executionMgr.Close()
 	}

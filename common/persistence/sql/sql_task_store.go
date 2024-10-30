@@ -434,7 +434,7 @@ func (m *sqlTaskStore) DeleteTaskList(
 
 func (m *sqlTaskStore) CreateTasks(
 	ctx context.Context,
-	request *persistence.InternalCreateTasksRequest,
+	request *persistence.CreateTasksRequest,
 ) (*persistence.CreateTasksResponse, error) {
 	var tasksRows []sqlplugin.TasksRow
 	var tasksRowsWithTTL []sqlplugin.TasksRowWithTTL
@@ -449,8 +449,8 @@ func (m *sqlTaskStore) CreateTasks(
 	for i, v := range request.Tasks {
 		var expiryTime time.Time
 		var ttl time.Duration
-		if v.Data.ScheduleToStartTimeout.Seconds() > 0 {
-			ttl = v.Data.ScheduleToStartTimeout
+		if v.Data.ScheduleToStartTimeoutSeconds > 0 {
+			ttl = time.Duration(v.Data.ScheduleToStartTimeoutSeconds) * time.Second
 			if m.db.SupportsTTL() {
 				maxAllowedTTL, err := m.db.MaxAllowedTTL()
 				if err != nil {
@@ -526,7 +526,7 @@ func (m *sqlTaskStore) CreateTasks(
 func (m *sqlTaskStore) GetTasks(
 	ctx context.Context,
 	request *persistence.GetTasksRequest,
-) (*persistence.InternalGetTasksResponse, error) {
+) (*persistence.GetTasksResponse, error) {
 	shardID := sqlplugin.GetDBShardIDFromDomainIDAndTasklist(request.DomainID, request.TaskList, m.db.GetTotalNumDBShards())
 	rows, err := m.db.SelectFromTasks(ctx, &sqlplugin.TasksFilter{
 		ShardID:      shardID,
@@ -541,13 +541,13 @@ func (m *sqlTaskStore) GetTasks(
 		return nil, convertCommonErrors(m.db, "GetTasks", "", err)
 	}
 
-	var tasks = make([]*persistence.InternalTaskInfo, len(rows))
+	var tasks = make([]*persistence.TaskInfo, len(rows))
 	for i, v := range rows {
 		info, err := m.parser.TaskInfoFromBlob(v.Data, v.DataEncoding)
 		if err != nil {
 			return nil, err
 		}
-		tasks[i] = &persistence.InternalTaskInfo{
+		tasks[i] = &persistence.TaskInfo{
 			DomainID:        request.DomainID,
 			WorkflowID:      info.GetWorkflowID(),
 			RunID:           info.RunID.String(),
@@ -559,7 +559,7 @@ func (m *sqlTaskStore) GetTasks(
 		}
 	}
 
-	return &persistence.InternalGetTasksResponse{Tasks: tasks}, nil
+	return &persistence.GetTasksResponse{Tasks: tasks}, nil
 }
 
 func (m *sqlTaskStore) CompleteTask(

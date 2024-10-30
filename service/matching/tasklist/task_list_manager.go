@@ -200,7 +200,7 @@ func NewManager(
 	if tlMgr.isIsolationMatcherEnabled() {
 		isolationGroups = config.AllIsolationGroups()
 	}
-	var fwdr *Forwarder
+	var fwdr Forwarder
 	if tlMgr.isFowardingAllowed(taskList, *taskListKind) {
 		fwdr = newForwarder(&taskListConfig.ForwarderConfig, taskList, *taskListKind, matchingClient, isolationGroups, scope)
 	}

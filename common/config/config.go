@@ -182,6 +182,7 @@ type (
 		AdvancedVisibilityStore string `yaml:"advancedVisibilityStore"`
 		// HistoryMaxConns is the desired number of conns to history store. Value specified
 		// here overrides the MaxConns config specified as part of datastore
+		// Deprecated: This value is not used
 		HistoryMaxConns int `yaml:"historyMaxConns"`
 		// EnablePersistenceLatencyHistogramMetrics is to enable latency histogram metrics for persistence layer
 		EnablePersistenceLatencyHistogramMetrics bool `yaml:"enablePersistenceLatencyHistogramMetrics"`
