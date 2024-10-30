@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-//go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination database_mock.go -self_package github.com/uber/cadence/tools/cli
+//go:generate mockgen -package $GOPACKAGE -destination mock_manager_factory.go -self_package github.com/uber/cadence/tools/cli github.com/uber/cadence/tools/cli ManagerFactory
 
 package cli
 
