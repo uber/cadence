@@ -2218,7 +2218,6 @@ func TestMutableStateBuilder_closeTransactionHandleWorkflowReset(t *testing.T) {
 	}
 }
 
-
 func TestStartTransactionHandleFailover(t *testing.T) {
 
 	tests := map[string]struct {
