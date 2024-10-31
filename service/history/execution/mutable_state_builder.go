@@ -143,9 +143,9 @@ type (
 		// TODO: persist this to db
 		appliedEvents map[string]struct{}
 
-		insertTransferTasks     []persistence.Task
-		insertReplicationTasks  []persistence.Task
-		insertTimerTasks        []persistence.Task
+		insertTransferTasks    []persistence.Task
+		insertReplicationTasks []persistence.Task
+		insertTimerTasks       []persistence.Task
 
 		workflowRequests map[persistence.WorkflowRequest]struct{}
 
@@ -1472,9 +1472,9 @@ func (e *mutableStateBuilder) CloseTransactionAsMutation(
 		NewBufferedEvents:         e.updateBufferedEvents,
 		ClearBufferedEvents:       e.clearBufferedEvents,
 
-		TransferTasks:     e.insertTransferTasks,
-		ReplicationTasks:  e.insertReplicationTasks,
-		TimerTasks:        e.insertTimerTasks,
+		TransferTasks:    e.insertTransferTasks,
+		ReplicationTasks: e.insertReplicationTasks,
+		TimerTasks:       e.insertTimerTasks,
 
 		WorkflowRequests: convertWorkflowRequests(e.workflowRequests),
 
@@ -1551,9 +1551,9 @@ func (e *mutableStateBuilder) CloseTransactionAsSnapshot(
 		SignalInfos:         convertPendingSignalInfos(e.pendingSignalInfoIDs),
 		SignalRequestedIDs:  convertStringSetToSlice(e.pendingSignalRequestedIDs),
 
-		TransferTasks:     e.insertTransferTasks,
-		ReplicationTasks:  e.insertReplicationTasks,
-		TimerTasks:        e.insertTimerTasks,
+		TransferTasks:    e.insertTransferTasks,
+		ReplicationTasks: e.insertReplicationTasks,
+		TimerTasks:       e.insertTimerTasks,
 
 		WorkflowRequests: convertWorkflowRequests(e.workflowRequests),
 

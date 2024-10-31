@@ -2889,7 +2889,6 @@ func TestMutableStateBuilder_GetTransferTasks(t *testing.T) {
 	assert.IsType(t, &persistence.DecisionTask{}, tasks[1])
 }
 
-
 func TestMutableStateBuilder_GetTimerTasks(t *testing.T) {
 	msb := &mutableStateBuilder{
 		insertTimerTasks: []persistence.Task{
@@ -2910,7 +2909,6 @@ func TestMutableStateBuilder_DeleteTransferTasks(t *testing.T) {
 	msb.DeleteTransferTasks()
 	assert.Nil(t, msb.insertTransferTasks)
 }
-
 
 func TestMutableStateBuilder_DeleteTimerTasks(t *testing.T) {
 	msb := &mutableStateBuilder{
@@ -2937,18 +2935,18 @@ func TestMutableStateBuilder_GetUpdateCondition(t *testing.T) {
 
 func TestCheckAndClearTimerFiredEvent(t *testing.T) {
 	tests := []struct {
-		name                  string
-		timerID               string
-		bufferedEvents        []*types.HistoryEvent
-		updateBufferedEvents  []*types.HistoryEvent
-		history               []*types.HistoryEvent
-		expectedTimerEvent    *types.HistoryEvent
-		expectedBufferedEvents []*types.HistoryEvent
+		name                         string
+		timerID                      string
+		bufferedEvents               []*types.HistoryEvent
+		updateBufferedEvents         []*types.HistoryEvent
+		history                      []*types.HistoryEvent
+		expectedTimerEvent           *types.HistoryEvent
+		expectedBufferedEvents       []*types.HistoryEvent
 		expectedUpdateBufferedEvents []*types.HistoryEvent
-		expectedHistory       []*types.HistoryEvent
+		expectedHistory              []*types.HistoryEvent
 	}{
 		{
-			name:   "TimerFiredEventInBufferedEvents",
+			name:    "TimerFiredEventInBufferedEvents",
 			timerID: "timer1",
 			bufferedEvents: []*types.HistoryEvent{
 				{
@@ -2965,7 +2963,7 @@ func TestCheckAndClearTimerFiredEvent(t *testing.T) {
 				},
 			},
 			updateBufferedEvents: []*types.HistoryEvent{},
-			history: []*types.HistoryEvent{},
+			history:              []*types.HistoryEvent{},
 			expectedTimerEvent: &types.HistoryEvent{
 				EventType: types.EventTypeTimerFired.Ptr(),
 				TimerFiredEventAttributes: &types.TimerFiredEventAttributes{
@@ -2981,11 +2979,11 @@ func TestCheckAndClearTimerFiredEvent(t *testing.T) {
 				},
 			},
 			expectedUpdateBufferedEvents: []*types.HistoryEvent{},
-			expectedHistory: []*types.HistoryEvent{},
+			expectedHistory:              []*types.HistoryEvent{},
 		},
 		{
-			name:   "TimerFiredEventInUpdateBufferedEvents",
-			timerID: "timer2",
+			name:           "TimerFiredEventInUpdateBufferedEvents",
+			timerID:        "timer2",
 			bufferedEvents: []*types.HistoryEvent{},
 			updateBufferedEvents: []*types.HistoryEvent{
 				{
@@ -3014,8 +3012,7 @@ func TestCheckAndClearTimerFiredEvent(t *testing.T) {
 					TimerID: "timer2",
 				},
 			},
-			expectedBufferedEvents: []*types.HistoryEvent{
-			},
+			expectedBufferedEvents: []*types.HistoryEvent{},
 			expectedUpdateBufferedEvents: []*types.HistoryEvent{
 				{
 					EventType: types.EventTypeTimerFired.Ptr(),
@@ -3030,13 +3027,12 @@ func TestCheckAndClearTimerFiredEvent(t *testing.T) {
 					},
 				},
 			},
-			expectedHistory: []*types.HistoryEvent{
-			},
+			expectedHistory: []*types.HistoryEvent{},
 		},
 		{
-			name:   "TimerFiredEventInHistory",
-			timerID: "timer3",
-			bufferedEvents: []*types.HistoryEvent{},
+			name:                 "TimerFiredEventInHistory",
+			timerID:              "timer3",
+			bufferedEvents:       []*types.HistoryEvent{},
 			updateBufferedEvents: []*types.HistoryEvent{},
 			history: []*types.HistoryEvent{
 				{
@@ -3058,7 +3054,7 @@ func TestCheckAndClearTimerFiredEvent(t *testing.T) {
 					TimerID: "timer3",
 				},
 			},
-			expectedBufferedEvents: []*types.HistoryEvent{},
+			expectedBufferedEvents:       []*types.HistoryEvent{},
 			expectedUpdateBufferedEvents: []*types.HistoryEvent{},
 			expectedHistory: []*types.HistoryEvent{
 				{
@@ -3070,15 +3066,15 @@ func TestCheckAndClearTimerFiredEvent(t *testing.T) {
 			},
 		},
 		{
-			name:   "NoTimerFiredEvent",
-			timerID: "timer4",
-			bufferedEvents: []*types.HistoryEvent{},
-			updateBufferedEvents: []*types.HistoryEvent{},
-			history: []*types.HistoryEvent{},
-			expectedTimerEvent: nil,
-			expectedBufferedEvents: []*types.HistoryEvent{},
+			name:                         "NoTimerFiredEvent",
+			timerID:                      "timer4",
+			bufferedEvents:               []*types.HistoryEvent{},
+			updateBufferedEvents:         []*types.HistoryEvent{},
+			history:                      []*types.HistoryEvent{},
+			expectedTimerEvent:           nil,
+			expectedBufferedEvents:       []*types.HistoryEvent{},
 			expectedUpdateBufferedEvents: []*types.HistoryEvent{},
-			expectedHistory: []*types.HistoryEvent{},
+			expectedHistory:              []*types.HistoryEvent{},
 		},
 	}
 
@@ -3100,22 +3096,21 @@ func TestCheckAndClearTimerFiredEvent(t *testing.T) {
 	}
 }
 
-
 func TestAssignTaskIDToTransientHistoryEvents(t *testing.T) {
 
 	tests := map[string]struct {
-		transientHistory []*types.HistoryEvent
-		taskID        int64
+		transientHistory         []*types.HistoryEvent
+		taskID                   int64
 		shardContextExpectations func(mockCache *events.MockCache, shardContext *shardCtx.MockContext, mockDomainCache *cache.MockDomainCache)
-		expectedEvents []*types.HistoryEvent
-		expectedErr error
+		expectedEvents           []*types.HistoryEvent
+		expectedErr              error
 	}{
 		"AssignTaskIDToSingleEvent - transient": {
 			transientHistory: []*types.HistoryEvent{
 				{
 					ID:        1,
 					EventType: types.EventTypeWorkflowExecutionStarted.Ptr(),
-					TaskID: common.EmptyEventTaskID,
+					TaskID:    common.EmptyEventTaskID,
 				},
 			},
 			taskID: 123,
@@ -3135,12 +3130,12 @@ func TestAssignTaskIDToTransientHistoryEvents(t *testing.T) {
 				{
 					ID:        1,
 					EventType: types.EventTypeWorkflowExecutionStarted.Ptr(),
-					TaskID: common.EmptyEventTaskID,
+					TaskID:    common.EmptyEventTaskID,
 				},
 				{
 					ID:        2,
 					EventType: types.EventTypeDecisionTaskScheduled.Ptr(),
-					TaskID: common.EmptyEventTaskID,
+					TaskID:    common.EmptyEventTaskID,
 				},
 			},
 			taskID: 456,
@@ -3162,7 +3157,7 @@ func TestAssignTaskIDToTransientHistoryEvents(t *testing.T) {
 		},
 		"NoEvents - transient events": {
 			transientHistory: []*types.HistoryEvent{},
-			taskID:        789,
+			taskID:           789,
 			shardContextExpectations: func(mockCache *events.MockCache, shardContext *shardCtx.MockContext, mockDomainCache *cache.MockDomainCache) {
 			},
 			expectedEvents: []*types.HistoryEvent{},
@@ -3172,7 +3167,7 @@ func TestAssignTaskIDToTransientHistoryEvents(t *testing.T) {
 				{
 					ID:        1,
 					EventType: types.EventTypeWorkflowExecutionStarted.Ptr(),
-					TaskID: common.EmptyEventTaskID,
+					TaskID:    common.EmptyEventTaskID,
 				},
 			},
 			taskID: 456,
@@ -3183,7 +3178,7 @@ func TestAssignTaskIDToTransientHistoryEvents(t *testing.T) {
 				{
 					ID:        1,
 					EventType: types.EventTypeWorkflowExecutionStarted.Ptr(),
-					TaskID: common.EmptyEventTaskID,
+					TaskID:    common.EmptyEventTaskID,
 				},
 			},
 			expectedErr: assert.AnError,
@@ -3216,18 +3211,18 @@ func TestAssignTaskIDToTransientHistoryEvents(t *testing.T) {
 func TestAssignTaskIDToHistoryEvents(t *testing.T) {
 
 	tests := map[string]struct {
-		history []*types.HistoryEvent
-		taskID        int64
+		history                  []*types.HistoryEvent
+		taskID                   int64
 		shardContextExpectations func(mockCache *events.MockCache, shardContext *shardCtx.MockContext, mockDomainCache *cache.MockDomainCache)
-		expectedEvents []*types.HistoryEvent
-		expectedErr error
+		expectedEvents           []*types.HistoryEvent
+		expectedErr              error
 	}{
 		"AssignTaskIDToSingleEvent": {
 			history: []*types.HistoryEvent{
 				{
 					ID:        1,
 					EventType: types.EventTypeWorkflowExecutionStarted.Ptr(),
-					TaskID: common.EmptyEventTaskID,
+					TaskID:    common.EmptyEventTaskID,
 				},
 			},
 			taskID: 123,
@@ -3247,12 +3242,12 @@ func TestAssignTaskIDToHistoryEvents(t *testing.T) {
 				{
 					ID:        1,
 					EventType: types.EventTypeWorkflowExecutionStarted.Ptr(),
-					TaskID: common.EmptyEventTaskID,
+					TaskID:    common.EmptyEventTaskID,
 				},
 				{
 					ID:        2,
 					EventType: types.EventTypeDecisionTaskScheduled.Ptr(),
-					TaskID: common.EmptyEventTaskID,
+					TaskID:    common.EmptyEventTaskID,
 				},
 			},
 			taskID: 456,
@@ -3274,7 +3269,7 @@ func TestAssignTaskIDToHistoryEvents(t *testing.T) {
 		},
 		"NoEvents - transient events": {
 			history: []*types.HistoryEvent{},
-			taskID:        789,
+			taskID:  789,
 			shardContextExpectations: func(mockCache *events.MockCache, shardContext *shardCtx.MockContext, mockDomainCache *cache.MockDomainCache) {
 			},
 			expectedEvents: []*types.HistoryEvent{},
@@ -3284,7 +3279,7 @@ func TestAssignTaskIDToHistoryEvents(t *testing.T) {
 				{
 					ID:        1,
 					EventType: types.EventTypeWorkflowExecutionStarted.Ptr(),
-					TaskID: common.EmptyEventTaskID,
+					TaskID:    common.EmptyEventTaskID,
 				},
 			},
 			taskID: 456,
@@ -3295,7 +3290,7 @@ func TestAssignTaskIDToHistoryEvents(t *testing.T) {
 				{
 					ID:        1,
 					EventType: types.EventTypeWorkflowExecutionStarted.Ptr(),
-					TaskID: common.EmptyEventTaskID,
+					TaskID:    common.EmptyEventTaskID,
 				},
 			},
 			expectedErr: assert.AnError,
@@ -3348,7 +3343,7 @@ func TestAddUpsertWorkflowSearchAttributesEvent(t *testing.T) {
 			mutableStateBuilderSetup: func(m *mutableStateBuilder) {
 			},
 			expectedEvent: &types.HistoryEvent{
-				ID: 1,
+				ID:        1,
 				EventType: types.EventTypeUpsertWorkflowSearchAttributes.Ptr(),
 				UpsertWorkflowSearchAttributesEventAttributes: &types.UpsertWorkflowSearchAttributesEventAttributes{
 					DecisionTaskCompletedEventID: 123,
@@ -3358,8 +3353,8 @@ func TestAddUpsertWorkflowSearchAttributesEvent(t *testing.T) {
 						},
 					},
 				},
-				TaskID: common.EmptyEventTaskID,
-				Version: common.EmptyVersion,
+				TaskID:    common.EmptyEventTaskID,
+				Version:   common.EmptyVersion,
 				Timestamp: common.Ptr(now.UnixNano()),
 			},
 			expectedErr: nil,
@@ -3379,32 +3374,6 @@ func TestAddUpsertWorkflowSearchAttributesEvent(t *testing.T) {
 			expectedEvent: nil,
 			expectedErr:   &types.InternalServiceError{Message: "invalid mutable state action: mutation after finish"},
 		},
-		// "replication fails": {
-		// 	decisionCompletedEventID: 123,
-		// 	request: &types.UpsertWorkflowSearchAttributesDecisionAttributes{
-		// 		SearchAttributes: &types.SearchAttributes{
-		// 			IndexedFields: map[string][]byte{
-		// 				"CustomKeywordField": []byte("keyword"),
-		// 			},
-		// 		},
-		// 	},
-		// 	mutableStateBuilderSetup: func(m *mutableStateBuilder) {
-		// 		m.hBuilder = &HistoryBuilder{}
-		// 		m.hBuilder.AddUpsertWorkflowSearchAttributesEvent = func(decisionCompletedEventID int64, request *types.UpsertWorkflowSearchAttributesDecisionAttributes) *types.HistoryEvent {
-		// 			return &types.HistoryEvent{
-		// 				EventType: types.EventTypeUpsertWorkflowSearchAttributes.Ptr(),
-		// 				UpsertWorkflowSearchAttributesEventAttributes: &types.UpsertWorkflowSearchAttributesEventAttributes{
-		// 					SearchAttributes: request.SearchAttributes,
-		// 				},
-		// 			}
-		// 		}
-		// 		m.ReplicateUpsertWorkflowSearchAttributesEvent = func(event *types.HistoryEvent) error {
-		// 			return errors.New("replication failed")
-		// 		}
-		// 	},
-		// 	expectedEvent: nil,
-		// 	expectedErr:   errors.New("replication failed"),
-		// },
 	}
 
 	for name, td := range tests {
@@ -3416,13 +3385,12 @@ func TestAddUpsertWorkflowSearchAttributesEvent(t *testing.T) {
 			mockCache := events.NewMockCache(ctrl)
 			mockDomainCache := cache.NewMockDomainCache(ctrl)
 
-
 			nowClock := clock.NewMockedTimeSourceAt(now)
 
 			msb := createMSBWithMocks(mockCache, shardContext, mockDomainCache)
 
 			msb.hBuilder = &HistoryBuilder{
-				history: []*types.HistoryEvent{},
+				history:   []*types.HistoryEvent{},
 				msBuilder: msb,
 			}
 
@@ -3437,7 +3405,6 @@ func TestAddUpsertWorkflowSearchAttributesEvent(t *testing.T) {
 		})
 	}
 }
-
 
 func createMSBWithMocks(mockCache *events.MockCache, shardContext *shardCtx.MockContext, mockDomainCache *cache.MockDomainCache) *mutableStateBuilder {
 	// the MSB constructor calls a bunch of endpoints on the mocks, so
