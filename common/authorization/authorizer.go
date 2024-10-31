@@ -24,8 +24,10 @@ package authorization
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
+	"reflect"
 	"strings"
 
 	clientworker "go.uber.org/cadence/worker"
@@ -120,20 +122,19 @@ type simpleRequestLogWrapper struct {
 }
 
 func (f *simpleRequestLogWrapper) SerializeForLogging() (string, error) {
-	return types.SerializeRequest(f.request)
-}
+	if f.request == nil || reflect.ValueOf(f.request).IsNil() {
+		return "", nil
+	}
 
-type nullRequestLogWrapper struct{}
+	res, err := json.Marshal(f.request)
+	if err != nil {
+		return "", err
+	}
 
-func (f *nullRequestLogWrapper) SerializeForLogging() (string, error) {
-	return "", nil
+	return string(res), nil
 }
 
 func NewFilteredRequestBody(request interface{}) FilteredRequestBody {
-	if request == nil {
-		return &nullRequestLogWrapper{}
-	}
-
 	return &simpleRequestLogWrapper{request}
 }
 

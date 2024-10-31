@@ -21,7 +21,6 @@
 package types
 
 import (
-	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
@@ -8066,17 +8065,6 @@ type RespondCrossClusterTasksCompletedResponse struct {
 // StickyWorkerUnavailableError is an internal type (TBD...)
 type StickyWorkerUnavailableError struct {
 	Message string `json:"message,required"`
-}
-
-// SerializeRequest Serialize an arbitrary request for logging
-// pass in a pointer as a parameter to save space
-func SerializeRequest(request interface{}) (string, error) {
-	res, err := json.Marshal(request)
-	if err != nil {
-		return "", err
-	}
-
-	return string(res), nil
 }
 
 // Any is an internal mirror of google.protobuf.Any, serving the same purposes, but
