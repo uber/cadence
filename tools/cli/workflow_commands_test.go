@@ -2298,10 +2298,21 @@ func Test_ProcessResets(t *testing.T) {
 				{
 					ID:        15,
 					EventType: types.EventTypeWorkflowExecutionContinuedAsNew.Ptr(),
+					WorkflowExecutionStartedEventAttributes: &types.WorkflowExecutionStartedEventAttributes{
+						ContinuedExecutionRunID: "test-run-id",
+					},
+				},
+				{
+					ID:        17,
+					EventType: types.EventTypeDecisionTaskCompleted.Ptr(),
+					WorkflowExecutionStartedEventAttributes: &types.WorkflowExecutionStartedEventAttributes{
+						ContinuedExecutionRunID: "test-run-id",
+					},
 				},
 			},
 		},
 	}, nil).AnyTimes()
+	serverFrontendClient.EXPECT().ResetWorkflowExecution(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
 	ctx := clitest.NewCLIContext(t, app, clitest.StringArgument(FlagDomain, "test-domain"))
 
 	// Initialize channels and WaitGroup
@@ -2330,5 +2341,57 @@ func Test_ProcessResets(t *testing.T) {
 	}
 	done <- true
 	wg.Wait()
-	assert.Error(t, doReset(ctx, "test-domain", wid, rid, params))
+	assert.NoError(t, doReset(ctx, "test-domain", wid, rid, params))
+}
+
+func Test_ListWorkflows_Errors(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	serverFrontendClient := frontend.NewMockClient(mockCtrl)
+	app := NewCliApp(&clientFactoryMock{
+		serverFrontendClient: serverFrontendClient,
+	})
+	ctx := clitest.NewCLIContext(t, app, clitest.StringArgument(FlagDomain, "test-domain"),
+		clitest.StringArgument(FlagEarliestTime, "InvalidTime"))
+	_, err := listWorkflows(ctx)
+	assert.ErrorContains(t, err, "cannot parse timeRange")
+
+	ctx = clitest.NewCLIContext(t, app, clitest.StringArgument(FlagDomain, "test-domain"),
+		clitest.StringArgument(FlagLatestTime, "InvalidTime"))
+	_, err = listWorkflows(ctx)
+	assert.ErrorContains(t, err, "cannot parse timeRange")
+
+	ctx = clitest.NewCLIContext(t, app, clitest.StringArgument(FlagDomain, "test-domain"),
+		clitest.StringArgument(FlagWorkflowStatus, "Closed"), clitest.StringArgument(FlagOpen, "true"))
+	_, err = listWorkflows(ctx)
+	assert.ErrorContains(t, err, "you can only filter on status for closed workflow")
+
+	ctx = clitest.NewCLIContext(t, app, clitest.StringArgument(FlagDomain, "test-domain"),
+		clitest.StringArgument(FlagWorkflowStatus, "Test"))
+	_, err = listWorkflows(ctx)
+	assert.ErrorContains(t, err, "failed to parse workflow status")
+
+	ctx = clitest.NewCLIContext(t, app, clitest.StringArgument(FlagDomain, "test-domain"),
+		clitest.StringArgument(FlagWorkflowID, "test-workflow-id"), clitest.StringArgument(FlagWorkflowType, "test-workflow-type"))
+	_, err = listWorkflows(ctx)
+	assert.ErrorContains(t, err, "you can filter on workflow_id or workflow_type")
+}
+
+func Test_ListArchivedWorkflows_Errors(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	serverFrontendClient := frontend.NewMockClient(mockCtrl)
+	app := NewCliApp(&clientFactoryMock{
+		serverFrontendClient: serverFrontendClient,
+	})
+	ctx := clitest.NewCLIContext(t, app)
+	_, err := listArchivedWorkflows(ctx)
+	assert.ErrorContains(t, err, fmt.Sprintf("%s is required", FlagDomain))
+
+	ctx = clitest.NewCLIContext(t, app, clitest.StringArgument(FlagDomain, "test-domain"))
+	_, err = listArchivedWorkflows(ctx)
+	assert.ErrorContains(t, err, fmt.Sprintf("%s is required", FlagListQuery))
+
+	ctx = clitest.NewCLIContext(t, app, clitest.StringArgument(FlagDomain, "test-domain"), clitest.StringArgument(FlagListQuery, "test-query"),
+		clitest.IntArgument(FlagPageSize, -1), clitest.IntArgument(FlagContextTimeout, 10))
+	_, err = listArchivedWorkflows(ctx)
+	assert.NoError(t, err)
 }
