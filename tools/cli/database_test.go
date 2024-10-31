@@ -25,23 +25,23 @@ package cli
 import (
 	"flag"
 	"fmt"
+	"testing"
+
+	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/urfave/cli/v2"
+
 	"github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/common/config"
+	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/persistence/client"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra"
 	"github.com/uber/cadence/common/persistence/sql"
 	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
 	"github.com/uber/cadence/common/reconciliation/invariant"
 	commonFlag "github.com/uber/cadence/tools/common/flag"
-	"testing"
-
-	"github.com/golang/mock/gomock"
-	"github.com/stretchr/testify/assert"
-	"github.com/urfave/cli/v2"
-
-	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/persistence/client"
 )
 
 func TestDefaultManagerFactory(t *testing.T) {
@@ -167,24 +167,6 @@ func TestDefaultManagerFactory(t *testing.T) {
 				assert.Equal(t, expectedManager, result)
 			}
 		})
-	}
-}
-
-func newClientFactoryMock() *clientFactoryMock {
-	return &clientFactoryMock{
-		serverFrontendClient: frontend.NewMockClient(gomock.NewController(nil)),
-		serverAdminClient:    admin.NewMockClient(gomock.NewController(nil)),
-		config: &config.Config{
-			Persistence: config.Persistence{
-				DefaultStore: "default",
-				DataStores: map[string]config.DataStore{
-					"default": {NoSQL: &config.NoSQL{PluginName: cassandra.PluginName}},
-				},
-			},
-			ClusterGroupMetadata: &config.ClusterGroupMetadata{
-				CurrentClusterName: "current-cluster",
-			},
-		},
 	}
 }
 
@@ -392,5 +374,23 @@ func TestOverrideTLS(t *testing.T) {
 			assert.Equal(t, tt.expectedTLS.CaFile, tlsConfig.CaFile)
 			assert.Equal(t, tt.expectedTLS.EnableHostVerification, tlsConfig.EnableHostVerification)
 		})
+	}
+}
+
+func newClientFactoryMock() *clientFactoryMock {
+	return &clientFactoryMock{
+		serverFrontendClient: frontend.NewMockClient(gomock.NewController(nil)),
+		serverAdminClient:    admin.NewMockClient(gomock.NewController(nil)),
+		config: &config.Config{
+			Persistence: config.Persistence{
+				DefaultStore: "default",
+				DataStores: map[string]config.DataStore{
+					"default": {NoSQL: &config.NoSQL{PluginName: cassandra.PluginName}},
+				},
+			},
+			ClusterGroupMetadata: &config.ClusterGroupMetadata{
+				CurrentClusterName: "current-cluster",
+			},
+		},
 	}
 }
