@@ -22,6 +22,7 @@ package cli
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"os"
 	"strings"
@@ -66,6 +67,7 @@ var _ ClientFactory = (*clientFactoryMock)(nil)
 type clientFactoryMock struct {
 	serverFrontendClient frontend.Client
 	serverAdminClient    admin.Client
+	config               *config.Config
 }
 
 func (m *clientFactoryMock) ServerFrontendClient(c *cli.Context) (frontend.Client, error) {
@@ -89,7 +91,10 @@ func (m *clientFactoryMock) ElasticSearchClient(c *cli.Context) (*elastic.Client
 }
 
 func (m *clientFactoryMock) ServerConfig(c *cli.Context) (*config.Config, error) {
-	panic("not implemented")
+	if m.config != nil {
+		return m.config, nil
+	}
+	return nil, fmt.Errorf("config not set")
 }
 
 var commands = []string{
