@@ -58,6 +58,20 @@ func (m *MockRequestValidator) EXPECT() *MockRequestValidatorMockRecorder {
 	return m.recorder
 }
 
+// ValidateCountWorkflowExecutionsRequest mocks base method.
+func (m *MockRequestValidator) ValidateCountWorkflowExecutionsRequest(arg0 context.Context, arg1 *types.CountWorkflowExecutionsRequest) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ValidateCountWorkflowExecutionsRequest", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ValidateCountWorkflowExecutionsRequest indicates an expected call of ValidateCountWorkflowExecutionsRequest.
+func (mr *MockRequestValidatorMockRecorder) ValidateCountWorkflowExecutionsRequest(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateCountWorkflowExecutionsRequest", reflect.TypeOf((*MockRequestValidator)(nil).ValidateCountWorkflowExecutionsRequest), arg0, arg1)
+}
+
 // ValidateDescribeTaskListRequest mocks base method.
 func (m *MockRequestValidator) ValidateDescribeTaskListRequest(arg0 context.Context, arg1 *types.DescribeTaskListRequest) error {
 	m.ctrl.T.Helper()
@@ -86,6 +100,48 @@ func (mr *MockRequestValidatorMockRecorder) ValidateGetTaskListsByDomainRequest(
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateGetTaskListsByDomainRequest", reflect.TypeOf((*MockRequestValidator)(nil).ValidateGetTaskListsByDomainRequest), arg0, arg1)
 }
 
+// ValidateListArchivedWorkflowExecutionsRequest mocks base method.
+func (m *MockRequestValidator) ValidateListArchivedWorkflowExecutionsRequest(arg0 context.Context, arg1 *types.ListArchivedWorkflowExecutionsRequest) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ValidateListArchivedWorkflowExecutionsRequest", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ValidateListArchivedWorkflowExecutionsRequest indicates an expected call of ValidateListArchivedWorkflowExecutionsRequest.
+func (mr *MockRequestValidatorMockRecorder) ValidateListArchivedWorkflowExecutionsRequest(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateListArchivedWorkflowExecutionsRequest", reflect.TypeOf((*MockRequestValidator)(nil).ValidateListArchivedWorkflowExecutionsRequest), arg0, arg1)
+}
+
+// ValidateListClosedWorkflowExecutionsRequest mocks base method.
+func (m *MockRequestValidator) ValidateListClosedWorkflowExecutionsRequest(arg0 context.Context, arg1 *types.ListClosedWorkflowExecutionsRequest) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ValidateListClosedWorkflowExecutionsRequest", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ValidateListClosedWorkflowExecutionsRequest indicates an expected call of ValidateListClosedWorkflowExecutionsRequest.
+func (mr *MockRequestValidatorMockRecorder) ValidateListClosedWorkflowExecutionsRequest(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateListClosedWorkflowExecutionsRequest", reflect.TypeOf((*MockRequestValidator)(nil).ValidateListClosedWorkflowExecutionsRequest), arg0, arg1)
+}
+
+// ValidateListOpenWorkflowExecutionsRequest mocks base method.
+func (m *MockRequestValidator) ValidateListOpenWorkflowExecutionsRequest(arg0 context.Context, arg1 *types.ListOpenWorkflowExecutionsRequest) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ValidateListOpenWorkflowExecutionsRequest", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ValidateListOpenWorkflowExecutionsRequest indicates an expected call of ValidateListOpenWorkflowExecutionsRequest.
+func (mr *MockRequestValidatorMockRecorder) ValidateListOpenWorkflowExecutionsRequest(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateListOpenWorkflowExecutionsRequest", reflect.TypeOf((*MockRequestValidator)(nil).ValidateListOpenWorkflowExecutionsRequest), arg0, arg1)
+}
+
 // ValidateListTaskListPartitionsRequest mocks base method.
 func (m *MockRequestValidator) ValidateListTaskListPartitionsRequest(arg0 context.Context, arg1 *types.ListTaskListPartitionsRequest) error {
 	m.ctrl.T.Helper()
@@ -98,6 +154,20 @@ func (m *MockRequestValidator) ValidateListTaskListPartitionsRequest(arg0 contex
 func (mr *MockRequestValidatorMockRecorder) ValidateListTaskListPartitionsRequest(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateListTaskListPartitionsRequest", reflect.TypeOf((*MockRequestValidator)(nil).ValidateListTaskListPartitionsRequest), arg0, arg1)
+}
+
+// ValidateListWorkflowExecutionsRequest mocks base method.
+func (m *MockRequestValidator) ValidateListWorkflowExecutionsRequest(arg0 context.Context, arg1 *types.ListWorkflowExecutionsRequest) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ValidateListWorkflowExecutionsRequest", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ValidateListWorkflowExecutionsRequest indicates an expected call of ValidateListWorkflowExecutionsRequest.
+func (mr *MockRequestValidatorMockRecorder) ValidateListWorkflowExecutionsRequest(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateListWorkflowExecutionsRequest", reflect.TypeOf((*MockRequestValidator)(nil).ValidateListWorkflowExecutionsRequest), arg0, arg1)
 }
 
 // ValidateRefreshWorkflowTasksRequest mocks base method.
