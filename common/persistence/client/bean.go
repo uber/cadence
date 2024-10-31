@@ -98,7 +98,7 @@ func NewBeanFromFactory(
 	factory Factory,
 	params *Params,
 	serviceConfig *service.Config,
-) (*BeanImpl, error) {
+) (Bean, error) {
 
 	metadataMgr, err := factory.NewDomainManager()
 	if err != nil {

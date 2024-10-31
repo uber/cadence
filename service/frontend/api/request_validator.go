@@ -26,6 +26,7 @@ package api
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
@@ -43,6 +44,11 @@ type (
 		ValidateListTaskListPartitionsRequest(context.Context, *types.ListTaskListPartitionsRequest) error
 		ValidateGetTaskListsByDomainRequest(context.Context, *types.GetTaskListsByDomainRequest) error
 		ValidateResetStickyTaskListRequest(context.Context, *types.ResetStickyTaskListRequest) error
+		ValidateCountWorkflowExecutionsRequest(context.Context, *types.CountWorkflowExecutionsRequest) error
+		ValidateListWorkflowExecutionsRequest(context.Context, *types.ListWorkflowExecutionsRequest) error
+		ValidateListOpenWorkflowExecutionsRequest(context.Context, *types.ListOpenWorkflowExecutionsRequest) error
+		ValidateListArchivedWorkflowExecutionsRequest(context.Context, *types.ListArchivedWorkflowExecutionsRequest) error
+		ValidateListClosedWorkflowExecutionsRequest(context.Context, *types.ListClosedWorkflowExecutionsRequest) error
 	}
 
 	requestValidatorImpl struct {
@@ -64,7 +70,6 @@ func (v *requestValidatorImpl) validateTaskList(t *types.TaskList, scope metrics
 	if t == nil || t.GetName() == "" {
 		return validate.ErrTaskListNotSet
 	}
-
 	if !common.IsValidIDLength(
 		t.GetName(),
 		scope,
@@ -77,6 +82,11 @@ func (v *requestValidatorImpl) validateTaskList(t *types.TaskList, scope metrics
 		return validate.ErrTaskListTooLong
 	}
 	return nil
+}
+
+func (v *requestValidatorImpl) isListRequestPageSizeTooLarge(pageSize int32, domain string) bool {
+	return common.IsAdvancedVisibilityReadingEnabled(v.config.EnableReadVisibilityFromES(domain), v.config.IsAdvancedVisConfigExist) &&
+		pageSize > int32(v.config.ESIndexMaxResultWindow())
 }
 
 func (v *requestValidatorImpl) ValidateRefreshWorkflowTasksRequest(ctx context.Context, req *types.RefreshWorkflowTasksRequest) error {
@@ -131,4 +141,119 @@ func (v *requestValidatorImpl) ValidateResetStickyTaskListRequest(ctx context.Co
 	}
 	wfExecution := resetRequest.GetExecution()
 	return validate.CheckExecution(wfExecution)
+}
+
+func (v *requestValidatorImpl) ValidateCountWorkflowExecutionsRequest(ctx context.Context, countRequest *types.CountWorkflowExecutionsRequest) error {
+	if countRequest == nil {
+		return validate.ErrRequestNotSet
+	}
+	if countRequest.GetDomain() == "" {
+		return validate.ErrDomainNotSet
+	}
+	return nil
+}
+
+func (v *requestValidatorImpl) ValidateListWorkflowExecutionsRequest(ctx context.Context, listRequest *types.ListWorkflowExecutionsRequest) error {
+	if listRequest == nil {
+		return validate.ErrRequestNotSet
+	}
+	if listRequest.GetDomain() == "" {
+		return validate.ErrDomainNotSet
+	}
+	if listRequest.GetPageSize() <= 0 {
+		listRequest.PageSize = int32(v.config.VisibilityMaxPageSize(listRequest.GetDomain()))
+	}
+	if v.isListRequestPageSizeTooLarge(listRequest.GetPageSize(), listRequest.GetDomain()) {
+		return &types.BadRequestError{Message: fmt.Sprintf("Pagesize is larger than allow %d", v.config.ESIndexMaxResultWindow())}
+	}
+	return nil
+}
+
+func (v *requestValidatorImpl) ValidateListOpenWorkflowExecutionsRequest(ctx context.Context, listRequest *types.ListOpenWorkflowExecutionsRequest) error {
+	if listRequest == nil {
+		return validate.ErrRequestNotSet
+	}
+	if listRequest.GetDomain() == "" {
+		return validate.ErrDomainNotSet
+	}
+	if listRequest.StartTimeFilter == nil {
+		return &types.BadRequestError{Message: "StartTimeFilter is required"}
+	}
+	if listRequest.StartTimeFilter.EarliestTime == nil {
+		return &types.BadRequestError{Message: "EarliestTime in StartTimeFilter is required"}
+	}
+	if listRequest.StartTimeFilter.LatestTime == nil {
+		return &types.BadRequestError{Message: "LatestTime in StartTimeFilter is required"}
+	}
+	if listRequest.StartTimeFilter.GetEarliestTime() > listRequest.StartTimeFilter.GetLatestTime() {
+		return &types.BadRequestError{Message: "EarliestTime in StartTimeFilter should not be larger than LatestTime"}
+	}
+	if listRequest.ExecutionFilter != nil && listRequest.TypeFilter != nil {
+		return &types.BadRequestError{Message: "Only one of ExecutionFilter or TypeFilter is allowed"}
+	}
+	if listRequest.GetMaximumPageSize() <= 0 {
+		listRequest.MaximumPageSize = int32(v.config.VisibilityMaxPageSize(listRequest.GetDomain()))
+	}
+	if v.isListRequestPageSizeTooLarge(listRequest.GetMaximumPageSize(), listRequest.GetDomain()) {
+		return &types.BadRequestError{Message: fmt.Sprintf("Pagesize is larger than allow %d", v.config.ESIndexMaxResultWindow())}
+	}
+	return nil
+}
+
+func (v *requestValidatorImpl) ValidateListArchivedWorkflowExecutionsRequest(ctx context.Context, listRequest *types.ListArchivedWorkflowExecutionsRequest) error {
+	if listRequest == nil {
+		return validate.ErrRequestNotSet
+	}
+	if listRequest.GetDomain() == "" {
+		return validate.ErrDomainNotSet
+	}
+	if listRequest.GetPageSize() <= 0 {
+		listRequest.PageSize = int32(v.config.VisibilityMaxPageSize(listRequest.GetDomain()))
+	}
+	maxPageSize := v.config.VisibilityArchivalQueryMaxPageSize()
+	if int(listRequest.GetPageSize()) > maxPageSize {
+		return &types.BadRequestError{Message: fmt.Sprintf("Pagesize is larger than allowed %d", maxPageSize)}
+	}
+	return nil
+}
+
+func (v *requestValidatorImpl) ValidateListClosedWorkflowExecutionsRequest(ctx context.Context, listRequest *types.ListClosedWorkflowExecutionsRequest) error {
+	if listRequest == nil {
+		return validate.ErrRequestNotSet
+	}
+	if listRequest.GetDomain() == "" {
+		return validate.ErrDomainNotSet
+	}
+	if listRequest.StartTimeFilter == nil {
+		return &types.BadRequestError{Message: "StartTimeFilter is required"}
+	}
+	if listRequest.StartTimeFilter.EarliestTime == nil {
+		return &types.BadRequestError{Message: "EarliestTime in StartTimeFilter is required"}
+	}
+	if listRequest.StartTimeFilter.LatestTime == nil {
+		return &types.BadRequestError{Message: "LatestTime in StartTimeFilter is required"}
+	}
+	if listRequest.StartTimeFilter.GetEarliestTime() > listRequest.StartTimeFilter.GetLatestTime() {
+		return &types.BadRequestError{Message: "EarliestTime in StartTimeFilter should not be larger than LatestTime"}
+	}
+	filterCount := 0
+	if listRequest.ExecutionFilter != nil {
+		filterCount++
+	}
+	if listRequest.TypeFilter != nil {
+		filterCount++
+	}
+	if listRequest.StatusFilter != nil {
+		filterCount++
+	}
+	if filterCount > 1 {
+		return &types.BadRequestError{Message: "Only one of ExecutionFilter, TypeFilter or StatusFilter is allowed"}
+	} // If ExecutionFilter is provided with one of TypeFilter or StatusFilter, use ExecutionFilter and ignore other filter
+	if listRequest.GetMaximumPageSize() <= 0 {
+		listRequest.MaximumPageSize = int32(v.config.VisibilityMaxPageSize(listRequest.GetDomain()))
+	}
+	if v.isListRequestPageSizeTooLarge(listRequest.GetMaximumPageSize(), listRequest.GetDomain()) {
+		return &types.BadRequestError{Message: fmt.Sprintf("Pagesize is larger than allow %d", v.config.ESIndexMaxResultWindow())}
+	}
+	return nil
 }
