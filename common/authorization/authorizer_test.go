@@ -26,9 +26,9 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/uber/cadence/common/types"
 
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/types"
 )
 
 func Test_validatePermission(t *testing.T) {
