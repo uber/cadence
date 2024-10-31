@@ -29,17 +29,17 @@ import (
 	"encoding/pem"
 	"flag"
 	"fmt"
-	"github.com/fatih/color"
-	"github.com/golang-jwt/jwt/v5"
-	"github.com/stretchr/testify/require"
-	"github.com/uber/cadence/common/authorization"
-	"github.com/urfave/cli/v2"
 	"os"
 	"testing"
 	"time"
 
+	"github.com/fatih/color"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"github.com/urfave/cli/v2"
 
+	"github.com/uber/cadence/common/authorization"
 	"github.com/uber/cadence/common/testing/testdatagen/idlfuzzedtestdata"
 	"github.com/uber/cadence/common/types"
 )
