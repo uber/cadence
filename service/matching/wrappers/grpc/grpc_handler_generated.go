@@ -87,7 +87,17 @@ func (g GRPCHandler) QueryWorkflow(ctx context.Context, request *matchingv1.Quer
 	return proto.FromMatchingQueryWorkflowResponse(response), proto.FromError(err)
 }
 
+func (g GRPCHandler) RefreshTaskListPartitionConfig(ctx context.Context, request *matchingv1.RefreshTaskListPartitionConfigRequest) (*matchingv1.RefreshTaskListPartitionConfigResponse, error) {
+	response, err := g.h.RefreshTaskListPartitionConfig(ctx, proto.ToMatchingRefreshTaskListPartitionConfigRequest(request))
+	return proto.FromMatchingRefreshTaskListPartitionConfigResponse(response), proto.FromError(err)
+}
+
 func (g GRPCHandler) RespondQueryTaskCompleted(ctx context.Context, request *matchingv1.RespondQueryTaskCompletedRequest) (*matchingv1.RespondQueryTaskCompletedResponse, error) {
 	err := g.h.RespondQueryTaskCompleted(ctx, proto.ToMatchingRespondQueryTaskCompletedRequest(request))
 	return &matchingv1.RespondQueryTaskCompletedResponse{}, proto.FromError(err)
+}
+
+func (g GRPCHandler) UpdateTaskListPartitionConfig(ctx context.Context, request *matchingv1.UpdateTaskListPartitionConfigRequest) (*matchingv1.UpdateTaskListPartitionConfigResponse, error) {
+	response, err := g.h.UpdateTaskListPartitionConfig(ctx, proto.ToMatchingUpdateTaskListPartitionConfigRequest(request))
+	return proto.FromMatchingUpdateTaskListPartitionConfigResponse(response), proto.FromError(err)
 }

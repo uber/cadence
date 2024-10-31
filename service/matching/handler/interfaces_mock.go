@@ -402,6 +402,21 @@ func (mr *MockHandlerMockRecorder) QueryWorkflow(arg0, arg1 interface{}) *gomock
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "QueryWorkflow", reflect.TypeOf((*MockHandler)(nil).QueryWorkflow), arg0, arg1)
 }
 
+// RefreshTaskListPartitionConfig mocks base method.
+func (m *MockHandler) RefreshTaskListPartitionConfig(arg0 context.Context, arg1 *types.MatchingRefreshTaskListPartitionConfigRequest) (*types.MatchingRefreshTaskListPartitionConfigResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RefreshTaskListPartitionConfig", arg0, arg1)
+	ret0, _ := ret[0].(*types.MatchingRefreshTaskListPartitionConfigResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// RefreshTaskListPartitionConfig indicates an expected call of RefreshTaskListPartitionConfig.
+func (mr *MockHandlerMockRecorder) RefreshTaskListPartitionConfig(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RefreshTaskListPartitionConfig", reflect.TypeOf((*MockHandler)(nil).RefreshTaskListPartitionConfig), arg0, arg1)
+}
+
 // RespondQueryTaskCompleted mocks base method.
 func (m *MockHandler) RespondQueryTaskCompleted(arg0 context.Context, arg1 *types.MatchingRespondQueryTaskCompletedRequest) error {
 	m.ctrl.T.Helper()
@@ -438,4 +453,19 @@ func (m *MockHandler) Stop() {
 func (mr *MockHandlerMockRecorder) Stop() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stop", reflect.TypeOf((*MockHandler)(nil).Stop))
+}
+
+// UpdateTaskListPartitionConfig mocks base method.
+func (m *MockHandler) UpdateTaskListPartitionConfig(arg0 context.Context, arg1 *types.MatchingUpdateTaskListPartitionConfigRequest) (*types.MatchingUpdateTaskListPartitionConfigResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateTaskListPartitionConfig", arg0, arg1)
+	ret0, _ := ret[0].(*types.MatchingUpdateTaskListPartitionConfigResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpdateTaskListPartitionConfig indicates an expected call of UpdateTaskListPartitionConfig.
+func (mr *MockHandlerMockRecorder) UpdateTaskListPartitionConfig(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateTaskListPartitionConfig", reflect.TypeOf((*MockHandler)(nil).UpdateTaskListPartitionConfig), arg0, arg1)
 }

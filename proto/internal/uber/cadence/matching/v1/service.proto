@@ -83,6 +83,12 @@ service MatchingAPI {
 
   // GetTaskListsByDomain returns all tasklist for a given domain
   rpc GetTaskListsByDomain(GetTaskListsByDomainRequest) returns (GetTaskListsByDomainResponse);
+
+  // UpdateTaskListPartitionConfig is called to update the partition config of a task list
+  rpc UpdateTaskListPartitionConfig(UpdateTaskListPartitionConfigRequest) returns (UpdateTaskListPartitionConfigResponse);
+
+  // RefreshTaskListPartitionConfig is called to update the cache of partition config of a task list
+  rpc RefreshTaskListPartitionConfig(RefreshTaskListPartitionConfigRequest) returns (RefreshTaskListPartitionConfigResponse);
 }
 
 message TaskListPartitionConfig {
@@ -250,4 +256,24 @@ message GetTaskListsByDomainRequest {
 message GetTaskListsByDomainResponse {
   map <string,DescribeTaskListResponse> decision_task_list_map = 1;
   map <string,DescribeTaskListResponse> activity_task_list_map = 2;
+}
+
+message UpdateTaskListPartitionConfigRequest {
+  string domain_id = 1;
+  api.v1.TaskList task_list = 2;
+  api.v1.TaskListType task_list_type = 3;
+  TaskListPartitionConfig partition_config = 4;
+}
+
+message UpdateTaskListPartitionConfigResponse {}
+
+message RefreshTaskListPartitionConfigRequest {
+  string domain_id = 1;
+  api.v1.TaskList task_list = 2;
+  api.v1.TaskListType task_list_type = 3;
+  TaskListPartitionConfig partition_config = 4;
+}
+
+message RefreshTaskListPartitionConfigResponse {
+
 }

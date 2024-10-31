@@ -263,3 +263,19 @@ func (c *clientImpl) GetTaskListsByDomain(
 		ActivityTaskListMap: activityTaskListMap,
 	}, nil
 }
+
+func (c *clientImpl) UpdateTaskListPartitionConfig(
+	ctx context.Context,
+	request *types.MatchingUpdateTaskListPartitionConfigRequest,
+	opts ...yarpc.CallOption,
+) (*types.MatchingUpdateTaskListPartitionConfigResponse, error) {
+	return nil, &types.BadRequestError{}
+}
+
+func (c *clientImpl) RefreshTaskListPartitionConfig(
+	ctx context.Context,
+	request *types.MatchingRefreshTaskListPartitionConfigRequest,
+	opts ...yarpc.CallOption,
+) (*types.MatchingRefreshTaskListPartitionConfigResponse, error) {
+	return nil, &types.BadRequestError{}
+}

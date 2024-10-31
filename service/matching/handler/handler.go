@@ -415,6 +415,20 @@ func (h *handlerImpl) GetTaskListsByDomain(
 	return response, hCtx.handleErr(err)
 }
 
+func (h *handlerImpl) UpdateTaskListPartitionConfig(
+	ctx context.Context,
+	request *types.MatchingUpdateTaskListPartitionConfigRequest,
+) (*types.MatchingUpdateTaskListPartitionConfigResponse, error) {
+	return nil, &types.BadRequestError{}
+}
+
+func (h *handlerImpl) RefreshTaskListPartitionConfig(
+	ctx context.Context,
+	request *types.MatchingRefreshTaskListPartitionConfigRequest,
+) (*types.MatchingRefreshTaskListPartitionConfigResponse, error) {
+	return nil, &types.BadRequestError{}
+}
+
 func (h *handlerImpl) domainName(id string) string {
 	domainName, err := h.domainCache.GetDomainName(id)
 	if err != nil {
