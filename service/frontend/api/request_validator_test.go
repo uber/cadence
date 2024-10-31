@@ -816,3 +816,267 @@ func TestValidateListArchivedWorkflowExecutionsRequest(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateDeprecateDomainRequest(t *testing.T) {
+	testCases := []struct {
+		name          string
+		req           *types.DeprecateDomainRequest
+		expectError   bool
+		expectedError string
+	}{
+		{
+			name: "success",
+			req: &types.DeprecateDomainRequest{
+				Name:          "domain",
+				SecurityToken: "token",
+			},
+			expectError: false,
+		},
+		{
+			name:          "not set",
+			req:           nil,
+			expectError:   true,
+			expectedError: "Request is nil.",
+		},
+		{
+			name: "domain not set",
+			req: &types.DeprecateDomainRequest{
+				Name: "",
+			},
+			expectError:   true,
+			expectedError: "Domain not set on request.",
+		},
+		{
+			name: "wrong token",
+			req: &types.DeprecateDomainRequest{
+				Name:          "domain",
+				SecurityToken: "to",
+			},
+			expectError:   true,
+			expectedError: "No permission to do this operation.",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			v, deps := setupMocksForRequestValidator(t)
+			require.NoError(t, deps.dynamicClient.UpdateValue(dynamicconfig.EnableAdminProtection, true))
+			require.NoError(t, deps.dynamicClient.UpdateValue(dynamicconfig.AdminOperationToken, "token"))
+
+			err := v.ValidateDeprecateDomainRequest(context.Background(), tc.req)
+			if tc.expectError {
+				assert.ErrorContains(t, err, tc.expectedError)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestValidateDescribeDomainRequest(t *testing.T) {
+	testCases := []struct {
+		name          string
+		req           *types.DescribeDomainRequest
+		expectError   bool
+		expectedError string
+	}{
+		{
+			name: "success - with domain name",
+			req: &types.DescribeDomainRequest{
+				Name: common.Ptr("domain"),
+			},
+			expectError: false,
+		},
+		{
+			name: "success - with domain id",
+			req: &types.DescribeDomainRequest{
+				UUID: common.Ptr("id"),
+			},
+			expectError: false,
+		},
+		{
+			name:          "not set",
+			req:           nil,
+			expectError:   true,
+			expectedError: "Request is nil.",
+		},
+		{
+			name:          "domain not set",
+			req:           &types.DescribeDomainRequest{},
+			expectError:   true,
+			expectedError: "Domain not set on request.",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			v, _ := setupMocksForRequestValidator(t)
+
+			err := v.ValidateDescribeDomainRequest(context.Background(), tc.req)
+			if tc.expectError {
+				assert.ErrorContains(t, err, tc.expectedError)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestValidateUpdateDomainRequest(t *testing.T) {
+	testCases := []struct {
+		name          string
+		req           *types.UpdateDomainRequest
+		expectError   bool
+		expectedError string
+	}{
+		{
+			name: "success - non failover",
+			req: &types.UpdateDomainRequest{
+				Name:          "domain",
+				SecurityToken: "token",
+			},
+			expectError: false,
+		},
+		{
+			name:          "not set",
+			req:           nil,
+			expectError:   true,
+			expectedError: "Request is nil.",
+		},
+		{
+			name:          "domain not set",
+			req:           &types.UpdateDomainRequest{},
+			expectError:   true,
+			expectedError: "Domain not set on request.",
+		},
+		{
+			name: "invalid retention",
+			req: &types.UpdateDomainRequest{
+				Name:                                   "domain",
+				WorkflowExecutionRetentionPeriodInDays: common.Ptr(int32(100)),
+			},
+			expectError:   true,
+			expectedError: "RetentionDays is invalid.",
+		},
+		{
+			name: "wrong token",
+			req: &types.UpdateDomainRequest{
+				Name:          "domain",
+				SecurityToken: "to",
+			},
+			expectError:   true,
+			expectedError: "No permission to do this operation.",
+		},
+		{
+			name: "lockdown",
+			req: &types.UpdateDomainRequest{
+				Name:              "domain",
+				ActiveClusterName: common.Ptr("a"),
+			},
+			expectError:   true,
+			expectedError: "Domain is not accepting fail overs at this time due to lockdown.",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			v, deps := setupMocksForRequestValidator(t)
+			require.NoError(t, deps.dynamicClient.UpdateValue(dynamicconfig.EnableAdminProtection, true))
+			require.NoError(t, deps.dynamicClient.UpdateValue(dynamicconfig.AdminOperationToken, "token"))
+			require.NoError(t, deps.dynamicClient.UpdateValue(dynamicconfig.MaxRetentionDays, 3))
+			require.NoError(t, deps.dynamicClient.UpdateValue(dynamicconfig.Lockdown, true))
+
+			err := v.ValidateUpdateDomainRequest(context.Background(), tc.req)
+			if tc.expectError {
+				assert.ErrorContains(t, err, tc.expectedError)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestValidateRegisterDomainRequest(t *testing.T) {
+	testCases := []struct {
+		name          string
+		req           *types.RegisterDomainRequest
+		expectError   bool
+		expectedError string
+	}{
+		{
+			name: "success",
+			req: &types.RegisterDomainRequest{
+				Name:          "domain",
+				SecurityToken: "token",
+				Data:          map[string]string{"tier": "3"},
+			},
+			expectError: false,
+		},
+		{
+			name:          "not set",
+			req:           nil,
+			expectError:   true,
+			expectedError: "Request is nil.",
+		},
+		{
+			name:          "domain not set",
+			req:           &types.RegisterDomainRequest{},
+			expectError:   true,
+			expectedError: "Domain not set on request.",
+		},
+		{
+			name: "name too long",
+			req: &types.RegisterDomainRequest{
+				Name: "domain-name-toooooooooooooo-long",
+			},
+			expectError:   true,
+			expectedError: "Domain length exceeds limit.",
+		},
+		{
+			name: "invalid retention",
+			req: &types.RegisterDomainRequest{
+				Name:                                   "domain",
+				WorkflowExecutionRetentionPeriodInDays: 100,
+			},
+			expectError:   true,
+			expectedError: "RetentionDays is invalid.",
+		},
+		{
+			name: "missing data key",
+			req: &types.RegisterDomainRequest{
+				Name:          "domain",
+				SecurityToken: "to",
+			},
+			expectError:   true,
+			expectedError: "domain data error, missing required key tier . All required keys: map[tier:true]",
+		},
+		{
+			name: "wrong token",
+			req: &types.RegisterDomainRequest{
+				Name:          "domain",
+				SecurityToken: "to",
+				Data:          map[string]string{"tier": "3"},
+			},
+			expectError:   true,
+			expectedError: "No permission to do this operation.",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			v, deps := setupMocksForRequestValidator(t)
+			require.NoError(t, deps.dynamicClient.UpdateValue(dynamicconfig.EnableAdminProtection, true))
+			require.NoError(t, deps.dynamicClient.UpdateValue(dynamicconfig.AdminOperationToken, "token"))
+			require.NoError(t, deps.dynamicClient.UpdateValue(dynamicconfig.MaxRetentionDays, 3))
+			require.NoError(t, deps.dynamicClient.UpdateValue(dynamicconfig.DomainNameMaxLength, 10))
+			require.NoError(t, deps.dynamicClient.UpdateValue(dynamicconfig.RequiredDomainDataKeys, map[string]interface{}{"tier": true}))
+
+			err := v.ValidateRegisterDomainRequest(context.Background(), tc.req)
+			if tc.expectError {
+				assert.ErrorContains(t, err, tc.expectedError)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
