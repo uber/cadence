@@ -381,7 +381,7 @@ func (d *domainCLIImpl) failoverDomains(c *cli.Context) ([]string, []string, err
 			domainName := domain.GetDomainInfo().GetName()
 			err := d.failover(c, domainName, targetCluster)
 			if err != nil {
-				printError(fmt.Sprintf("Failed failover domain: %s\n", domainName), err)
+				printError(getDeps(c).Output(), fmt.Sprintf("Failed failover domain: %s\n", domainName), err)
 				failedDomains = append(failedDomains, domainName)
 			} else {
 				fmt.Printf("Success failover domain: %s\n", domainName)
@@ -633,6 +633,8 @@ func domainTableOptions(c *cli.Context) RenderOptions {
 }
 
 func (d *domainCLIImpl) ListDomains(c *cli.Context) error {
+	output := getDeps(c).Output()
+
 	pageSize := c.Int(FlagPageSize)
 	prefix := c.String(FlagPrefix)
 	printAll := c.Bool(FlagAll)
@@ -697,7 +699,7 @@ func (d *domainCLIImpl) ListDomains(c *cli.Context) error {
 		if err := Render(c, table, domainTableOptions(c)); err != nil {
 			return fmt.Errorf("failed to render domain list: %w", err)
 		}
-		if i == len(domains)-1 || !showNextPage() {
+		if i == len(domains)-1 || !showNextPage(output) {
 			return nil
 		}
 		table = make([]DomainRow, 0, pageSize)
