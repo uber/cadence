@@ -958,80 +958,76 @@ func (s *matchingEngineSuite) TestMultipleEnginesDecisionsRangeStealing() {
 }
 
 func (s *matchingEngineSuite) MultipleEnginesTasksRangeStealing(taskType int) {
-	const engineCount = 2
-	const taskCount = 400
-	const iterations = 2
+	// Add N tasks to engine1 and then N tasks to engine2. Then poll all tasks from engine2. Engine1 should be closed
+	const N = 10
 	const initialRangeID = 0
-	const rangeSize = 10
+	const rangeSize = 5
 	var scheduleID int64 = 123
 
 	testParam := newTestParam(s.T(), taskType)
 	s.taskManager.SetRangeID(testParam.TaskListID, initialRangeID)
 	s.matchingEngine.config.RangeSize = rangeSize // override to low number for the test
 
-	var engines []*matchingEngineImpl
+	engine1 := s.newMatchingEngine(defaultTestConfig(), s.taskManager)
+	engine1.config.RangeSize = rangeSize
+	engine1.Start()
+	defer engine1.Stop()
 
-	for p := 0; p < engineCount; p++ {
-		e := s.newMatchingEngine(defaultTestConfig(), s.taskManager)
-		e.config.RangeSize = rangeSize
-		engines = append(engines, e)
-		e.Start()
-	}
-
-	for j := 0; j < iterations; j++ {
-		for p := 0; p < engineCount; p++ {
-			engine := engines[p]
-			for i := int64(0); i < taskCount; i++ {
-				addRequest := &addTaskRequest{
-					TaskType:                      taskType,
-					DomainUUID:                    testParam.DomainID,
-					Execution:                     testParam.WorkflowExecution,
-					ScheduleID:                    scheduleID,
-					TaskList:                      testParam.TaskList,
-					ScheduleToStartTimeoutSeconds: 600,
-				}
-
-				_, err := addTask(engine, s.handlerContext, addRequest)
-				if err != nil {
-					s.Require().IsType(&persistence.ConditionFailedError{}, err)
-					i-- // retry adding
-				}
-			}
+	createAddTaskReq := func() *addTaskRequest {
+		return &addTaskRequest{
+			TaskType:                      taskType,
+			DomainUUID:                    testParam.DomainID,
+			Execution:                     testParam.WorkflowExecution,
+			ScheduleID:                    scheduleID,
+			TaskList:                      testParam.TaskList,
+			ScheduleToStartTimeoutSeconds: 600,
 		}
 	}
-	s.EqualValues(iterations*engineCount*taskCount, s.taskManager.GetCreateTaskCount(testParam.TaskListID))
+
+	// First add tasks to engine1
+	for i := 0; i < N; i++ {
+		_, err := addTask(engine1, s.handlerContext, createAddTaskReq())
+		s.Require().NoError(err)
+	}
+
+	engine2 := s.newMatchingEngine(defaultTestConfig(), s.taskManager)
+	engine2.config.RangeSize = rangeSize
+	engine2.Start()
+	defer engine2.Stop()
+
+	// Then add tasks to engine2. It should be able to steal lease and process tasks
+	for i := 0; i < N; i++ {
+		_, err := addTask(engine2, s.handlerContext, createAddTaskReq())
+		s.Require().NoError(err)
+	}
+
+	_, err := addTask(engine1, s.handlerContext, createAddTaskReq())
+	// Adding another task to engine1 should fail because it will not have the lease
+	s.Require().ErrorContains(err, "task list shutting down")
+
+	s.EqualValues(2*N, s.taskManager.GetCreateTaskCount(testParam.TaskListID))
 
 	s.setupRecordTaskStartedMock(taskType, testParam, true)
 
-	for j := 0; j < iterations; j++ {
-		for p := 0; p < engineCount; p++ {
-			engine := engines[p]
-			for i := int64(0); i < taskCount; /* incremented explicitly to skip empty polls */ {
-				pollReq := &pollTaskRequest{
-					TaskType:   taskType,
-					DomainUUID: testParam.DomainID,
-					TaskList:   testParam.TaskList,
-					Identity:   testParam.Identity,
-				}
-				result, err := pollTask(engine, s.handlerContext, pollReq)
-				s.Require().NoError(err)
-				s.NotNil(result)
-				if isEmptyToken(result.TaskToken) {
-					s.logger.Debug("empty poll returned")
-					continue
-				}
-				s.assertPollTaskResponse(taskType, testParam, scheduleID, result)
-				i++
-			}
+	// Poll all tasks from engine2.
+	for i := 0; i < 2*N; i++ {
+		pollReq := &pollTaskRequest{
+			TaskType:   taskType,
+			DomainUUID: testParam.DomainID,
+			TaskList:   testParam.TaskList,
+			Identity:   testParam.Identity,
 		}
-	}
-
-	for _, e := range engines {
-		e.Stop()
+		result, err := pollTask(engine2, s.handlerContext, pollReq)
+		s.Require().NoError(err)
+		s.NotNil(result)
+		if isEmptyToken(result.TaskToken) {
+			s.Fail("empty poll returned")
+		}
+		s.assertPollTaskResponse(taskType, testParam, scheduleID, result)
 	}
 
 	s.EqualValues(0, s.taskManager.GetTaskCount(testParam.TaskListID))
-	totalTasks := taskCount * engineCount * iterations
+	totalTasks := 2 * N
 	persisted := s.taskManager.GetCreateTaskCount(testParam.TaskListID)
 	// No sync matching as all messages are added first
 	s.EqualValues(totalTasks, persisted)
