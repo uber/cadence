@@ -24,6 +24,7 @@ package types
 
 import (
 	"testing"
+	"unsafe"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -67,4 +68,9 @@ func TestDataBlobDeepCopy(t *testing.T) {
 			}
 		})
 	}
+}
+
+// identicalByteArray returns true if a and b are the same slice, false otherwise.
+func identicalByteArray(a, b []byte) bool {
+	return len(a) == len(b) && unsafe.SliceData(a) == unsafe.SliceData(b)
 }

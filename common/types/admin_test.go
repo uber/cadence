@@ -24,7 +24,6 @@ package types
 
 import (
 	"testing"
-	"unsafe"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -618,9 +617,4 @@ func TestGetWorkflowExecutionRawHistoryV2Response_GetVersionHistory(t *testing.T
 
 func ptrInt64(i int64) *int64 {
 	return &i
-}
-
-// identicalByteArray returns true if a and b are the same slice, false otherwise.
-func identicalByteArray(a, b []byte) bool {
-	return len(a) == len(b) && unsafe.SliceData(a) == unsafe.SliceData(b)
 }
