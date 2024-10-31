@@ -380,6 +380,7 @@ func (e *mutableStateBuilder) Load(
 			}
 		}
 	}
+
 	return nil
 }
 
@@ -1363,10 +1364,6 @@ func (e *mutableStateBuilder) AddTimerTasks(
 
 func (e *mutableStateBuilder) GetTransferTasks() []persistence.Task {
 	return e.insertTransferTasks
-}
-
-func (e *mutableStateBuilder) GetCrossClusterTasks() []persistence.Task {
-	return e.insertCrossClusterTasks
 }
 
 func (e *mutableStateBuilder) GetTimerTasks() []persistence.Task {
