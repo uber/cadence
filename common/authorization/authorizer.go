@@ -115,6 +115,28 @@ type FilteredRequestBody interface {
 	SerializeForLogging() (string, error)
 }
 
+type simpleRequestLogWrapper struct {
+	request interface{}
+}
+
+func (f *simpleRequestLogWrapper) SerializeForLogging() (string, error) {
+	return types.SerializeRequest(f.request)
+}
+
+type nullRequestLogWrapper struct{}
+
+func (f *nullRequestLogWrapper) SerializeForLogging() (string, error) {
+	return "", nil
+}
+
+func NewFilteredRequestBody(request interface{}) FilteredRequestBody {
+	if request == nil {
+		return &nullRequestLogWrapper{}
+	}
+
+	return &simpleRequestLogWrapper{request}
+}
+
 func validatePermission(claims *JWTClaims, attributes *Attributes, data domainData) error {
 	if (attributes.Permission < PermissionRead) || (attributes.Permission > PermissionAdmin) {
 		return fmt.Errorf("permission %v is not supported", attributes.Permission)

@@ -632,13 +632,6 @@ type CloseShardRequest struct {
 	ShardID int32 `json:"shardID,omitempty"`
 }
 
-func (v *CloseShardRequest) SerializeForLogging() (string, error) {
-	if v == nil {
-		return "", nil
-	}
-	return SerializeRequest(v)
-}
-
 // GetShardID is an internal getter (TBD...)
 func (v *CloseShardRequest) GetShardID() (o int32) {
 	if v != nil {
@@ -800,13 +793,6 @@ func (v *ContinueAsNewWorkflowExecutionDecisionAttributes) GetSearchAttributes()
 type CountWorkflowExecutionsRequest struct {
 	Domain string `json:"domain,omitempty"`
 	Query  string `json:"query,omitempty"`
-}
-
-func (v *CountWorkflowExecutionsRequest) SerializeForLogging() (string, error) {
-	if v == nil {
-		return "", nil
-	}
-	return SerializeRequest(v)
 }
 
 // GetDomain is an internal getter (TBD...)
@@ -1511,13 +1497,6 @@ type DeprecateDomainRequest struct {
 	SecurityToken string `json:"securityToken,omitempty"`
 }
 
-func (v *DeprecateDomainRequest) SerializeForLogging() (string, error) {
-	if v == nil {
-		return "", nil
-	}
-	return SerializeRequest(v)
-}
-
 // GetName is an internal getter (TBD...)
 func (v *DeprecateDomainRequest) GetName() (o string) {
 	if v != nil {
@@ -1530,13 +1509,6 @@ func (v *DeprecateDomainRequest) GetName() (o string) {
 type DescribeDomainRequest struct {
 	Name *string `json:"name,omitempty"`
 	UUID *string `json:"uuid,omitempty"`
-}
-
-func (v *DescribeDomainRequest) SerializeForLogging() (string, error) {
-	if v == nil {
-		return "", nil
-	}
-	return SerializeRequest(v)
 }
 
 // GetName is an internal getter (TBD...)
@@ -1604,24 +1576,10 @@ type DescribeHistoryHostRequest struct {
 	ExecutionForHost *WorkflowExecution `json:"executionForHost,omitempty"`
 }
 
-func (v *DescribeHistoryHostRequest) SerializeForLogging() (string, error) {
-	if v == nil {
-		return "", nil
-	}
-	return SerializeRequest(v)
-}
-
 // DescribeShardDistributionRequest is an internal type (TBD...)
 type DescribeShardDistributionRequest struct {
 	PageSize int32 `json:"pageSize,omitempty"`
 	PageID   int32 `json:"pageID,omitempty"`
-}
-
-func (v *DescribeShardDistributionRequest) SerializeForLogging() (string, error) {
-	if v == nil {
-		return "", nil
-	}
-	return SerializeRequest(v)
 }
 
 // GetHostAddress is an internal getter (TBD...)
@@ -1662,13 +1620,6 @@ type DescribeQueueRequest struct {
 	Type        *int32 `json:"type,omitempty"`
 }
 
-func (v *DescribeQueueRequest) SerializeForLogging() (string, error) {
-	if v == nil {
-		return "", nil
-	}
-	return SerializeRequest(v)
-}
-
 // GetShardID is an internal getter (TBD...)
 func (v *DescribeQueueRequest) GetShardID() (o int32) {
 	if v != nil {
@@ -1704,13 +1655,6 @@ type DescribeTaskListRequest struct {
 	TaskList              *TaskList     `json:"taskList,omitempty"`
 	TaskListType          *TaskListType `json:"taskListType,omitempty"`
 	IncludeTaskListStatus bool          `json:"includeTaskListStatus,omitempty"`
-}
-
-func (v *DescribeTaskListRequest) SerializeForLogging() (string, error) {
-	if v == nil {
-		return "", nil
-	}
-	return SerializeRequest(v)
 }
 
 // GetDomain is an internal getter (TBD...)
@@ -1771,13 +1715,6 @@ func (v *DescribeTaskListResponse) GetTaskListStatus() (o *TaskListStatus) {
 type DescribeWorkflowExecutionRequest struct {
 	Domain    string             `json:"domain,omitempty"`
 	Execution *WorkflowExecution `json:"execution,omitempty"`
-}
-
-func (v *DescribeWorkflowExecutionRequest) SerializeForLogging() (string, error) {
-	if v == nil {
-		return "", nil
-	}
-	return SerializeRequest(v)
 }
 
 // GetDomain is an internal getter (TBD...)
@@ -2559,13 +2496,6 @@ type GetWorkflowExecutionHistoryRequest struct {
 	SkipArchival           bool                    `json:"skipArchival,omitempty"`
 }
 
-func (v *GetWorkflowExecutionHistoryRequest) SerializeForLogging() (string, error) {
-	if v == nil {
-		return "", nil
-	}
-	return SerializeRequest(v)
-}
-
 // GetDomain is an internal getter (TBD...)
 func (v *GetWorkflowExecutionHistoryRequest) GetDomain() (o string) {
 	if v != nil {
@@ -3291,13 +3221,6 @@ type ListArchivedWorkflowExecutionsRequest struct {
 	Query         string `json:"query,omitempty"`
 }
 
-func (v *ListArchivedWorkflowExecutionsRequest) SerializeForLogging() (string, error) {
-	if v == nil {
-		return "", nil
-	}
-	return SerializeRequest(v)
-}
-
 // GetDomain is an internal getter (TBD...)
 func (v *ListArchivedWorkflowExecutionsRequest) GetDomain() (o string) {
 	if v != nil {
@@ -3347,13 +3270,6 @@ type ListClosedWorkflowExecutionsRequest struct {
 	StatusFilter    *WorkflowExecutionCloseStatus `json:"statusFilter,omitempty"`
 }
 
-func (v *ListClosedWorkflowExecutionsRequest) SerializeForLogging() (string, error) {
-	if v == nil {
-		return "", nil
-	}
-	return SerializeRequest(v)
-}
-
 // GetDomain is an internal getter (TBD...)
 func (v *ListClosedWorkflowExecutionsRequest) GetDomain() (o string) {
 	if v != nil {
@@ -3398,13 +3314,6 @@ type ListDomainsRequest struct {
 	NextPageToken []byte `json:"nextPageToken,omitempty"`
 }
 
-func (v *ListDomainsRequest) SerializeForLogging() (string, error) {
-	if v == nil {
-		return "", nil
-	}
-	return SerializeRequest(v)
-}
-
 // GetPageSize is an internal getter (TBD...)
 func (v *ListDomainsRequest) GetPageSize() (o int32) {
 	if v != nil {
@@ -3445,13 +3354,6 @@ type ListOpenWorkflowExecutionsRequest struct {
 	TypeFilter      *WorkflowTypeFilter      `json:"typeFilter,omitempty"`
 }
 
-func (v *ListOpenWorkflowExecutionsRequest) SerializeForLogging() (string, error) {
-	if v == nil {
-		return "", nil
-	}
-	return SerializeRequest(v)
-}
-
 // GetDomain is an internal getter (TBD...)
 func (v *ListOpenWorkflowExecutionsRequest) GetDomain() (o string) {
 	if v != nil {
@@ -3488,13 +3390,6 @@ type ListTaskListPartitionsRequest struct {
 	TaskList *TaskList `json:"taskList,omitempty"`
 }
 
-func (v *ListTaskListPartitionsRequest) SerializeForLogging() (string, error) {
-	if v == nil {
-		return "", nil
-	}
-	return SerializeRequest(v)
-}
-
 // GetDomain is an internal getter (TBD...)
 func (v *ListTaskListPartitionsRequest) GetDomain() (o string) {
 	if v != nil {
@@ -3520,13 +3415,6 @@ type ListTaskListPartitionsResponse struct {
 // GetTaskListsByDomainRequest is an internal type (TBD...)
 type GetTaskListsByDomainRequest struct {
 	Domain string `json:"domain,omitempty"`
-}
-
-func (v *GetTaskListsByDomainRequest) SerializeForLogging() (string, error) {
-	if v == nil {
-		return "", nil
-	}
-	return SerializeRequest(v)
 }
 
 // GetDomain is an internal getter (TBD...)
@@ -3565,13 +3453,6 @@ type ListWorkflowExecutionsRequest struct {
 	PageSize      int32  `json:"pageSize,omitempty"`
 	NextPageToken []byte `json:"nextPageToken,omitempty"`
 	Query         string `json:"query,omitempty"`
-}
-
-func (v *ListWorkflowExecutionsRequest) SerializeForLogging() (string, error) {
-	if v == nil {
-		return "", nil
-	}
-	return SerializeRequest(v)
 }
 
 // GetDomain is an internal getter (TBD...)
@@ -3973,13 +3854,6 @@ type PollForActivityTaskRequest struct {
 	TaskListMetadata *TaskListMetadata `json:"taskListMetadata,omitempty"`
 }
 
-func (v *PollForActivityTaskRequest) SerializeForLogging() (string, error) {
-	if v == nil {
-		return "", nil
-	}
-	return SerializeRequest(v)
-}
-
 // GetDomain is an internal getter (TBD...)
 func (v *PollForActivityTaskRequest) GetDomain() (o string) {
 	if v != nil {
@@ -4038,13 +3912,6 @@ type PollForDecisionTaskRequest struct {
 	TaskList       *TaskList `json:"taskList,omitempty"`
 	Identity       string    `json:"identity,omitempty"`
 	BinaryChecksum string    `json:"binaryChecksum,omitempty"`
-}
-
-func (v *PollForDecisionTaskRequest) SerializeForLogging() (string, error) {
-	if v == nil {
-		return "", nil
-	}
-	return SerializeRequest(v)
 }
 
 // GetDomain is an internal getter (TBD...)
@@ -4408,13 +4275,6 @@ type QueryWorkflowRequest struct {
 	QueryConsistencyLevel *QueryConsistencyLevel `json:"queryConsistencyLevel,omitempty"`
 }
 
-func (v *QueryWorkflowRequest) SerializeForLogging() (string, error) {
-	if v == nil {
-		return "", nil
-	}
-	return SerializeRequest(v)
-}
-
 // GetDomain is an internal getter (TBD...)
 func (v *QueryWorkflowRequest) GetDomain() (o string) {
 	if v != nil {
@@ -4482,13 +4342,6 @@ type ReapplyEventsRequest struct {
 	DomainName        string             `json:"domainName,omitempty"`
 	WorkflowExecution *WorkflowExecution `json:"workflowExecution,omitempty"`
 	Events            *DataBlob          `json:"events,omitempty"`
-}
-
-func (v *ReapplyEventsRequest) SerializeForLogging() (string, error) {
-	if v == nil {
-		return "", nil
-	}
-	return SerializeRequest(v)
 }
 
 // GetDomainName is an internal getter (TBD...)
@@ -4564,13 +4417,6 @@ type RecordActivityTaskHeartbeatRequest struct {
 	Identity  string `json:"identity,omitempty"`
 }
 
-func (v *RecordActivityTaskHeartbeatRequest) SerializeForLogging() (string, error) {
-	if v == nil {
-		return "", nil
-	}
-	return SerializeRequest(v)
-}
-
 // RecordActivityTaskHeartbeatResponse is an internal type (TBD...)
 type RecordActivityTaskHeartbeatResponse struct {
 	CancelRequested bool `json:"cancelRequested,omitempty"`
@@ -4595,13 +4441,6 @@ func (v *RecordMarkerDecisionAttributes) GetMarkerName() (o string) {
 type RefreshWorkflowTasksRequest struct {
 	Domain    string             `json:"domain,omitempty"`
 	Execution *WorkflowExecution `json:"execution,omitempty"`
-}
-
-func (v *RefreshWorkflowTasksRequest) SerializeForLogging() (string, error) {
-	if v == nil {
-		return "", nil
-	}
-	return SerializeRequest(v)
 }
 
 // GetDomain is an internal getter (TBD...)
@@ -4636,13 +4475,6 @@ type RegisterDomainRequest struct {
 	HistoryArchivalURI                     string                             `json:"historyArchivalURI,omitempty"`
 	VisibilityArchivalStatus               *ArchivalStatus                    `json:"visibilityArchivalStatus,omitempty"`
 	VisibilityArchivalURI                  string                             `json:"visibilityArchivalURI,omitempty"`
-}
-
-func (v *RegisterDomainRequest) SerializeForLogging() (string, error) {
-	if v == nil {
-		return "", nil
-	}
-	return SerializeRequest(v)
 }
 
 // GetName is an internal getter (TBD...)
@@ -4738,13 +4570,6 @@ type RemoveTaskRequest struct {
 	TaskID              int64  `json:"taskID,omitempty"`
 	VisibilityTimestamp *int64 `json:"visibilityTimestamp,omitempty"`
 	ClusterName         string `json:"clusterName,omitempty"`
-}
-
-func (v *RemoveTaskRequest) SerializeForLogging() (string, error) {
-	if v == nil {
-		return "", nil
-	}
-	return SerializeRequest(v)
 }
 
 // GetShardID is an internal getter (TBD...)
@@ -4917,13 +4742,6 @@ type RequestCancelWorkflowExecutionRequest struct {
 	FirstExecutionRunID string             `json:"first_execution_run_id,omitempty"`
 }
 
-func (v *RequestCancelWorkflowExecutionRequest) SerializeForLogging() (string, error) {
-	if v == nil {
-		return "", nil
-	}
-	return SerializeRequest(v)
-}
-
 // GetDomain is an internal getter (TBD...)
 func (v *RequestCancelWorkflowExecutionRequest) GetDomain() (o string) {
 	if v != nil {
@@ -5026,13 +4844,6 @@ type ResetQueueRequest struct {
 	Type        *int32 `json:"type,omitempty"`
 }
 
-func (v *ResetQueueRequest) SerializeForLogging() (string, error) {
-	if v == nil {
-		return "", nil
-	}
-	return SerializeRequest(v)
-}
-
 // GetShardID is an internal getter (TBD...)
 func (v *ResetQueueRequest) GetShardID() (o int32) {
 	if v != nil {
@@ -5063,13 +4874,6 @@ type ResetStickyTaskListRequest struct {
 	Execution *WorkflowExecution `json:"execution,omitempty"`
 }
 
-func (v *ResetStickyTaskListRequest) SerializeForLogging() (string, error) {
-	if v == nil {
-		return "", nil
-	}
-	return SerializeRequest(v)
-}
-
 // GetDomain is an internal getter (TBD...)
 func (v *ResetStickyTaskListRequest) GetDomain() (o string) {
 	if v != nil {
@@ -5098,13 +4902,6 @@ type ResetWorkflowExecutionRequest struct {
 	DecisionFinishEventID int64              `json:"decisionFinishEventId,omitempty"`
 	RequestID             string             `json:"requestId,omitempty"`
 	SkipSignalReapply     bool               `json:"skipSignalReapply,omitempty"`
-}
-
-func (v *ResetWorkflowExecutionRequest) SerializeForLogging() (string, error) {
-	if v == nil {
-		return "", nil
-	}
-	return SerializeRequest(v)
 }
 
 // GetDomain is an internal getter (TBD...)
@@ -5877,13 +5674,6 @@ type SignalWithStartWorkflowExecutionRequest struct {
 	FirstRunAtTimestamp                 *int64                 `json:"firstRunAtTimestamp,omitempty"`
 }
 
-func (v *SignalWithStartWorkflowExecutionRequest) SerializeForLogging() (string, error) {
-	if v == nil {
-		return "", nil
-	}
-	return SerializeRequest(v)
-}
-
 // GetDomain is an internal getter (TBD...)
 func (v *SignalWithStartWorkflowExecutionRequest) GetDomain() (o string) {
 	if v != nil {
@@ -5998,13 +5788,6 @@ type SignalWorkflowExecutionRequest struct {
 	Identity          string             `json:"identity,omitempty"`
 	RequestID         string             `json:"requestId,omitempty"`
 	Control           []byte             `json:"control,omitempty"`
-}
-
-func (v *SignalWorkflowExecutionRequest) SerializeForLogging() (string, error) {
-	if v == nil {
-		return "", nil
-	}
-	return SerializeRequest(v)
 }
 
 // GetDomain is an internal getter (TBD...)
@@ -6262,13 +6045,6 @@ type RestartWorkflowExecutionRequest struct {
 	Identity          string             `json:"identity,omitempty"`
 }
 
-func (v *RestartWorkflowExecutionRequest) SerializeForLogging() (string, error) {
-	if v == nil {
-		return "", nil
-	}
-	return SerializeRequest(v)
-}
-
 // GetDomain is an internal getter (TBD...)
 func (v *RestartWorkflowExecutionRequest) GetDomain() (o string) {
 	if v != nil {
@@ -6289,13 +6065,6 @@ type DiagnoseWorkflowExecutionRequest struct {
 	Domain            string             `json:"domain,omitempty"`
 	WorkflowExecution *WorkflowExecution `json:"workflowExecution,omitempty"`
 	Identity          string             `json:"identity,omitempty"`
-}
-
-func (v *DiagnoseWorkflowExecutionRequest) SerializeForLogging() (string, error) {
-	if v == nil {
-		return "", nil
-	}
-	return SerializeRequest(v)
 }
 
 // GetDomain returns the domain
@@ -6355,13 +6124,6 @@ type StartWorkflowExecutionRequest struct {
 	DelayStartSeconds                   *int32                 `json:"delayStartSeconds,omitempty"`
 	JitterStartSeconds                  *int32                 `json:"jitterStartSeconds,omitempty"`
 	FirstRunAtTimeStamp                 *int64                 `json:"firstRunAtTimeStamp,omitempty"`
-}
-
-func (v *StartWorkflowExecutionRequest) SerializeForLogging() (string, error) {
-	if v == nil {
-		return "", nil
-	}
-	return SerializeRequest(v)
 }
 
 // GetDomain is an internal getter (TBD...)
@@ -6729,13 +6491,6 @@ type TerminateWorkflowExecutionRequest struct {
 	FirstExecutionRunID string             `json:"first_execution_run_id,omitempty"`
 }
 
-func (v *TerminateWorkflowExecutionRequest) SerializeForLogging() (string, error) {
-	if v == nil {
-		return "", nil
-	}
-	return SerializeRequest(v)
-}
-
 // GetDomain is an internal getter (TBD...)
 func (v *TerminateWorkflowExecutionRequest) GetDomain() (o string) {
 	if v != nil {
@@ -6934,13 +6689,6 @@ type UpdateDomainRequest struct {
 	SecurityToken                          string                             `json:"securityToken,omitempty"`
 	DeleteBadBinary                        *string                            `json:"deleteBadBinary,omitempty"`
 	FailoverTimeoutInSeconds               *int32                             `json:"failoverTimeoutInSeconds,omitempty"`
-}
-
-func (v *UpdateDomainRequest) SerializeForLogging() (string, error) {
-	if v == nil {
-		return "", nil
-	}
-	return SerializeRequest(v)
 }
 
 // GetName is an internal getter (TBD...)
@@ -8256,13 +8004,6 @@ type GetCrossClusterTasksRequest struct {
 	TargetCluster string  `json:"targetCluster,omitempty"`
 }
 
-func (v *GetCrossClusterTasksRequest) SerializeForLogging() (string, error) {
-	if v == nil {
-		return "", nil
-	}
-	return SerializeRequest(v)
-}
-
 // GetShardIDs is an internal getter (TBD...)
 func (v *GetCrossClusterTasksRequest) GetShardIDs() (o []int32) {
 	if v != nil && v.ShardIDs != nil {
@@ -8299,13 +8040,6 @@ type RespondCrossClusterTasksCompletedRequest struct {
 	TargetCluster string                      `json:"targetCluster,omitempty"`
 	TaskResponses []*CrossClusterTaskResponse `json:"taskResponses,omitempty"`
 	FetchNewTasks bool                        `json:"fetchNewTasks,omitempty"`
-}
-
-func (v *RespondCrossClusterTasksCompletedRequest) SerializeForLogging() (string, error) {
-	if v == nil {
-		return "", nil
-	}
-	return SerializeRequest(v)
 }
 
 // GetShardID is an internal getter (TBD...)

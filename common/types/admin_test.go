@@ -24,6 +24,7 @@ package types
 
 import (
 	"testing"
+	"unsafe"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -172,54 +173,6 @@ func TestAsyncWorkflowConfigurationDeepCopy(t *testing.T) {
 	}
 }
 
-func TestAddSearchAttributeRequest_SerializeForLogging(t *testing.T) {
-	tests := []struct {
-		name    string
-		request *AddSearchAttributeRequest
-		want    string
-		wantErr bool
-	}{
-		{
-			name:    "Nil request",
-			request: nil,
-			want:    "",
-			wantErr: false,
-		},
-		{
-			name: "Empty SearchAttribute",
-			request: &AddSearchAttributeRequest{
-				SearchAttribute: nil,
-				SecurityToken:   "",
-			},
-			want:    `{}`,
-			wantErr: false,
-		},
-		{
-			name: "With SearchAttribute",
-			request: &AddSearchAttributeRequest{
-				SearchAttribute: map[string]IndexedValueType{
-					"attr1": 1,
-				},
-				SecurityToken: "token",
-			},
-			want:    `{"searchAttribute":{"attr1":"KEYWORD"},"securityToken":"token"}`,
-			wantErr: false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := tt.request.SerializeForLogging()
-			if tt.wantErr {
-				assert.Error(t, err, "SerializeForLogging() error expected")
-			} else {
-				assert.NoError(t, err, "SerializeForLogging() error unexpected")
-			}
-			assert.Equal(t, tt.want, got, "SerializeForLogging() result mismatch")
-		})
-	}
-}
-
 func TestAddSearchAttributeRequest_GetSearchAttribute(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -257,52 +210,6 @@ func TestAddSearchAttributeRequest_GetSearchAttribute(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got := tt.request.GetSearchAttribute()
 			assert.Equal(t, tt.want, got, "GetSearchAttribute() result mismatch")
-		})
-	}
-}
-
-func TestAdminDescribeWorkflowExecutionRequest_SerializeForLogging(t *testing.T) {
-	tests := []struct {
-		name    string
-		request *AdminDescribeWorkflowExecutionRequest
-		want    string
-		wantErr bool
-	}{
-		{
-			name:    "Nil request",
-			request: nil,
-			want:    "",
-			wantErr: false,
-		},
-		{
-			name:    "Empty request",
-			request: &AdminDescribeWorkflowExecutionRequest{},
-			want:    `{}`,
-			wantErr: false,
-		},
-		{
-			name: "With Domain and Execution",
-			request: &AdminDescribeWorkflowExecutionRequest{
-				Domain: "test-domain",
-				Execution: &WorkflowExecution{
-					WorkflowID: "test-workflow",
-					RunID:      "test-run",
-				},
-			},
-			want:    `{"domain":"test-domain","execution":{"workflowId":"test-workflow","runId":"test-run"}}`,
-			wantErr: false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := tt.request.SerializeForLogging()
-			if tt.wantErr {
-				assert.Error(t, err, "SerializeForLogging() error expected")
-			} else {
-				assert.NoError(t, err, "SerializeForLogging() error unexpected")
-			}
-			assert.Equal(t, tt.want, got, "SerializeForLogging() result mismatch")
 		})
 	}
 }
@@ -402,58 +309,6 @@ func TestAdminDescribeWorkflowExecutionResponse_GetMutableStateInDatabase(t *tes
 		t.Run(tt.name, func(t *testing.T) {
 			got := tt.response.GetMutableStateInDatabase()
 			assert.Equal(t, tt.want, got, "GetMutableStateInDatabase() result mismatch")
-		})
-	}
-}
-
-func TestGetWorkflowExecutionRawHistoryV2Request_SerializeForLogging(t *testing.T) {
-	tests := []struct {
-		name    string
-		request *GetWorkflowExecutionRawHistoryV2Request
-		want    string
-		wantErr bool
-	}{
-		{
-			name:    "Nil request",
-			request: nil,
-			want:    "",
-			wantErr: false,
-		},
-		{
-			name:    "Empty request",
-			request: &GetWorkflowExecutionRawHistoryV2Request{},
-			want:    `{}`,
-			wantErr: false,
-		},
-		{
-			name: "Full request",
-			request: &GetWorkflowExecutionRawHistoryV2Request{
-				Domain: "test-domain",
-				Execution: &WorkflowExecution{
-					WorkflowID: "workflow-id",
-					RunID:      "run-id",
-				},
-				StartEventID:      ptrInt64(100),
-				StartEventVersion: ptrInt64(1),
-				EndEventID:        ptrInt64(200),
-				EndEventVersion:   ptrInt64(2),
-				MaximumPageSize:   50,
-				NextPageToken:     []byte("token"),
-			},
-			want:    `{"domain":"test-domain","execution":{"workflowId":"workflow-id","runId":"run-id"},"startEventId":100,"startEventVersion":1,"endEventId":200,"endEventVersion":2,"maximumPageSize":50,"nextPageToken":"dG9rZW4="}`,
-			wantErr: false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := tt.request.SerializeForLogging()
-			if tt.wantErr {
-				assert.Error(t, err, "SerializeForLogging() error expected")
-			} else {
-				assert.NoError(t, err, "SerializeForLogging() error unexpected")
-			}
-			assert.Equal(t, tt.want, got, "SerializeForLogging() result mismatch")
 		})
 	}
 }
@@ -763,4 +618,9 @@ func TestGetWorkflowExecutionRawHistoryV2Response_GetVersionHistory(t *testing.T
 
 func ptrInt64(i int64) *int64 {
 	return &i
+}
+
+// identicalByteArray returns true if a and b are the same slice, false otherwise.
+func identicalByteArray(a, b []byte) bool {
+	return len(a) == len(b) && unsafe.SliceData(a) == unsafe.SliceData(b)
 }
