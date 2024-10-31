@@ -70,89 +70,80 @@ func NewResourceFactory() ResourceFactory {
 
 type resourceImplFactory struct{}
 
-func (*resourceImplFactory) NewResource(params *Params,
+func (*resourceImplFactory) NewResource(
+	params *Params,
 	serviceName string,
 	serviceConfig *service.Config,
 ) (resource Resource, err error) {
 	return New(params, serviceName, serviceConfig)
 }
 
-type (
+// Impl contains all common resources shared across frontend / matching / history / worker
+type Impl struct {
+	status int32
 
-	// VisibilityManagerInitializer is the function each service should implement
-	// for visibility manager initialization
-	VisibilityManagerInitializer func(
-		persistenceBean persistenceClient.Bean,
-		logger log.Logger,
-	) (persistence.VisibilityManager, error)
+	// static infos
+	numShards       int
+	serviceName     string
+	hostInfo        membership.HostInfo
+	metricsScope    tally.Scope
+	clusterMetadata cluster.Metadata
 
-	// Impl contains all common resources shared across frontend / matching / history / worker
-	Impl struct {
-		status int32
+	// other common resources
 
-		// static infos
-		numShards       int
-		serviceName     string
-		hostInfo        membership.HostInfo
-		metricsScope    tally.Scope
-		clusterMetadata cluster.Metadata
+	domainCache             cache.DomainCache
+	domainMetricsScopeCache cache.DomainMetricsScopeCache
+	timeSource              clock.TimeSource
+	payloadSerializer       persistence.PayloadSerializer
+	metricsClient           metrics.Client
+	messagingClient         messaging.Client
+	blobstoreClient         blobstore.Client
+	archivalMetadata        archiver.ArchivalMetadata
+	archiverProvider        provider.ArchiverProvider
+	domainReplicationQueue  domain.ReplicationQueue
 
-		// other common resources
+	// membership infos
 
-		domainCache             cache.DomainCache
-		domainMetricsScopeCache cache.DomainMetricsScopeCache
-		timeSource              clock.TimeSource
-		payloadSerializer       persistence.PayloadSerializer
-		metricsClient           metrics.Client
-		messagingClient         messaging.Client
-		blobstoreClient         blobstore.Client
-		archivalMetadata        archiver.ArchivalMetadata
-		archiverProvider        provider.ArchiverProvider
-		domainReplicationQueue  domain.ReplicationQueue
+	membershipResolver membership.Resolver
 
-		// membership infos
+	// internal services clients
 
-		membershipResolver membership.Resolver
+	sdkClient         workflowserviceclient.Interface
+	frontendRawClient frontend.Client
+	frontendClient    frontend.Client
+	matchingRawClient matching.Client
+	matchingClient    matching.Client
+	historyRawClient  history.Client
+	historyClient     history.Client
+	clientBean        client.Bean
 
-		// internal services clients
+	// persistence clients
+	persistenceBean persistenceClient.Bean
 
-		sdkClient         workflowserviceclient.Interface
-		frontendRawClient frontend.Client
-		frontendClient    frontend.Client
-		matchingRawClient matching.Client
-		matchingClient    matching.Client
-		historyRawClient  history.Client
-		historyClient     history.Client
-		clientBean        client.Bean
+	// hostName
+	hostName string
 
-		// persistence clients
-		persistenceBean persistenceClient.Bean
+	// loggers
+	logger          log.Logger
+	throttledLogger log.Logger
 
-		// hostName
-		hostName string
+	// for registering handlers
+	dispatcher *yarpc.Dispatcher
 
-		// loggers
-		logger          log.Logger
-		throttledLogger log.Logger
+	// internal vars
 
-		// for registering handlers
-		dispatcher *yarpc.Dispatcher
+	pprofInitializer       common.PProfInitializer
+	runtimeMetricsReporter *metrics.RuntimeMetricsReporter
+	rpcFactory             rpc.Factory
 
-		// internal vars
+	isolationGroups           isolationgroup.State
+	isolationGroupConfigStore configstore.Client
+	partitioner               partition.Partitioner
 
-		pprofInitializer       common.PProfInitializer
-		runtimeMetricsReporter *metrics.RuntimeMetricsReporter
-		rpcFactory             rpc.Factory
+	asyncWorkflowQueueProvider queue.Provider
 
-		isolationGroups           isolationgroup.State
-		isolationGroupConfigStore configstore.Client
-		partitioner               partition.Partitioner
-
-		asyncWorkflowQueueProvider queue.Provider
-
-		ratelimiterAggregatorClient qrpc.Client
-	}
-)
+	ratelimiterAggregatorClient qrpc.Client
+}
 
 var _ Resource = (*Impl)(nil)
 
@@ -195,7 +186,11 @@ func New(
 		return nil, err
 	}
 
-	persistenceBean, err := persistenceClient.NewBeanFromFactory(persistenceClient.NewFactory(
+	newPersistenceBeanFn := persistenceClient.NewBeanFromFactory
+	if params.NewPersistenceBeanFn != nil {
+		newPersistenceBeanFn = params.NewPersistenceBeanFn
+	}
+	persistenceBean, err := newPersistenceBeanFn(persistenceClient.NewFactory(
 		&params.PersistenceConfig,
 		func() float64 {
 			return permember.PerMember(
@@ -613,9 +608,7 @@ func (h *Impl) GetHistoryManager() persistence.HistoryManager {
 }
 
 // GetExecutionManager return execution manager for given shard ID
-func (h *Impl) GetExecutionManager(
-	shardID int,
-) (persistence.ExecutionManager, error) {
+func (h *Impl) GetExecutionManager(shardID int) (persistence.ExecutionManager, error) {
 
 	return h.persistenceBean.GetExecutionManager(shardID)
 }

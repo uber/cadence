@@ -379,6 +379,7 @@ func (e *mutableStateBuilder) Load(
 			}
 		}
 	}
+
 	return nil
 }
 

@@ -308,7 +308,7 @@ func AdminDeleteWorkflow(c *cli.Context) error {
 	if err != nil {
 		return commoncli.Problem("Error in Admin delete WF: ", err)
 	}
-	exeStore, err := getDeps(c).initializeExecutionStore(c, shardIDInt)
+	exeStore, err := getDeps(c).initializeExecutionManager(c, shardIDInt)
 	if err != nil {
 		return commoncli.Problem("Error in Admin delete WF: ", err)
 	}
@@ -699,7 +699,7 @@ func AdminRefreshWorkflowTasks(c *cli.Context) error {
 	if err != nil {
 		return commoncli.Problem("Refresh workflow task failed", err)
 	}
-	fmt.Println("Refresh workflow task succeeded.")
+	fmt.Fprintln(getDeps(c).Output(), "Refresh workflow task succeeded.")
 	return nil
 }
 
@@ -737,7 +737,8 @@ func AdminResetQueue(c *cli.Context) error {
 	if err != nil {
 		return commoncli.Problem("Failed to reset queue", err)
 	}
-	fmt.Println("Reset queue state succeeded")
+
+	fmt.Fprintln(getDeps(c).Output(), "Reset queue state succeeded")
 	return nil
 }
 
@@ -777,8 +778,9 @@ func AdminDescribeQueue(c *cli.Context) error {
 		return commoncli.Problem("Failed to describe queue", err)
 	}
 
+	output := getDeps(c).Output()
 	for _, state := range resp.ProcessingQueueStates {
-		fmt.Println(state)
+		fmt.Fprintln(output, state)
 	}
 	return nil
 }
