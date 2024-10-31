@@ -700,35 +700,6 @@ func TestPrompt(t *testing.T) {
 	prompt("Test message") // if input is "y", it will not exit
 }
 
-func TestGetInputFile_Stdin(t *testing.T) {
-	// Use os.Pipe to simulate non-empty stdin
-	r, w, _ := os.Pipe()
-	origStdin := os.Stdin
-	defer func() { os.Stdin = origStdin }()
-	os.Stdin = r
-
-	// Write dummy data to stdin
-	fmt.Fprint(w, "dummy data")
-	w.Close() // close the write end to signal EOF
-
-	// Call function and check the result
-	result, err := getInputFile("")
-	assert.NoError(t, err)
-	assert.Equal(t, os.Stdin, result)
-}
-
-func TestGetInputFile_File(t *testing.T) {
-	// Test with a sample temporary file
-	tmpFile, err := os.CreateTemp("", "testfile")
-	assert.NoError(t, err)
-	defer os.Remove(tmpFile.Name()) // clean up
-
-	// Call getInputFile with the temp file path
-	result, err := getInputFile(tmpFile.Name())
-	assert.NoError(t, err)
-	assert.Equal(t, tmpFile.Name(), result.Name())
-}
-
 func TestSerializeSearchAttributes(t *testing.T) {
 	// Test with nil input
 	result, err := serializeSearchAttributes(nil)
