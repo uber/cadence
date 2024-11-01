@@ -23,6 +23,7 @@
 package authorization
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -99,26 +100,33 @@ func Test_validatePermission(t *testing.T) {
 
 func TestSignalWithStartWorkflowExecutionRequestSerializeForLogging(t *testing.T) {
 	tests := map[string]struct {
-		input               *types.SignalWithStartWorkflowExecutionRequest
+		input               interface{}
 		expectedOutput      string
 		expectedErrorOutput error
 	}{
 		"complete request without error": {
-			input:               createNewSignalWithStartWorkflowExecutionRequest(),
-			expectedOutput:      "{\"domain\":\"testDomain\",\"workflowId\":\"testWorkflowID\",\"workflowType\":{\"name\":\"testWorkflowType\"},\"taskList\":{\"name\":\"testTaskList\",\"kind\":\"STICKY\"},\"executionStartToCloseTimeoutSeconds\":1,\"taskStartToCloseTimeoutSeconds\":1,\"identity\":\"testIdentity\",\"requestId\":\"DF66E35D-A5B0-425D-8731-6AAC4A4B6368\",\"workflowIdReusePolicy\":\"AllowDuplicate\",\"signalName\":\"testRequest\",\"control\":\"dGVzdENvbnRyb2w=\",\"retryPolicy\":{\"initialIntervalInSeconds\":1,\"backoffCoefficient\":1,\"maximumIntervalInSeconds\":1,\"maximumAttempts\":1,\"nonRetriableErrorReasons\":[\"testArray\"],\"expirationIntervalInSeconds\":1},\"cronSchedule\":\"testSchedule\",\"header\":{},\"delayStartSeconds\":1,\"jitterStartSeconds\":1,\"firstRunAtTimestamp\":1}",
-			expectedErrorOutput: nil,
+			input:          createNewSignalWithStartWorkflowExecutionRequest(),
+			expectedOutput: "{\"domain\":\"testDomain\",\"workflowId\":\"testWorkflowID\",\"workflowType\":{\"name\":\"testWorkflowType\"},\"taskList\":{\"name\":\"testTaskList\",\"kind\":\"STICKY\"},\"executionStartToCloseTimeoutSeconds\":1,\"taskStartToCloseTimeoutSeconds\":1,\"identity\":\"testIdentity\",\"requestId\":\"DF66E35D-A5B0-425D-8731-6AAC4A4B6368\",\"workflowIdReusePolicy\":\"AllowDuplicate\",\"signalName\":\"testRequest\",\"control\":\"dGVzdENvbnRyb2w=\",\"retryPolicy\":{\"initialIntervalInSeconds\":1,\"backoffCoefficient\":1,\"maximumIntervalInSeconds\":1,\"maximumAttempts\":1,\"nonRetriableErrorReasons\":[\"testArray\"],\"expirationIntervalInSeconds\":1},\"cronSchedule\":\"testSchedule\",\"header\":{},\"delayStartSeconds\":1,\"jitterStartSeconds\":1,\"firstRunAtTimestamp\":1}",
+		},
+
+		"non marchalable struct should error": {
+			input:               make(chan struct{}),
+			expectedErrorOutput: &json.UnsupportedTypeError{},
 		},
 
 		"empty request without error": {
-			input:               &types.SignalWithStartWorkflowExecutionRequest{},
-			expectedOutput:      "{}",
-			expectedErrorOutput: nil,
+			input:          &types.SignalWithStartWorkflowExecutionRequest{},
+			expectedOutput: "{}",
+		},
+
+		"typed nil request without error": {
+			input:          (*types.SignalWithStartWorkflowExecutionRequest)(nil),
+			expectedOutput: "",
 		},
 
 		"nil request without error": {
-			input:               nil,
-			expectedOutput:      "",
-			expectedErrorOutput: nil,
+			input:          nil,
+			expectedOutput: "",
 		},
 	}
 
@@ -128,7 +136,12 @@ func TestSignalWithStartWorkflowExecutionRequestSerializeForLogging(t *testing.T
 				wrappedInput := NewFilteredRequestBody(test.input)
 				output, err := wrappedInput.SerializeForLogging()
 				assert.Equal(t, test.expectedOutput, output)
-				assert.Equal(t, test.expectedErrorOutput, err)
+				if test.expectedErrorOutput != nil {
+					assert.ErrorAs(t, err, &test.expectedErrorOutput)
+				} else {
+					assert.NoError(t, err)
+				}
+
 				assert.NotContains(t, output, "PII")
 			})
 		})

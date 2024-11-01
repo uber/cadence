@@ -122,6 +122,9 @@ type simpleRequestLogWrapper struct {
 }
 
 func (f *simpleRequestLogWrapper) SerializeForLogging() (string, error) {
+	// We have to check if the request is a typed nil. In the interface we have to handle typed nils.
+	// The reflection check  is slow but this function is doing json marshalling, so performance
+	// shouldn't be an issue.
 	if f.request == nil || reflect.ValueOf(f.request).IsNil() {
 		return "", nil
 	}
