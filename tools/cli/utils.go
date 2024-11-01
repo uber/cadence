@@ -482,8 +482,8 @@ func getCurrentUserFromEnv() string {
 func prettyPrintJSONObject(writer io.Writer, o interface{}) {
 	b, err := json.MarshalIndent(o, "", "  ")
 	if err != nil {
-		fmt.Printf("Error when try to print pretty: %v\n", err)
-		fmt.Println(o)
+		writer.Write([]byte(fmt.Sprintf("Error when try to print pretty: %v\n", err)))
+		writer.Write([]byte(fmt.Sprintf("%+v\n", o)))
 	}
 	writer.Write(b)
 	writer.Write([]byte("\n"))
@@ -505,21 +505,21 @@ func intSliceToSet(s []int) map[int]struct{} {
 	return ret
 }
 
-func printMessage(msg string) {
-	fmt.Printf("%s %s\n", "cadence:", msg)
+func printMessage(output io.Writer, msg string) {
+	output.Write([]byte(fmt.Sprintf("%s %s\n", "cadence:", msg)))
 }
 
-func printError(msg string, err error) {
+func printError(output io.Writer, msg string, err error) {
 	if err != nil {
-		fmt.Printf("%s %s\n%s %+v\n", colorRed("Error:"), msg, colorMagenta("Error Details:"), err)
+		output.Write([]byte(fmt.Sprintf("%s %s\n%s %+v\n", colorRed("Error:"), msg, colorMagenta("Error Details:"), err)))
 		if os.Getenv(showErrorStackEnv) != `` {
 			fmt.Printf("Stack trace:\n")
 			debug.PrintStack()
 		} else {
-			fmt.Printf("('export %s=1' to see stack traces)\n", showErrorStackEnv)
+			output.Write([]byte(fmt.Sprintf("('export %s=1' to see stack traces)\n", showErrorStackEnv)))
 		}
 	} else {
-		fmt.Printf("%s %s\n", colorRed("Error:"), msg)
+		output.Write([]byte(fmt.Sprintf("%s %s\n", colorRed("Error:"), msg)))
 	}
 }
 
@@ -947,16 +947,16 @@ func truncate(str string) string {
 
 // this only works for ANSI terminal, which means remove existing lines won't work if users redirect to file
 // ref: https://en.wikipedia.org/wiki/ANSI_escape_code
-func removePrevious2LinesFromTerminal() {
-	fmt.Printf("\033[1A")
-	fmt.Printf("\033[2K")
-	fmt.Printf("\033[1A")
-	fmt.Printf("\033[2K")
+func removePrevious2LinesFromTerminal(output io.Writer) {
+	output.Write([]byte("\033[1A"))
+	output.Write([]byte("\033[2K"))
+	output.Write([]byte("\033[1A"))
+	output.Write([]byte("\033[2K"))
 }
 
-func showNextPage() bool {
-	fmt.Printf("Press %s to show next page, press %s to quit: ",
-		color.GreenString("Enter"), color.RedString("any other key then Enter"))
+func showNextPage(output io.Writer) bool {
+	output.Write([]byte(fmt.Sprintf("Press %s to show next page, press %s to quit: ",
+		color.GreenString("Enter"), color.RedString("any other key then Enter"))))
 	var input string
 	fmt.Scanln(&input)
 	return strings.Trim(input, " ") == ""

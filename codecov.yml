@@ -71,3 +71,4 @@ ignore:
   - "tools/common/schema/test/**"
   - "tools/linter/**"
   - "tools/matchingsimulationcomparison/**"
+  - "tools/cli/factory.go"
