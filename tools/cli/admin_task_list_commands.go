@@ -45,6 +45,11 @@ type (
 		StartID   int64   `header:"Lease Start TaskID"`
 		EndID     int64   `header:"Lease End TaskID"`
 	}
+	TaskListPartitionConfigRow struct {
+		Version            int64 `header:"Version"`
+		NumReadPartitions  int32 `header:"Number of Read Partitions"`
+		NumWritePartitions int32 `header:"Number of Write Partitions"`
+	}
 )
 
 // AdminDescribeTaskList displays poller and status information of task list.
@@ -91,7 +96,12 @@ func AdminDescribeTaskList(c *cli.Context) error {
 		return fmt.Errorf("failed to print task list status: %w", err)
 	}
 	fmt.Printf("\n")
-
+	if response.PartitionConfig != nil {
+		if err := printTaskListPartitionConfig(response.PartitionConfig); err != nil {
+			return fmt.Errorf("failed to print task list partition config: %w", err)
+		}
+		fmt.Printf("\n")
+	}
 	pollers := response.Pollers
 	if len(pollers) == 0 {
 		return commoncli.Problem(colorMagenta("No poller for tasklist: "+taskList), nil)
@@ -146,6 +156,15 @@ func printTaskListStatus(taskListStatus *types.TaskListStatus) error {
 	return RenderTable(os.Stdout, table, RenderOptions{Color: true})
 }
 
+func printTaskListPartitionConfig(config *types.TaskListPartitionConfig) error {
+	table := TaskListPartitionConfigRow{
+		Version:            config.Version,
+		NumReadPartitions:  config.NumReadPartitions,
+		NumWritePartitions: config.NumWritePartitions,
+	}
+	return RenderTable(os.Stdout, table, RenderOptions{Color: true})
+}
+
 func AdminUpdateTaskListPartitionConfig(c *cli.Context) error {
 	adminClient, err := getDeps(c).ServerAdminClient(c)
 	if err != nil {
@@ -182,7 +201,7 @@ func AdminUpdateTaskListPartitionConfig(c *cli.Context) error {
 	}
 	_, err = adminClient.UpdateTaskListPartitionConfig(ctx, &types.UpdateTaskListPartitionConfigRequest{
 		Domain:       domain,
-		TaskList:     &types.TaskList{Name: taskList},
+		TaskList:     &types.TaskList{Name: taskList, Kind: types.TaskListKindNormal.Ptr()},
 		TaskListType: taskListType,
 		PartitionConfig: &types.TaskListPartitionConfig{
 			NumReadPartitions:  int32(numReadPartitions),

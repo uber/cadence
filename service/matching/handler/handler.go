@@ -418,15 +418,51 @@ func (h *handlerImpl) GetTaskListsByDomain(
 func (h *handlerImpl) UpdateTaskListPartitionConfig(
 	ctx context.Context,
 	request *types.MatchingUpdateTaskListPartitionConfigRequest,
-) (*types.MatchingUpdateTaskListPartitionConfigResponse, error) {
-	return nil, &types.BadRequestError{}
+) (resp *types.MatchingUpdateTaskListPartitionConfigResponse, retError error) {
+	defer func() { log.CapturePanic(recover(), h.logger, &retError) }()
+
+	domainName := h.domainName(request.DomainUUID)
+	hCtx := h.newHandlerContext(
+		ctx,
+		domainName,
+		request.TaskList,
+		metrics.MatchingUpdateTaskListPartitionConfigScope,
+	)
+
+	sw := hCtx.startProfiling(&h.startWG)
+	defer sw.Stop()
+
+	if ok := h.userRateLimiter.Allow(quotas.Info{Domain: domainName}); !ok {
+		return nil, hCtx.handleErr(errMatchingHostThrottle)
+	}
+
+	response, err := h.engine.UpdateTaskListPartitionConfig(hCtx, request)
+	return response, hCtx.handleErr(err)
 }
 
 func (h *handlerImpl) RefreshTaskListPartitionConfig(
 	ctx context.Context,
 	request *types.MatchingRefreshTaskListPartitionConfigRequest,
-) (*types.MatchingRefreshTaskListPartitionConfigResponse, error) {
-	return nil, &types.BadRequestError{}
+) (resp *types.MatchingRefreshTaskListPartitionConfigResponse, retError error) {
+	defer func() { log.CapturePanic(recover(), h.logger, &retError) }()
+
+	domainName := h.domainName(request.DomainUUID)
+	hCtx := h.newHandlerContext(
+		ctx,
+		domainName,
+		request.TaskList,
+		metrics.MatchingRefreshTaskListPartitionConfigScope,
+	)
+
+	sw := hCtx.startProfiling(&h.startWG)
+	defer sw.Stop()
+
+	if ok := h.userRateLimiter.Allow(quotas.Info{Domain: domainName}); !ok {
+		return nil, hCtx.handleErr(errMatchingHostThrottle)
+	}
+
+	response, err := h.engine.RefreshTaskListPartitionConfig(hCtx, request)
+	return response, hCtx.handleErr(err)
 }
 
 func (h *handlerImpl) domainName(id string) string {

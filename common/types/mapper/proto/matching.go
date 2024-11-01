@@ -217,8 +217,9 @@ func FromMatchingDescribeTaskListResponse(t *types.DescribeTaskListResponse) *ma
 		return nil
 	}
 	return &matchingv1.DescribeTaskListResponse{
-		Pollers:        FromPollerInfoArray(t.Pollers),
-		TaskListStatus: FromTaskListStatus(t.TaskListStatus),
+		Pollers:         FromPollerInfoArray(t.Pollers),
+		TaskListStatus:  FromTaskListStatus(t.TaskListStatus),
+		PartitionConfig: FromAPITaskListPartitionConfig(t.PartitionConfig),
 	}
 }
 
@@ -227,8 +228,9 @@ func ToMatchingDescribeTaskListResponse(t *matchingv1.DescribeTaskListResponse) 
 		return nil
 	}
 	return &types.DescribeTaskListResponse{
-		Pollers:        ToPollerInfoArray(t.Pollers),
-		TaskListStatus: ToTaskListStatus(t.TaskListStatus),
+		Pollers:         ToPollerInfoArray(t.Pollers),
+		TaskListStatus:  ToTaskListStatus(t.TaskListStatus),
+		PartitionConfig: ToAPITaskListPartitionConfig(t.PartitionConfig),
 	}
 }
 
@@ -588,7 +590,7 @@ func FromMatchingUpdateTaskListPartitionConfigRequest(t *types.MatchingUpdateTas
 		DomainId:        t.DomainUUID,
 		TaskList:        FromTaskList(t.TaskList),
 		TaskListType:    FromTaskListType(t.TaskListType),
-		PartitionConfig: FromTaskListPartitionConfig(t.PartitionConfig),
+		PartitionConfig: FromAPITaskListPartitionConfig(t.PartitionConfig),
 	}
 }
 
@@ -600,7 +602,7 @@ func ToMatchingUpdateTaskListPartitionConfigRequest(t *matchingv1.UpdateTaskList
 		DomainUUID:      t.DomainId,
 		TaskList:        ToTaskList(t.TaskList),
 		TaskListType:    ToTaskListType(t.TaskListType),
-		PartitionConfig: ToTaskListPartitionConfig(t.PartitionConfig),
+		PartitionConfig: ToAPITaskListPartitionConfig(t.PartitionConfig),
 	}
 }
 
@@ -612,7 +614,7 @@ func FromMatchingRefreshTaskListPartitionConfigRequest(t *types.MatchingRefreshT
 		DomainId:        t.DomainUUID,
 		TaskList:        FromTaskList(t.TaskList),
 		TaskListType:    FromTaskListType(t.TaskListType),
-		PartitionConfig: FromTaskListPartitionConfig(t.PartitionConfig),
+		PartitionConfig: FromAPITaskListPartitionConfig(t.PartitionConfig),
 	}
 }
 
@@ -624,7 +626,7 @@ func ToMatchingRefreshTaskListPartitionConfigRequest(t *matchingv1.RefreshTaskLi
 		DomainUUID:      t.DomainId,
 		TaskList:        ToTaskList(t.TaskList),
 		TaskListType:    ToTaskListType(t.TaskListType),
-		PartitionConfig: ToTaskListPartitionConfig(t.PartitionConfig),
+		PartitionConfig: ToAPITaskListPartitionConfig(t.PartitionConfig),
 	}
 }
 

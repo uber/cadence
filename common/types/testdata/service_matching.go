@@ -174,4 +174,18 @@ var (
 		WorkflowType:                    &WorkflowType,
 		WorkflowDomain:                  DomainName,
 	}
+
+	MatchingUpdateTaskListPartitionConfigRequest = types.MatchingUpdateTaskListPartitionConfigRequest{
+		DomainUUID:      DomainID,
+		TaskList:        &TaskList,
+		TaskListType:    &TaskListType,
+		PartitionConfig: &TaskListPartitionConfig,
+	}
+
+	MatchingRefreshTaskListPartitionConfigRequest = types.MatchingRefreshTaskListPartitionConfigRequest{
+		DomainUUID:      DomainID,
+		TaskList:        &TaskList,
+		TaskListType:    &TaskListType,
+		PartitionConfig: &TaskListPartitionConfig,
+	}
 )

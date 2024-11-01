@@ -43,6 +43,7 @@ const (
 	activeCluster             = "active_cluster"
 	taskList                  = "tasklist"
 	taskListType              = "tasklistType"
+	taskListRootPartition     = "tasklist_root_partition"
 	workflowType              = "workflowType"
 	activityType              = "activityType"
 	decisionType              = "decisionType"
@@ -173,6 +174,14 @@ func TaskListUnknownTag() Tag {
 // TaskListTypeTag returns a new task list type tag.
 func TaskListTypeTag(value string) Tag {
 	return metricWithUnknown(taskListType, value)
+}
+
+// TaskListRootPartition returns a new task list root partition tag.
+func TaskListRootPartitionTag(value string) Tag {
+	if len(value) == 0 {
+		value = unknownValue
+	}
+	return simpleMetric{key: taskListRootPartition, value: sanitizer.Value(value)}
 }
 
 // WorkflowTypeTag returns a new workflow type tag.

@@ -39,20 +39,21 @@ type (
 		ShutdownDrainDuration   dynamicconfig.DurationPropertyFn
 
 		// taskListManager configuration
-		RangeSize                    int64
-		GetTasksBatchSize            dynamicconfig.IntPropertyFnWithTaskListInfoFilters
-		UpdateAckInterval            dynamicconfig.DurationPropertyFnWithTaskListInfoFilters
-		IdleTasklistCheckInterval    dynamicconfig.DurationPropertyFnWithTaskListInfoFilters
-		MaxTasklistIdleTime          dynamicconfig.DurationPropertyFnWithTaskListInfoFilters
-		NumTasklistWritePartitions   dynamicconfig.IntPropertyFnWithTaskListInfoFilters
-		NumTasklistReadPartitions    dynamicconfig.IntPropertyFnWithTaskListInfoFilters
-		ForwarderMaxOutstandingPolls dynamicconfig.IntPropertyFnWithTaskListInfoFilters
-		ForwarderMaxOutstandingTasks dynamicconfig.IntPropertyFnWithTaskListInfoFilters
-		ForwarderMaxRatePerSecond    dynamicconfig.IntPropertyFnWithTaskListInfoFilters
-		ForwarderMaxChildrenPerNode  dynamicconfig.IntPropertyFnWithTaskListInfoFilters
-		AsyncTaskDispatchTimeout     dynamicconfig.DurationPropertyFnWithTaskListInfoFilters
-		LocalPollWaitTime            dynamicconfig.DurationPropertyFnWithTaskListInfoFilters
-		LocalTaskWaitTime            dynamicconfig.DurationPropertyFnWithTaskListInfoFilters
+		RangeSize                            int64
+		GetTasksBatchSize                    dynamicconfig.IntPropertyFnWithTaskListInfoFilters
+		UpdateAckInterval                    dynamicconfig.DurationPropertyFnWithTaskListInfoFilters
+		IdleTasklistCheckInterval            dynamicconfig.DurationPropertyFnWithTaskListInfoFilters
+		MaxTasklistIdleTime                  dynamicconfig.DurationPropertyFnWithTaskListInfoFilters
+		NumTasklistWritePartitions           dynamicconfig.IntPropertyFnWithTaskListInfoFilters
+		NumTasklistReadPartitions            dynamicconfig.IntPropertyFnWithTaskListInfoFilters
+		ForwarderMaxOutstandingPolls         dynamicconfig.IntPropertyFnWithTaskListInfoFilters
+		ForwarderMaxOutstandingTasks         dynamicconfig.IntPropertyFnWithTaskListInfoFilters
+		ForwarderMaxRatePerSecond            dynamicconfig.IntPropertyFnWithTaskListInfoFilters
+		ForwarderMaxChildrenPerNode          dynamicconfig.IntPropertyFnWithTaskListInfoFilters
+		AsyncTaskDispatchTimeout             dynamicconfig.DurationPropertyFnWithTaskListInfoFilters
+		LocalPollWaitTime                    dynamicconfig.DurationPropertyFnWithTaskListInfoFilters
+		LocalTaskWaitTime                    dynamicconfig.DurationPropertyFnWithTaskListInfoFilters
+		EnableGetNumberOfPartitionsFromCache dynamicconfig.BoolPropertyFnWithTaskListInfoFilters
 
 		// Time to hold a poll request before returning an empty response if there are no tasks
 		LongPollExpirationInterval dynamicconfig.DurationPropertyFnWithTaskListInfoFilters
@@ -109,10 +110,11 @@ type (
 		LocalPollWaitTime             func() time.Duration
 		LocalTaskWaitTime             func() time.Duration
 		// taskWriter configuration
-		OutstandingTaskAppendsThreshold func() int
-		MaxTaskBatchSize                func() int
-		NumWritePartitions              func() int
-		NumReadPartitions               func() int
+		OutstandingTaskAppendsThreshold      func() int
+		MaxTaskBatchSize                     func() int
+		NumWritePartitions                   func() int
+		NumReadPartitions                    func() int
+		EnableGetNumberOfPartitionsFromCache func() bool
 		// isolation configuration
 		EnableTasklistIsolation func() bool
 		// A function which returns all the isolation groups
@@ -130,43 +132,44 @@ type (
 // NewConfig returns new service config with default values
 func NewConfig(dc *dynamicconfig.Collection, hostName string, getIsolationGroups func() []string) *Config {
 	return &Config{
-		PersistenceMaxQPS:               dc.GetIntProperty(dynamicconfig.MatchingPersistenceMaxQPS),
-		PersistenceGlobalMaxQPS:         dc.GetIntProperty(dynamicconfig.MatchingPersistenceGlobalMaxQPS),
-		EnableSyncMatch:                 dc.GetBoolPropertyFilteredByTaskListInfo(dynamicconfig.MatchingEnableSyncMatch),
-		UserRPS:                         dc.GetIntProperty(dynamicconfig.MatchingUserRPS),
-		WorkerRPS:                       dc.GetIntProperty(dynamicconfig.MatchingWorkerRPS),
-		DomainUserRPS:                   dc.GetIntPropertyFilteredByDomain(dynamicconfig.MatchingDomainUserRPS),
-		DomainWorkerRPS:                 dc.GetIntPropertyFilteredByDomain(dynamicconfig.MatchingDomainWorkerRPS),
-		RangeSize:                       100000,
-		GetTasksBatchSize:               dc.GetIntPropertyFilteredByTaskListInfo(dynamicconfig.MatchingGetTasksBatchSize),
-		UpdateAckInterval:               dc.GetDurationPropertyFilteredByTaskListInfo(dynamicconfig.MatchingUpdateAckInterval),
-		IdleTasklistCheckInterval:       dc.GetDurationPropertyFilteredByTaskListInfo(dynamicconfig.MatchingIdleTasklistCheckInterval),
-		MaxTasklistIdleTime:             dc.GetDurationPropertyFilteredByTaskListInfo(dynamicconfig.MaxTasklistIdleTime),
-		LongPollExpirationInterval:      dc.GetDurationPropertyFilteredByTaskListInfo(dynamicconfig.MatchingLongPollExpirationInterval),
-		MinTaskThrottlingBurstSize:      dc.GetIntPropertyFilteredByTaskListInfo(dynamicconfig.MatchingMinTaskThrottlingBurstSize),
-		MaxTaskDeleteBatchSize:          dc.GetIntPropertyFilteredByTaskListInfo(dynamicconfig.MatchingMaxTaskDeleteBatchSize),
-		OutstandingTaskAppendsThreshold: dc.GetIntPropertyFilteredByTaskListInfo(dynamicconfig.MatchingOutstandingTaskAppendsThreshold),
-		MaxTaskBatchSize:                dc.GetIntPropertyFilteredByTaskListInfo(dynamicconfig.MatchingMaxTaskBatchSize),
-		ThrottledLogRPS:                 dc.GetIntProperty(dynamicconfig.MatchingThrottledLogRPS),
-		NumTasklistWritePartitions:      dc.GetIntPropertyFilteredByTaskListInfo(dynamicconfig.MatchingNumTasklistWritePartitions),
-		NumTasklistReadPartitions:       dc.GetIntPropertyFilteredByTaskListInfo(dynamicconfig.MatchingNumTasklistReadPartitions),
-		ForwarderMaxOutstandingPolls:    dc.GetIntPropertyFilteredByTaskListInfo(dynamicconfig.MatchingForwarderMaxOutstandingPolls),
-		ForwarderMaxOutstandingTasks:    dc.GetIntPropertyFilteredByTaskListInfo(dynamicconfig.MatchingForwarderMaxOutstandingTasks),
-		ForwarderMaxRatePerSecond:       dc.GetIntPropertyFilteredByTaskListInfo(dynamicconfig.MatchingForwarderMaxRatePerSecond),
-		ForwarderMaxChildrenPerNode:     dc.GetIntPropertyFilteredByTaskListInfo(dynamicconfig.MatchingForwarderMaxChildrenPerNode),
-		ShutdownDrainDuration:           dc.GetDurationProperty(dynamicconfig.MatchingShutdownDrainDuration),
-		EnableDebugMode:                 dc.GetBoolProperty(dynamicconfig.EnableDebugMode)(),
-		EnableTaskInfoLogByDomainID:     dc.GetBoolPropertyFilteredByDomainID(dynamicconfig.MatchingEnableTaskInfoLogByDomainID),
-		ActivityTaskSyncMatchWaitTime:   dc.GetDurationPropertyFilteredByDomain(dynamicconfig.MatchingActivityTaskSyncMatchWaitTime),
-		EnableTasklistIsolation:         dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableTasklistIsolation),
-		AsyncTaskDispatchTimeout:        dc.GetDurationPropertyFilteredByTaskListInfo(dynamicconfig.AsyncTaskDispatchTimeout),
-		EnableTasklistOwnershipGuard:    dc.GetBoolProperty(dynamicconfig.MatchingEnableTasklistGuardAgainstOwnershipShardLoss),
-		LocalPollWaitTime:               dc.GetDurationPropertyFilteredByTaskListInfo(dynamicconfig.LocalPollWaitTime),
-		LocalTaskWaitTime:               dc.GetDurationPropertyFilteredByTaskListInfo(dynamicconfig.LocalTaskWaitTime),
-		HostName:                        hostName,
-		TaskDispatchRPS:                 100000.0,
-		TaskDispatchRPSTTL:              time.Minute,
-		MaxTimeBetweenTaskDeletes:       time.Second,
-		AllIsolationGroups:              getIsolationGroups,
+		PersistenceMaxQPS:                    dc.GetIntProperty(dynamicconfig.MatchingPersistenceMaxQPS),
+		PersistenceGlobalMaxQPS:              dc.GetIntProperty(dynamicconfig.MatchingPersistenceGlobalMaxQPS),
+		EnableSyncMatch:                      dc.GetBoolPropertyFilteredByTaskListInfo(dynamicconfig.MatchingEnableSyncMatch),
+		UserRPS:                              dc.GetIntProperty(dynamicconfig.MatchingUserRPS),
+		WorkerRPS:                            dc.GetIntProperty(dynamicconfig.MatchingWorkerRPS),
+		DomainUserRPS:                        dc.GetIntPropertyFilteredByDomain(dynamicconfig.MatchingDomainUserRPS),
+		DomainWorkerRPS:                      dc.GetIntPropertyFilteredByDomain(dynamicconfig.MatchingDomainWorkerRPS),
+		RangeSize:                            100000,
+		GetTasksBatchSize:                    dc.GetIntPropertyFilteredByTaskListInfo(dynamicconfig.MatchingGetTasksBatchSize),
+		UpdateAckInterval:                    dc.GetDurationPropertyFilteredByTaskListInfo(dynamicconfig.MatchingUpdateAckInterval),
+		IdleTasklistCheckInterval:            dc.GetDurationPropertyFilteredByTaskListInfo(dynamicconfig.MatchingIdleTasklistCheckInterval),
+		MaxTasklistIdleTime:                  dc.GetDurationPropertyFilteredByTaskListInfo(dynamicconfig.MaxTasklistIdleTime),
+		LongPollExpirationInterval:           dc.GetDurationPropertyFilteredByTaskListInfo(dynamicconfig.MatchingLongPollExpirationInterval),
+		MinTaskThrottlingBurstSize:           dc.GetIntPropertyFilteredByTaskListInfo(dynamicconfig.MatchingMinTaskThrottlingBurstSize),
+		MaxTaskDeleteBatchSize:               dc.GetIntPropertyFilteredByTaskListInfo(dynamicconfig.MatchingMaxTaskDeleteBatchSize),
+		OutstandingTaskAppendsThreshold:      dc.GetIntPropertyFilteredByTaskListInfo(dynamicconfig.MatchingOutstandingTaskAppendsThreshold),
+		MaxTaskBatchSize:                     dc.GetIntPropertyFilteredByTaskListInfo(dynamicconfig.MatchingMaxTaskBatchSize),
+		ThrottledLogRPS:                      dc.GetIntProperty(dynamicconfig.MatchingThrottledLogRPS),
+		NumTasklistWritePartitions:           dc.GetIntPropertyFilteredByTaskListInfo(dynamicconfig.MatchingNumTasklistWritePartitions),
+		NumTasklistReadPartitions:            dc.GetIntPropertyFilteredByTaskListInfo(dynamicconfig.MatchingNumTasklistReadPartitions),
+		ForwarderMaxOutstandingPolls:         dc.GetIntPropertyFilteredByTaskListInfo(dynamicconfig.MatchingForwarderMaxOutstandingPolls),
+		ForwarderMaxOutstandingTasks:         dc.GetIntPropertyFilteredByTaskListInfo(dynamicconfig.MatchingForwarderMaxOutstandingTasks),
+		ForwarderMaxRatePerSecond:            dc.GetIntPropertyFilteredByTaskListInfo(dynamicconfig.MatchingForwarderMaxRatePerSecond),
+		ForwarderMaxChildrenPerNode:          dc.GetIntPropertyFilteredByTaskListInfo(dynamicconfig.MatchingForwarderMaxChildrenPerNode),
+		EnableGetNumberOfPartitionsFromCache: dc.GetBoolPropertyFilteredByTaskListInfo(dynamicconfig.MatchingEnableGetNumberOfPartitionsFromCache),
+		ShutdownDrainDuration:                dc.GetDurationProperty(dynamicconfig.MatchingShutdownDrainDuration),
+		EnableDebugMode:                      dc.GetBoolProperty(dynamicconfig.EnableDebugMode)(),
+		EnableTaskInfoLogByDomainID:          dc.GetBoolPropertyFilteredByDomainID(dynamicconfig.MatchingEnableTaskInfoLogByDomainID),
+		ActivityTaskSyncMatchWaitTime:        dc.GetDurationPropertyFilteredByDomain(dynamicconfig.MatchingActivityTaskSyncMatchWaitTime),
+		EnableTasklistIsolation:              dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableTasklistIsolation),
+		AsyncTaskDispatchTimeout:             dc.GetDurationPropertyFilteredByTaskListInfo(dynamicconfig.AsyncTaskDispatchTimeout),
+		EnableTasklistOwnershipGuard:         dc.GetBoolProperty(dynamicconfig.MatchingEnableTasklistGuardAgainstOwnershipShardLoss),
+		LocalPollWaitTime:                    dc.GetDurationPropertyFilteredByTaskListInfo(dynamicconfig.LocalPollWaitTime),
+		LocalTaskWaitTime:                    dc.GetDurationPropertyFilteredByTaskListInfo(dynamicconfig.LocalTaskWaitTime),
+		HostName:                             hostName,
+		TaskDispatchRPS:                      100000.0,
+		TaskDispatchRPSTTL:                   time.Minute,
+		MaxTimeBetweenTaskDeletes:            time.Second,
+		AllIsolationGroups:                   getIsolationGroups,
 	}
 }

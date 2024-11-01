@@ -725,3 +725,409 @@ func TestShutDownTasklistsNotOwned(t *testing.T) {
 
 	assert.NoError(t, err)
 }
+
+func TestUpdateTaskListPartitionConfig(t *testing.T) {
+	testCases := []struct {
+		name          string
+		req           *types.MatchingUpdateTaskListPartitionConfigRequest
+		hCtx          *handlerContext
+		mockSetup     func(*tasklist.MockManager)
+		expectError   bool
+		expectedError string
+	}{
+		{
+			name: "success",
+			req: &types.MatchingUpdateTaskListPartitionConfigRequest{
+				DomainUUID: "test-domain-id",
+				TaskList: &types.TaskList{
+					Name: "test-tasklist",
+				},
+				TaskListType: types.TaskListTypeActivity.Ptr(),
+				PartitionConfig: &types.TaskListPartitionConfig{
+					Version:            1,
+					NumReadPartitions:  2,
+					NumWritePartitions: 2,
+				},
+			},
+			hCtx: &handlerContext{
+				Context: context.Background(),
+			},
+			mockSetup: func(mockManager *tasklist.MockManager) {
+				mockManager.EXPECT().UpdateTaskListPartitionConfig(gomock.Any(), &types.TaskListPartitionConfig{
+					Version:            1,
+					NumReadPartitions:  2,
+					NumWritePartitions: 2,
+				}).Return(nil)
+			},
+			expectError: false,
+		},
+		{
+			name: "tasklist manager error",
+			req: &types.MatchingUpdateTaskListPartitionConfigRequest{
+				DomainUUID: "test-domain-id",
+				TaskList: &types.TaskList{
+					Name: "test-tasklist",
+				},
+				TaskListType: types.TaskListTypeActivity.Ptr(),
+				PartitionConfig: &types.TaskListPartitionConfig{
+					Version:            1,
+					NumReadPartitions:  2,
+					NumWritePartitions: 2,
+				},
+			},
+			hCtx: &handlerContext{
+				Context: context.Background(),
+			},
+			mockSetup: func(mockManager *tasklist.MockManager) {
+				mockManager.EXPECT().UpdateTaskListPartitionConfig(gomock.Any(), &types.TaskListPartitionConfig{
+					Version:            1,
+					NumReadPartitions:  2,
+					NumWritePartitions: 2,
+				}).Return(errors.New("tasklist manager error"))
+			},
+			expectError:   true,
+			expectedError: "tasklist manager error",
+		},
+		{
+			name: "non root partition error",
+			req: &types.MatchingUpdateTaskListPartitionConfigRequest{
+				DomainUUID: "test-domain-id",
+				TaskList: &types.TaskList{
+					Name: "/__cadence_sys/test-tasklist/1",
+				},
+				TaskListType: types.TaskListTypeActivity.Ptr(),
+				PartitionConfig: &types.TaskListPartitionConfig{
+					Version:            1,
+					NumReadPartitions:  2,
+					NumWritePartitions: 2,
+				},
+			},
+			hCtx: &handlerContext{
+				Context: context.Background(),
+			},
+			mockSetup: func(mockManager *tasklist.MockManager) {
+			},
+			expectError:   true,
+			expectedError: "Only root partition's partition config can be updated.",
+		},
+		{
+			name: "invalid tasklist name",
+			req: &types.MatchingUpdateTaskListPartitionConfigRequest{
+				DomainUUID: "test-domain-id",
+				TaskList: &types.TaskList{
+					Name: "/__cadence_sys/test-tasklist",
+				},
+				TaskListType: types.TaskListTypeActivity.Ptr(),
+				PartitionConfig: &types.TaskListPartitionConfig{
+					Version:            1,
+					NumReadPartitions:  2,
+					NumWritePartitions: 2,
+				},
+			},
+			hCtx: &handlerContext{
+				Context: context.Background(),
+			},
+			mockSetup: func(mockManager *tasklist.MockManager) {
+			},
+			expectError:   true,
+			expectedError: "invalid partitioned task list name /__cadence_sys/test-tasklist",
+		},
+		{
+			name: "invalid partition config",
+			req: &types.MatchingUpdateTaskListPartitionConfigRequest{
+				DomainUUID: "test-domain-id",
+				TaskList: &types.TaskList{
+					Name: "test-tasklist",
+				},
+				TaskListType: types.TaskListTypeActivity.Ptr(),
+				PartitionConfig: &types.TaskListPartitionConfig{
+					Version:            1,
+					NumReadPartitions:  2,
+					NumWritePartitions: 3,
+				},
+			},
+			hCtx: &handlerContext{
+				Context: context.Background(),
+			},
+			mockSetup: func(mockManager *tasklist.MockManager) {
+			},
+			expectError:   true,
+			expectedError: "The number of write partitions cannot be larger than the number of read partitions.",
+		},
+		{
+			name: "invalid partition config - 2",
+			req: &types.MatchingUpdateTaskListPartitionConfigRequest{
+				DomainUUID: "test-domain-id",
+				TaskList: &types.TaskList{
+					Name: "test-tasklist",
+				},
+				TaskListType: types.TaskListTypeActivity.Ptr(),
+				PartitionConfig: &types.TaskListPartitionConfig{
+					Version:            1,
+					NumReadPartitions:  2,
+					NumWritePartitions: -1,
+				},
+			},
+			hCtx: &handlerContext{
+				Context: context.Background(),
+			},
+			mockSetup: func(mockManager *tasklist.MockManager) {
+			},
+			expectError:   true,
+			expectedError: "The number of partitions must be larger than 0.",
+		},
+		{
+			name: "nil partition config",
+			req: &types.MatchingUpdateTaskListPartitionConfigRequest{
+				DomainUUID: "test-domain-id",
+				TaskList: &types.TaskList{
+					Name: "test-tasklist",
+				},
+				TaskListType: types.TaskListTypeActivity.Ptr(),
+			},
+			hCtx: &handlerContext{
+				Context: context.Background(),
+			},
+			mockSetup: func(mockManager *tasklist.MockManager) {
+			},
+			expectError:   true,
+			expectedError: "Task list partition config is not set in the request.",
+		},
+		{
+			name: "invalid tasklist kind",
+			req: &types.MatchingUpdateTaskListPartitionConfigRequest{
+				DomainUUID: "test-domain-id",
+				TaskList: &types.TaskList{
+					Name: "test-tasklist",
+					Kind: types.TaskListKindSticky.Ptr(),
+				},
+				TaskListType: types.TaskListTypeActivity.Ptr(),
+			},
+			hCtx: &handlerContext{
+				Context: context.Background(),
+			},
+			mockSetup: func(mockManager *tasklist.MockManager) {
+			},
+			expectError:   true,
+			expectedError: "Only normal tasklist's partition config can be updated.",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			mockCtrl := gomock.NewController(t)
+			mockManager := tasklist.NewMockManager(mockCtrl)
+			tc.mockSetup(mockManager)
+			tasklistID, err := tasklist.NewIdentifier("test-domain-id", "test-tasklist", 1)
+			require.NoError(t, err)
+			engine := &matchingEngineImpl{
+				taskLists: map[tasklist.Identifier]tasklist.Manager{
+					*tasklistID: mockManager,
+				},
+				timeSource: clock.NewRealTimeSource(),
+			}
+			_, err = engine.UpdateTaskListPartitionConfig(tc.hCtx, tc.req)
+			if tc.expectError {
+				assert.ErrorContains(t, err, tc.expectedError)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestRefreshTaskListPartitionConfig(t *testing.T) {
+	testCases := []struct {
+		name          string
+		req           *types.MatchingRefreshTaskListPartitionConfigRequest
+		hCtx          *handlerContext
+		mockSetup     func(*tasklist.MockManager)
+		expectError   bool
+		expectedError string
+	}{
+		{
+			name: "success",
+			req: &types.MatchingRefreshTaskListPartitionConfigRequest{
+				DomainUUID: "test-domain-id",
+				TaskList: &types.TaskList{
+					Name: "/__cadence_sys/test-tasklist/1",
+				},
+				TaskListType: types.TaskListTypeActivity.Ptr(),
+				PartitionConfig: &types.TaskListPartitionConfig{
+					Version:            1,
+					NumReadPartitions:  2,
+					NumWritePartitions: 2,
+				},
+			},
+			hCtx: &handlerContext{
+				Context: context.Background(),
+			},
+			mockSetup: func(mockManager *tasklist.MockManager) {
+				mockManager.EXPECT().RefreshTaskListPartitionConfig(gomock.Any(), &types.TaskListPartitionConfig{
+					Version:            1,
+					NumReadPartitions:  2,
+					NumWritePartitions: 2,
+				}).Return(nil)
+			},
+			expectError: false,
+		},
+		{
+			name: "tasklist manager error",
+			req: &types.MatchingRefreshTaskListPartitionConfigRequest{
+				DomainUUID: "test-domain-id",
+				TaskList: &types.TaskList{
+					Name: "/__cadence_sys/test-tasklist/1",
+				},
+				TaskListType: types.TaskListTypeActivity.Ptr(),
+				PartitionConfig: &types.TaskListPartitionConfig{
+					Version:            1,
+					NumReadPartitions:  2,
+					NumWritePartitions: 2,
+				},
+			},
+			hCtx: &handlerContext{
+				Context: context.Background(),
+			},
+			mockSetup: func(mockManager *tasklist.MockManager) {
+				mockManager.EXPECT().RefreshTaskListPartitionConfig(gomock.Any(), &types.TaskListPartitionConfig{
+					Version:            1,
+					NumReadPartitions:  2,
+					NumWritePartitions: 2,
+				}).Return(errors.New("tasklist manager error"))
+			},
+			expectError:   true,
+			expectedError: "tasklist manager error",
+		},
+		{
+			name: "invalid tasklist name",
+			req: &types.MatchingRefreshTaskListPartitionConfigRequest{
+				DomainUUID: "test-domain-id",
+				TaskList: &types.TaskList{
+					Name: "/__cadence_sys/test-tasklist",
+				},
+				TaskListType: types.TaskListTypeActivity.Ptr(),
+				PartitionConfig: &types.TaskListPartitionConfig{
+					Version:            1,
+					NumReadPartitions:  2,
+					NumWritePartitions: 2,
+				},
+			},
+			hCtx: &handlerContext{
+				Context: context.Background(),
+			},
+			mockSetup: func(mockManager *tasklist.MockManager) {
+			},
+			expectError:   true,
+			expectedError: "invalid partitioned task list name /__cadence_sys/test-tasklist",
+		},
+		{
+			name: "invalid partition config",
+			req: &types.MatchingRefreshTaskListPartitionConfigRequest{
+				DomainUUID: "test-domain-id",
+				TaskList: &types.TaskList{
+					Name: "test-tasklist",
+				},
+				TaskListType: types.TaskListTypeActivity.Ptr(),
+				PartitionConfig: &types.TaskListPartitionConfig{
+					Version:            1,
+					NumReadPartitions:  2,
+					NumWritePartitions: 3,
+				},
+			},
+			hCtx: &handlerContext{
+				Context: context.Background(),
+			},
+			mockSetup: func(mockManager *tasklist.MockManager) {
+			},
+			expectError:   true,
+			expectedError: "The number of write partitions cannot be larger than the number of read partitions.",
+		},
+		{
+			name: "invalid partition config - 2",
+			req: &types.MatchingRefreshTaskListPartitionConfigRequest{
+				DomainUUID: "test-domain-id",
+				TaskList: &types.TaskList{
+					Name: "test-tasklist",
+				},
+				TaskListType: types.TaskListTypeActivity.Ptr(),
+				PartitionConfig: &types.TaskListPartitionConfig{
+					Version:            1,
+					NumReadPartitions:  2,
+					NumWritePartitions: -1,
+				},
+			},
+			hCtx: &handlerContext{
+				Context: context.Background(),
+			},
+			mockSetup: func(mockManager *tasklist.MockManager) {
+			},
+			expectError:   true,
+			expectedError: "The number of partitions must be larger than 0.",
+		},
+		{
+			name: "invalid tasklist kind",
+			req: &types.MatchingRefreshTaskListPartitionConfigRequest{
+				DomainUUID: "test-domain-id",
+				TaskList: &types.TaskList{
+					Name: "test-tasklist",
+					Kind: types.TaskListKindSticky.Ptr(),
+				},
+				TaskListType: types.TaskListTypeActivity.Ptr(),
+			},
+			hCtx: &handlerContext{
+				Context: context.Background(),
+			},
+			mockSetup: func(mockManager *tasklist.MockManager) {
+			},
+			expectError:   true,
+			expectedError: "Only normal tasklist's partition config can be updated.",
+		},
+		{
+			name: "invalid request for root partition",
+			req: &types.MatchingRefreshTaskListPartitionConfigRequest{
+				DomainUUID: "test-domain-id",
+				TaskList: &types.TaskList{
+					Name: "test-tasklist",
+				},
+				TaskListType: types.TaskListTypeActivity.Ptr(),
+				PartitionConfig: &types.TaskListPartitionConfig{
+					Version:            1,
+					NumReadPartitions:  2,
+					NumWritePartitions: 2,
+				},
+			},
+			hCtx: &handlerContext{
+				Context: context.Background(),
+			},
+			mockSetup: func(mockManager *tasklist.MockManager) {
+			},
+			expectError:   true,
+			expectedError: "PartitionConfig must be nil for root partition.",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			mockCtrl := gomock.NewController(t)
+			mockManager := tasklist.NewMockManager(mockCtrl)
+			tc.mockSetup(mockManager)
+			tasklistID, err := tasklist.NewIdentifier("test-domain-id", "test-tasklist", 1)
+			require.NoError(t, err)
+			tasklistID2, err := tasklist.NewIdentifier("test-domain-id", "/__cadence_sys/test-tasklist/1", 1)
+			require.NoError(t, err)
+			engine := &matchingEngineImpl{
+				taskLists: map[tasklist.Identifier]tasklist.Manager{
+					*tasklistID:  mockManager,
+					*tasklistID2: mockManager,
+				},
+				timeSource: clock.NewRealTimeSource(),
+			}
+			_, err = engine.RefreshTaskListPartitionConfig(tc.hCtx, tc.req)
+			if tc.expectError {
+				assert.ErrorContains(t, err, tc.expectedError)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}

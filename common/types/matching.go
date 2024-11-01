@@ -654,6 +654,13 @@ type MatchingUpdateTaskListPartitionConfigRequest struct {
 	PartitionConfig *TaskListPartitionConfig
 }
 
+func (v *MatchingUpdateTaskListPartitionConfigRequest) GetTaskListType() (o TaskListType) {
+	if v != nil && v.TaskListType != nil {
+		return *v.TaskListType
+	}
+	return
+}
+
 type MatchingUpdateTaskListPartitionConfigResponse struct{}
 
 type MatchingRefreshTaskListPartitionConfigRequest struct {
@@ -661,6 +668,13 @@ type MatchingRefreshTaskListPartitionConfigRequest struct {
 	TaskList        *TaskList
 	TaskListType    *TaskListType
 	PartitionConfig *TaskListPartitionConfig
+}
+
+func (v *MatchingRefreshTaskListPartitionConfigRequest) GetTaskListType() (o TaskListType) {
+	if v != nil && v.TaskListType != nil {
+		return *v.TaskListType
+	}
+	return
 }
 
 type MatchingRefreshTaskListPartitionConfigResponse struct{}
