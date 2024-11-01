@@ -123,9 +123,6 @@ func (s *handlerSuite) TestStart() {
 	handler := s.getHandler(cfg)
 
 	handler.Start()
-
-	wg := sync.WaitGroup{}
-	wg.Wait()
 }
 
 func (s *handlerSuite) TestStop() {
