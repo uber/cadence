@@ -598,7 +598,7 @@ const (
 	//
 	// KeyName: frontend.globalDomainrps
 	// Value type: Int
-	// Default value: 0
+	// Default value: UnlimitedRPS (0 triggers a fallback to per-instance-RPS, generally avoid)
 	// Allowed filters: DomainName
 	FrontendGlobalDomainUserRPS
 	// FrontendGlobalDomainWorkerRPS is used to limit "worker" requests (PollFor...Task, RespondTask..., etc)
@@ -613,7 +613,7 @@ const (
 	//
 	// KeyName: frontend.globalDomainWorkerrps
 	// Value type: Int
-	// Default value: UnlimitedRPS
+	// Default value: UnlimitedRPS (0 triggers a fallback to per-instance-RPS, generally avoid)
 	// Allowed filters: DomainName
 	FrontendGlobalDomainWorkerRPS
 	// FrontendGlobalDomainVisibilityRPS is used to limit "visibility" requests (ListWorkflow* and similar)
@@ -628,7 +628,7 @@ const (
 	//
 	// KeyName: frontend.globalDomainVisibilityrps
 	// Value type: Int
-	// Default value: UnlimitedRPS
+	// Default value: UnlimitedRPS (0 triggers a fallback to per-instance-RPS, generally avoid)
 	// Allowed filters: DomainName
 	FrontendGlobalDomainVisibilityRPS
 	// FrontendGlobalDomainAsyncRPS is used to limit "async" requests (StartWorkflowAsync, etc for many "user" APIs)
@@ -3105,7 +3105,7 @@ var IntKeys = map[IntKey]DynamicInt{
 		KeyName:      "frontend.globalDomainrps",
 		Filters:      []Filter{DomainName},
 		Description:  "FrontendGlobalDomainUserRPS is workflow domain rate limit per second for the whole Cadence cluster",
-		DefaultValue: 0,
+		DefaultValue: UnlimitedRPS,
 	},
 	FrontendGlobalDomainWorkerRPS: {
 		KeyName:      "frontend.globalDomainWorkerrps",
