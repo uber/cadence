@@ -285,6 +285,9 @@ func (w *taskWriter) sendWriteResponse(reqs []*writeTaskRequest,
 			persistenceResponse: persistenceResponse,
 		}
 
-		req.responseCh <- resp
+		select {
+		case <-w.stopCh:
+		case req.responseCh <- resp:
+		}
 	}
 }

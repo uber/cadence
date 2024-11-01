@@ -36,6 +36,7 @@ import (
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-go/tally"
+	"go.uber.org/goleak"
 	"go.uber.org/yarpc"
 
 	"github.com/uber/cadence/client/history"
@@ -958,6 +959,7 @@ func (s *matchingEngineSuite) TestMultipleEnginesDecisionsRangeStealing() {
 }
 
 func (s *matchingEngineSuite) MultipleEnginesTasksRangeStealing(taskType int) {
+	s.T().Cleanup(func() { goleak.VerifyNone(s.T()) })
 	// Add N tasks to engine1 and then N tasks to engine2. Then poll all tasks from engine2. Engine1 should be closed
 	const N = 10
 	const initialRangeID = 0
