@@ -963,6 +963,47 @@ func TestAdminDeleteWorkflowRequest_GetSkipErrors(t *testing.T) {
 	}
 }
 
+func TestFromIsolationGroupPartitionList(t *testing.T) {
+	tests := []struct {
+		name string
+		in   []IsolationGroupPartition
+		want IsolationGroupConfiguration
+	}{
+		{
+			name: "empty list",
+			in:   []IsolationGroupPartition{},
+			want: IsolationGroupConfiguration{},
+		},
+		{
+			name: "single group",
+			in: []IsolationGroupPartition{
+				{Name: "zone-1", State: IsolationGroupStateHealthy},
+			},
+			want: IsolationGroupConfiguration{
+				"zone-1": {Name: "zone-1", State: IsolationGroupStateHealthy},
+			},
+		},
+		{
+			name: "multiple groups",
+			in: []IsolationGroupPartition{
+				{Name: "zone-1", State: IsolationGroupStateHealthy},
+				{Name: "zone-2", State: IsolationGroupStateDrained},
+			},
+			want: IsolationGroupConfiguration{
+				"zone-1": {Name: "zone-1", State: IsolationGroupStateHealthy},
+				"zone-2": {Name: "zone-2", State: IsolationGroupStateDrained},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := FromIsolationGroupPartitionList(tt.in)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
 func ptrInt64(i int64) *int64 {
 	return &i
 }
