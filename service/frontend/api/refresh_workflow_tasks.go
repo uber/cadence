@@ -26,6 +26,7 @@ import (
 	"context"
 
 	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/service/frontend/validate"
 )
 
 // RefreshWorkflowTasks re-generates the workflow tasks
@@ -33,6 +34,9 @@ func (wh *WorkflowHandler) RefreshWorkflowTasks(
 	ctx context.Context,
 	request *types.RefreshWorkflowTasksRequest,
 ) error {
+	if wh.isShuttingDown() {
+		return validate.ErrShuttingDown
+	}
 	if err := wh.requestValidator.ValidateRefreshWorkflowTasksRequest(ctx, request); err != nil {
 		return err
 	}
