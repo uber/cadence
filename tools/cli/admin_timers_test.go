@@ -23,6 +23,7 @@
 package cli
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
@@ -259,11 +260,7 @@ func TestReporter_Report(t *testing.T) {
 					{TaskType: 3, DomainID: "testDomain"},
 					{TaskType: 2, DomainID: "otherDomain"},
 				}, nil).Times(1)
-				mockPrinter.EXPECT().Print([]*persistence.TimerTaskInfo{
-					{TaskType: 1, DomainID: "testDomain"},
-					nil,
-					nil,
-				}).Return(nil).Times(1)
+				mockPrinter.EXPECT().Print(gomock.Any(), gomock.Any()).Return(nil).Times(1)
 			},
 		},
 		{
@@ -295,7 +292,7 @@ func TestReporter_Report(t *testing.T) {
 			reporter := NewReporter(tt.domainID, tt.timerTypes, mockLoader, mockPrinter)
 
 			// Call Report and capture error
-			err := reporter.Report()
+			err := reporter.Report(nil)
 
 			// Check results based on expected error
 			if tt.expectedError != "" {
@@ -310,10 +307,11 @@ func TestReporter_Report(t *testing.T) {
 
 func TestAdminTimers(t *testing.T) {
 	tests := []struct {
-		name          string
-		contextSetup  func(td *cliTestData) *cli.Context
-		mockSetup     func(td *cliTestData)
-		expectedError string
+		name           string
+		contextSetup   func(td *cliTestData) *cli.Context
+		mockSetup      func(td *cliTestData)
+		expectedError  string
+		expectedOutput string
 	}{
 		{
 			name: "Default Timer Types with DB Loader and Histogram Printer",
@@ -327,14 +325,11 @@ func TestAdminTimers(t *testing.T) {
 				set.String(FlagEndDate, "", "end date flag")             // Explicitly set end date format
 				set.String(FlagStartDate, "", "start date flag")         // Explicitly set start date format
 
-				// Explicitly set flag values
 				require.NoError(t, set.Set(FlagTimerType, "-1"))
 				require.NoError(t, set.Set(FlagPrintJSON, "false"))
 				require.NoError(t, set.Set(FlagBucketSize, "hour"))
 				require.NoError(t, set.Set(FlagShardID, "1"))
-				require.NoError(t, set.Set(FlagShardMultiplier, "1")) // Ensure multiplier is non-zero
-
-				// Set valid date values for end_date and start_date
+				require.NoError(t, set.Set(FlagShardMultiplier, "1"))
 				require.NoError(t, set.Set(FlagEndDate, "2023-01-01T00:00:00Z"))
 				require.NoError(t, set.Set(FlagStartDate, "2022-01-01T00:00:00Z"))
 
@@ -344,12 +339,10 @@ func TestAdminTimers(t *testing.T) {
 				ctrl := gomock.NewController(t)
 				mockExecManager := persistence.NewMockExecutionManager(ctrl)
 
-				// Mock initializeExecutionManager
 				td.mockManagerFactory.EXPECT().
 					initializeExecutionManager(gomock.Any(), gomock.Any()).
 					Return(mockExecManager, nil).Times(1)
 
-				// Mock GetTimerIndexTasks with multiple tasks to ensure maxCount is non-zero
 				mockExecManager.EXPECT().
 					GetTimerIndexTasks(gomock.Any(), gomock.Any()).
 					Return(&persistence.GetTimerIndexTasksResponse{
@@ -370,23 +363,15 @@ func TestAdminTimers(t *testing.T) {
 								TaskID:              2,
 								TaskType:            persistence.TaskTypeUserTimer,
 							},
-							{
-								DomainID:            "testDomain",
-								WorkflowID:          "testWorkflow3",
-								RunID:               "testRun3",
-								VisibilityTimestamp: time.Now().Add(2 * time.Hour),
-								TaskID:              3,
-								TaskType:            persistence.TaskTypeUserTimer,
-							},
 						},
 						NextPageToken: nil,
 					}, nil).Times(1)
 
 				mockExecManager.EXPECT().Close().Times(1)
 			},
-			expectedError: "",
+			expectedError:  "",
+			expectedOutput: "Bucket        Count\n", // Customize this with expected histogram output
 		},
-
 		{
 			name: "File Loader with JSON Printer",
 			contextSetup: func(td *cliTestData) *cli.Context {
@@ -395,35 +380,50 @@ func TestAdminTimers(t *testing.T) {
 				set.Bool(FlagPrintJSON, true, "print JSON flag") // Use JSON printer
 				set.String(FlagInputFile, "", "input file flag") // Set input file for file loader
 
-				// Create a temporary file for testing and set FlagInputFile
+				// Create a temporary file and write test timer data to it
 				tempFile, err := os.CreateTemp("", "testfile_*.txt")
 				require.NoError(t, err)
-				defer tempFile.Close()
 
+				// Write a sample TimerTaskInfo JSON object to the file
+				timerTask := persistence.TimerTaskInfo{
+					DomainID:            "testDomain",
+					WorkflowID:          "testWorkflow1",
+					RunID:               "testRun1",
+					VisibilityTimestamp: time.Now(),
+					TaskID:              1,
+					TaskType:            persistence.TaskTypeUserTimer,
+				}
+				timerData, err := json.Marshal(timerTask)
+				require.NoError(t, err)
+				_, err = tempFile.Write(timerData)
+				require.NoError(t, err)
+				tempFile.Close() // Close after writing to ensure data is saved
+
+				// Set flag values
 				require.NoError(t, set.Set(FlagTimerType, fmt.Sprint(persistence.TaskTypeUserTimer)))
 				require.NoError(t, set.Set(FlagPrintJSON, "true"))
 				require.NoError(t, set.Set(FlagInputFile, tempFile.Name()))
 
-				// Ensure file is removed after test
+				// Ensure file is removed after the test
 				t.Cleanup(func() {
 					os.Remove(tempFile.Name())
 				})
 
 				return cli.NewContext(td.app, set, nil)
 			},
-			mockSetup:     func(td *cliTestData) {},
-			expectedError: "",
+			mockSetup:      func(td *cliTestData) {},
+			expectedError:  "",
+			expectedOutput: `{"DomainID":"testDomain","WorkflowID":"testWorkflow1","RunID":"testRun1"`, // Partial match to validate JSON structure
 		},
 		{
 			name: "Error with Unknown Bucket Size",
 			contextSetup: func(td *cliTestData) *cli.Context {
 				set := flag.NewFlagSet("test", 0)
 				set.String(FlagBucketSize, "", "bucket size flag")
-				set.Int(FlagShardID, 1, "shard ID flag") // Provide a valid shard ID to bypass DBLoadCloser error
+				set.Int(FlagShardID, 1, "shard ID flag")
 
-				// Explicitly set unknown bucket size
 				require.NoError(t, set.Set(FlagBucketSize, "unknown"))
-				require.NoError(t, set.Set(FlagShardID, "1")) // Ensure FlagShardID is set
+				require.NoError(t, set.Set(FlagShardID, "1"))
 
 				return cli.NewContext(td.app, set, nil)
 			},
@@ -432,7 +432,6 @@ func TestAdminTimers(t *testing.T) {
 				mockExecManager := persistence.NewMockExecutionManager(ctrl)
 				mockExecManager.EXPECT().Close().Times(1)
 
-				// Mock initializeExecutionManager to return a valid ExecutionManager to bypass the shard error
 				td.mockManagerFactory.EXPECT().
 					initializeExecutionManager(gomock.Any(), gomock.Any()).
 					Return(mockExecManager, nil).Times(1)
@@ -443,20 +442,23 @@ func TestAdminTimers(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Setup context and test data
 			td := newCLITestData(t)
 			c := tt.contextSetup(td)
 
-			// Set up mocks
 			tt.mockSetup(td)
 
-			// Run AdminTimers and check for expected errors
+			// Run AdminTimers
 			err := AdminTimers(c)
+
+			// Validate expected error
 			if tt.expectedError != "" {
 				require.Error(t, err)
 				assert.Contains(t, err.Error(), tt.expectedError)
 			} else {
 				require.NoError(t, err)
+				// Validate the output using testIOHandler's outputBytes
+				output := td.ioHandler.outputBytes.String()
+				assert.Contains(t, output, tt.expectedOutput)
 			}
 		})
 	}

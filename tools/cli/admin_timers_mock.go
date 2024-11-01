@@ -27,6 +27,7 @@
 package cli
 
 import (
+	io "io"
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
@@ -108,15 +109,15 @@ func (m *MockPrinter) EXPECT() *MockPrinterMockRecorder {
 }
 
 // Print mocks base method.
-func (m *MockPrinter) Print(arg0 []*persistence.TimerTaskInfo) error {
+func (m *MockPrinter) Print(arg0 io.Writer, arg1 []*persistence.TimerTaskInfo) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Print", arg0)
+	ret := m.ctrl.Call(m, "Print", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Print indicates an expected call of Print.
-func (mr *MockPrinterMockRecorder) Print(arg0 interface{}) *gomock.Call {
+func (mr *MockPrinterMockRecorder) Print(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Print", reflect.TypeOf((*MockPrinter)(nil).Print), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Print", reflect.TypeOf((*MockPrinter)(nil).Print), arg0, arg1)
 }
