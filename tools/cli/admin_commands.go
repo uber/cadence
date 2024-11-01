@@ -575,6 +575,8 @@ type ShardRow struct {
 
 // AdminDescribeShardDistribution describes shard distribution
 func AdminDescribeShardDistribution(c *cli.Context) error {
+	output := getDeps(c).Output()
+
 	adminClient, err := getDeps(c).ServerAdminClient(c)
 	if err != nil {
 		return err
@@ -595,8 +597,8 @@ func AdminDescribeShardDistribution(c *cli.Context) error {
 		return commoncli.Problem("Shard list failed", err)
 	}
 
-	fmt.Printf("Total Number of Shards: %d \n", resp.NumberOfShards)
-	fmt.Printf("Number of Shards Returned: %d \n", len(resp.Shards))
+	output.Write([]byte(fmt.Sprintf("Total Number of Shards: %d \n", resp.NumberOfShards)))
+	output.Write([]byte(fmt.Sprintf("Number of Shards Returned: %d \n", len(resp.Shards))))
 
 	if len(resp.Shards) == 0 {
 		return nil
@@ -611,7 +613,7 @@ func AdminDescribeShardDistribution(c *cli.Context) error {
 				return fmt.Errorf("error rendering: %w", err)
 			}
 			table = []ShardRow{}
-			if !showNextPage() {
+			if !showNextPage(output) {
 				break
 			}
 			outputPageSize = tableRenderSize

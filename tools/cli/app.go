@@ -243,7 +243,8 @@ func NewCliApp(cf ClientFactory, opts ...CLIAppOptions) *cli.App {
 		},
 	}
 	app.CommandNotFound = func(context *cli.Context, command string) {
-		printMessage("command not found: " + command)
+		output := getDeps(context).Output()
+		printMessage(output, "command not found: "+command)
 	}
 
 	for _, opt := range opts {
