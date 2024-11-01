@@ -761,6 +761,208 @@ func TestGetWorkflowExecutionRawHistoryV2Response_GetVersionHistory(t *testing.T
 	}
 }
 
+func TestResendReplicationTasksRequest_GetWorkflowID(t *testing.T) {
+	tests := []struct {
+		name     string
+		request  *ResendReplicationTasksRequest
+		expected string
+	}{
+		{
+			name:     "Nil request",
+			request:  nil,
+			expected: "",
+		},
+		{
+			name:     "Empty WorkflowID",
+			request:  &ResendReplicationTasksRequest{},
+			expected: "",
+		},
+		{
+			name: "With WorkflowID",
+			request: &ResendReplicationTasksRequest{
+				WorkflowID: "test-workflow-id",
+			},
+			expected: "test-workflow-id",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.request.GetWorkflowID()
+			assert.Equal(t, tt.expected, got)
+		})
+	}
+}
+
+func TestResendReplicationTasksRequest_GetRunID(t *testing.T) {
+	tests := []struct {
+		name     string
+		request  *ResendReplicationTasksRequest
+		expected string
+	}{
+		{
+			name:     "Nil request",
+			request:  nil,
+			expected: "",
+		},
+		{
+			name:     "Empty RunID",
+			request:  &ResendReplicationTasksRequest{},
+			expected: "",
+		},
+		{
+			name: "With RunID",
+			request: &ResendReplicationTasksRequest{
+				RunID: "test-run-id",
+			},
+			expected: "test-run-id",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.request.GetRunID()
+			assert.Equal(t, tt.expected, got)
+		})
+	}
+}
+
+func TestResendReplicationTasksRequest_GetRemoteCluster(t *testing.T) {
+	tests := []struct {
+		name     string
+		request  *ResendReplicationTasksRequest
+		expected string
+	}{
+		{
+			name:     "Nil request",
+			request:  nil,
+			expected: "",
+		},
+		{
+			name:     "Empty RemoteCluster",
+			request:  &ResendReplicationTasksRequest{},
+			expected: "",
+		},
+		{
+			name: "With RemoteCluster",
+			request: &ResendReplicationTasksRequest{
+				RemoteCluster: "test-remote-cluster",
+			},
+			expected: "test-remote-cluster",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.request.GetRemoteCluster()
+			assert.Equal(t, tt.expected, got)
+		})
+	}
+}
+
+func TestAdminDeleteWorkflowRequest_GetDomain(t *testing.T) {
+	tests := []struct {
+		name     string
+		request  *AdminDeleteWorkflowRequest
+		expected string
+	}{
+		{
+			name:     "Nil request",
+			request:  nil,
+			expected: "",
+		},
+		{
+			name:     "Empty Domain",
+			request:  &AdminDeleteWorkflowRequest{},
+			expected: "",
+		},
+		{
+			name: "With Domain",
+			request: &AdminDeleteWorkflowRequest{
+				Domain: "test-domain",
+			},
+			expected: "test-domain",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.request.GetDomain()
+			assert.Equal(t, tt.expected, got)
+		})
+	}
+}
+
+func TestAdminDeleteWorkflowRequest_GetExecution(t *testing.T) {
+	tests := []struct {
+		name     string
+		request  *AdminDeleteWorkflowRequest
+		expected *WorkflowExecution
+	}{
+		{
+			name:     "Nil request",
+			request:  nil,
+			expected: nil,
+		},
+		{
+			name:     "Nil Execution",
+			request:  &AdminDeleteWorkflowRequest{},
+			expected: nil,
+		},
+		{
+			name: "With Execution",
+			request: &AdminDeleteWorkflowRequest{
+				Execution: &WorkflowExecution{
+					WorkflowID: "test-workflow-id",
+					RunID:      "test-run-id",
+				},
+			},
+			expected: &WorkflowExecution{
+				WorkflowID: "test-workflow-id",
+				RunID:      "test-run-id",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.request.GetExecution()
+			assert.Equal(t, tt.expected, got)
+		})
+	}
+}
+
+func TestAdminDeleteWorkflowRequest_GetSkipErrors(t *testing.T) {
+	tests := []struct {
+		name     string
+		request  *AdminDeleteWorkflowRequest
+		expected bool
+	}{
+		{
+			name:     "Nil request",
+			request:  nil,
+			expected: false,
+		},
+		{
+			name:     "SkipErrors is false",
+			request:  &AdminDeleteWorkflowRequest{SkipErrors: false},
+			expected: false,
+		},
+		{
+			name:     "SkipErrors is true",
+			request:  &AdminDeleteWorkflowRequest{SkipErrors: true},
+			expected: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.request.GetSkipErrors()
+			assert.Equal(t, tt.expected, got)
+		})
+	}
+}
+
 func ptrInt64(i int64) *int64 {
 	return &i
 }
