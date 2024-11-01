@@ -20,6 +20,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+//go:generate mockgen -package $GOPACKAGE -destination admin_timers_mock.go -self_package github.com/uber/cadence/tools/cli github.com/uber/cadence/tools/cli LoadCloser,Printer
+
 package cli
 
 import (
