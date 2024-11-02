@@ -82,7 +82,9 @@ func TerminateBatchJob(c *cli.Context) error {
 // DescribeBatchJob describe the status of the batch job
 func DescribeBatchJob(c *cli.Context) error {
 	jobID, err := getRequiredOption(c, FlagJobID)
-
+	if err != nil {
+		return err
+	}
 	svcClient, err := getDeps(c).ServerFrontendClient(c)
 	if err != nil {
 		return err
@@ -134,7 +136,7 @@ func DescribeBatchJob(c *cli.Context) error {
 func ListBatchJobs(c *cli.Context) error {
 	domain, err := getRequiredOption(c, FlagDomain)
 	if err != nil {
-		return commoncli.Problem("Required flag not found: ", err)
+		return err
 	}
 	pageSize := c.Int(FlagPageSize)
 	svcClient, err := getDeps(c).ServerFrontendClient(c)
@@ -185,19 +187,19 @@ func ListBatchJobs(c *cli.Context) error {
 func StartBatchJob(c *cli.Context) error {
 	domain, err := getRequiredOption(c, FlagDomain)
 	if err != nil {
-		return commoncli.Problem("Required flag not found: ", err)
+		return err
 	}
 	query, err := getRequiredOption(c, FlagListQuery)
 	if err != nil {
-		return commoncli.Problem("Required flag not found: ", err)
+		return err
 	}
 	reason, err := getRequiredOption(c, FlagReason)
 	if err != nil {
-		return commoncli.Problem("Required flag not found: ", err)
+		return err
 	}
 	batchType, err := getRequiredOption(c, FlagBatchType)
 	if err != nil {
-		return commoncli.Problem("Required flag not found: ", err)
+		return err
 	}
 	if !validateBatchType(batchType) {
 		return commoncli.Problem("batchType is not valid, supported:"+strings.Join(batcher.AllBatchTypes, ","), nil)
@@ -207,22 +209,22 @@ func StartBatchJob(c *cli.Context) error {
 	if batchType == batcher.BatchTypeSignal {
 		sigName, err = getRequiredOption(c, FlagSignalName)
 		if err != nil {
-			return commoncli.Problem("Required flag not found: ", err)
+			return err
 		}
 		sigVal, err = getRequiredOption(c, FlagInput)
 		if err != nil {
-			return commoncli.Problem("Required flag not found: ", err)
+			return err
 		}
 	}
 	var sourceCluster, targetCluster string
 	if batchType == batcher.BatchTypeReplicate {
 		sourceCluster, err = getRequiredOption(c, FlagSourceCluster)
 		if err != nil {
-			return commoncli.Problem("Required flag not found: ", err)
+			return err
 		}
 		targetCluster, err = getRequiredOption(c, FlagTargetCluster)
 		if err != nil {
-			return commoncli.Problem("Required flag not found: ", err)
+			return err
 		}
 	}
 	rps := c.Int(FlagRPS)
