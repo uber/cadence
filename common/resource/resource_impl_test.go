@@ -61,6 +61,7 @@ func TestStartStop(t *testing.T) {
 	hostName := "test-host"
 	metricsCl := metrics.NewNoopMetricsClient()
 	logger := testlogger.New(t)
+	metricCl := metrics.NewNoopMetricsClient()
 	dc := dynamicconfig.NewInMemoryClient()
 
 	// membership resolver mocks
@@ -82,7 +83,7 @@ func TestStartStop(t *testing.T) {
 		"primary-cluster":   {InitialFailoverVersion: 1, Enabled: true, RPCTransport: "tchannel", RPCAddress: "localhost:0"},
 		"secondary-cluster": {InitialFailoverVersion: 1, Enabled: true, RPCTransport: "tchannel", RPCAddress: "localhost:0"},
 	}, nil, metricsCl, logger)
-	directOutboundPCF := rpc.NewDirectPeerChooserFactory(serviceName, logger)
+	directOutboundPCF := rpc.NewDirectPeerChooserFactory(serviceName, logger, metricsCl)
 	directConnRetainFn := func(opts ...dynamicconfig.FilterOption) bool { return false }
 	pcf := rpc.NewMockPeerChooserFactory(ctrl)
 	peerChooser := rpc.NewMockPeerChooser(ctrl)

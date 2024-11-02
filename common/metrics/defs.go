@@ -846,6 +846,9 @@ const (
 	// GlobalRatelimiterAggregator is the metrics scope for aggregator-side common/quotas/global behavior
 	GlobalRatelimiterAggregator
 
+	// P2PRPCPeerChooserScope is the metrics scope for P2P RPC peer chooser
+	P2PRPCPeerChooserScope
+
 	NumCommonScopes
 )
 
@@ -1741,6 +1744,8 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		// currently used by both frontend and history, but may grow to other limiting-host-services.
 		GlobalRatelimiter:           {operation: "GlobalRatelimiter"},
 		GlobalRatelimiterAggregator: {operation: "GlobalRatelimiterAggregator"},
+
+		P2PRPCPeerChooserScope: {operation: "P2PRPCPeerChooser"},
 	},
 	// Frontend Scope Names
 	Frontend: {
@@ -2242,6 +2247,11 @@ const (
 	GlobalRatelimiterHostLimitsQueried
 	GlobalRatelimiterRemovedLimits
 	GlobalRatelimiterRemovedHostLimits
+
+	// p2p rpc metrics
+	P2PPeersCount
+	P2PPeerAdded
+	P2PPeerRemoved
 
 	NumCommonMetrics // Needs to be last on this list for iota numbering
 )
@@ -2936,6 +2946,10 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		GlobalRatelimiterHostLimitsQueried: {metricName: "global_ratelimiter_host_limits_queried", metricType: Histogram, buckets: GlobalRatelimiterUsageHistogram},
 		GlobalRatelimiterRemovedLimits:     {metricName: "global_ratelimiter_removed_limits", metricType: Histogram, buckets: GlobalRatelimiterUsageHistogram},
 		GlobalRatelimiterRemovedHostLimits: {metricName: "global_ratelimiter_removed_host_limits", metricType: Histogram, buckets: GlobalRatelimiterUsageHistogram},
+
+		P2PPeersCount:  {metricName: "p2p_peers_count", metricType: Gauge},
+		P2PPeerAdded:   {metricName: "p2p_peer_added", metricType: Counter},
+		P2PPeerRemoved: {metricName: "p2p_peer_removed", metricType: Counter},
 	},
 	History: {
 		TaskRequests:             {metricName: "task_requests", metricType: Counter},

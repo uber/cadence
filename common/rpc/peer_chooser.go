@@ -31,6 +31,7 @@ import (
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/membership"
+	"github.com/uber/cadence/common/metrics"
 )
 
 const defaultDNSRefreshInterval = time.Second * 10
@@ -67,6 +68,7 @@ type (
 	directPeerChooserFactory struct {
 		serviceName string
 		logger      log.Logger
+		metricsCl   metrics.Client
 		choosers    []*directPeerChooser
 	}
 )
@@ -96,14 +98,15 @@ func (f *dnsPeerChooserFactory) CreatePeerChooser(transport peer.Transport, opts
 	return &defaultPeerChooser{Chooser: peerList}, nil
 }
 
-func NewDirectPeerChooserFactory(serviceName string, logger log.Logger) PeerChooserFactory {
+func NewDirectPeerChooserFactory(serviceName string, logger log.Logger, metricsCl metrics.Client) PeerChooserFactory {
 	return &directPeerChooserFactory{
-		logger: logger,
+		logger:    logger,
+		metricsCl: metricsCl,
 	}
 }
 
 func (f *directPeerChooserFactory) CreatePeerChooser(transport peer.Transport, opts PeerChooserOptions) (PeerChooser, error) {
-	c := newDirectChooser(f.serviceName, transport, f.logger, opts.EnableConnectionRetainingDirectChooser)
+	c := newDirectChooser(f.serviceName, transport, f.logger, f.metricsCl, opts.EnableConnectionRetainingDirectChooser)
 	f.choosers = append(f.choosers, c)
 	return c, nil
 }

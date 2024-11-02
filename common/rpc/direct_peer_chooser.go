@@ -24,6 +24,7 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"sync/atomic"
 
 	"go.uber.org/yarpc/api/peer"
 	"go.uber.org/yarpc/api/transport"
@@ -31,10 +32,12 @@ import (
 	"go.uber.org/yarpc/peer/hostport"
 	"go.uber.org/yarpc/yarpcerrors"
 
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/membership"
+	"github.com/uber/cadence/common/metrics"
 )
 
 var (
@@ -44,8 +47,10 @@ var (
 // directPeerChooser is a peer.Chooser that chooses a peer based on the shard key.
 // Peers are managed by the peerList and peers are reused across multiple requests.
 type directPeerChooser struct {
+	status               int32
 	serviceName          string
 	logger               log.Logger
+	scope                metrics.Scope
 	t                    peer.Transport
 	enableConnRetainMode dynamicconfig.BoolPropertyFn
 	legacyChooser        peer.Chooser
@@ -54,20 +59,35 @@ type directPeerChooser struct {
 	peers                map[string]peer.Peer
 }
 
-func newDirectChooser(serviceName string, t peer.Transport, logger log.Logger, enableConnRetainMode dynamicconfig.BoolPropertyFn) *directPeerChooser {
+func newDirectChooser(
+	serviceName string,
+	t peer.Transport,
+	logger log.Logger,
+	metricsCl metrics.Client,
+	enableConnRetainMode dynamicconfig.BoolPropertyFn,
+) *directPeerChooser {
 	return &directPeerChooser{
 		serviceName:          serviceName,
 		logger:               logger,
+		scope:                metricsCl.Scope(metrics.P2PRPCPeerChooserScope).Tagged(metrics.DestServiceTag(serviceName)),
 		t:                    t,
 		enableConnRetainMode: enableConnRetainMode,
+		peers:                make(map[string]peer.Peer),
 	}
 }
 
 // Start statisfies the peer.Chooser interface.
 func (g *directPeerChooser) Start() error {
-	c, ok := g.getLegacyChooser()
-	if ok {
-		return c.Start()
+	if !atomic.CompareAndSwapInt32(&g.status, common.DaemonStatusInitialized, common.DaemonStatusStarted) {
+		return nil
+	}
+
+	if g.enableConnRetainMode != nil && !g.enableConnRetainMode() {
+		c, ok := g.getLegacyChooser()
+		if ok {
+			return c.Start()
+		}
+		return nil
 	}
 
 	return nil // no-op
@@ -75,19 +95,35 @@ func (g *directPeerChooser) Start() error {
 
 // Stop statisfies the peer.Chooser interface.
 func (g *directPeerChooser) Stop() error {
-	c, ok := g.getLegacyChooser()
-	if ok {
-		return c.Stop()
+	if !atomic.CompareAndSwapInt32(&g.status, common.DaemonStatusStarted, common.DaemonStatusStopped) {
+		return nil
 	}
 
-	return nil // no-op
+	if g.enableConnRetainMode != nil && !g.enableConnRetainMode() {
+		c, ok := g.getLegacyChooser()
+		if ok {
+			return c.Stop()
+		}
+		return nil
+	}
+
+	// Release all peers
+	g.updatePeersInternal(nil)
+	return nil
 }
 
 // IsRunning statisfies the peer.Chooser interface.
 func (g *directPeerChooser) IsRunning() bool {
-	c, ok := g.getLegacyChooser()
-	if ok {
-		return c.IsRunning()
+	if atomic.LoadInt32(&g.status) != common.DaemonStatusStarted {
+		return false
+	}
+
+	if g.enableConnRetainMode != nil && !g.enableConnRetainMode() {
+		c, ok := g.getLegacyChooser()
+		if ok {
+			return c.IsRunning()
+		}
+		return false
 	}
 
 	return true // no-op
@@ -121,11 +157,24 @@ func (g *directPeerChooser) Choose(ctx context.Context, req *transport.Request) 
 	return p, func(error) {}, nil
 }
 
+// UpdatePeers removes peers that are not in the members list.
+// Do not create actual yarpc peers for the members. They are created lazily when a request comes in (Choose is called).
 func (g *directPeerChooser) UpdatePeers(members []membership.HostInfo) {
 	g.logger.Debug("direct peer chooser got a membership update", tag.Counter(len(members)))
 
-	// Create a map of valid peer addresses given members list. This is used to remove peers that are not in the members list.
-	// Actual yarpc peers are not created for the members here. They are created lazily when a request comes in.
+	// If the chooser is not started, do not act on membership changes.
+	// If membership updates arrive after chooser is stopped, ignore them.
+	if atomic.LoadInt32(&g.status) != common.DaemonStatusStarted {
+		return
+	}
+
+	g.updatePeersInternal(members)
+
+	g.scope.UpdateGauge(metrics.P2PPeersCount, float64(len(g.peers)))
+}
+
+func (g *directPeerChooser) updatePeersInternal(members []membership.HostInfo) {
+	// Create a map of valid peer addresses given members list.
 	validPeerAddresses := make(map[string]bool)
 	for _, member := range members {
 		for _, portName := range []string{membership.PortTchannel, membership.PortGRPC} {
@@ -151,12 +200,9 @@ func (g *directPeerChooser) UpdatePeers(members []membership.HostInfo) {
 			g.removePeer(addr)
 		}
 	}
-
-	// todo: emit gauge metric for peers
 }
 
 func (g *directPeerChooser) removePeer(addr string) {
-	// TODO: is ReleasePeer thread safe? If not we need to hold the write lock while releasing the peer.
 	if err := g.t.ReleasePeer(g.peers[addr], noOpSubscriberInstance); err != nil {
 		g.logger.Error("failed to release peer", tag.Error(err), tag.Address(addr))
 	}
@@ -164,8 +210,9 @@ func (g *directPeerChooser) removePeer(addr string) {
 	g.mu.Lock()
 	delete(g.peers, addr)
 	g.mu.Unlock()
-	g.logger.Debug("removed peer from direct peer chooser", tag.Address(addr))
-	// TODO: emit count metric
+	// TODO: change to debug level
+	g.logger.Info("removed peer from direct peer chooser", tag.Address(addr))
+	g.scope.IncCounter(metrics.P2PPeerRemoved)
 }
 
 func (g *directPeerChooser) addPeer(addr string) (peer.Peer, error) {
@@ -180,8 +227,9 @@ func (g *directPeerChooser) addPeer(addr string) (peer.Peer, error) {
 		return nil, err
 	}
 	g.peers[addr] = p
-	g.logger.Debug("added peer to direct peer chooser", tag.Address(addr))
-	// TODO: emit count metric
+	// TODO: change to debug level
+	g.logger.Info("added peer to direct peer chooser", tag.Address(addr))
+	g.scope.IncCounter(metrics.P2PPeerAdded)
 	return p, nil
 }
 
