@@ -61,7 +61,6 @@ func TestStartStop(t *testing.T) {
 	hostName := "test-host"
 	metricsCl := metrics.NewNoopMetricsClient()
 	logger := testlogger.New(t)
-	metricCl := metrics.NewNoopMetricsClient()
 	dc := dynamicconfig.NewInMemoryClient()
 
 	// membership resolver mocks
