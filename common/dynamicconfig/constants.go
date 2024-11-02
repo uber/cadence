@@ -1647,6 +1647,8 @@ const (
 	// Default value: false
 	MatchingEnableTasklistGuardAgainstOwnershipShardLoss
 
+	MatchingEnableGetNumberOfPartitionsFromCache
+
 	// key for history
 
 	// EventsCacheGlobalEnable is enables global cache over all history shards
@@ -4001,6 +4003,12 @@ var BoolKeys = map[BoolKey]DynamicBool{
 	MatchingEnableTasklistGuardAgainstOwnershipShardLoss: {
 		KeyName:      "matching.enableTasklistGuardAgainstOwnershipLoss",
 		Description:  "allows guards to ensure that tasklists don't continue processing if there's signal that they've lost ownership",
+		DefaultValue: false,
+	},
+	MatchingEnableGetNumberOfPartitionsFromCache: {
+		KeyName:      "matching.enableGetNumberOfPartitionsFromCache",
+		Filters:      []Filter{DomainName, TaskListName, TaskType},
+		Description:  "MatchingEnableGetNumberOfPartitionsFromCache is to enable getting number of partitions from cache instead of dynamic config",
 		DefaultValue: false,
 	},
 	EventsCacheGlobalEnable: {

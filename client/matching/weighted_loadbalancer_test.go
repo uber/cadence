@@ -23,7 +23,6 @@
 package matching
 
 import (
-	"errors"
 	"math/rand"
 	"testing"
 	"time"
@@ -32,7 +31,6 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/uber/cadence/common/cache"
-	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log/testlogger"
 	"github.com/uber/cadence/common/types"
 )
@@ -101,19 +99,15 @@ func testPickProbHelper(t *testing.T, pw *weightSelector, seed int64) {
 func TestNewWeightedLoadBalancer(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	roundRobinMock := NewMockLoadBalancer(ctrl)
-	domainIDToName := func(domainID string) (string, error) {
-		return "testDomainName", nil
-	}
-	dc := dynamicconfig.NewCollection(dynamicconfig.NewNopClient(), testlogger.New(t))
+	p := NewMockPartitionConfigProvider(ctrl)
 	logger := testlogger.New(t)
-	lb := NewWeightedLoadBalancer(roundRobinMock, domainIDToName, dc, logger)
+	lb := NewWeightedLoadBalancer(roundRobinMock, p, logger)
 	assert.NotNil(t, lb)
 	weightedLB, ok := lb.(*weightedLoadBalancer)
 	assert.NotNil(t, weightedLB)
 	assert.True(t, ok)
-	assert.NotNil(t, weightedLB.fallbackLoadBalancer)
-	assert.NotNil(t, weightedLB.domainIDToName)
-	assert.NotNil(t, weightedLB.nReadPartitions)
+	assert.Equal(t, roundRobinMock, weightedLB.fallbackLoadBalancer)
+	assert.Equal(t, p, weightedLB.provider)
 	assert.NotNil(t, weightedLB.weightCache)
 	assert.NotNil(t, weightedLB.logger)
 }
@@ -263,8 +257,7 @@ func TestWeightedLoadBalancer_UpdateWeight(t *testing.T) {
 		forwardedFrom string
 		partition     string
 		weight        int64
-		nPartitions   int
-		setupCache    func(mockCache *cache.MockCache)
+		setupMock     func(*cache.MockCache, *MockPartitionConfigProvider)
 	}{
 		{
 			name:     "Sticky task list",
@@ -288,12 +281,12 @@ func TestWeightedLoadBalancer_UpdateWeight(t *testing.T) {
 			taskList: types.TaskList{Name: "a"},
 		},
 		{
-			name:        "1 partition",
-			domainID:    "domainA",
-			taskList:    types.TaskList{Name: "a"},
-			partition:   "a",
-			nPartitions: 1,
-			setupCache: func(mockCache *cache.MockCache) {
+			name:      "1 partition",
+			domainID:  "domainA",
+			taskList:  types.TaskList{Name: "a"},
+			partition: "a",
+			setupMock: func(mockCache *cache.MockCache, mockPartitionConfigProvider *MockPartitionConfigProvider) {
+				mockPartitionConfigProvider.EXPECT().GetNumberOfReadPartitions("domainA", types.TaskList{Name: "a"}, 0).Return(1)
 				mockCache.EXPECT().Delete(key{
 					domainID:     "domainA",
 					taskListName: "a",
@@ -302,13 +295,13 @@ func TestWeightedLoadBalancer_UpdateWeight(t *testing.T) {
 			},
 		},
 		{
-			name:        "partition 0",
-			domainID:    "domainA",
-			taskList:    types.TaskList{Name: "a"},
-			partition:   "a",
-			weight:      1,
-			nPartitions: 2,
-			setupCache: func(mockCache *cache.MockCache) {
+			name:      "partition 0",
+			domainID:  "domainA",
+			taskList:  types.TaskList{Name: "a"},
+			partition: "a",
+			weight:    1,
+			setupMock: func(mockCache *cache.MockCache, mockPartitionConfigProvider *MockPartitionConfigProvider) {
+				mockPartitionConfigProvider.EXPECT().GetNumberOfReadPartitions("domainA", types.TaskList{Name: "a"}, 0).Return(2)
 				mockCache.EXPECT().Get(key{
 					domainID:     "domainA",
 					taskListName: "a",
@@ -322,13 +315,13 @@ func TestWeightedLoadBalancer_UpdateWeight(t *testing.T) {
 			},
 		},
 		{
-			name:        "partition 1",
-			domainID:    "domainA",
-			taskList:    types.TaskList{Name: "a"},
-			partition:   "/__cadence_sys/a/1",
-			weight:      1,
-			nPartitions: 2,
-			setupCache: func(mockCache *cache.MockCache) {
+			name:      "partition 1",
+			domainID:  "domainA",
+			taskList:  types.TaskList{Name: "a"},
+			partition: "/__cadence_sys/a/1",
+			weight:    1,
+			setupMock: func(mockCache *cache.MockCache, mockPartitionConfigProvider *MockPartitionConfigProvider) {
+				mockPartitionConfigProvider.EXPECT().GetNumberOfReadPartitions("domainA", types.TaskList{Name: "a"}, 0).Return(2)
 				mockCache.EXPECT().Get(key{
 					domainID:     "domainA",
 					taskListName: "a",
@@ -342,21 +335,14 @@ func TestWeightedLoadBalancer_UpdateWeight(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			mockWeightCache := cache.NewMockCache(ctrl)
+			mockPartitionConfigProvider := NewMockPartitionConfigProvider(ctrl)
 			lb := &weightedLoadBalancer{
-				domainIDToName: func(domainID string) (string, error) {
-					if domainID == "invalid-domainID" {
-						return "", errors.New("invalid domainID")
-					}
-					return "testDomainName", nil
-				},
-				nReadPartitions: func(domainName, taskListName string, taskListType int) int {
-					return tc.nPartitions
-				},
 				weightCache: mockWeightCache,
+				provider:    mockPartitionConfigProvider,
 				logger:      testlogger.New(t),
 			}
-			if tc.setupCache != nil {
-				tc.setupCache(mockWeightCache)
+			if tc.setupMock != nil {
+				tc.setupMock(mockWeightCache, mockPartitionConfigProvider)
 			}
 
 			lb.UpdateWeight(tc.domainID, tc.taskList, tc.taskListType, tc.forwardedFrom, tc.partition, tc.weight)
