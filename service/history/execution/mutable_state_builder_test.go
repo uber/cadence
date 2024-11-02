@@ -3406,6 +3406,187 @@ func TestAddUpsertWorkflowSearchAttributesEvent(t *testing.T) {
 	}
 }
 
+func TestCloseTransactionAsMutation(t *testing.T) {
+
+	now := time.Unix(500, 0)
+
+	mockDomain := cache.NewLocalDomainCacheEntryForTest(&persistence.DomainInfo{Name: "domain"}, &persistence.DomainConfig{
+		BadBinaries: types.BadBinaries{},
+	}, "cluster0")
+
+	tests := map[string]struct {
+		mutableStateSetup        func(ms *mutableStateBuilder)
+		shardContextExpectations func(mockCache *events.MockCache, shardContext *shardCtx.MockContext, mockDomainCache *cache.MockDomainCache)
+		transactionPolicy        TransactionPolicy
+		expectedMutation         *persistence.WorkflowMutation
+		expectedEvent            []*persistence.WorkflowEvents
+		expectedErr              error
+	}{
+		"no buffered events": {
+			mutableStateSetup: func(ms *mutableStateBuilder) {
+				ms.executionInfo.DomainID = "some-domain-id"
+				ms.executionInfo.NextEventID = 10
+				ms.executionInfo.LastProcessedEvent = 5
+				ms.executionInfo.State = persistence.WorkflowStateRunning
+				ms.executionInfo.CloseStatus = persistence.WorkflowCloseStatusNone
+			},
+			shardContextExpectations: func(mockCache *events.MockCache, shardContext *shardCtx.MockContext, mockDomainCache *cache.MockDomainCache) {
+				shardContext.EXPECT().GetConfig().Return(&config.Config{
+					NumberOfShards:                        2,
+					IsAdvancedVisConfigExist:              false,
+					MaxResponseSize:                       0,
+					MutableStateChecksumInvalidateBefore:  dynamicconfig.GetFloatPropertyFn(10),
+					MutableStateChecksumVerifyProbability: dynamicconfig.GetIntPropertyFilteredByDomain(0.0),
+					HostName:                              "test-host",
+					EnableReplicationTaskGeneration:       func(string, string) bool { return true },
+					MaximumBufferedEventsBatch:            func(...dynamicconfig.FilterOption) int { return 100 },
+				}).Times(2)
+
+				shardContext.EXPECT().GetDomainCache().Return(mockDomainCache).Times(1)
+				mockDomainCache.EXPECT().GetDomainByID("some-domain-id").Return(mockDomain, nil)
+
+			},
+			expectedMutation: &persistence.WorkflowMutation{
+				ExecutionInfo: &persistence.WorkflowExecutionInfo{
+					DomainID:             "some-domain-id",
+					NextEventID:          10,
+					LastProcessedEvent:   5,
+					State:                persistence.WorkflowStateRunning,
+					CloseStatus:          persistence.WorkflowCloseStatusNone,
+					LastUpdatedTimestamp: now,
+					DecisionVersion:      common.EmptyVersion,
+					DecisionScheduleID:   common.EmptyEventID,
+					DecisionRequestID:    common.EmptyUUID,
+					DecisionStartedID:    common.EmptyEventID,
+				},
+				TimerTasks:                nil,
+				ReplicationTasks:          nil,
+				UpsertActivityInfos:       []*persistence.ActivityInfo{},
+				DeleteActivityInfos:       []int64{},
+				UpsertTimerInfos:          []*persistence.TimerInfo{},
+				DeleteTimerInfos:          []string{},
+				UpsertChildExecutionInfos: []*persistence.ChildExecutionInfo{},
+				UpsertRequestCancelInfos:  []*persistence.RequestCancelInfo{},
+				DeleteRequestCancelInfos:  []int64{},
+				UpsertSignalInfos:         []*persistence.SignalInfo{},
+				DeleteSignalInfos:         []int64{},
+				UpsertSignalRequestedIDs:  []string{},
+				DeleteSignalRequestedIDs:  []string{},
+				DeleteChildExecutionInfos: []int64{},
+				TransferTasks:             nil,
+				WorkflowRequests:          []*persistence.WorkflowRequest{},
+				Condition:                 0,
+			},
+			expectedEvent: nil,
+			expectedErr:   nil,
+		},
+		"with buffered events": {
+			mutableStateSetup: func(ms *mutableStateBuilder) {
+				ms.executionInfo.DomainID = "some-domain-id"
+				ms.executionInfo.NextEventID = 10
+				ms.executionInfo.LastProcessedEvent = 5
+				ms.executionInfo.State = persistence.WorkflowStateRunning
+				ms.executionInfo.CloseStatus = persistence.WorkflowCloseStatusNone
+				ms.bufferedEvents = []*types.HistoryEvent{
+					{
+						ID:        1,
+						EventType: types.EventTypeWorkflowExecutionStarted.Ptr(),
+					},
+				}
+			},
+			shardContextExpectations: func(mockCache *events.MockCache, shardContext *shardCtx.MockContext, mockDomainCache *cache.MockDomainCache) {
+				shardContext.EXPECT().GetConfig().Return(&config.Config{
+					NumberOfShards:                        2,
+					IsAdvancedVisConfigExist:              false,
+					MaxResponseSize:                       0,
+					MutableStateChecksumInvalidateBefore:  dynamicconfig.GetFloatPropertyFn(10),
+					MutableStateChecksumVerifyProbability: dynamicconfig.GetIntPropertyFilteredByDomain(0.0),
+					HostName:                              "test-host",
+					EnableReplicationTaskGeneration:       func(string, string) bool { return true },
+					MaximumBufferedEventsBatch:            func(...dynamicconfig.FilterOption) int { return 100 },
+				}).Times(3)
+
+				shardContext.EXPECT().GenerateTransferTaskIDs(1).Return([]int64{123}, nil).Times(1)
+				shardContext.EXPECT().GetDomainCache().Return(mockDomainCache).Times(1)
+				mockDomainCache.EXPECT().GetDomainByID("some-domain-id").Return(mockDomain, nil)
+
+			},
+			expectedMutation: &persistence.WorkflowMutation{
+				ExecutionInfo: &persistence.WorkflowExecutionInfo{
+					DomainID:             "some-domain-id",
+					NextEventID:          10,
+					LastProcessedEvent:   5,
+					State:                persistence.WorkflowStateRunning,
+					CloseStatus:          persistence.WorkflowCloseStatusNone,
+					LastUpdatedTimestamp: now,
+					DecisionVersion:      common.EmptyVersion,
+					DecisionScheduleID:   common.EmptyEventID,
+					DecisionRequestID:    common.EmptyUUID,
+					DecisionStartedID:    common.EmptyEventID,
+					LastFirstEventID:     1,
+				},
+				TimerTasks: nil,
+				ReplicationTasks: []persistence.Task{
+					&persistence.HistoryReplicationTask{
+						FirstEventID: 1,
+						NextEventID:  2,
+						TaskData: persistence.TaskData{
+							Version:             0,
+							TaskID:              0,
+							VisibilityTimestamp: time.Time{},
+						},
+					},
+				},
+				UpsertActivityInfos:       []*persistence.ActivityInfo{},
+				DeleteActivityInfos:       []int64{},
+				UpsertTimerInfos:          []*persistence.TimerInfo{},
+				DeleteTimerInfos:          []string{},
+				UpsertChildExecutionInfos: []*persistence.ChildExecutionInfo{},
+				UpsertRequestCancelInfos:  []*persistence.RequestCancelInfo{},
+				DeleteRequestCancelInfos:  []int64{},
+				UpsertSignalInfos:         []*persistence.SignalInfo{},
+				DeleteSignalInfos:         []int64{},
+				UpsertSignalRequestedIDs:  []string{},
+				DeleteSignalRequestedIDs:  []string{},
+				DeleteChildExecutionInfos: []int64{},
+				TransferTasks:             nil,
+				WorkflowRequests:          []*persistence.WorkflowRequest{},
+				Condition:                 0,
+			},
+			expectedEvent: []*persistence.WorkflowEvents{
+				{
+					DomainID: "some-domain-id",
+					Events: []*types.HistoryEvent{{
+						ID: 1, EventType: types.EventTypeWorkflowExecutionStarted.Ptr()},
+					},
+				},
+			},
+			expectedErr: nil,
+		},
+	}
+
+	for name, td := range tests {
+
+		t.Run(name, func(t *testing.T) {
+
+			ctrl := gomock.NewController(t)
+
+			shardContext := shard.NewMockContext(ctrl)
+			mockCache := events.NewMockCache(ctrl)
+			mockDomainCache := cache.NewMockDomainCache(ctrl)
+
+			ms := createMSBWithMocks(mockCache, shardContext, mockDomainCache)
+			td.mutableStateSetup(ms)
+			td.shardContextExpectations(mockCache, shardContext, mockDomainCache)
+
+			mutation, workflowEvents, err := ms.CloseTransactionAsMutation(now, td.transactionPolicy)
+			assert.Equal(t, td.expectedMutation, mutation)
+			assert.Equal(t, td.expectedEvent, workflowEvents)
+			assert.Equal(t, td.expectedErr, err)
+		})
+	}
+}
+
 func createMSBWithMocks(mockCache *events.MockCache, shardContext *shardCtx.MockContext, mockDomainCache *cache.MockDomainCache) *mutableStateBuilder {
 	// the MSB constructor calls a bunch of endpoints on the mocks, so
 	// put them in here as a set of fixed expectations so the actual mocking
@@ -3419,7 +3600,10 @@ func createMSBWithMocks(mockCache *events.MockCache, shardContext *shardCtx.Mock
 		MaxResponseSize:                       0,
 		MutableStateChecksumInvalidateBefore:  dynamicconfig.GetFloatPropertyFn(10),
 		MutableStateChecksumVerifyProbability: dynamicconfig.GetIntPropertyFilteredByDomain(0.0),
+		MutableStateChecksumGenProbability:    dynamicconfig.GetIntPropertyFilteredByDomain(0.0),
 		HostName:                              "test-host",
+		EnableReplicationTaskGeneration:       func(string, string) bool { return true },
+		MaximumBufferedEventsBatch:            func(...dynamicconfig.FilterOption) int { return 100 },
 	}).Times(1)
 	shardContext.EXPECT().GetTimeSource().Return(clock.NewMockedTimeSource())
 	shardContext.EXPECT().GetMetricsClient().Return(metrics.NewNoopMetricsClient())
