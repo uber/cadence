@@ -447,7 +447,6 @@ func TestAdminTimers(t *testing.T) {
 
 			tt.mockSetup(td)
 
-			// Run AdminTimers
 			err := AdminTimers(c)
 
 			// Validate expected error
