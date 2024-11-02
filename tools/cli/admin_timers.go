@@ -20,6 +20,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+//go:generate mockgen -package $GOPACKAGE -destination admin_timers_mock.go -self_package github.com/uber/cadence/tools/cli github.com/uber/cadence/tools/cli LoadCloser,Printer
+
 package cli
 
 import (
@@ -44,7 +46,7 @@ type LoadCloser interface {
 
 // Printer prints timer task information
 type Printer interface {
-	Print(timers []*persistence.TimerTaskInfo) error
+	Print(output io.Writer, timers []*persistence.TimerTaskInfo) error
 }
 
 // Reporter wraps LoadCloser, Printer and a filter on time task type and domainID
@@ -144,12 +146,12 @@ func (r *Reporter) filter(timers []*persistence.TimerTaskInfo) []*persistence.Ti
 }
 
 // Report loads, filters and prints timer tasks
-func (r *Reporter) Report() error {
+func (r *Reporter) Report(output io.Writer) error {
 	loader, err := r.loader.Load()
 	if err != nil {
 		return err
 	}
-	return r.printer.Print(r.filter(loader))
+	return r.printer.Print(output, r.filter(loader))
 }
 
 // AdminTimers is used to list scheduled timers.
@@ -209,13 +211,14 @@ func AdminTimers(c *cli.Context) error {
 	}
 
 	reporter := NewReporter(c.String(FlagDomainID), timerTypes, loader, printer)
-	if err := reporter.Report(); err != nil {
+	output := getDeps(c).Output()
+	if err := reporter.Report(output); err != nil {
 		return commoncli.Problem("Reporter failed", err)
 	}
 	return nil
 }
 
-func (jp *jsonPrinter) Print(timers []*persistence.TimerTaskInfo) error {
+func (jp *jsonPrinter) Print(output io.Writer, timers []*persistence.TimerTaskInfo) error {
 	for _, t := range timers {
 		if t == nil {
 			continue
@@ -225,9 +228,9 @@ func (jp *jsonPrinter) Print(timers []*persistence.TimerTaskInfo) error {
 			if !jp.ctx.Bool(FlagSkipErrorMode) {
 				return commoncli.Problem("cannot marshal timer to json", err)
 			}
-			fmt.Println(err.Error())
+			output.Write([]byte(fmt.Sprintf("%s\n", err.Error())))
 		} else {
-			fmt.Println(string(data))
+			output.Write([]byte(fmt.Sprintf("%s\n", data)))
 		}
 	}
 	return nil
@@ -321,7 +324,7 @@ func (fl *fileLoadCloser) Close() {
 	}
 }
 
-func (hp *histogramPrinter) Print(timers []*persistence.TimerTaskInfo) error {
+func (hp *histogramPrinter) Print(output io.Writer, timers []*persistence.TimerTaskInfo) error {
 	h := NewHistogram()
 	for _, t := range timers {
 		if t == nil {
@@ -330,5 +333,5 @@ func (hp *histogramPrinter) Print(timers []*persistence.TimerTaskInfo) error {
 		h.Add(t.VisibilityTimestamp.Format(hp.timeFormat))
 	}
 
-	return h.Print(hp.ctx.Int(FlagShardMultiplier))
+	return h.Print(output, hp.ctx.Int(FlagShardMultiplier))
 }
