@@ -2947,9 +2947,9 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		GlobalRatelimiterRemovedLimits:     {metricName: "global_ratelimiter_removed_limits", metricType: Histogram, buckets: GlobalRatelimiterUsageHistogram},
 		GlobalRatelimiterRemovedHostLimits: {metricName: "global_ratelimiter_removed_host_limits", metricType: Histogram, buckets: GlobalRatelimiterUsageHistogram},
 
-		P2PPeersCount:  {metricName: "p2p_peers_count", metricType: Gauge},
-		P2PPeerAdded:   {metricName: "p2p_peer_added", metricType: Counter},
-		P2PPeerRemoved: {metricName: "p2p_peer_removed", metricType: Counter},
+		P2PPeersCount:  {metricName: "peers_count", metricType: Gauge},
+		P2PPeerAdded:   {metricName: "peer_added", metricType: Counter},
+		P2PPeerRemoved: {metricName: "peer_removed", metricType: Counter},
 	},
 	History: {
 		TaskRequests:             {metricName: "task_requests", metricType: Counter},
