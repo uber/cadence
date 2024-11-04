@@ -107,9 +107,14 @@ func AdminDBScan(c *cli.Context) error {
 			if err == io.EOF || err == io.ErrUnexpectedEOF {
 				break
 			}
+			return commoncli.Problem("Error decoding input file", err)
 		} else {
 			data = append(data, exec)
 		}
+	}
+
+	if len(data) == 0 {
+		return commoncli.Problem("Input file contained no data to scan", nil)
 	}
 
 	for _, e := range data {
@@ -140,15 +145,17 @@ func checkExecution(
 	fetcher executions.ExecutionFetcher,
 ) (interface{}, invariant.ManagerCheckResult, error) {
 	execManager, err := getDeps(c).initializeExecutionManager(c, common.WorkflowIDToHistoryShard(req.WorkflowID, numberOfShards))
+	if err != nil {
+		return nil, invariant.ManagerCheckResult{}, fmt.Errorf("initialize execution manager: %w", err)
+	}
 	defer execManager.Close()
-	if err != nil {
-		return nil, invariant.ManagerCheckResult{}, fmt.Errorf("Error in execution check: %w", err)
-	}
+
 	historyV2Mgr, err := getDeps(c).initializeHistoryManager(c)
-	defer historyV2Mgr.Close()
 	if err != nil {
-		return nil, invariant.ManagerCheckResult{}, fmt.Errorf("Error in execution check: %w", err)
+		return nil, invariant.ManagerCheckResult{}, fmt.Errorf("initialize history manager: %w", err)
 	}
+	defer historyV2Mgr.Close()
+
 	pr := persistence.NewPersistenceRetryer(
 		execManager,
 		historyV2Mgr,
@@ -156,14 +163,14 @@ func checkExecution(
 	)
 
 	ctx, cancel, err := newContext(c)
-	defer cancel()
 	if err != nil {
 		return nil, invariant.ManagerCheckResult{}, fmt.Errorf("Error in creating context: %w", err)
 	}
+	defer cancel()
 	execution, err := fetcher(ctx, pr, req)
 
 	if err != nil {
-		return nil, invariant.ManagerCheckResult{}, fmt.Errorf("Error in check execution: %w", err)
+		return nil, invariant.ManagerCheckResult{}, fmt.Errorf("fetching execution: %w", err)
 	}
 
 	var ivs []invariant.Invariant
