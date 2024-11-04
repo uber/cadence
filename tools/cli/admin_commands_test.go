@@ -23,16 +23,21 @@
 package cli
 
 import (
+	"context"
+	"encoding/json"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/urfave/cli/v2"
 
 	"github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/tools/cli/clitest"
 )
@@ -49,6 +54,7 @@ const (
 )
 
 type cliTestData struct {
+	ctrl               *gomock.Controller
 	mockFrontendClient *frontend.MockClient
 	mockAdminClient    *admin.MockClient
 	ioHandler          *testIOHandler
@@ -59,11 +65,11 @@ type cliTestData struct {
 func newCLITestData(t *testing.T) *cliTestData {
 	var td cliTestData
 
-	ctrl := gomock.NewController(t)
+	td.ctrl = gomock.NewController(t)
 
-	td.mockFrontendClient = frontend.NewMockClient(ctrl)
-	td.mockAdminClient = admin.NewMockClient(ctrl)
-	td.mockManagerFactory = NewMockManagerFactory(ctrl)
+	td.mockFrontendClient = frontend.NewMockClient(td.ctrl)
+	td.mockAdminClient = admin.NewMockClient(td.ctrl)
+	td.mockManagerFactory = NewMockManagerFactory(td.ctrl)
 	td.ioHandler = &testIOHandler{}
 
 	// Create a new CLI app with client factory and persistence manager factory
@@ -519,6 +525,703 @@ func TestAdminCloseShard(t *testing.T) {
 			} else {
 				assert.ErrorContains(t, err, tt.errContains)
 			}
+		})
+	}
+}
+
+func TestAdminRemoveTask(t *testing.T) {
+	tests := []struct {
+		name        string
+		testSetup   func(td *cliTestData) *cli.Context
+		errContains string // empty if no error is expected
+	}{
+		{
+			name: "no arguments provided",
+			testSetup: func(td *cliTestData) *cli.Context {
+				return clitest.NewCLIContext(t, td.app /* arguments are missing */)
+			},
+			errContains: "Required flag not found",
+		},
+		{
+			name: "missing ShardID",
+			testSetup: func(td *cliTestData) *cli.Context {
+				return clitest.NewCLIContext(t, td.app,
+					clitest.Int64Argument(FlagTaskID, 123),
+					clitest.IntArgument(FlagTaskType, 1), // type is provided
+				)
+			},
+			errContains: "Required flag not found",
+		},
+		{
+			name: "missing TaskID",
+			testSetup: func(td *cliTestData) *cli.Context {
+				return clitest.NewCLIContext(t, td.app,
+					clitest.IntArgument(FlagShardID, 1),
+					clitest.IntArgument(FlagTaskType, 1), // type is provided
+				)
+			},
+			errContains: "Required flag not found",
+		},
+		{
+			name: "missing TaskType",
+			testSetup: func(td *cliTestData) *cli.Context {
+				return clitest.NewCLIContext(t, td.app,
+					clitest.IntArgument(FlagShardID, 1),
+					clitest.Int64Argument(FlagTaskID, 123),
+				)
+			},
+			errContains: "Required flag not found",
+		},
+		{
+			name: "calling with all arguments",
+			testSetup: func(td *cliTestData) *cli.Context {
+				cliCtx := clitest.NewCLIContext(
+					t,
+					td.app,
+					clitest.IntArgument(FlagShardID, testShardID),
+					clitest.Int64Argument(FlagTaskID, 123),
+					clitest.IntArgument(FlagTaskType, 1), // some valid type
+				)
+
+				td.mockAdminClient.EXPECT().RemoveTask(gomock.Any(),
+					&types.RemoveTaskRequest{
+						ShardID:             int32(testShardID),
+						Type:                common.Int32Ptr(1),
+						TaskID:              123,
+						VisibilityTimestamp: common.Int64Ptr(0),
+						ClusterName:         "",
+					}).Return(nil)
+
+				return cliCtx
+			},
+			errContains: "",
+		},
+		{
+			name: "RemoveTask returns an error",
+			testSetup: func(td *cliTestData) *cli.Context {
+				cliCtx := clitest.NewCLIContext(
+					t,
+					td.app,
+					clitest.IntArgument(FlagShardID, testShardID),
+					clitest.Int64Argument(FlagTaskID, 123),
+					clitest.IntArgument(FlagTaskType, 1), // some valid type
+				)
+
+				td.mockAdminClient.EXPECT().RemoveTask(gomock.Any(), gomock.Any()).
+					Return(errors.New("critical error"))
+
+				return cliCtx
+			},
+			errContains: "Remove task has failed",
+		},
+		{
+			name: "calling with Timer task requiring visibility timestamp",
+			testSetup: func(td *cliTestData) *cli.Context {
+				cliCtx := clitest.NewCLIContext(
+					t,
+					td.app,
+					clitest.IntArgument(FlagShardID, testShardID),
+					clitest.Int64Argument(FlagTaskID, 123),
+					clitest.IntArgument(FlagTaskType, int(common.TaskTypeTimer)),
+					clitest.Int64Argument(FlagTaskVisibilityTimestamp, 1616161616), // visibility timestamp
+				)
+
+				td.mockAdminClient.EXPECT().RemoveTask(gomock.Any(),
+					&types.RemoveTaskRequest{
+						ShardID:             int32(testShardID),
+						Type:                common.Int32Ptr(int32(common.TaskTypeTimer)),
+						TaskID:              123,
+						VisibilityTimestamp: common.Int64Ptr(1616161616),
+						ClusterName:         "",
+					}).Return(nil)
+
+				return cliCtx
+			},
+			errContains: "",
+		},
+		{
+			name: "calling with Timer task requiring visibility timestamp, but not provided",
+			testSetup: func(td *cliTestData) *cli.Context {
+				cliCtx := clitest.NewCLIContext(
+					t,
+					td.app,
+					clitest.IntArgument(FlagShardID, testShardID),
+					clitest.Int64Argument(FlagTaskID, 123),
+					clitest.IntArgument(FlagTaskType, int(common.TaskTypeTimer)),
+					// visibility timestamp is missing though FlagTaskType is common.TaskTypeTimer
+				)
+
+				return cliCtx
+			},
+			errContains: "Required flag not found",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			td := newCLITestData(t)
+			cliCtx := tt.testSetup(td)
+
+			err := AdminRemoveTask(cliCtx)
+			if tt.errContains == "" {
+				assert.NoError(t, err)
+			} else {
+				assert.ErrorContains(t, err, tt.errContains)
+			}
+		})
+	}
+}
+
+func TestAdminGetShardID(t *testing.T) {
+	tests := []struct {
+		name           string
+		testSetup      func(td *cliTestData) *cli.Context
+		expectedOutput string // expected output to check against
+		errContains    string // empty if no error is expected
+	}{
+		{
+			name: "no WorkflowID provided",
+			testSetup: func(td *cliTestData) *cli.Context {
+				return clitest.NewCLIContext(t, td.app /* arguments are missing */)
+			},
+			errContains: "Required flag not found",
+		},
+		{
+			name: "numberOfShards not provided",
+			testSetup: func(td *cliTestData) *cli.Context {
+				return clitest.NewCLIContext(t, td.app,
+					clitest.StringArgument(FlagWorkflowID, "some-workflow-id"),
+					/* numberOfShards is missing */
+				)
+			},
+			errContains: "numberOfShards is required",
+		},
+		{
+			name: "numberOfShards is zero",
+			testSetup: func(td *cliTestData) *cli.Context {
+				return clitest.NewCLIContext(t, td.app,
+					clitest.StringArgument(FlagWorkflowID, "some-workflow-id"),
+					clitest.IntArgument(FlagNumberOfShards, 0), // zero is invalid
+				)
+			},
+			errContains: "numberOfShards is required",
+		},
+		{
+			name: "valid inputs",
+			testSetup: func(td *cliTestData) *cli.Context {
+				cliCtx := clitest.NewCLIContext(t, td.app,
+					clitest.StringArgument(FlagWorkflowID, testWorkflowID),
+					clitest.IntArgument(FlagNumberOfShards, 10), // valid number of shards
+				)
+
+				return cliCtx
+			},
+			expectedOutput: "ShardID for workflowID: test-workflow-id is 6\n",
+			errContains:    "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			td := newCLITestData(t)
+			cliCtx := tt.testSetup(td)
+
+			err := AdminGetShardID(cliCtx)
+			if tt.errContains == "" {
+				assert.NoError(t, err)
+			} else {
+				assert.ErrorContains(t, err, tt.errContains)
+			}
+
+			// If there is no error, check the output
+			if tt.expectedOutput != "" {
+				assert.Contains(t, tt.expectedOutput, td.consoleOutput())
+			}
+		})
+	}
+}
+
+func TestAdminDescribeShardDistribution(t *testing.T) {
+	tests := []struct {
+		name           string
+		testSetup      func(td *cliTestData) *cli.Context
+		errContains    string // empty if no error is expected
+		expectedOutput string
+	}{
+		{
+			name: "all arguments provided",
+			testSetup: func(td *cliTestData) *cli.Context {
+				cliCtx := clitest.NewCLIContext(
+					t,
+					td.app,
+					clitest.IntArgument(FlagPageSize, 10),
+					clitest.IntArgument(FlagPageID, 1),
+					clitest.StringArgument(FlagFormat, formatJSON),
+				)
+
+				td.mockAdminClient.EXPECT().DescribeShardDistribution(
+					gomock.Any(),
+					&types.DescribeShardDistributionRequest{
+						PageSize: 10,
+						PageID:   1,
+					}).Return(
+					&types.DescribeShardDistributionResponse{
+						NumberOfShards: 1,
+						Shards: map[int32]string{
+							1: "identity1",
+						},
+					}, nil,
+				)
+
+				return cliCtx
+			},
+			errContains: "",
+			expectedOutput: `Total Number of Shards: 1
+Number of Shards Returned: 1
+[
+  {
+    "ShardID": 1,
+    "Identity": "identity1"
+  }
+]
+`,
+		},
+		{
+			name: "no shards are returned",
+			testSetup: func(td *cliTestData) *cli.Context {
+				cliCtx := clitest.NewCLIContext(
+					t,
+					td.app,
+					clitest.IntArgument(FlagPageSize, 10),
+					clitest.IntArgument(FlagPageID, 1),
+					clitest.StringArgument(FlagFormat, formatJSON),
+				)
+
+				td.mockAdminClient.EXPECT().DescribeShardDistribution(gomock.Any(), gomock.Any()).
+					Return(
+						&types.DescribeShardDistributionResponse{
+							NumberOfShards: 10,
+							Shards:         nil, // no shards
+						}, nil,
+					)
+
+				return cliCtx
+			},
+			errContains:    "",
+			expectedOutput: "Total Number of Shards: 10\nNumber of Shards Returned: 0\n",
+		},
+		{
+			name: "DescribeShardDistribution returns an error",
+			testSetup: func(td *cliTestData) *cli.Context {
+				cliCtx := clitest.NewCLIContext(
+					t,
+					td.app,
+					clitest.IntArgument(FlagPageSize, 10),
+					clitest.IntArgument(FlagPageID, 1),
+				)
+
+				td.mockAdminClient.EXPECT().DescribeShardDistribution(gomock.Any(), gomock.Any()).
+					Return(nil, errors.New("critical error"))
+
+				return cliCtx
+			},
+			errContains: "Shard list failed",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			td := newCLITestData(t)
+			cliCtx := tt.testSetup(td)
+
+			err := AdminDescribeShardDistribution(cliCtx)
+			if tt.errContains == "" {
+				assert.NoError(t, err)
+			} else {
+				assert.ErrorContains(t, err, tt.errContains)
+			}
+			assert.Equal(t, tt.expectedOutput, td.consoleOutput())
+		})
+	}
+}
+
+func TestAdminMaintainCorruptWorkflow(t *testing.T) {
+	tests := []struct {
+		name        string
+		testSetup   func(td *cliTestData) *cli.Context
+		errContains string // empty if no error is expected
+	}{
+		{
+			name: "no domain argument",
+			testSetup: func(td *cliTestData) *cli.Context {
+				return clitest.NewCLIContext(t, td.app /* arguments are missing */)
+			},
+			errContains: "Required flag not found",
+		},
+		{
+			name: "all arguments provided",
+			testSetup: func(td *cliTestData) *cli.Context {
+				cliCtx := clitest.NewCLIContext(
+					t,
+					td.app,
+					clitest.StringArgument(FlagDomain, testDomain),
+					clitest.StringArgument(FlagWorkflowID, testWorkflowID),
+					clitest.StringArgument(FlagRunID, testRunID),
+					clitest.BoolArgument(FlagSkipErrorMode, true),
+				)
+
+				td.mockAdminClient.EXPECT().MaintainCorruptWorkflow(gomock.Any(), &types.AdminMaintainWorkflowRequest{
+					Domain: testDomain,
+					Execution: &types.WorkflowExecution{
+						WorkflowID: testWorkflowID,
+						RunID:      testRunID,
+					},
+					SkipErrors: true,
+				}).Return(nil, nil)
+
+				return cliCtx
+			},
+			errContains: "",
+		},
+		{
+			name: "MaintainCorruptWorkflow returns an error",
+			testSetup: func(td *cliTestData) *cli.Context {
+				cliCtx := clitest.NewCLIContext(
+					t,
+					td.app,
+					clitest.StringArgument(FlagDomain, testDomain),
+					clitest.StringArgument(FlagWorkflowID, testWorkflowID),
+					clitest.StringArgument(FlagRunID, testRunID),
+					clitest.BoolArgument(FlagSkipErrorMode, false),
+				)
+
+				td.mockAdminClient.EXPECT().MaintainCorruptWorkflow(gomock.Any(), gomock.Any()).
+					Return(nil, errors.New("critical error"))
+
+				return cliCtx
+			},
+			errContains: "Operation AdminMaintainCorruptWorkflow failed.",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			td := newCLITestData(t)
+			cliCtx := tt.testSetup(td)
+
+			err := AdminMaintainCorruptWorkflow(cliCtx)
+			if tt.errContains == "" {
+				assert.NoError(t, err)
+			} else {
+				assert.ErrorContains(t, err, tt.errContains)
+			}
+		})
+	}
+}
+
+func TestAdminDescribeShard(t *testing.T) {
+	tests := []struct {
+		name        string
+		testSetup   func(td *cliTestData) *cli.Context
+		errContains string // empty if no error is expected
+		checkOutput func(td *cliTestData)
+	}{
+		{
+			name: "no ShardID argument",
+			testSetup: func(td *cliTestData) *cli.Context {
+				return clitest.NewCLIContext(t, td.app /* arguments are missing */)
+			},
+			errContains: "Required flag not found",
+		},
+		{
+			name: "all arguments provided",
+			testSetup: func(td *cliTestData) *cli.Context {
+				cliCtx := clitest.NewCLIContext(
+					t,
+					td.app,
+					clitest.IntArgument(FlagShardID, testShardID),
+				)
+
+				mockShardManager := persistence.NewMockShardManager(td.ctrl)
+				mockShardManager.EXPECT().GetShard(
+					gomock.Any(),
+					&persistence.GetShardRequest{ShardID: testShardID},
+				).Return(&persistence.GetShardResponse{
+					ShardInfo: &persistence.ShardInfo{
+						ShardID: testShardID,
+						Owner:   "host-abc",
+					},
+				}, nil)
+
+				td.mockManagerFactory.EXPECT().initializeShardManager(gomock.Any()).
+					Return(mockShardManager, nil)
+
+				return cliCtx
+			},
+			errContains: "",
+			checkOutput: func(td *cliTestData) {
+				// We must have visualised GetShardResponse in console.
+				// Check it is a valid JSON and important fields are there
+				var resp persistence.GetShardResponse
+
+				require.NoError(t, json.Unmarshal([]byte(td.consoleOutput()), &resp))
+				assert.Equal(t, testShardID, resp.ShardInfo.ShardID)
+				assert.Equal(t, "host-abc", resp.ShardInfo.Owner)
+			},
+		},
+		{
+			name: "all arguments provided",
+			testSetup: func(td *cliTestData) *cli.Context {
+				cliCtx := clitest.NewCLIContext(
+					t,
+					td.app,
+					clitest.IntArgument(FlagShardID, testShardID),
+				)
+
+				mockShardManager := persistence.NewMockShardManager(td.ctrl)
+				mockShardManager.EXPECT().GetShard(
+					gomock.Any(),
+					&persistence.GetShardRequest{ShardID: testShardID},
+				).Return(&persistence.GetShardResponse{
+					ShardInfo: &persistence.ShardInfo{
+						ShardID: testShardID,
+						Owner:   "host-abc",
+					},
+				}, nil)
+
+				td.mockManagerFactory.EXPECT().initializeShardManager(gomock.Any()).
+					Return(mockShardManager, nil)
+
+				return cliCtx
+			},
+			errContains: "",
+			checkOutput: func(td *cliTestData) {
+				// We must have visualised GetShardResponse in console.
+				// Check it is a valid JSON and important fields are there
+				var resp persistence.GetShardResponse
+
+				require.NoError(t, json.Unmarshal([]byte(td.consoleOutput()), &resp))
+				assert.Equal(t, testShardID, resp.ShardInfo.ShardID)
+				assert.Equal(t, "host-abc", resp.ShardInfo.Owner)
+			},
+		},
+		{
+			name: "GetShard returns an error",
+			testSetup: func(td *cliTestData) *cli.Context {
+				cliCtx := clitest.NewCLIContext(
+					t,
+					td.app,
+					clitest.IntArgument(FlagShardID, testShardID),
+				)
+
+				mockShardManager := persistence.NewMockShardManager(td.ctrl)
+				mockShardManager.EXPECT().GetShard(gomock.Any(), gomock.Any()).
+					Return(nil, errors.New("critical error"))
+
+				td.mockManagerFactory.EXPECT().initializeShardManager(gomock.Any()).
+					Return(mockShardManager, nil)
+
+				return cliCtx
+			},
+			errContains: "Failed to describe shard",
+		},
+		{
+			name: "failed to initializeShardManager",
+			testSetup: func(td *cliTestData) *cli.Context {
+				cliCtx := clitest.NewCLIContext(
+					t,
+					td.app,
+					clitest.IntArgument(FlagShardID, testShardID),
+				)
+
+				td.mockManagerFactory.EXPECT().initializeShardManager(gomock.Any()).
+					Return(nil, errors.New("failed to initializeShardManager"))
+
+				return cliCtx
+			},
+			errContains: "failed to initializeShardManager",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			td := newCLITestData(t)
+			cliCtx := tt.testSetup(td)
+
+			err := AdminDescribeShard(cliCtx)
+			if tt.errContains == "" {
+				assert.NoError(t, err)
+				require.NotNil(t, tt.checkOutput)
+				tt.checkOutput(td)
+			} else {
+				assert.ErrorContains(t, err, tt.errContains)
+			}
+		})
+	}
+}
+
+func TestAdminSetShardRangeID(t *testing.T) {
+	tests := []struct {
+		name           string
+		testSetup      func(td *cliTestData) *cli.Context
+		errContains    string // empty if no error is expected
+		expectedOutput string
+	}{
+		{
+			name: "no ShardID argument",
+			testSetup: func(td *cliTestData) *cli.Context {
+				return clitest.NewCLIContext(t, td.app /* arguments are missing */)
+			},
+			errContains: "Required flag not found",
+		},
+		{
+			name: "no RangeID argument",
+			testSetup: func(td *cliTestData) *cli.Context {
+				return clitest.NewCLIContext(t, td.app,
+					clitest.IntArgument(FlagShardID, testShardID),
+					// FlagRangeID is missing
+				)
+			},
+			errContains: "Required flag not found",
+		},
+		{
+			name: "all arguments provided",
+			testSetup: func(td *cliTestData) *cli.Context {
+				cliCtx := clitest.NewCLIContext(
+					t,
+					td.app,
+					clitest.IntArgument(FlagShardID, testShardID),
+					clitest.Int64Argument(FlagRangeID, 133),
+				)
+
+				mockShardManager := persistence.NewMockShardManager(td.ctrl)
+
+				mockShardManager.EXPECT().GetShard(
+					gomock.Any(),
+					&persistence.GetShardRequest{ShardID: testShardID},
+				).Return(&persistence.GetShardResponse{
+					ShardInfo: &persistence.ShardInfo{
+						ShardID:          testShardID,
+						Owner:            "host-abc",
+						RangeID:          123,
+						StolenSinceRenew: 100, // this supposed to be incremented
+					},
+				}, nil)
+
+				mockShardManager.EXPECT().UpdateShard(
+					gomock.Any(),
+					gomock.Any(),
+				).Do(func(ctx context.Context, req *persistence.UpdateShardRequest) {
+					// we can't use input arguments matching as it contains current time
+					assert.Equal(t, int64(123), req.PreviousRangeID)
+					assert.Equal(t, 101, req.ShardInfo.StolenSinceRenew)
+					assert.Equal(t, int64(133), req.ShardInfo.RangeID)
+
+					now := time.Now()
+
+					// check time is really updated
+					assert.WithinRange(
+						t,
+						req.ShardInfo.UpdatedAt,
+						now.Add(-time.Minute),
+						time.Now(),
+						"didn't update UpdatedAt?",
+					)
+				}).Return(nil)
+
+				td.mockManagerFactory.EXPECT().initializeShardManager(gomock.Any()).
+					Return(mockShardManager, nil)
+
+				return cliCtx
+			},
+			errContains:    "",
+			expectedOutput: "Successfully updated rangeID from 123 to 133 for shard 1234.\n",
+		},
+		{
+			name: "all arguments provided, but UpdateShard fails",
+			testSetup: func(td *cliTestData) *cli.Context {
+				cliCtx := clitest.NewCLIContext(
+					t,
+					td.app,
+					clitest.IntArgument(FlagShardID, testShardID),
+					clitest.Int64Argument(FlagRangeID, 133),
+				)
+
+				mockShardManager := persistence.NewMockShardManager(td.ctrl)
+
+				mockShardManager.EXPECT().GetShard(
+					gomock.Any(),
+					gomock.Any(),
+				).Return(&persistence.GetShardResponse{
+					ShardInfo: &persistence.ShardInfo{
+						ShardID: testShardID,
+					},
+				}, nil)
+
+				mockShardManager.EXPECT().UpdateShard(
+					gomock.Any(),
+					gomock.Any(),
+				).Return(errors.New("critical failure"))
+
+				td.mockManagerFactory.EXPECT().initializeShardManager(gomock.Any()).
+					Return(mockShardManager, nil)
+
+				return cliCtx
+			},
+			errContains: "Failed to reset shard rangeID.",
+		},
+		{
+			name: "GetShard returns an error",
+			testSetup: func(td *cliTestData) *cli.Context {
+				cliCtx := clitest.NewCLIContext(
+					t,
+					td.app,
+					clitest.IntArgument(FlagShardID, testShardID),
+					clitest.Int64Argument(FlagRangeID, 123),
+				)
+
+				mockShardManager := persistence.NewMockShardManager(td.ctrl)
+				mockShardManager.EXPECT().GetShard(gomock.Any(), gomock.Any()).
+					Return(nil, errors.New("critical error"))
+
+				td.mockManagerFactory.EXPECT().initializeShardManager(gomock.Any()).
+					Return(mockShardManager, nil)
+
+				return cliCtx
+			},
+			errContains: "Failed to get shardInfo.",
+		},
+		{
+			name: "failed to initializeShardManager",
+			testSetup: func(td *cliTestData) *cli.Context {
+				cliCtx := clitest.NewCLIContext(
+					t,
+					td.app,
+					clitest.IntArgument(FlagShardID, testShardID),
+					clitest.Int64Argument(FlagRangeID, 123),
+				)
+
+				td.mockManagerFactory.EXPECT().initializeShardManager(gomock.Any()).
+					Return(nil, errors.New("failed to initializeShardManager"))
+
+				return cliCtx
+			},
+			errContains: "failed to initializeShardManager",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			td := newCLITestData(t)
+			cliCtx := tt.testSetup(td)
+
+			err := AdminSetShardRangeID(cliCtx)
+			if tt.errContains == "" {
+				assert.NoError(t, err)
+			} else {
+				assert.ErrorContains(t, err, tt.errContains)
+			}
+			assert.Equal(t, tt.expectedOutput, td.consoleOutput())
 		})
 	}
 }

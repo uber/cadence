@@ -38,6 +38,7 @@ func TestNewCLIContext(t *testing.T) {
 		IntArgument("shards", 1024),
 		BoolArgument("verbose", true),
 		BoolArgument("exit-if-error", false),
+		Int64Argument("bytes-per-minute", 999876543210),
 	)
 
 	assert.True(t, ctx.IsSet("region"))
@@ -51,6 +52,9 @@ func TestNewCLIContext(t *testing.T) {
 
 	assert.True(t, ctx.IsSet("exit-if-error"))
 	assert.False(t, ctx.Bool("exit-if-error"))
+
+	assert.True(t, ctx.IsSet("bytes-per-minute"))
+	assert.Equal(t, int64(999876543210), ctx.Int64("bytes-per-minute"))
 
 	assert.False(t, ctx.IsSet("should-not-exist"))
 }
