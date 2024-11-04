@@ -31,7 +31,9 @@ import (
 	"github.com/stretchr/testify/mock"
 	"go.uber.org/goleak"
 
+	"github.com/uber/cadence/.gen/go/indexer"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/elasticsearch/bulk"
 	mocks2 "github.com/uber/cadence/common/elasticsearch/bulk/mocks"
@@ -217,5 +219,125 @@ func TestIndexerStop(t *testing.T) {
 	// Call Stop again to ensure idempotency
 	indexer.Stop()
 	defer goleak.VerifyNone(t)
+}
 
+func TestIsValidFieldToES(t *testing.T) {
+	tests := map[string]struct {
+		testIndexer *Indexer
+		field       string
+		expectedRes bool
+	}{
+		"not EnableQueryAttributeValidation": {
+			testIndexer: &Indexer{
+				config: &Config{
+					EnableQueryAttributeValidation: dynamicconfig.GetBoolPropertyFn(false),
+				},
+			},
+			field:       "someField",
+			expectedRes: true,
+		},
+		"field is valid": {
+			testIndexer: &Indexer{
+				config: &Config{
+					EnableQueryAttributeValidation: dynamicconfig.GetBoolPropertyFn(true),
+					ValidSearchAttributes:          dynamicconfig.GetMapPropertyFn(map[string]interface{}{"someField": "ok"}),
+				},
+			},
+			field:       "someField",
+			expectedRes: true,
+		},
+		"field is not valid, but meet definition": {
+			testIndexer: &Indexer{
+				config: &Config{
+					EnableQueryAttributeValidation: dynamicconfig.GetBoolPropertyFn(true),
+					ValidSearchAttributes:          dynamicconfig.GetMapPropertyFn(map[string]interface{}{}),
+				},
+			},
+			field:       definition.Memo,
+			expectedRes: true,
+		},
+		"false": {
+			testIndexer: &Indexer{
+				config: &Config{
+					EnableQueryAttributeValidation: dynamicconfig.GetBoolPropertyFn(true),
+					ValidSearchAttributes:          dynamicconfig.GetMapPropertyFn(map[string]interface{}{}),
+				},
+			},
+			field:       "stuff",
+			expectedRes: false,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			res := tc.testIndexer.isValidFieldToES(tc.field)
+			assert.Equal(t, tc.expectedRes, res)
+		})
+	}
+}
+
+func TestFulfillDoc_AllFieldsPresent(t *testing.T) {
+	domainID := "domain1"
+	workflowID := "workflow1"
+	runID := "run1"
+	keyToKafkaMsg := "kafka-key-1"
+
+	doc := map[string]interface{}{}
+	msg := &indexer.Message{
+		DomainID:   &domainID,
+		WorkflowID: &workflowID,
+		RunID:      &runID,
+	}
+
+	expectedDoc := map[string]interface{}{
+		definition.DomainID:   domainID,
+		definition.WorkflowID: workflowID,
+		definition.RunID:      runID,
+		definition.KafkaKey:   keyToKafkaMsg,
+	}
+
+	fulfillDoc(doc, msg, keyToKafkaMsg)
+	assert.Equal(t, expectedDoc, doc, "fulfillDoc() result mismatch")
+}
+
+func TestDumpFieldsToMap(t *testing.T) {
+	testIndexer := &Indexer{
+		config: &Config{
+			EnableQueryAttributeValidation: dynamicconfig.GetBoolPropertyFn(true),
+			ValidSearchAttributes:          dynamicconfig.GetMapPropertyFn(map[string]interface{}{}),
+		},
+		logger: log.NewNoop(),
+		scope:  metrics.NoopScope(metrics.Worker),
+	}
+
+	stringPtr := "string"
+
+	tests := map[string]struct {
+		fields   map[string]*indexer.Field
+		expected map[string]interface{}
+	}{
+		"empty fields": {
+			fields: map[string]*indexer.Field{},
+			expected: map[string]interface{}{
+				"Attr": map[string]interface{}{},
+			},
+		},
+		"different fields": {
+			fields: map[string]*indexer.Field{
+				"invalid": {
+					StringData: &stringPtr,
+				},
+			},
+			expected: map[string]interface{}{
+				"Attr": map[string]interface{}{},
+			},
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			res := testIndexer.dumpFieldsToMap(tc.fields, "id")
+			assert.Equal(t, tc.expected, res)
+		})
+	}
 }
