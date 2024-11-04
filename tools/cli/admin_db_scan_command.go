@@ -108,9 +108,8 @@ func AdminDBScan(c *cli.Context) error {
 				break
 			}
 			return commoncli.Problem("Error decoding input file", err)
-		} else {
-			data = append(data, exec)
 		}
+		data = append(data, exec)
 	}
 
 	if len(data) == 0 {
@@ -132,7 +131,7 @@ func AdminDBScan(c *cli.Context) error {
 			continue
 		}
 
-		fmt.Println(string(data))
+		getDeps(c).Output().Write(data)
 	}
 	return nil
 }

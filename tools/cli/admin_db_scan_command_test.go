@@ -23,63 +23,17 @@
 package cli
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+	"github.com/urfave/cli/v2"
+
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/tools/cli/clitest"
-	"github.com/urfave/cli/v2"
 )
-
-func TestAdminDBScan(t *testing.T) {
-	td := newCLITestData(t)
-
-	expectWorkFlow(td, "test-workflow-id1")
-	expectWorkFlow(td, "test-workflow-id2")
-	expectWorkFlow(td, "test-workflow-id3")
-
-	cliCtx := clitest.NewCLIContext(t, td.app,
-		clitest.StringArgument("scan_type", "CurrentExecutionType"),
-		clitest.IntArgument("number_of_shards", 16384),
-		clitest.StringSliceArgument("invariant_collection", "CollectionMutableState"),
-		clitest.StringArgument("input_file", "testdata/scan_input.json"),
-	)
-
-	err := AdminDBScan(cliCtx)
-	assert.NoError(t, err)
-}
-
-func expectWorkFlow(td *cliTestData, workflowID string) {
-	shardId1 := common.WorkflowIDToHistoryShard(workflowID, 16384)
-	mockExecutionManager := persistence.NewMockExecutionManager(td.ctrl)
-	mockExecutionManager.EXPECT().Close().Times(1)
-	td.mockManagerFactory.EXPECT().
-		initializeExecutionManager(gomock.Any(), shardId1).
-		Return(mockExecutionManager, nil).
-		Times(1)
-
-	mockHistoryManager := persistence.NewMockHistoryManager(td.ctrl)
-	mockHistoryManager.EXPECT().Close().Times(1)
-	td.mockManagerFactory.EXPECT().
-		initializeHistoryManager(gomock.Any()).
-		Return(mockHistoryManager, nil).
-		Times(1)
-
-	mockExecutionManager.EXPECT().GetCurrentExecution(gomock.Any(), gomock.Any()).
-		Return(&persistence.GetCurrentExecutionResponse{
-			RunID: "test-run-id1",
-			State: persistence.WorkflowStateCompleted,
-		}, nil).
-		Times(1)
-	mockExecutionManager.EXPECT().GetShardID().Return(shardId1).Times(1)
-	mockExecutionManager.EXPECT().IsWorkflowExecutionExists(gomock.Any(), gomock.Any()).
-		Return(&persistence.IsWorkflowExecutionExistsResponse{
-			Exists: true,
-		}, nil).
-		Times(1)
-}
 
 func TestAdminDBScanErrorCases(t *testing.T) {
 	cases := []struct {
@@ -188,11 +142,11 @@ func TestAdminDBScanErrorCases(t *testing.T) {
 		{
 			name: "historyV2 manager initialization error",
 			testSetup: func(td *cliTestData) *cli.Context {
-				shardId1 := common.WorkflowIDToHistoryShard("test-workflow-id1", 16384)
+				shardID1 := common.WorkflowIDToHistoryShard("test-workflow-id1", 16384)
 				mockExecutionManager := persistence.NewMockExecutionManager(td.ctrl)
 				mockExecutionManager.EXPECT().Close()
 				td.mockManagerFactory.EXPECT().
-					initializeExecutionManager(gomock.Any(), shardId1).
+					initializeExecutionManager(gomock.Any(), shardID1).
 					Return(mockExecutionManager, nil)
 
 				td.mockManagerFactory.EXPECT().
@@ -211,11 +165,11 @@ func TestAdminDBScanErrorCases(t *testing.T) {
 		{
 			name: "failed to fetch execution",
 			testSetup: func(td *cliTestData) *cli.Context {
-				shardId1 := common.WorkflowIDToHistoryShard("test-workflow-id1", 16384)
+				shardID1 := common.WorkflowIDToHistoryShard("test-workflow-id1", 16384)
 				mockExecutionManager := persistence.NewMockExecutionManager(td.ctrl)
 				mockExecutionManager.EXPECT().Close()
 				td.mockManagerFactory.EXPECT().
-					initializeExecutionManager(gomock.Any(), shardId1).
+					initializeExecutionManager(gomock.Any(), shardID1).
 					Return(mockExecutionManager, nil)
 
 				mockHistoryManager := persistence.NewMockHistoryManager(td.ctrl)
@@ -251,4 +205,101 @@ func TestAdminDBScanErrorCases(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestAdminDBScan(t *testing.T) {
+	td := newCLITestData(t)
+
+	expectWorkFlow(td, "test-workflow-id1")
+	expectWorkFlow(td, "test-workflow-id2")
+	expectWorkFlow(td, "test-workflow-id3")
+
+	cliCtx := clitest.NewCLIContext(t, td.app,
+		clitest.StringArgument("scan_type", "CurrentExecutionType"),
+		clitest.IntArgument("number_of_shards", 16384),
+		clitest.StringSliceArgument("invariant_collection", "CollectionMutableState"),
+		clitest.StringArgument("input_file", "testdata/scan_input.json"),
+	)
+
+	err := AdminDBScan(cliCtx)
+	assert.NoError(t, err)
+
+	assert.Equal(t, expectedOutput, td.ioHandler.outputBytes.String())
+}
+
+// The expected output does not have any newlines or tabs
+// so we use strings.Join(strings.Fields()) to remove them
+var expectedOutput = strings.Join(strings.Fields(`
+{
+	"Execution":{
+		"CurrentRunID":"test-run-id1",
+		"ShardID":8946,
+		"DomainID":"test-domain-id1",
+		"WorkflowID":"test-workflow-id1",
+		"RunID":"test-run-id1",
+		"State":2
+	},
+	"Result":{
+		"CheckResultType":"healthy",
+		"DeterminingInvariantType":null,
+		"CheckResults":[{"CheckResultType":"healthy","InvariantName":"concrete_execution_exists","Info":"","InfoDetails":""}]
+	}
+}{
+	"Execution":{
+		"CurrentRunID":"test-run-id1",
+		"ShardID":14767,
+		"DomainID":"test-domain-id2",
+		"WorkflowID":"test-workflow-id2",
+		"RunID":"test-run-id1",
+		"State":2
+	},
+	"Result":{
+		"CheckResultType":"healthy",
+		"DeterminingInvariantType":null,
+		"CheckResults":[{"CheckResultType":"healthy","InvariantName":"concrete_execution_exists","Info":"","InfoDetails":""}]
+	}
+}{
+	"Execution":{
+		"CurrentRunID":"test-run-id1",
+		"ShardID":14582,
+		"DomainID":"test-domain-id3",
+		"WorkflowID":"test-workflow-id3",
+		"RunID":"test-run-id1","State":2
+	},
+	"Result":{
+		"CheckResultType":"healthy",
+		"DeterminingInvariantType":null,
+		"CheckResults":[{"CheckResultType":"healthy","InvariantName":"concrete_execution_exists","Info":"","InfoDetails":""}]
+	}
+}`,
+), "")
+
+func expectWorkFlow(td *cliTestData, workflowID string) {
+	shardID1 := common.WorkflowIDToHistoryShard(workflowID, 16384)
+	mockExecutionManager := persistence.NewMockExecutionManager(td.ctrl)
+	mockExecutionManager.EXPECT().Close().Times(1)
+	td.mockManagerFactory.EXPECT().
+		initializeExecutionManager(gomock.Any(), shardID1).
+		Return(mockExecutionManager, nil).
+		Times(1)
+
+	mockHistoryManager := persistence.NewMockHistoryManager(td.ctrl)
+	mockHistoryManager.EXPECT().Close().Times(1)
+	td.mockManagerFactory.EXPECT().
+		initializeHistoryManager(gomock.Any()).
+		Return(mockHistoryManager, nil).
+		Times(1)
+
+	mockExecutionManager.EXPECT().GetCurrentExecution(gomock.Any(), gomock.Any()).
+		Return(&persistence.GetCurrentExecutionResponse{
+			RunID: "test-run-id1",
+			State: persistence.WorkflowStateCompleted,
+		}, nil).
+		Times(1)
+	mockExecutionManager.EXPECT().GetShardID().Return(shardID1).Times(1)
+	mockExecutionManager.EXPECT().IsWorkflowExecutionExists(gomock.Any(), gomock.Any()).
+		Return(&persistence.IsWorkflowExecutionExistsResponse{
+			Exists: true,
+		}, nil).
+		Times(1)
 }
