@@ -667,11 +667,6 @@ func TestParse(t *testing.T) {
 
 func TestAdminKafkaParse(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
-		defer func() {
-			_ = os.Remove("input.txt")
-			_ = os.Remove("output.txt")
-		}()
-
 		wireVal, _ := (&replicator.ReplicationTask{CreationTime: ptr.Int64(123)}).ToWire()
 		encoded := bytes.NewBuffer([]byte{})
 		_ = binary.Default.Encode(wireVal, encoded)
@@ -679,23 +674,21 @@ func TestAdminKafkaParse(t *testing.T) {
 		data = append(data, preambleVersion0)
 		data = append(data, encoded.Bytes()...)
 
-		err := os.WriteFile("input.txt", data, 0666)
-		if err != nil {
-			assert.FailNow(t, err.Error())
-		}
+		inputFileName := createTempFileWithContent(t, string(data))
+		outputFileName := createTempFileWithContent(t, "")
 
 		testData := newCLITestData(t)
 
 		cliContext := clitest.NewCLIContext(t, testData.app,
-			clitest.StringArgument(FlagInputFile, "input.txt"),
-			clitest.StringArgument(FlagOutputFilename, "output.txt"),
+			clitest.StringArgument(FlagInputFile, inputFileName),
+			clitest.StringArgument(FlagOutputFilename, outputFileName),
 		)
 
-		err = AdminKafkaParse(cliContext)
+		err := AdminKafkaParse(cliContext)
 
 		assert.NoError(t, err)
 
-		result, err := os.ReadFile("output.txt")
+		result, err := os.ReadFile(outputFileName)
 
 		assert.Equal(t, "{\"creationTime\":123}\n", string(result))
 	})
@@ -714,23 +707,16 @@ func TestAdminKafkaParse(t *testing.T) {
 	})
 
 	t.Run("can't open output file", func(t *testing.T) {
-		defer func() {
-			_ = os.Remove("input.txt")
-		}()
-
 		testData := newCLITestData(t)
 
-		err := os.WriteFile("input.txt", []byte{}, 0666)
-		if err != nil {
-			assert.FailNow(t, err.Error())
-		}
+		inputFileName := createTempFileWithContent(t, "")
 
 		cliContext := clitest.NewCLIContext(t, testData.app,
-			clitest.StringArgument(FlagInputFile, "input.txt"),
+			clitest.StringArgument(FlagInputFile, inputFileName),
 			clitest.StringArgument(FlagOutputFilename, "/path/do/not/exist/output.txt"),
 		)
 
-		err = AdminKafkaParse(cliContext)
+		err := AdminKafkaParse(cliContext)
 
 		assert.EqualError(t, err, "Error in Admin kafka parse: : failed to create output file open /path/do/not/exist/output.txt: no such file or directory")
 	})
@@ -738,11 +724,9 @@ func TestAdminKafkaParse(t *testing.T) {
 
 func TestWriteVisibilityMessage(t *testing.T) {
 	t.Run("successful write", func(t *testing.T) {
-		file, _ := os.Create("output.txt")
-		defer func() {
-			_ = file.Close()
-			_ = os.Remove("output.txt")
-		}()
+		filename := createTempFileWithContent(t, "")
+		file, _ := os.OpenFile(filename, os.O_WRONLY, 0600)
+		defer file.Close()
 
 		ch := newWriterChannel(kafkaMessageTypeVisibilityMsg)
 		skippedCount := ptr.Int32(0)
@@ -761,17 +745,15 @@ func TestWriteVisibilityMessage(t *testing.T) {
 
 		assert.NoError(t, err)
 
-		result, _ := os.ReadFile("output.txt")
+		result, _ := os.ReadFile(filename)
 
 		assert.Equal(t, "{\"domainID\":\"domain_id\",\"workflowID\":\"workflow_id\",\"runID\":\"run_id\"}\n", string(result))
 	})
 
 	t.Run("successful write with header mode", func(t *testing.T) {
-		file, _ := os.Create("output.txt")
-		defer func() {
-			_ = file.Close()
-			_ = os.Remove("output.txt")
-		}()
+		filename := createTempFileWithContent(t, "")
+		file, _ := os.OpenFile(filename, os.O_WRONLY, 0600)
+		defer file.Close()
 
 		ch := newWriterChannel(kafkaMessageTypeVisibilityMsg)
 		skippedCount := ptr.Int32(0)
@@ -790,18 +772,14 @@ func TestWriteVisibilityMessage(t *testing.T) {
 
 		assert.NoError(t, err)
 
-		result, _ := os.ReadFile("output.txt")
+		result, _ := os.ReadFile(filename)
 
 		assert.Equal(t, "domain_id, workflow_id, run_id, Index, 0\n", string(result))
 	})
 
 	t.Run("returns error if can't write to the file", func(t *testing.T) {
-		defer func() {
-			_ = os.Remove("output.txt")
-		}()
-
-		file, _ := os.Create("output.txt")
-		_ = file.Close()
+		filename := createTempFileWithContent(t, "")
+		file, _ := os.OpenFile(filename, os.O_WRONLY, 0600)
 
 		ch := newWriterChannel(kafkaMessageTypeVisibilityMsg)
 		skippedCount := ptr.Int32(0)
@@ -812,19 +790,19 @@ func TestWriteVisibilityMessage(t *testing.T) {
 			ch.Close()
 		}()
 
+		_ = file.Close()
+
 		err := writeVisibilityMessage(file, ch, skippedCount, false, true, cliContext)
 
-		assert.EqualError(t, err, "failed to write to file: write output.txt: file already closed")
+		assert.Errorf(t, err, "failed to write to file: write %v: file already closed", filename)
 	})
 }
 
 func TestWriteReplicationTask(t *testing.T) {
 	t.Run("successful write", func(t *testing.T) {
-		file, _ := os.Create("output.txt")
-		defer func() {
-			_ = file.Close()
-			_ = os.Remove("output.txt")
-		}()
+		filename := createTempFileWithContent(t, "")
+		file, _ := os.OpenFile(filename, os.O_WRONLY, 0600)
+		defer file.Close()
 
 		ch := newWriterChannel(kafkaMessageTypeReplicationTask)
 		skippedCount := ptr.Int32(0)
@@ -842,17 +820,15 @@ func TestWriteReplicationTask(t *testing.T) {
 
 		assert.NoError(t, err)
 
-		result, _ := os.ReadFile("output.txt")
+		result, _ := os.ReadFile(filename)
 
 		assert.Equal(t, "{\"sourceTaskId\":123,\"creationTime\":123}\n", string(result))
 	})
 
 	t.Run("successful write with header mode", func(t *testing.T) {
-		file, _ := os.Create("output.txt")
-		defer func() {
-			_ = file.Close()
-			_ = os.Remove("output.txt")
-		}()
+		filename := createTempFileWithContent(t, "")
+		file, _ := os.OpenFile(filename, os.O_WRONLY, 0600)
+		defer file.Close()
 
 		ch := newWriterChannel(kafkaMessageTypeReplicationTask)
 		skippedCount := ptr.Int32(0)
@@ -875,18 +851,14 @@ func TestWriteReplicationTask(t *testing.T) {
 
 		assert.NoError(t, err)
 
-		result, _ := os.ReadFile("output.txt")
+		result, _ := os.ReadFile(filename)
 
 		assert.Equal(t, "domain_id, workflow_id, run_id\n", string(result))
 	})
 
 	t.Run("returns error if can't write to the file", func(t *testing.T) {
-		defer func() {
-			_ = os.Remove("output.txt")
-		}()
-
-		file, _ := os.Create("output.txt")
-		_ = file.Close()
+		filename := createTempFileWithContent(t, "")
+		file, _ := os.OpenFile(filename, os.O_WRONLY, 0600)
 
 		ch := newWriterChannel(kafkaMessageTypeReplicationTask)
 		skippedCount := ptr.Int32(0)
@@ -897,19 +869,19 @@ func TestWriteReplicationTask(t *testing.T) {
 			ch.Close()
 		}()
 
+		file.Close()
+
 		err := writeReplicationTask(file, ch, skippedCount, false, false, persistence.NewPayloadSerializer(), cliContext)
 
-		assert.EqualError(t, err, "failed to write to file: write output.txt: file already closed")
+		assert.Errorf(t, err, "failed to write to file: write %v: file already closed", filename)
 	})
 }
 
 func TestStartWriter(t *testing.T) {
 	t.Run("successful write to replication task", func(t *testing.T) {
-		file, _ := os.Create("output.txt")
-		defer func() {
-			_ = file.Close()
-			_ = os.Remove("output.txt")
-		}()
+		filename := createTempFileWithContent(t, "")
+		file, _ := os.OpenFile(filename, os.O_WRONLY, 0600)
+		defer file.Close()
 
 		ch := newWriterChannel(kafkaMessageTypeReplicationTask)
 		doneCh := make(chan struct{})
@@ -928,17 +900,15 @@ func TestStartWriter(t *testing.T) {
 
 		assert.NoError(t, err)
 
-		result, _ := os.ReadFile("output.txt")
+		result, _ := os.ReadFile(filename)
 
 		assert.Equal(t, "{\"sourceTaskId\":123,\"creationTime\":123}\n", string(result))
 	})
 
 	t.Run("successful write with visibility task", func(t *testing.T) {
-		file, _ := os.Create("output.txt")
-		defer func() {
-			_ = file.Close()
-			_ = os.Remove("output.txt")
-		}()
+		filename := createTempFileWithContent(t, "")
+		file, _ := os.OpenFile(filename, os.O_WRONLY, 0600)
+		defer file.Close()
 
 		ch := newWriterChannel(kafkaMessageTypeVisibilityMsg)
 		doneCh := make(chan struct{})
@@ -958,7 +928,7 @@ func TestStartWriter(t *testing.T) {
 
 		assert.NoError(t, err)
 
-		result, _ := os.ReadFile("output.txt")
+		result, _ := os.ReadFile(filename)
 
 		assert.Equal(t, "{\"domainID\":\"domain_id\",\"workflowID\":\"workflow_id\",\"runID\":\"run_id\"}\n", string(result))
 	})

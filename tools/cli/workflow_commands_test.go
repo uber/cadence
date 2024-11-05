@@ -1071,7 +1071,7 @@ func Test_DoReset_SkipCurrentCompleted(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func createTempFileWithContent(t *testing.T, content string) (string, func()) {
+func createTempFileWithContent(t *testing.T, content string) string {
 	tmpFile, err := os.CreateTemp("", "testfile")
 	if err != nil {
 		t.Fatalf("Failed to create temporary file: %v", err)
@@ -1085,18 +1085,16 @@ func createTempFileWithContent(t *testing.T, content string) (string, func()) {
 	tmpFileName := tmpFile.Name()
 	tmpFile.Close()
 
-	// Return a cleanup function to delete the file after the test
-	cleanup := func() {
-		os.Remove(tmpFileName)
-	}
+	t.Cleanup(func() {
+		_ = os.Remove(tmpFileName)
+	})
 
-	return tmpFileName, cleanup
+	return tmpFileName
 }
 
 func TestLoadWorkflowIDsFromFile_Success(t *testing.T) {
 	content := "wid1,wid2,wid3\n\nwid4,wid5\nwid6\n"
-	fileName, cleanup := createTempFileWithContent(t, content)
-	defer cleanup()
+	fileName := createTempFileWithContent(t, content)
 
 	workflowIDs, err := loadWorkflowIDsFromFile(fileName, ",")
 	assert.NoError(t, err)
@@ -1171,8 +1169,8 @@ func Test_ResetInBatch_WithFile(t *testing.T) {
 	set.String("reset_type", "BadBinary", "reset_type")
 	set.String("reset_bad_binary_checksum", "test-bad-binary-checksum", "reset_bad_binary_checksum")
 	content := "wid1,wid2,wid3\n\nwid4,wid5\nwid6\n"
-	fileName, cleanup := createTempFileWithContent(t, content)
-	defer cleanup()
+	fileName := createTempFileWithContent(t, content)
+
 	set.String(FlagInputFile, fileName, "input file")
 	set.String(FlagParallismDeprecated, "1", "input parallism")
 	set.String(FlagParallelism, "2", "parallelism")
