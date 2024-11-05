@@ -207,10 +207,10 @@ func listExecutionsByShardID(
 ) error {
 
 	client, err := getDeps(c).initializeExecutionManager(c, shardID)
-	defer client.Close()
 	if err != nil {
-		commoncli.Problem("Error in Admin DB unsupported WF scan: ", err)
+		commoncli.Problem("initialize execution manager:", err)
 	}
+	defer client.Close()
 	paginationFunc := func(paginationToken []byte) ([]interface{}, []byte, error) {
 		ctx, cancel := context.WithTimeout(c.Context, listContextTimeout)
 		defer cancel()
