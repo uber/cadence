@@ -61,6 +61,15 @@ func BoolArgument(name string, value bool) CliArgument {
 	}
 }
 
+// Int64Argument introduces a new int64 argument for cli context
+func Int64Argument(name string, value int64) CliArgument {
+	return func(t *testing.T, flags *flag.FlagSet, c *cli.Context) {
+		t.Helper()
+		flags.Int64(name, value, "")
+		require.NoError(t, c.Set(name, strconv.FormatInt(value, 10)))
+	}
+}
+
 // NewCLIContext creates a new cli context with optional arguments
 // this is a useful to make testing of commands compact
 func NewCLIContext(t *testing.T, app *cli.App, args ...CliArgument) *cli.Context {
