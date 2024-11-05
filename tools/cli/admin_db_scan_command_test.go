@@ -23,11 +23,14 @@
 package cli
 
 import (
+	"fmt"
+	"os"
 	"strings"
 	"testing"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/urfave/cli/v2"
 
 	"github.com/uber/cadence/common"
@@ -224,12 +227,12 @@ func TestAdminDBScan(t *testing.T) {
 	err := AdminDBScan(cliCtx)
 	assert.NoError(t, err)
 
-	assert.Equal(t, expectedOutput, td.ioHandler.outputBytes.String())
+	assert.Equal(t, expectedAdminDBScanOutput, td.ioHandler.outputBytes.String())
 }
 
 // The expected output does not have any newlines or tabs
 // so we use strings.Join(strings.Fields()) to remove them
-var expectedOutput = strings.Join(strings.Fields(`
+var expectedAdminDBScanOutput = strings.Join(strings.Fields(`
 {
 	"Execution":{
 		"CurrentRunID":"test-run-id1",
@@ -303,3 +306,86 @@ func expectWorkFlow(td *cliTestData, workflowID string) {
 		}, nil).
 		Times(1)
 }
+
+func TestAdminDBScanUnsupportedWorkflow(t *testing.T) {
+	td := newCLITestData(t)
+
+	outPutFile, cleanup := createTempFileWithContent(t, "")
+	defer cleanup()
+
+	expectShard(td, 123)
+	expectShard(td, 124)
+	expectShard(td, 125)
+
+	cliCtx := clitest.NewCLIContext(t, td.app,
+		clitest.StringArgument("output_filename", outPutFile),
+		clitest.IntArgument("lower_shard_bound", 123),
+		clitest.IntArgument("upper_shard_bound", 125),
+	)
+
+	err := AdminDBScanUnsupportedWorkflow(cliCtx)
+	assert.NoError(t, err)
+
+	actual, err := os.ReadFile(outPutFile)
+	require.NoError(t, err)
+	assert.Equal(t, expectedAdminDBScanUnsupportedOutput, string(actual))
+}
+
+func expectShard(td *cliTestData, shardID int) {
+	mockExecutionManager := persistence.NewMockExecutionManager(td.ctrl)
+	mockExecutionManager.EXPECT().Close().Times(1)
+
+	// Return 2 executions in the first call and a page token
+	mockExecutionManager.EXPECT().ListConcreteExecutions(gomock.Any(),
+		&persistence.ListConcreteExecutionsRequest{
+			PageSize:  1000,
+			PageToken: nil,
+		},
+	).
+		Return(&persistence.ListConcreteExecutionsResponse{
+			Executions: []*persistence.ListConcreteExecutionsEntity{
+				createListConcreteExecutionsEntity(1, shardID),
+				createListConcreteExecutionsEntity(2, shardID),
+			},
+			PageToken: []byte("some-next-page-token"),
+		}, nil).Times(1)
+
+	// Return 1 execution in the second call and no page token
+	mockExecutionManager.EXPECT().ListConcreteExecutions(gomock.Any(),
+		&persistence.ListConcreteExecutionsRequest{
+			PageSize:  1000,
+			PageToken: []byte("some-next-page-token"),
+		},
+	).
+		Return(&persistence.ListConcreteExecutionsResponse{
+			Executions: []*persistence.ListConcreteExecutionsEntity{
+				createListConcreteExecutionsEntity(3, shardID),
+			},
+			PageToken: nil,
+		}, nil).Times(1)
+
+	td.mockManagerFactory.EXPECT().initializeExecutionManager(gomock.Any(), shardID).
+		Return(mockExecutionManager, nil).Times(1)
+}
+
+func createListConcreteExecutionsEntity(number int, shardID int) *persistence.ListConcreteExecutionsEntity {
+	return &persistence.ListConcreteExecutionsEntity{
+		ExecutionInfo: &persistence.WorkflowExecutionInfo{
+			DomainID:   fmt.Sprintf("%d-test-domain-id%d", shardID, number),
+			WorkflowID: fmt.Sprintf("%d-test-workflow-id%d", shardID, number),
+			RunID:      fmt.Sprintf("%d-test-run-id%d", shardID, number),
+		},
+		VersionHistories: nil,
+	}
+}
+
+const expectedAdminDBScanUnsupportedOutput = `cadence --address <host>:<port> --domain <123-test-domain-id1> workflow reset --wid 123-test-workflow-id1 --rid 123-test-run-id1 --reset_type LastDecisionCompleted --reason 'release 0.16 upgrade'
+cadence --address <host>:<port> --domain <123-test-domain-id2> workflow reset --wid 123-test-workflow-id2 --rid 123-test-run-id2 --reset_type LastDecisionCompleted --reason 'release 0.16 upgrade'
+cadence --address <host>:<port> --domain <123-test-domain-id3> workflow reset --wid 123-test-workflow-id3 --rid 123-test-run-id3 --reset_type LastDecisionCompleted --reason 'release 0.16 upgrade'
+cadence --address <host>:<port> --domain <124-test-domain-id1> workflow reset --wid 124-test-workflow-id1 --rid 124-test-run-id1 --reset_type LastDecisionCompleted --reason 'release 0.16 upgrade'
+cadence --address <host>:<port> --domain <124-test-domain-id2> workflow reset --wid 124-test-workflow-id2 --rid 124-test-run-id2 --reset_type LastDecisionCompleted --reason 'release 0.16 upgrade'
+cadence --address <host>:<port> --domain <124-test-domain-id3> workflow reset --wid 124-test-workflow-id3 --rid 124-test-run-id3 --reset_type LastDecisionCompleted --reason 'release 0.16 upgrade'
+cadence --address <host>:<port> --domain <125-test-domain-id1> workflow reset --wid 125-test-workflow-id1 --rid 125-test-run-id1 --reset_type LastDecisionCompleted --reason 'release 0.16 upgrade'
+cadence --address <host>:<port> --domain <125-test-domain-id2> workflow reset --wid 125-test-workflow-id2 --rid 125-test-run-id2 --reset_type LastDecisionCompleted --reason 'release 0.16 upgrade'
+cadence --address <host>:<port> --domain <125-test-domain-id3> workflow reset --wid 125-test-workflow-id3 --rid 125-test-run-id3 --reset_type LastDecisionCompleted --reason 'release 0.16 upgrade'
+`
