@@ -383,7 +383,8 @@ func AdminDeleteWorkflow(c *cli.Context) error {
 func AdminGetDomainIDOrName(c *cli.Context) error {
 	domainID := c.String(FlagDomainID)
 	domainName := c.String(FlagDomain)
-	if len(domainID) == 0 && len(domainName) == 0 {
+
+	if (len(domainID) == 0 && len(domainName) == 0) || (len(domainID) != 0 && len(domainName) != 0) {
 		return commoncli.Problem("Need either domainName or domainID", nil)
 	}
 
@@ -396,18 +397,20 @@ func AdminGetDomainIDOrName(c *cli.Context) error {
 	if err != nil {
 		return commoncli.Problem("Error in creating context: ", err)
 	}
+
+	output := getDeps(c).Output()
 	if len(domainID) > 0 {
-		domain, err := domainManager.GetDomain(ctx, &persistence.GetDomainRequest{ID: domainID})
+		res, err := domainManager.GetDomain(ctx, &persistence.GetDomainRequest{ID: domainID})
 		if err != nil {
-			return commoncli.Problem("SelectDomain error", err)
+			return commoncli.Problem("GetDomain error", err)
 		}
-		fmt.Printf("domainName for domainID %v is %v \n", domainID, domain.Info.Name)
+		fmt.Fprintf(output, "domainName for domainID %v is %v\n", domainID, res.Info.Name)
 	} else {
-		domain, err := domainManager.GetDomain(ctx, &persistence.GetDomainRequest{Name: domainName})
+		res, err := domainManager.GetDomain(ctx, &persistence.GetDomainRequest{Name: domainName})
 		if err != nil {
-			return commoncli.Problem("SelectDomain error", err)
+			return commoncli.Problem("GetDomain error", err)
 		}
-		fmt.Printf("domainID for domainName %v is %v \n", domain.Info.ID, domainID)
+		fmt.Fprintf(output, "domainID for domainName %v is %v\n", domainName, res.Info.ID)
 	}
 	return nil
 }
