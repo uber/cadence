@@ -70,6 +70,17 @@ func Int64Argument(name string, value int64) CliArgument {
 	}
 }
 
+// StringSliceArgument introduces a new string slice argument for cli context
+func StringSliceArgument(name string, values ...string) CliArgument {
+	return func(t *testing.T, flags *flag.FlagSet, c *cli.Context) {
+		t.Helper()
+		flags.Var(&cli.StringSlice{}, name, "")
+		for _, v := range values {
+			require.NoError(t, c.Set(name, v))
+		}
+	}
+}
+
 // NewCLIContext creates a new cli context with optional arguments
 // this is a useful to make testing of commands compact
 func NewCLIContext(t *testing.T, app *cli.App, args ...CliArgument) *cli.Context {
