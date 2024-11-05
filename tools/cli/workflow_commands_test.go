@@ -2046,8 +2046,7 @@ func Test_QueryWorkflowHelper_MissingFlags(t *testing.T) {
 	assert.ErrorContains(t, err, fmt.Sprintf("%s is required", FlagWorkflowID))
 
 	content := "wid1,wid2,wid3\n\nwid4,wid5\nwid6\n"
-	fileName, cleanup := createTempFileWithContent(t, content)
-	defer cleanup()
+	fileName := createTempFileWithContent(t, content)
 	ctx := clitest.NewCLIContext(t, app, clitest.StringArgument(FlagDomain, "test-domain"), clitest.StringArgument(FlagWorkflowID, "test-workflow-id"),
 		clitest.StringArgument(FlagInputFile, fileName))
 	err = QueryWorkflowUsingQueryTypes(ctx)
@@ -2057,8 +2056,7 @@ func Test_QueryWorkflowHelper_MissingFlags(t *testing.T) {
 func Test_ProcessJsonInputHelper(t *testing.T) {
 	app := NewCliApp(&clientFactoryMock{})
 	content := "wid1,wid2,wid3\n\nwid4,wid5\nwid6\n"
-	fileName, cleanup := createTempFileWithContent(t, content)
-	defer cleanup()
+	fileName := createTempFileWithContent(t, content)
 
 	ctx := clitest.NewCLIContext(t, app, clitest.StringArgument(FlagInputFile, fileName))
 	_, err := processJSONInputHelper(ctx, jsonTypeInput)

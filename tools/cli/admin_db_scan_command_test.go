@@ -310,8 +310,7 @@ func expectWorkFlow(td *cliTestData, workflowID string) {
 func TestAdminDBScanUnsupportedWorkflow(t *testing.T) {
 	td := newCLITestData(t)
 
-	outPutFile, cleanup := createTempFileWithContent(t, "")
-	defer cleanup()
+	outPutFile := createTempFileWithContent(t, "")
 
 	expectShard(td, 123)
 	expectShard(td, 124)
