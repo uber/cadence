@@ -172,54 +172,6 @@ func TestAsyncWorkflowConfigurationDeepCopy(t *testing.T) {
 	}
 }
 
-func TestAddSearchAttributeRequest_SerializeForLogging(t *testing.T) {
-	tests := []struct {
-		name    string
-		request *AddSearchAttributeRequest
-		want    string
-		wantErr bool
-	}{
-		{
-			name:    "Nil request",
-			request: nil,
-			want:    "",
-			wantErr: false,
-		},
-		{
-			name: "Empty SearchAttribute",
-			request: &AddSearchAttributeRequest{
-				SearchAttribute: nil,
-				SecurityToken:   "",
-			},
-			want:    `{}`,
-			wantErr: false,
-		},
-		{
-			name: "With SearchAttribute",
-			request: &AddSearchAttributeRequest{
-				SearchAttribute: map[string]IndexedValueType{
-					"attr1": 1,
-				},
-				SecurityToken: "token",
-			},
-			want:    `{"searchAttribute":{"attr1":"KEYWORD"},"securityToken":"token"}`,
-			wantErr: false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := tt.request.SerializeForLogging()
-			if tt.wantErr {
-				assert.Error(t, err, "SerializeForLogging() error expected")
-			} else {
-				assert.NoError(t, err, "SerializeForLogging() error unexpected")
-			}
-			assert.Equal(t, tt.want, got, "SerializeForLogging() result mismatch")
-		})
-	}
-}
-
 func TestAddSearchAttributeRequest_GetSearchAttribute(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -257,52 +209,6 @@ func TestAddSearchAttributeRequest_GetSearchAttribute(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got := tt.request.GetSearchAttribute()
 			assert.Equal(t, tt.want, got, "GetSearchAttribute() result mismatch")
-		})
-	}
-}
-
-func TestAdminDescribeWorkflowExecutionRequest_SerializeForLogging(t *testing.T) {
-	tests := []struct {
-		name    string
-		request *AdminDescribeWorkflowExecutionRequest
-		want    string
-		wantErr bool
-	}{
-		{
-			name:    "Nil request",
-			request: nil,
-			want:    "",
-			wantErr: false,
-		},
-		{
-			name:    "Empty request",
-			request: &AdminDescribeWorkflowExecutionRequest{},
-			want:    `{}`,
-			wantErr: false,
-		},
-		{
-			name: "With Domain and Execution",
-			request: &AdminDescribeWorkflowExecutionRequest{
-				Domain: "test-domain",
-				Execution: &WorkflowExecution{
-					WorkflowID: "test-workflow",
-					RunID:      "test-run",
-				},
-			},
-			want:    `{"domain":"test-domain","execution":{"workflowId":"test-workflow","runId":"test-run"}}`,
-			wantErr: false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := tt.request.SerializeForLogging()
-			if tt.wantErr {
-				assert.Error(t, err, "SerializeForLogging() error expected")
-			} else {
-				assert.NoError(t, err, "SerializeForLogging() error unexpected")
-			}
-			assert.Equal(t, tt.want, got, "SerializeForLogging() result mismatch")
 		})
 	}
 }
@@ -402,58 +308,6 @@ func TestAdminDescribeWorkflowExecutionResponse_GetMutableStateInDatabase(t *tes
 		t.Run(tt.name, func(t *testing.T) {
 			got := tt.response.GetMutableStateInDatabase()
 			assert.Equal(t, tt.want, got, "GetMutableStateInDatabase() result mismatch")
-		})
-	}
-}
-
-func TestGetWorkflowExecutionRawHistoryV2Request_SerializeForLogging(t *testing.T) {
-	tests := []struct {
-		name    string
-		request *GetWorkflowExecutionRawHistoryV2Request
-		want    string
-		wantErr bool
-	}{
-		{
-			name:    "Nil request",
-			request: nil,
-			want:    "",
-			wantErr: false,
-		},
-		{
-			name:    "Empty request",
-			request: &GetWorkflowExecutionRawHistoryV2Request{},
-			want:    `{}`,
-			wantErr: false,
-		},
-		{
-			name: "Full request",
-			request: &GetWorkflowExecutionRawHistoryV2Request{
-				Domain: "test-domain",
-				Execution: &WorkflowExecution{
-					WorkflowID: "workflow-id",
-					RunID:      "run-id",
-				},
-				StartEventID:      ptrInt64(100),
-				StartEventVersion: ptrInt64(1),
-				EndEventID:        ptrInt64(200),
-				EndEventVersion:   ptrInt64(2),
-				MaximumPageSize:   50,
-				NextPageToken:     []byte("token"),
-			},
-			want:    `{"domain":"test-domain","execution":{"workflowId":"workflow-id","runId":"run-id"},"startEventId":100,"startEventVersion":1,"endEventId":200,"endEventVersion":2,"maximumPageSize":50,"nextPageToken":"dG9rZW4="}`,
-			wantErr: false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := tt.request.SerializeForLogging()
-			if tt.wantErr {
-				assert.Error(t, err, "SerializeForLogging() error expected")
-			} else {
-				assert.NoError(t, err, "SerializeForLogging() error unexpected")
-			}
-			assert.Equal(t, tt.want, got, "SerializeForLogging() result mismatch")
 		})
 	}
 }
@@ -757,6 +611,249 @@ func TestGetWorkflowExecutionRawHistoryV2Response_GetVersionHistory(t *testing.T
 		t.Run(tt.name, func(t *testing.T) {
 			got := tt.response.GetVersionHistory()
 			assert.Equal(t, tt.want, got, "GetVersionHistory() result mismatch")
+		})
+	}
+}
+
+func TestResendReplicationTasksRequest_GetWorkflowID(t *testing.T) {
+	tests := []struct {
+		name     string
+		request  *ResendReplicationTasksRequest
+		expected string
+	}{
+		{
+			name:     "Nil request",
+			request:  nil,
+			expected: "",
+		},
+		{
+			name:     "Empty WorkflowID",
+			request:  &ResendReplicationTasksRequest{},
+			expected: "",
+		},
+		{
+			name: "With WorkflowID",
+			request: &ResendReplicationTasksRequest{
+				WorkflowID: "test-workflow-id",
+			},
+			expected: "test-workflow-id",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.request.GetWorkflowID()
+			assert.Equal(t, tt.expected, got)
+		})
+	}
+}
+
+func TestResendReplicationTasksRequest_GetRunID(t *testing.T) {
+	tests := []struct {
+		name     string
+		request  *ResendReplicationTasksRequest
+		expected string
+	}{
+		{
+			name:     "Nil request",
+			request:  nil,
+			expected: "",
+		},
+		{
+			name:     "Empty RunID",
+			request:  &ResendReplicationTasksRequest{},
+			expected: "",
+		},
+		{
+			name: "With RunID",
+			request: &ResendReplicationTasksRequest{
+				RunID: "test-run-id",
+			},
+			expected: "test-run-id",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.request.GetRunID()
+			assert.Equal(t, tt.expected, got)
+		})
+	}
+}
+
+func TestResendReplicationTasksRequest_GetRemoteCluster(t *testing.T) {
+	tests := []struct {
+		name     string
+		request  *ResendReplicationTasksRequest
+		expected string
+	}{
+		{
+			name:     "Nil request",
+			request:  nil,
+			expected: "",
+		},
+		{
+			name:     "Empty RemoteCluster",
+			request:  &ResendReplicationTasksRequest{},
+			expected: "",
+		},
+		{
+			name: "With RemoteCluster",
+			request: &ResendReplicationTasksRequest{
+				RemoteCluster: "test-remote-cluster",
+			},
+			expected: "test-remote-cluster",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.request.GetRemoteCluster()
+			assert.Equal(t, tt.expected, got)
+		})
+	}
+}
+
+func TestAdminDeleteWorkflowRequest_GetDomain(t *testing.T) {
+	tests := []struct {
+		name     string
+		request  *AdminDeleteWorkflowRequest
+		expected string
+	}{
+		{
+			name:     "Nil request",
+			request:  nil,
+			expected: "",
+		},
+		{
+			name:     "Empty Domain",
+			request:  &AdminDeleteWorkflowRequest{},
+			expected: "",
+		},
+		{
+			name: "With Domain",
+			request: &AdminDeleteWorkflowRequest{
+				Domain: "test-domain",
+			},
+			expected: "test-domain",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.request.GetDomain()
+			assert.Equal(t, tt.expected, got)
+		})
+	}
+}
+
+func TestAdminDeleteWorkflowRequest_GetExecution(t *testing.T) {
+	tests := []struct {
+		name     string
+		request  *AdminDeleteWorkflowRequest
+		expected *WorkflowExecution
+	}{
+		{
+			name:     "Nil request",
+			request:  nil,
+			expected: nil,
+		},
+		{
+			name:     "Nil Execution",
+			request:  &AdminDeleteWorkflowRequest{},
+			expected: nil,
+		},
+		{
+			name: "With Execution",
+			request: &AdminDeleteWorkflowRequest{
+				Execution: &WorkflowExecution{
+					WorkflowID: "test-workflow-id",
+					RunID:      "test-run-id",
+				},
+			},
+			expected: &WorkflowExecution{
+				WorkflowID: "test-workflow-id",
+				RunID:      "test-run-id",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.request.GetExecution()
+			assert.Equal(t, tt.expected, got)
+		})
+	}
+}
+
+func TestAdminDeleteWorkflowRequest_GetSkipErrors(t *testing.T) {
+	tests := []struct {
+		name     string
+		request  *AdminDeleteWorkflowRequest
+		expected bool
+	}{
+		{
+			name:     "Nil request",
+			request:  nil,
+			expected: false,
+		},
+		{
+			name:     "SkipErrors is false",
+			request:  &AdminDeleteWorkflowRequest{SkipErrors: false},
+			expected: false,
+		},
+		{
+			name:     "SkipErrors is true",
+			request:  &AdminDeleteWorkflowRequest{SkipErrors: true},
+			expected: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.request.GetSkipErrors()
+			assert.Equal(t, tt.expected, got)
+		})
+	}
+}
+
+func TestFromIsolationGroupPartitionList(t *testing.T) {
+	tests := []struct {
+		name string
+		in   []IsolationGroupPartition
+		want IsolationGroupConfiguration
+	}{
+		{
+			name: "empty list",
+			in:   []IsolationGroupPartition{},
+			want: IsolationGroupConfiguration{},
+		},
+		{
+			name: "single group",
+			in: []IsolationGroupPartition{
+				{Name: "zone-1", State: IsolationGroupStateHealthy},
+			},
+			want: IsolationGroupConfiguration{
+				"zone-1": {Name: "zone-1", State: IsolationGroupStateHealthy},
+			},
+		},
+		{
+			name: "multiple groups",
+			in: []IsolationGroupPartition{
+				{Name: "zone-1", State: IsolationGroupStateHealthy},
+				{Name: "zone-2", State: IsolationGroupStateDrained},
+			},
+			want: IsolationGroupConfiguration{
+				"zone-1": {Name: "zone-1", State: IsolationGroupStateHealthy},
+				"zone-2": {Name: "zone-2", State: IsolationGroupStateDrained},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := FromIsolationGroupPartitionList(tt.in)
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }

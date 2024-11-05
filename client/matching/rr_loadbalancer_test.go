@@ -31,28 +31,18 @@ import (
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
-	"github.com/uber/cadence/common/dynamicconfig"
-	"github.com/uber/cadence/common/log/testlogger"
 	"github.com/uber/cadence/common/types"
 )
 
 func TestNewRoundRobinLoadBalancer(t *testing.T) {
-	domainIDToName := func(domainID string) (string, error) {
-		return "testDomainName", nil
-	}
-	dc := dynamicconfig.NewCollection(dynamicconfig.NewNopClient(), testlogger.New(t))
-
-	lb := NewRoundRobinLoadBalancer(domainIDToName, dc)
+	ctrl := gomock.NewController(t)
+	p := NewMockPartitionConfigProvider(ctrl)
+	lb := NewRoundRobinLoadBalancer(p)
 	assert.NotNil(t, lb)
 	rb, ok := lb.(*roundRobinLoadBalancer)
 	assert.NotNil(t, rb)
 	assert.True(t, ok)
-
-	assert.NotNil(t, rb.domainIDToName)
-	assert.NotNil(t, rb.nReadPartitions)
-	assert.NotNil(t, rb.nWritePartitions)
-	assert.NotNil(t, rb.readCache)
-	assert.NotNil(t, rb.writeCache)
+	assert.Equal(t, p, rb.provider)
 }
 
 func TestPickPartition(t *testing.T) {
@@ -197,186 +187,137 @@ func TestPickPartition(t *testing.T) {
 	}
 }
 
-func TestPickWritePartition(t *testing.T) {
-	tests := []struct {
+func setUpMocksForRoundRobinLoadBalancer(t *testing.T, pickPartitionFn func(domainID string, taskList types.TaskList, taskListType int, forwardedFrom string, nPartitions int, partitionCache cache.Cache) string) (*roundRobinLoadBalancer, *MockPartitionConfigProvider, *cache.MockCache) {
+	ctrl := gomock.NewController(t)
+	mockProvider := NewMockPartitionConfigProvider(ctrl)
+	mockCache := cache.NewMockCache(ctrl)
+
+	return &roundRobinLoadBalancer{
+		provider:        mockProvider,
+		readCache:       mockCache,
+		writeCache:      mockCache,
+		pickPartitionFn: pickPartitionFn,
+	}, mockProvider, mockCache
+}
+
+func TestRoundRobinPickWritePartition(t *testing.T) {
+	testCases := []struct {
 		name              string
-		domainID          string
-		taskList          types.TaskList
-		taskListType      int
 		forwardedFrom     string
-		domainIDToName    func(string, *testing.T) (string, error)
-		nReadPartitions   func(string, string, int, *testing.T) int
-		nWritePartitions  func(string, string, int, *testing.T) int
-		pickPartitionFn   func(string, types.TaskList, int, string, int, cache.Cache, *testing.T) string
+		taskListType      int
+		nPartitions       int
+		taskListKind      types.TaskListKind
 		expectedPartition string
-		expectError       bool
 	}{
 		{
-			name:          "successful partition pick",
-			domainID:      "testDomainID",
-			taskList:      types.TaskList{Name: "testTaskList"},
-			taskListType:  1,
-			forwardedFrom: "",
-			domainIDToName: func(domainID string, t *testing.T) (string, error) {
-				assert.Equal(t, "testDomainID", domainID) // Assert parameter with t
-				return "testDomainName", nil
-			},
-			nReadPartitions: func(domainName, taskListName string, taskListType int, t *testing.T) int {
-				assert.Equal(t, "testDomainName", domainName) // Assert parameters with t
-				assert.Equal(t, "testTaskList", taskListName)
-				assert.Equal(t, 1, taskListType)
-				return 3
-			},
-			nWritePartitions: func(domainName, taskListName string, taskListType int, t *testing.T) int {
-				assert.Equal(t, "testDomainName", domainName) // Assert parameters with t
-				assert.Equal(t, "testTaskList", taskListName)
-				assert.Equal(t, 1, taskListType)
-				return 4
-			},
-			pickPartitionFn: func(domainID string, taskList types.TaskList, taskListType int, forwardedFrom string, nPartitions int, partitionCache cache.Cache, t *testing.T) string {
-				assert.Equal(t, "testDomainID", domainID) // Assert parameters with t
-				assert.Equal(t, "testTaskList", taskList.GetName())
-				assert.Equal(t, 1, taskListType)
-				assert.Equal(t, "", forwardedFrom)
-				assert.Equal(t, 3, nPartitions)
-				return "partition1"
-			},
-			expectedPartition: "partition1",
-			expectError:       false,
+			name:              "single write partition, forwarded",
+			forwardedFrom:     "parent-task-list",
+			taskListType:      0,
+			nPartitions:       1,
+			taskListKind:      types.TaskListKindNormal,
+			expectedPartition: "test-task-list",
 		},
 		{
-			name:          "domainIDToName returns error",
-			domainID:      "badDomainID",
-			taskList:      types.TaskList{Name: "testTaskList"},
-			taskListType:  1,
-			forwardedFrom: "",
-			domainIDToName: func(domainID string, t *testing.T) (string, error) {
-				assert.Equal(t, "badDomainID", domainID) // Assert parameter with t
-				return "", fmt.Errorf("domain not found")
-			},
-			expectedPartition: "testTaskList",
-			expectError:       false,
+			name:              "multiple write partitions, no forward",
+			forwardedFrom:     "",
+			taskListType:      0,
+			nPartitions:       3,
+			taskListKind:      types.TaskListKindNormal,
+			expectedPartition: "custom-partition", // Simulated by fake pickPartitionFn
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			lb := &roundRobinLoadBalancer{
-				domainIDToName: func(domainID string) (string, error) {
-					return tt.domainIDToName(domainID, t)
-				},
-				nReadPartitions: func(domainName, taskListName string, taskListType int) int {
-					return tt.nReadPartitions(domainName, taskListName, taskListType, t)
-				},
-				nWritePartitions: func(domainName, taskListName string, taskListType int) int {
-					return tt.nWritePartitions(domainName, taskListName, taskListType, t)
-				},
-				pickPartitionFn: func(domainName string, taskList types.TaskList, taskListType int, forwardedFrom string, nPartitions int, partitionCache cache.Cache) string {
-					return tt.pickPartitionFn(domainName, taskList, taskListType, forwardedFrom, nPartitions, partitionCache, t)
-				},
-				writeCache: cache.New(&cache.Options{
-					TTL:             0,
-					InitialCapacity: 100,
-					Pin:             false,
-					MaxCount:        3000,
-					ActivelyEvict:   false,
-				}),
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Fake pickPartitionFn behavior
+			fakePickPartitionFn := func(domainID string, taskList types.TaskList, taskListType int, forwardedFrom string, nPartitions int, partitionCache cache.Cache) string {
+				assert.Equal(t, "test-domain-id", domainID)
+				assert.Equal(t, "test-task-list", taskList.Name)
+				assert.Equal(t, tc.taskListKind, taskList.GetKind())
+				assert.Equal(t, tc.taskListType, taskListType)
+				assert.Equal(t, tc.forwardedFrom, forwardedFrom)
+				assert.Equal(t, tc.nPartitions, nPartitions)
+				if forwardedFrom != "" || taskList.GetKind() == types.TaskListKindSticky {
+					return taskList.GetName()
+				}
+				return "custom-partition"
 			}
 
-			partition := lb.PickWritePartition(tt.domainID, tt.taskList, tt.taskListType, tt.forwardedFrom)
-			assert.Equal(t, tt.expectedPartition, partition)
+			// Set up mocks with the fake pickPartitionFn
+			loadBalancer, mockProvider, _ := setUpMocksForRoundRobinLoadBalancer(t, fakePickPartitionFn)
+
+			mockProvider.EXPECT().
+				GetNumberOfWritePartitions("test-domain-id", types.TaskList{Name: "test-task-list", Kind: &tc.taskListKind}, tc.taskListType).
+				Return(tc.nPartitions).
+				Times(1)
+
+			kind := tc.taskListKind
+			taskList := types.TaskList{Name: "test-task-list", Kind: &kind}
+			partition := loadBalancer.PickWritePartition("test-domain-id", taskList, tc.taskListType, tc.forwardedFrom)
+
+			// Validate result
+			assert.Equal(t, tc.expectedPartition, partition)
 		})
 	}
 }
 
-func TestPickReadPartition(t *testing.T) {
-	tests := []struct {
+func TestRoundRobinPickReadPartition(t *testing.T) {
+	testCases := []struct {
 		name              string
-		domainID          string
-		taskList          types.TaskList
-		taskListType      int
 		forwardedFrom     string
-		domainIDToName    func(string, *testing.T) (string, error)
-		nReadPartitions   func(string, string, int, *testing.T) int
-		nWritePartitions  func(string, string, int, *testing.T) int
-		pickPartitionFn   func(string, types.TaskList, int, string, int, cache.Cache, *testing.T) string
+		taskListType      int
+		nPartitions       int
+		taskListKind      types.TaskListKind
 		expectedPartition string
-		expectError       bool
 	}{
 		{
-			name:          "successful partition pick",
-			domainID:      "testDomainID",
-			taskList:      types.TaskList{Name: "testTaskList"},
-			taskListType:  1,
-			forwardedFrom: "",
-			domainIDToName: func(domainID string, t *testing.T) (string, error) {
-				assert.Equal(t, "testDomainID", domainID) // Assert parameter with t
-				return "testDomainName", nil
-			},
-			nReadPartitions: func(domainName, taskListName string, taskListType int, t *testing.T) int {
-				assert.Equal(t, "testDomainName", domainName) // Assert parameters with t
-				assert.Equal(t, "testTaskList", taskListName)
-				assert.Equal(t, 1, taskListType)
-				return 3
-			},
-			nWritePartitions: func(domainName, taskListName string, taskListType int, t *testing.T) int {
-				assert.Equal(t, "testDomainName", domainName) // Assert parameters with t
-				assert.Equal(t, "testTaskList", taskListName)
-				assert.Equal(t, 1, taskListType)
-				return 4
-			},
-			pickPartitionFn: func(domainID string, taskList types.TaskList, taskListType int, forwardedFrom string, nPartitions int, partitionCache cache.Cache, t *testing.T) string {
-				assert.Equal(t, "testDomainID", domainID) // Assert parameters with t
-				assert.Equal(t, "testTaskList", taskList.GetName())
-				assert.Equal(t, 1, taskListType)
-				assert.Equal(t, "", forwardedFrom)
-				assert.Equal(t, 3, nPartitions)
-				return "partition1"
-			},
-			expectedPartition: "partition1",
-			expectError:       false,
+			name:              "single read partition, forwarded",
+			forwardedFrom:     "parent-task-list",
+			taskListType:      0,
+			nPartitions:       1,
+			taskListKind:      types.TaskListKindNormal,
+			expectedPartition: "test-task-list",
 		},
 		{
-			name:          "domainIDToName returns error",
-			domainID:      "badDomainID",
-			taskList:      types.TaskList{Name: "testTaskList"},
-			taskListType:  1,
-			forwardedFrom: "",
-			domainIDToName: func(domainID string, t *testing.T) (string, error) {
-				assert.Equal(t, "badDomainID", domainID) // Assert parameter with t
-				return "", fmt.Errorf("domain not found")
-			},
-			expectedPartition: "testTaskList",
-			expectError:       false,
+			name:              "multiple read partitions, no forward",
+			forwardedFrom:     "",
+			taskListType:      0,
+			nPartitions:       3,
+			taskListKind:      types.TaskListKindNormal,
+			expectedPartition: "custom-partition", // Simulated by fake pickPartitionFn
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			lb := &roundRobinLoadBalancer{
-				domainIDToName: func(domainID string) (string, error) {
-					return tt.domainIDToName(domainID, t)
-				},
-				nReadPartitions: func(domainName, taskListName string, taskListType int) int {
-					return tt.nReadPartitions(domainName, taskListName, taskListType, t)
-				},
-				nWritePartitions: func(domainName, taskListName string, taskListType int) int {
-					return tt.nWritePartitions(domainName, taskListName, taskListType, t)
-				},
-				pickPartitionFn: func(domainName string, taskList types.TaskList, taskListType int, forwardedFrom string, nPartitions int, partitionCache cache.Cache) string {
-					return tt.pickPartitionFn(domainName, taskList, taskListType, forwardedFrom, nPartitions, partitionCache, t)
-				},
-				writeCache: cache.New(&cache.Options{
-					TTL:             0,
-					InitialCapacity: 100,
-					Pin:             false,
-					MaxCount:        3000,
-					ActivelyEvict:   false,
-				}),
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Fake pickPartitionFn behavior
+			fakePickPartitionFn := func(domainID string, taskList types.TaskList, taskListType int, forwardedFrom string, nPartitions int, partitionCache cache.Cache) string {
+				assert.Equal(t, "test-domain-id", domainID)
+				assert.Equal(t, "test-task-list", taskList.Name)
+				assert.Equal(t, tc.taskListKind, taskList.GetKind())
+				assert.Equal(t, tc.taskListType, taskListType)
+				assert.Equal(t, tc.forwardedFrom, forwardedFrom)
+				assert.Equal(t, tc.nPartitions, nPartitions)
+				if forwardedFrom != "" || taskList.GetKind() == types.TaskListKindSticky {
+					return taskList.GetName()
+				}
+				return "custom-partition"
 			}
 
-			partition := lb.PickReadPartition(tt.domainID, tt.taskList, tt.taskListType, tt.forwardedFrom)
-			assert.Equal(t, tt.expectedPartition, partition)
+			// Set up mocks with the fake pickPartitionFn
+			loadBalancer, mockProvider, _ := setUpMocksForRoundRobinLoadBalancer(t, fakePickPartitionFn)
+
+			mockProvider.EXPECT().
+				GetNumberOfReadPartitions("test-domain-id", types.TaskList{Name: "test-task-list", Kind: &tc.taskListKind}, tc.taskListType).
+				Return(tc.nPartitions).
+				Times(1)
+
+			kind := tc.taskListKind
+			taskList := types.TaskList{Name: "test-task-list", Kind: &kind}
+			partition := loadBalancer.PickReadPartition("test-domain-id", taskList, tc.taskListType, tc.forwardedFrom)
+
+			// Validate result
+			assert.Equal(t, tc.expectedPartition, partition)
 		})
 	}
 }

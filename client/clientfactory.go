@@ -151,9 +151,10 @@ func (cf *rpcClientFactory) NewMatchingClientWithTimeout(
 
 	peerResolver := matching.NewPeerResolver(cf.resolver, namedPort)
 
-	defaultLoadBalancer := matching.NewLoadBalancer(domainIDToName, cf.dynConfig)
-	roundRobinLoadBalancer := matching.NewRoundRobinLoadBalancer(domainIDToName, cf.dynConfig)
-	weightedLoadBalancer := matching.NewWeightedLoadBalancer(roundRobinLoadBalancer, domainIDToName, cf.dynConfig, cf.logger)
+	partitionConfigProvider := matching.NewPartitionConfigProvider(cf.logger, domainIDToName, cf.dynConfig)
+	defaultLoadBalancer := matching.NewLoadBalancer(partitionConfigProvider)
+	roundRobinLoadBalancer := matching.NewRoundRobinLoadBalancer(partitionConfigProvider)
+	weightedLoadBalancer := matching.NewWeightedLoadBalancer(roundRobinLoadBalancer, partitionConfigProvider, cf.logger)
 	loadBalancers := map[string]matching.LoadBalancer{
 		"random":      defaultLoadBalancer,
 		"round-robin": roundRobinLoadBalancer,
@@ -163,6 +164,7 @@ func (cf *rpcClientFactory) NewMatchingClientWithTimeout(
 		rawClient,
 		peerResolver,
 		matching.NewMultiLoadBalancer(defaultLoadBalancer, loadBalancers, domainIDToName, cf.dynConfig, cf.logger),
+		partitionConfigProvider,
 	)
 	client = timeoutwrapper.NewMatchingClient(client, longPollTimeout, timeout)
 	if errorRate := cf.dynConfig.GetFloat64Property(dynamicconfig.MatchingErrorInjectionRate)(); errorRate != 0 {

@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-//go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination database_mock.go -self_package github.com/uber/cadence/tools/cli
+//go:generate mockgen -package $GOPACKAGE -destination mock_manager_factory.go -self_package github.com/uber/cadence/tools/cli github.com/uber/cadence/tools/cli ManagerFactory
 
 package cli
 
@@ -37,6 +37,7 @@ import (
 	"github.com/uber/cadence/common/persistence/client"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra"
 	"github.com/uber/cadence/common/persistence/sql"
+	"github.com/uber/cadence/common/reconciliation/invariant"
 	"github.com/uber/cadence/tools/common/flag"
 )
 
@@ -152,19 +153,20 @@ func getDBFlags() []cli.Flag {
 	}
 }
 
-type PersistenceManagerFactory interface {
-	initializeExecutionStore(c *cli.Context, shardID int) (persistence.ExecutionManager, error)
+type ManagerFactory interface {
+	initializeExecutionManager(c *cli.Context, shardID int) (persistence.ExecutionManager, error)
 	initializeHistoryManager(c *cli.Context) (persistence.HistoryManager, error)
 	initializeShardManager(c *cli.Context) (persistence.ShardManager, error)
 	initializeDomainManager(c *cli.Context) (persistence.DomainManager, error)
 	initPersistenceFactory(c *cli.Context) (client.Factory, error)
+	initializeInvariantManager(ivs []invariant.Invariant) (invariant.Manager, error)
 }
 
-type defaultPersistenceManagerFactory struct {
+type defaultManagerFactory struct {
 	persistenceFactory client.Factory
 }
 
-func (f *defaultPersistenceManagerFactory) initializeExecutionStore(c *cli.Context, shardID int) (persistence.ExecutionManager, error) {
+func (f *defaultManagerFactory) initializeExecutionManager(c *cli.Context, shardID int) (persistence.ExecutionManager, error) {
 	factory, err := f.getPersistenceFactory(c)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to get persistence factory: %w", err)
@@ -176,7 +178,7 @@ func (f *defaultPersistenceManagerFactory) initializeExecutionStore(c *cli.Conte
 	return executionManager, nil
 }
 
-func (f *defaultPersistenceManagerFactory) initializeHistoryManager(c *cli.Context) (persistence.HistoryManager, error) {
+func (f *defaultManagerFactory) initializeHistoryManager(c *cli.Context) (persistence.HistoryManager, error) {
 	factory, err := f.getPersistenceFactory(c)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to get persistence factory: %w", err)
@@ -188,7 +190,7 @@ func (f *defaultPersistenceManagerFactory) initializeHistoryManager(c *cli.Conte
 	return historyManager, nil
 }
 
-func (f *defaultPersistenceManagerFactory) initializeShardManager(c *cli.Context) (persistence.ShardManager, error) {
+func (f *defaultManagerFactory) initializeShardManager(c *cli.Context) (persistence.ShardManager, error) {
 	factory, err := f.getPersistenceFactory(c)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to get persistence factory: %w", err)
@@ -200,7 +202,7 @@ func (f *defaultPersistenceManagerFactory) initializeShardManager(c *cli.Context
 	return shardManager, nil
 }
 
-func (f *defaultPersistenceManagerFactory) initializeDomainManager(c *cli.Context) (persistence.DomainManager, error) {
+func (f *defaultManagerFactory) initializeDomainManager(c *cli.Context) (persistence.DomainManager, error) {
 	factory, err := f.getPersistenceFactory(c)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to get persistence factory: %w", err)
@@ -212,7 +214,7 @@ func (f *defaultPersistenceManagerFactory) initializeDomainManager(c *cli.Contex
 	return domainManager, nil
 }
 
-func (f *defaultPersistenceManagerFactory) getPersistenceFactory(c *cli.Context) (client.Factory, error) {
+func (f *defaultManagerFactory) getPersistenceFactory(c *cli.Context) (client.Factory, error) {
 	var err error
 	if f.persistenceFactory == nil {
 		f.persistenceFactory, err = getDeps(c).initPersistenceFactory(c)
@@ -223,7 +225,7 @@ func (f *defaultPersistenceManagerFactory) getPersistenceFactory(c *cli.Context)
 	return f.persistenceFactory, nil
 }
 
-func (f *defaultPersistenceManagerFactory) initPersistenceFactory(c *cli.Context) (client.Factory, error) {
+func (f *defaultManagerFactory) initPersistenceFactory(c *cli.Context) (client.Factory, error) {
 	cfg, err := getDeps(c).ServerConfig(c)
 
 	if err != nil {
@@ -263,6 +265,10 @@ func (f *defaultPersistenceManagerFactory) initPersistenceFactory(c *cli.Context
 			EnableSQLAsyncTransaction: dynamicconfig.GetBoolPropertyFn(false),
 		},
 	), nil
+}
+
+func (f *defaultManagerFactory) initializeInvariantManager(ivs []invariant.Invariant) (invariant.Manager, error) {
+	return invariant.NewInvariantManager(ivs), nil
 }
 
 func overrideDataStore(c *cli.Context, ds config.DataStore) (config.DataStore, error) {

@@ -20,23 +20,36 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package resource
+package api
 
 import (
-	"testing"
+	"context"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/service/frontend/validate"
 )
 
-func TestShutdown(t *testing.T) {
-	i := Impl{}
-	assert.NotPanics(t, func() {
-		i.Stop()
+// RefreshWorkflowTasks re-generates the workflow tasks
+func (wh *WorkflowHandler) RefreshWorkflowTasks(
+	ctx context.Context,
+	request *types.RefreshWorkflowTasksRequest,
+) error {
+	if wh.isShuttingDown() {
+		return validate.ErrShuttingDown
+	}
+	if err := wh.requestValidator.ValidateRefreshWorkflowTasksRequest(ctx, request); err != nil {
+		return err
+	}
+	domainEntry, err := wh.GetDomainCache().GetDomain(request.GetDomain())
+	if err != nil {
+		return err
+	}
+	err = wh.GetHistoryClient().RefreshWorkflowTasks(ctx, &types.HistoryRefreshWorkflowTasksRequest{
+		DomainUIID: domainEntry.GetInfo().ID,
+		Request:    request,
 	})
-}
-
-func TestNewResource(t *testing.T) {
-	assert.NotPanics(t, func() {
-		ensureGetAllIsolationGroupsFnIsSet(&Params{})
-	})
+	if err != nil {
+		return err
+	}
+	return nil
 }

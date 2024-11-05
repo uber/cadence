@@ -143,10 +143,9 @@ type (
 		// TODO: persist this to db
 		appliedEvents map[string]struct{}
 
-		insertTransferTasks     []persistence.Task
-		insertCrossClusterTasks []persistence.Task
-		insertReplicationTasks  []persistence.Task
-		insertTimerTasks        []persistence.Task
+		insertTransferTasks    []persistence.Task
+		insertReplicationTasks []persistence.Task
+		insertTimerTasks       []persistence.Task
 
 		workflowRequests map[persistence.WorkflowRequest]struct{}
 
@@ -380,6 +379,7 @@ func (e *mutableStateBuilder) Load(
 			}
 		}
 	}
+
 	return nil
 }
 
@@ -1347,12 +1347,6 @@ func (e *mutableStateBuilder) AddTransferTasks(
 	e.insertTransferTasks = append(e.insertTransferTasks, transferTasks...)
 }
 
-func (e *mutableStateBuilder) AddCrossClusterTasks(
-	crossClusterTasks ...persistence.Task,
-) {
-	e.insertCrossClusterTasks = append(e.insertCrossClusterTasks, crossClusterTasks...)
-}
-
 // TODO convert AddTimerTasks to prepareTimerTasks
 func (e *mutableStateBuilder) AddTimerTasks(
 	timerTasks ...persistence.Task,
@@ -1365,20 +1359,12 @@ func (e *mutableStateBuilder) GetTransferTasks() []persistence.Task {
 	return e.insertTransferTasks
 }
 
-func (e *mutableStateBuilder) GetCrossClusterTasks() []persistence.Task {
-	return e.insertCrossClusterTasks
-}
-
 func (e *mutableStateBuilder) GetTimerTasks() []persistence.Task {
 	return e.insertTimerTasks
 }
 
 func (e *mutableStateBuilder) DeleteTransferTasks() {
 	e.insertTransferTasks = nil
-}
-
-func (e *mutableStateBuilder) DeleteCrossClusterTasks() {
-	e.insertCrossClusterTasks = nil
 }
 
 func (e *mutableStateBuilder) DeleteTimerTasks() {
@@ -1486,10 +1472,9 @@ func (e *mutableStateBuilder) CloseTransactionAsMutation(
 		NewBufferedEvents:         e.updateBufferedEvents,
 		ClearBufferedEvents:       e.clearBufferedEvents,
 
-		TransferTasks:     e.insertTransferTasks,
-		CrossClusterTasks: e.insertCrossClusterTasks,
-		ReplicationTasks:  e.insertReplicationTasks,
-		TimerTasks:        e.insertTimerTasks,
+		TransferTasks:    e.insertTransferTasks,
+		ReplicationTasks: e.insertReplicationTasks,
+		TimerTasks:       e.insertTimerTasks,
 
 		WorkflowRequests: convertWorkflowRequests(e.workflowRequests),
 
@@ -1566,10 +1551,9 @@ func (e *mutableStateBuilder) CloseTransactionAsSnapshot(
 		SignalInfos:         convertPendingSignalInfos(e.pendingSignalInfoIDs),
 		SignalRequestedIDs:  convertStringSetToSlice(e.pendingSignalRequestedIDs),
 
-		TransferTasks:     e.insertTransferTasks,
-		CrossClusterTasks: e.insertCrossClusterTasks,
-		ReplicationTasks:  e.insertReplicationTasks,
-		TimerTasks:        e.insertTimerTasks,
+		TransferTasks:    e.insertTransferTasks,
+		ReplicationTasks: e.insertReplicationTasks,
+		TimerTasks:       e.insertTimerTasks,
 
 		WorkflowRequests: convertWorkflowRequests(e.workflowRequests),
 
@@ -1678,7 +1662,6 @@ func (e *mutableStateBuilder) cleanupTransaction() error {
 	e.nextEventIDInDB = e.GetNextEventID()
 
 	e.insertTransferTasks = nil
-	e.insertCrossClusterTasks = nil
 	e.insertReplicationTasks = nil
 	e.insertTimerTasks = nil
 

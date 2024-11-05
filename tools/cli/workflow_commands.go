@@ -558,6 +558,8 @@ func processMemo(c *cli.Context) (map[string][]byte, error) {
 
 // helper function to print workflow progress with time refresh every second
 func printWorkflowProgress(c *cli.Context, domain, wid, rid string) error {
+	output := getDeps(c).Output()
+
 	fmt.Println(colorMagenta("Progress:"))
 
 	wfClient, err := getWorkflowClient(c)
@@ -598,7 +600,7 @@ func printWorkflowProgress(c *cli.Context, domain, wid, rid string) error {
 			event := entity.(*types.HistoryEvent)
 
 			if isTimeElapseExist {
-				removePrevious2LinesFromTerminal()
+				removePrevious2LinesFromTerminal(output)
 				isTimeElapseExist = false
 			}
 			if showDetails {
@@ -615,7 +617,7 @@ func printWorkflowProgress(c *cli.Context, domain, wid, rid string) error {
 		select {
 		case <-ticker:
 			if isTimeElapseExist {
-				removePrevious2LinesFromTerminal()
+				removePrevious2LinesFromTerminal(output)
 			}
 			fmt.Printf("\nTime elapse: %ds\n", timeElapse)
 			isTimeElapseExist = true
@@ -1427,6 +1429,8 @@ func filterExcludedWorkflows(c *cli.Context, getWorkflowPage getWorkflowPageFn) 
 }
 
 func displayPagedWorkflows(c *cli.Context, getWorkflowPage getWorkflowPageFn, firstPageOnly bool) error {
+	output := getDeps(c).Output()
+
 	var page []*types.WorkflowExecutionInfo
 	var nextPageToken []byte
 	var err error
@@ -1446,7 +1450,7 @@ func displayPagedWorkflows(c *cli.Context, getWorkflowPage getWorkflowPageFn, fi
 		if len(nextPageToken) == 0 {
 			break
 		}
-		if !showNextPage() {
+		if !showNextPage(output) {
 			break
 		}
 	}

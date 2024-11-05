@@ -60,71 +60,69 @@ type ResourceFactory interface {
 	) (resource Resource, err error)
 }
 
-type (
-	// Resource is the interface which expose common resources
-	Resource interface {
-		common.Daemon
+// Resource is the interface which expose common resources
+type Resource interface {
+	common.Daemon
 
-		// static infos
+	// static infos
 
-		GetServiceName() string
-		GetHostInfo() membership.HostInfo
-		GetArchivalMetadata() archiver.ArchivalMetadata
-		GetClusterMetadata() cluster.Metadata
+	GetServiceName() string
+	GetHostInfo() membership.HostInfo
+	GetArchivalMetadata() archiver.ArchivalMetadata
+	GetClusterMetadata() cluster.Metadata
 
-		// other common resources
+	// other common resources
 
-		GetDomainCache() cache.DomainCache
-		GetDomainMetricsScopeCache() cache.DomainMetricsScopeCache
-		GetTimeSource() clock.TimeSource
-		GetPayloadSerializer() persistence.PayloadSerializer
-		GetMetricsClient() metrics.Client
-		GetArchiverProvider() provider.ArchiverProvider
-		GetMessagingClient() messaging.Client
-		GetBlobstoreClient() blobstore.Client
-		GetDomainReplicationQueue() domain.ReplicationQueue
+	GetDomainCache() cache.DomainCache
+	GetDomainMetricsScopeCache() cache.DomainMetricsScopeCache
+	GetTimeSource() clock.TimeSource
+	GetPayloadSerializer() persistence.PayloadSerializer
+	GetMetricsClient() metrics.Client
+	GetArchiverProvider() provider.ArchiverProvider
+	GetMessagingClient() messaging.Client
+	GetBlobstoreClient() blobstore.Client
+	GetDomainReplicationQueue() domain.ReplicationQueue
 
-		// membership infos
-		GetMembershipResolver() membership.Resolver
+	// membership infos
+	GetMembershipResolver() membership.Resolver
 
-		// internal services clients
+	// internal services clients
 
-		GetSDKClient() workflowserviceclient.Interface
-		GetFrontendRawClient() frontend.Client
-		GetFrontendClient() frontend.Client
-		GetMatchingRawClient() matching.Client
-		GetMatchingClient() matching.Client
-		GetHistoryRawClient() history.Client
-		GetHistoryClient() history.Client
-		GetRatelimiterAggregatorsClient() qrpc.Client
-		GetRemoteAdminClient(cluster string) admin.Client
-		GetRemoteFrontendClient(cluster string) frontend.Client
-		GetClientBean() client.Bean
+	GetSDKClient() workflowserviceclient.Interface
+	GetFrontendRawClient() frontend.Client
+	GetFrontendClient() frontend.Client
+	GetMatchingRawClient() matching.Client
+	GetMatchingClient() matching.Client
+	GetHistoryRawClient() history.Client
+	GetHistoryClient() history.Client
+	GetRatelimiterAggregatorsClient() qrpc.Client
+	GetRemoteAdminClient(cluster string) admin.Client
+	GetRemoteFrontendClient(cluster string) frontend.Client
+	GetClientBean() client.Bean
 
-		// persistence clients
-		GetDomainManager() persistence.DomainManager
-		GetTaskManager() persistence.TaskManager
-		GetVisibilityManager() persistence.VisibilityManager
-		GetShardManager() persistence.ShardManager
-		GetHistoryManager() persistence.HistoryManager
-		GetExecutionManager(int) (persistence.ExecutionManager, error)
-		GetPersistenceBean() persistenceClient.Bean
+	// persistence clients
+	GetDomainManager() persistence.DomainManager
+	GetTaskManager() persistence.TaskManager
+	GetVisibilityManager() persistence.VisibilityManager
+	GetShardManager() persistence.ShardManager
+	GetHistoryManager() persistence.HistoryManager
+	GetExecutionManager(int) (persistence.ExecutionManager, error)
+	GetPersistenceBean() persistenceClient.Bean
 
-		// GetHostName get host name
-		GetHostName() string
+	// GetHostName get host name
+	GetHostName() string
 
-		// loggers
-		GetLogger() log.Logger
-		GetThrottledLogger() log.Logger
+	// loggers
+	GetLogger() log.Logger
+	GetThrottledLogger() log.Logger
 
-		// for registering handlers
-		GetDispatcher() *yarpc.Dispatcher
+	// for registering handlers
+	GetDispatcher() *yarpc.Dispatcher
 
-		// GetIsolationGroupState returns the isolationGroupState
-		GetIsolationGroupState() isolationgroup.State
-		GetPartitioner() partition.Partitioner
-		GetIsolationGroupStore() configstore.Client
+	// GetIsolationGroupState returns the isolationGroupState
+	GetIsolationGroupState() isolationgroup.State
+	GetPartitioner() partition.Partitioner
+	GetIsolationGroupStore() configstore.Client
 
-		GetAsyncWorkflowQueueProvider() queue.Provider
-	}
-)
+	GetAsyncWorkflowQueueProvider() queue.Provider
+}

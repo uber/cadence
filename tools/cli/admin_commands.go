@@ -308,7 +308,7 @@ func AdminDeleteWorkflow(c *cli.Context) error {
 	if err != nil {
 		return commoncli.Problem("Error in Admin delete WF: ", err)
 	}
-	exeStore, err := getDeps(c).initializeExecutionStore(c, shardIDInt)
+	exeStore, err := getDeps(c).initializeExecutionManager(c, shardIDInt)
 	if err != nil {
 		return commoncli.Problem("Error in Admin delete WF: ", err)
 	}
@@ -424,7 +424,8 @@ func AdminGetShardID(c *cli.Context) error {
 		return commoncli.Problem("numberOfShards is required", nil)
 	}
 	shardID := common.WorkflowIDToHistoryShard(wid, numberOfShards)
-	fmt.Printf("ShardID for workflowID: %v is %v \n", wid, shardID)
+
+	fmt.Fprintf(getDeps(c).Output(), "ShardID for workflowID: %v is %v\n", wid, shardID)
 	return nil
 }
 
@@ -489,15 +490,15 @@ func AdminDescribeShard(c *cli.Context) error {
 	}
 	shardManager, err := getDeps(c).initializeShardManager(c)
 	if err != nil {
-		return commoncli.Problem("Error in Admin delete WF: ", err)
+		return commoncli.Problem("Error in describe shard: ", err)
 	}
 	getShardReq := &persistence.GetShardRequest{ShardID: sid}
-	shard, err := shardManager.GetShard(ctx, getShardReq)
+	resp, err := shardManager.GetShard(ctx, getShardReq)
 	if err != nil {
 		return commoncli.Problem("Failed to describe shard.", err)
 	}
 
-	prettyPrintJSONObject(getDeps(c).Output(), shard)
+	prettyPrintJSONObject(getDeps(c).Output(), resp)
 	return nil
 }
 
@@ -518,7 +519,7 @@ func AdminSetShardRangeID(c *cli.Context) error {
 	}
 	shardManager, err := getDeps(c).initializeShardManager(c)
 	if err != nil {
-		return commoncli.Problem("Error in Admin delete WF: ", err)
+		return commoncli.Problem("Error in Admin SetShardRangeID: ", err)
 	}
 	getShardResp, err := shardManager.GetShard(ctx, &persistence.GetShardRequest{ShardID: sid})
 	if err != nil {
@@ -532,14 +533,15 @@ func AdminSetShardRangeID(c *cli.Context) error {
 	updatedShardInfo.Owner = ""
 	updatedShardInfo.UpdatedAt = time.Now()
 
-	if err := shardManager.UpdateShard(ctx, &persistence.UpdateShardRequest{
+	err = shardManager.UpdateShard(ctx, &persistence.UpdateShardRequest{
 		PreviousRangeID: previousRangeID,
 		ShardInfo:       updatedShardInfo,
-	}); err != nil {
+	})
+	if err != nil {
 		return commoncli.Problem("Failed to reset shard rangeID.", err)
 	}
 
-	fmt.Printf("Successfully updated rangeID from %v to %v for shard %v.\n", previousRangeID, rid, sid)
+	fmt.Fprintf(getDeps(c).Output(), "Successfully updated rangeID from %v to %v for shard %v.\n", previousRangeID, rid, sid)
 	return nil
 }
 
@@ -575,6 +577,8 @@ type ShardRow struct {
 
 // AdminDescribeShardDistribution describes shard distribution
 func AdminDescribeShardDistribution(c *cli.Context) error {
+	output := getDeps(c).Output()
+
 	adminClient, err := getDeps(c).ServerAdminClient(c)
 	if err != nil {
 		return err
@@ -595,8 +599,8 @@ func AdminDescribeShardDistribution(c *cli.Context) error {
 		return commoncli.Problem("Shard list failed", err)
 	}
 
-	fmt.Printf("Total Number of Shards: %d \n", resp.NumberOfShards)
-	fmt.Printf("Number of Shards Returned: %d \n", len(resp.Shards))
+	fmt.Fprintf(output, "Total Number of Shards: %d\n", resp.NumberOfShards)
+	fmt.Fprintf(output, "Number of Shards Returned: %d\n", len(resp.Shards))
 
 	if len(resp.Shards) == 0 {
 		return nil
@@ -611,7 +615,7 @@ func AdminDescribeShardDistribution(c *cli.Context) error {
 				return fmt.Errorf("error rendering: %w", err)
 			}
 			table = []ShardRow{}
-			if !showNextPage() {
+			if !showNextPage(output) {
 				break
 			}
 			outputPageSize = tableRenderSize
@@ -699,7 +703,7 @@ func AdminRefreshWorkflowTasks(c *cli.Context) error {
 	if err != nil {
 		return commoncli.Problem("Refresh workflow task failed", err)
 	}
-	fmt.Println("Refresh workflow task succeeded.")
+	fmt.Fprintln(getDeps(c).Output(), "Refresh workflow task succeeded.")
 	return nil
 }
 
@@ -737,7 +741,8 @@ func AdminResetQueue(c *cli.Context) error {
 	if err != nil {
 		return commoncli.Problem("Failed to reset queue", err)
 	}
-	fmt.Println("Reset queue state succeeded")
+
+	fmt.Fprintln(getDeps(c).Output(), "Reset queue state succeeded")
 	return nil
 }
 
@@ -777,8 +782,9 @@ func AdminDescribeQueue(c *cli.Context) error {
 		return commoncli.Problem("Failed to describe queue", err)
 	}
 
+	output := getDeps(c).Output()
 	for _, state := range resp.ProcessingQueueStates {
-		fmt.Println(state)
+		fmt.Fprintln(output, state)
 	}
 	return nil
 }

@@ -22,6 +22,7 @@ package cli
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"os"
 	"strings"
@@ -66,6 +67,7 @@ var _ ClientFactory = (*clientFactoryMock)(nil)
 type clientFactoryMock struct {
 	serverFrontendClient frontend.Client
 	serverAdminClient    admin.Client
+	config               *config.Config
 }
 
 func (m *clientFactoryMock) ServerFrontendClient(c *cli.Context) (frontend.Client, error) {
@@ -89,7 +91,10 @@ func (m *clientFactoryMock) ElasticSearchClient(c *cli.Context) (*elastic.Client
 }
 
 func (m *clientFactoryMock) ServerConfig(c *cli.Context) (*config.Config, error) {
-	panic("not implemented")
+	if m.config != nil {
+		return m.config, nil
+	}
+	return nil, fmt.Errorf("config not set")
 }
 
 var commands = []string{
@@ -923,5 +928,134 @@ func (s *cliAppSuite) TestConvertArray() {
 		res, err := parseArray(testCase.input)
 		s.NotNil(err)
 		s.Nil(res)
+	}
+}
+
+func TestWithManagerFactory(t *testing.T) {
+	tests := []struct {
+		name           string
+		app            *cli.App
+		expectFactory  bool
+		expectNilMeta  bool
+		expectDepsType bool
+	}{
+		{
+			name: "Valid Metadata with deps key",
+			app: &cli.App{
+				Metadata: map[string]interface{}{
+					depsKey: &deps{},
+				},
+			},
+			expectFactory:  true,
+			expectNilMeta:  false,
+			expectDepsType: true,
+		},
+		{
+			name:           "No Metadata",
+			app:            &cli.App{Metadata: nil},
+			expectFactory:  false,
+			expectNilMeta:  true,
+			expectDepsType: false,
+		},
+		{
+			name: "Incorrect deps key type",
+			app: &cli.App{
+				Metadata: map[string]interface{}{
+					depsKey: "invalid_type",
+				},
+			},
+			expectFactory:  false,
+			expectNilMeta:  false,
+			expectDepsType: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockFactory := NewMockManagerFactory(ctrl)
+
+			option := WithManagerFactory(mockFactory)
+			option(tt.app)
+
+			if tt.expectNilMeta {
+				assert.Nil(t, tt.app.Metadata, "Expected Metadata to be nil")
+			} else {
+				d, ok := tt.app.Metadata[depsKey].(*deps)
+				if tt.expectDepsType {
+					assert.True(t, ok, "Expected depsKey to be of type *deps")
+					if tt.expectFactory {
+						assert.Equal(t, mockFactory, d.ManagerFactory, "Expected ManagerFactory to be set correctly")
+					}
+				} else {
+					assert.False(t, ok, "Expected depsKey not to be of type *deps")
+				}
+			}
+		})
+	}
+}
+
+func TestWithIOHandler(t *testing.T) {
+	tests := []struct {
+		name           string
+		app            *cli.App
+		expectHandler  bool
+		expectNilMeta  bool
+		expectDepsType bool
+	}{
+		{
+			name: "Valid Metadata with deps key",
+			app: &cli.App{
+				Metadata: map[string]interface{}{
+					depsKey: &deps{},
+				},
+			},
+			expectHandler:  true,
+			expectNilMeta:  false,
+			expectDepsType: true,
+		},
+		{
+			name:           "No Metadata",
+			app:            &cli.App{Metadata: nil},
+			expectHandler:  false,
+			expectNilMeta:  true,
+			expectDepsType: false,
+		},
+		{
+			name: "Incorrect deps key type",
+			app: &cli.App{
+				Metadata: map[string]interface{}{
+					depsKey: "invalid_type",
+				},
+			},
+			expectHandler:  false,
+			expectNilMeta:  false,
+			expectDepsType: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			testHandler := testIOHandler{}
+
+			option := WithIOHandler(&testHandler)
+			option(tt.app)
+
+			if tt.expectNilMeta {
+				assert.Nil(t, tt.app.Metadata, "Expected Metadata to be nil")
+			} else {
+				d, ok := tt.app.Metadata[depsKey].(*deps)
+				if tt.expectDepsType {
+					assert.True(t, ok, "Expected depsKey to be of type *deps")
+					if tt.expectHandler {
+						assert.Equal(t, &testHandler, d.IOHandler, "Expected IOHandler to be set correctly")
+					}
+				} else {
+					assert.False(t, ok, "Expected depsKey not to be of type *deps")
+				}
+			}
+		})
 	}
 }
