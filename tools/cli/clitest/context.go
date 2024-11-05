@@ -25,7 +25,6 @@ package clitest
 import (
 	"flag"
 	"strconv"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -75,8 +74,10 @@ func Int64Argument(name string, value int64) CliArgument {
 func StringSliceArgument(name string, values ...string) CliArgument {
 	return func(t *testing.T, flags *flag.FlagSet, c *cli.Context) {
 		t.Helper()
-		flags.Var(cli.NewStringSlice(values...), name, "")
-		require.NoError(t, c.Set(name, strings.Join(values, " ")))
+		flags.Var(&cli.StringSlice{}, name, "")
+		for _, v := range values {
+			require.NoError(t, c.Set(name, v))
+		}
 	}
 }
 
