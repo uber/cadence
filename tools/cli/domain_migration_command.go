@@ -309,7 +309,7 @@ func (d *domainMigrationCLIImpl) SearchAttributesChecker(c *cli.Context) (Domain
 	// getting search attributes for current domain
 	currentSearchAttributes, err := d.frontendClient.GetSearchAttributes(ctx)
 	if err != nil {
-		return DomainMigrationRow{}, fmt.Errorf("Unable to get search attributes for new domain. %w", err)
+		return DomainMigrationRow{}, fmt.Errorf("Unable to get search attributes for old domain. %w", err)
 	}
 
 	// getting search attributes for new domain
@@ -399,6 +399,7 @@ func (d *domainMigrationCLIImpl) DynamicConfigCheck(c *cli.Context) (DomainMigra
 			})
 
 			currResp, err := d.frontendAdminClient.GetDynamicConfig(ctx, currRequest)
+			fmt.Println("this is the expected", configKey)
 			if err != nil {
 				// empty to indicate N/A
 				currResp = emptyGetDynamicConfigRequest
