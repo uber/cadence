@@ -424,7 +424,8 @@ func AdminGetShardID(c *cli.Context) error {
 		return commoncli.Problem("numberOfShards is required", nil)
 	}
 	shardID := common.WorkflowIDToHistoryShard(wid, numberOfShards)
-	fmt.Printf("ShardID for workflowID: %v is %v \n", wid, shardID)
+
+	fmt.Fprintf(getDeps(c).Output(), "ShardID for workflowID: %v is %v\n", wid, shardID)
 	return nil
 }
 
@@ -489,15 +490,15 @@ func AdminDescribeShard(c *cli.Context) error {
 	}
 	shardManager, err := getDeps(c).initializeShardManager(c)
 	if err != nil {
-		return commoncli.Problem("Error in Admin delete WF: ", err)
+		return commoncli.Problem("Error in describe shard: ", err)
 	}
 	getShardReq := &persistence.GetShardRequest{ShardID: sid}
-	shard, err := shardManager.GetShard(ctx, getShardReq)
+	resp, err := shardManager.GetShard(ctx, getShardReq)
 	if err != nil {
 		return commoncli.Problem("Failed to describe shard.", err)
 	}
 
-	prettyPrintJSONObject(getDeps(c).Output(), shard)
+	prettyPrintJSONObject(getDeps(c).Output(), resp)
 	return nil
 }
 
@@ -518,7 +519,7 @@ func AdminSetShardRangeID(c *cli.Context) error {
 	}
 	shardManager, err := getDeps(c).initializeShardManager(c)
 	if err != nil {
-		return commoncli.Problem("Error in Admin delete WF: ", err)
+		return commoncli.Problem("Error in Admin SetShardRangeID: ", err)
 	}
 	getShardResp, err := shardManager.GetShard(ctx, &persistence.GetShardRequest{ShardID: sid})
 	if err != nil {
@@ -532,14 +533,15 @@ func AdminSetShardRangeID(c *cli.Context) error {
 	updatedShardInfo.Owner = ""
 	updatedShardInfo.UpdatedAt = time.Now()
 
-	if err := shardManager.UpdateShard(ctx, &persistence.UpdateShardRequest{
+	err = shardManager.UpdateShard(ctx, &persistence.UpdateShardRequest{
 		PreviousRangeID: previousRangeID,
 		ShardInfo:       updatedShardInfo,
-	}); err != nil {
+	})
+	if err != nil {
 		return commoncli.Problem("Failed to reset shard rangeID.", err)
 	}
 
-	fmt.Printf("Successfully updated rangeID from %v to %v for shard %v.\n", previousRangeID, rid, sid)
+	fmt.Fprintf(getDeps(c).Output(), "Successfully updated rangeID from %v to %v for shard %v.\n", previousRangeID, rid, sid)
 	return nil
 }
 
@@ -597,8 +599,8 @@ func AdminDescribeShardDistribution(c *cli.Context) error {
 		return commoncli.Problem("Shard list failed", err)
 	}
 
-	output.Write([]byte(fmt.Sprintf("Total Number of Shards: %d \n", resp.NumberOfShards)))
-	output.Write([]byte(fmt.Sprintf("Number of Shards Returned: %d \n", len(resp.Shards))))
+	fmt.Fprintf(output, "Total Number of Shards: %d\n", resp.NumberOfShards)
+	fmt.Fprintf(output, "Number of Shards Returned: %d\n", len(resp.Shards))
 
 	if len(resp.Shards) == 0 {
 		return nil

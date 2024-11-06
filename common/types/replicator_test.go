@@ -298,24 +298,6 @@ func TestMergeDLQMessagesRequest_GetInclusiveEndMessageID(t *testing.T) {
 	assert.Equal(t, int64(0), res)
 }
 
-func TestGetDLQReplicationMessagesRequest_SerializeForLogging(t *testing.T) {
-	// Test case where the struct is nil
-	var nilStruct *GetDLQReplicationMessagesRequest
-	res, err := nilStruct.SerializeForLogging()
-	assert.Equal(t, "", res)
-	assert.NoError(t, err)
-
-	// Test case with a non-nil struct
-	taskInfos := []*ReplicationTaskInfo{{}, {}}
-	testStruct := GetDLQReplicationMessagesRequest{
-		TaskInfos: taskInfos,
-	}
-
-	res, err = testStruct.SerializeForLogging()
-	assert.NotEmpty(t, res)
-	assert.NoError(t, err)
-}
-
 func TestGetDLQReplicationMessagesRequest_GetTaskInfos(t *testing.T) {
 	taskInfos := []*ReplicationTaskInfo{{}, {}}
 	testStruct := GetDLQReplicationMessagesRequest{
@@ -371,25 +353,6 @@ func TestGetDomainReplicationMessagesRequest_GetClusterName(t *testing.T) {
 	assert.Equal(t, "", res)
 }
 
-func TestGetReplicationMessagesRequest_SerializeForLogging(t *testing.T) {
-	// Test case where the struct is nil
-	var nilStruct *GetReplicationMessagesRequest
-	res, err := nilStruct.SerializeForLogging()
-	assert.Equal(t, "", res)
-	assert.NoError(t, err)
-
-	// Test case with a non-nil struct
-	tokens := []*ReplicationToken{{}, {}}
-	testStruct := GetReplicationMessagesRequest{
-		Tokens:      tokens,
-		ClusterName: "test-cluster",
-	}
-
-	res, err = testStruct.SerializeForLogging()
-	assert.NotEmpty(t, res)
-	assert.NoError(t, err)
-}
-
 func TestGetReplicationMessagesRequest_GetClusterName(t *testing.T) {
 	testStruct := GetReplicationMessagesRequest{
 		ClusterName: "test-cluster",
@@ -418,23 +381,6 @@ func TestGetReplicationMessagesResponse_GetMessagesByShard(t *testing.T) {
 	var nilStruct *GetReplicationMessagesResponse
 	res = nilStruct.GetMessagesByShard()
 	assert.Nil(t, res)
-}
-
-func TestCountDLQMessagesRequest_SerializeForLogging(t *testing.T) {
-	// Test case where the struct is nil
-	var nilStruct *CountDLQMessagesRequest
-	res, err := nilStruct.SerializeForLogging()
-	assert.Equal(t, "", res)
-	assert.NoError(t, err)
-
-	// Test case with a non-nil struct
-	testStruct := CountDLQMessagesRequest{
-		ForceFetch: true,
-	}
-
-	res, err = testStruct.SerializeForLogging()
-	assert.NotEmpty(t, res)
-	assert.NoError(t, err)
 }
 
 func TestCountDLQMessagesResponse(t *testing.T) {
@@ -468,31 +414,6 @@ func TestHistoryCountDLQMessagesResponse(t *testing.T) {
 	// Test for empty entries
 	emptyStruct := HistoryCountDLQMessagesResponse{}
 	assert.Nil(t, emptyStruct.Entries)
-}
-
-func TestMergeDLQMessagesRequest_SerializeForLogging(t *testing.T) {
-	// Test case where the struct is nil
-	var nilStruct *MergeDLQMessagesRequest
-	res, err := nilStruct.SerializeForLogging()
-	assert.Equal(t, "", res)
-	assert.NoError(t, err)
-
-	// Test case with a non-nil struct
-	dlqType := DLQTypeReplication
-	endMessageID := int64(102)
-	nextPageToken := []byte("token")
-	testStruct := MergeDLQMessagesRequest{
-		Type:                  &dlqType,
-		ShardID:               101,
-		SourceCluster:         "cluster-1",
-		InclusiveEndMessageID: &endMessageID,
-		MaximumPageSize:       50,
-		NextPageToken:         nextPageToken,
-	}
-
-	res, err = testStruct.SerializeForLogging()
-	assert.NotEmpty(t, res)
-	assert.NoError(t, err)
 }
 
 func TestMergeDLQMessagesRequest_Getters(t *testing.T) {
@@ -606,28 +527,6 @@ func TestHistoryTaskV2Attributes_GetNewRunEvents(t *testing.T) {
 	assert.Nil(t, res)
 }
 
-func TestPurgeDLQMessagesRequest_SerializeForLogging(t *testing.T) {
-	// Test case where the struct is nil
-	var nilStruct *PurgeDLQMessagesRequest
-	res, err := nilStruct.SerializeForLogging()
-	assert.Equal(t, "", res)
-	assert.NoError(t, err)
-
-	// Test case with a non-nil struct
-	dlqType := DLQTypeReplication
-	endMessageID := int64(12345)
-	testStruct := PurgeDLQMessagesRequest{
-		Type:                  &dlqType,
-		ShardID:               101,
-		SourceCluster:         "test-cluster",
-		InclusiveEndMessageID: &endMessageID,
-	}
-
-	res, err = testStruct.SerializeForLogging()
-	assert.NotEmpty(t, res)
-	assert.NoError(t, err)
-}
-
 func TestPurgeDLQMessagesRequest_Getters(t *testing.T) {
 	dlqType := DLQTypeReplication
 	endMessageID := int64(12345)
@@ -649,31 +548,6 @@ func TestPurgeDLQMessagesRequest_Getters(t *testing.T) {
 	assert.Equal(t, int32(0), nilStruct.GetShardID())
 	assert.Equal(t, "", nilStruct.GetSourceCluster())
 	assert.Equal(t, int64(0), nilStruct.GetInclusiveEndMessageID())
-}
-
-func TestReadDLQMessagesRequest_SerializeForLogging(t *testing.T) {
-	// Test case where the struct is nil
-	var nilStruct *ReadDLQMessagesRequest
-	res, err := nilStruct.SerializeForLogging()
-	assert.Equal(t, "", res)
-	assert.NoError(t, err)
-
-	// Test case with a non-nil struct
-	dlqType := DLQTypeReplication
-	endMessageID := int64(12345)
-	nextPageToken := []byte("token")
-	testStruct := ReadDLQMessagesRequest{
-		Type:                  &dlqType,
-		ShardID:               101,
-		SourceCluster:         "test-cluster",
-		InclusiveEndMessageID: &endMessageID,
-		MaximumPageSize:       50,
-		NextPageToken:         nextPageToken,
-	}
-
-	res, err = testStruct.SerializeForLogging()
-	assert.NotEmpty(t, res)
-	assert.NoError(t, err)
 }
 
 func TestReadDLQMessagesRequest_Getters(t *testing.T) {
@@ -1281,25 +1155,4 @@ func TestSyncShardStatus_GetTimestamp(t *testing.T) {
 	var nilStruct *SyncShardStatus
 	res = nilStruct.GetTimestamp()
 	assert.Equal(t, int64(0), res)
-}
-
-func TestGetDomainReplicationMessagesRequest_SerializeForLogging(t *testing.T) {
-	// Test case where the struct is nil
-	var nilStruct *GetDomainReplicationMessagesRequest
-	res, err := nilStruct.SerializeForLogging()
-	assert.Equal(t, "", res)
-	assert.NoError(t, err)
-
-	// Test case with a non-nil struct
-	lastRetrievedMessageID := int64(12345)
-	lastProcessedMessageID := int64(67890)
-	testStruct := GetDomainReplicationMessagesRequest{
-		LastRetrievedMessageID: &lastRetrievedMessageID,
-		LastProcessedMessageID: &lastProcessedMessageID,
-		ClusterName:            "test-cluster",
-	}
-
-	res, err = testStruct.SerializeForLogging()
-	assert.NotEmpty(t, res)
-	assert.NoError(t, err)
 }

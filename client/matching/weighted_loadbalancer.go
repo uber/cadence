@@ -32,7 +32,6 @@ import (
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
-	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/types"
@@ -50,8 +49,7 @@ type (
 
 	weightedLoadBalancer struct {
 		fallbackLoadBalancer LoadBalancer
-		nReadPartitions      dynamicconfig.IntPropertyFnWithTaskListInfoFilters
-		domainIDToName       func(string) (string, error)
+		provider             PartitionConfigProvider
 		weightCache          cache.Cache
 		logger               log.Logger
 	}
@@ -116,14 +114,12 @@ func (pw *weightSelector) update(n, p int, weight int64) {
 
 func NewWeightedLoadBalancer(
 	lb LoadBalancer,
-	domainIDToName func(string) (string, error),
-	dc *dynamicconfig.Collection,
+	provider PartitionConfigProvider,
 	logger log.Logger,
 ) LoadBalancer {
 	return &weightedLoadBalancer{
 		fallbackLoadBalancer: lb,
-		domainIDToName:       domainIDToName,
-		nReadPartitions:      dc.GetIntPropertyFilteredByTaskListInfo(dynamicconfig.MatchingNumTasklistReadPartitions),
+		provider:             provider,
 		weightCache: cache.New(&cache.Options{
 			TTL:             0,
 			InitialCapacity: 100,
@@ -199,22 +195,19 @@ func (lb *weightedLoadBalancer) UpdateWeight(
 			return
 		}
 	}
-	domainName, err := lb.domainIDToName(domainID)
-	if err != nil {
-		return
-	}
 	taskListKey := key{
 		domainID:     domainID,
 		taskListName: taskList.GetName(),
 		taskListType: taskListType,
 	}
-	n := lb.nReadPartitions(domainName, taskList.GetName(), taskListType)
+	n := lb.provider.GetNumberOfReadPartitions(domainID, taskList, taskListType)
 	if n <= 1 {
 		lb.weightCache.Delete(taskListKey)
 		return
 	}
 	wI := lb.weightCache.Get(taskListKey)
 	if wI == nil {
+		var err error
 		w := newWeightSelector(n, _backlogThreshold)
 		wI, err = lb.weightCache.PutIfNotExist(taskListKey, w)
 		if err != nil {

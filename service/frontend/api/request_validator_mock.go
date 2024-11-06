@@ -72,6 +72,34 @@ func (mr *MockRequestValidatorMockRecorder) ValidateCountWorkflowExecutionsReque
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateCountWorkflowExecutionsRequest", reflect.TypeOf((*MockRequestValidator)(nil).ValidateCountWorkflowExecutionsRequest), arg0, arg1)
 }
 
+// ValidateDeprecateDomainRequest mocks base method.
+func (m *MockRequestValidator) ValidateDeprecateDomainRequest(arg0 context.Context, arg1 *types.DeprecateDomainRequest) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ValidateDeprecateDomainRequest", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ValidateDeprecateDomainRequest indicates an expected call of ValidateDeprecateDomainRequest.
+func (mr *MockRequestValidatorMockRecorder) ValidateDeprecateDomainRequest(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateDeprecateDomainRequest", reflect.TypeOf((*MockRequestValidator)(nil).ValidateDeprecateDomainRequest), arg0, arg1)
+}
+
+// ValidateDescribeDomainRequest mocks base method.
+func (m *MockRequestValidator) ValidateDescribeDomainRequest(arg0 context.Context, arg1 *types.DescribeDomainRequest) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ValidateDescribeDomainRequest", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ValidateDescribeDomainRequest indicates an expected call of ValidateDescribeDomainRequest.
+func (mr *MockRequestValidatorMockRecorder) ValidateDescribeDomainRequest(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateDescribeDomainRequest", reflect.TypeOf((*MockRequestValidator)(nil).ValidateDescribeDomainRequest), arg0, arg1)
+}
+
 // ValidateDescribeTaskListRequest mocks base method.
 func (m *MockRequestValidator) ValidateDescribeTaskListRequest(arg0 context.Context, arg1 *types.DescribeTaskListRequest) error {
 	m.ctrl.T.Helper()
@@ -184,6 +212,20 @@ func (mr *MockRequestValidatorMockRecorder) ValidateRefreshWorkflowTasksRequest(
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateRefreshWorkflowTasksRequest", reflect.TypeOf((*MockRequestValidator)(nil).ValidateRefreshWorkflowTasksRequest), arg0, arg1)
 }
 
+// ValidateRegisterDomainRequest mocks base method.
+func (m *MockRequestValidator) ValidateRegisterDomainRequest(arg0 context.Context, arg1 *types.RegisterDomainRequest) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ValidateRegisterDomainRequest", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ValidateRegisterDomainRequest indicates an expected call of ValidateRegisterDomainRequest.
+func (mr *MockRequestValidatorMockRecorder) ValidateRegisterDomainRequest(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateRegisterDomainRequest", reflect.TypeOf((*MockRequestValidator)(nil).ValidateRegisterDomainRequest), arg0, arg1)
+}
+
 // ValidateResetStickyTaskListRequest mocks base method.
 func (m *MockRequestValidator) ValidateResetStickyTaskListRequest(arg0 context.Context, arg1 *types.ResetStickyTaskListRequest) error {
 	m.ctrl.T.Helper()
@@ -196,4 +238,18 @@ func (m *MockRequestValidator) ValidateResetStickyTaskListRequest(arg0 context.C
 func (mr *MockRequestValidatorMockRecorder) ValidateResetStickyTaskListRequest(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateResetStickyTaskListRequest", reflect.TypeOf((*MockRequestValidator)(nil).ValidateResetStickyTaskListRequest), arg0, arg1)
+}
+
+// ValidateUpdateDomainRequest mocks base method.
+func (m *MockRequestValidator) ValidateUpdateDomainRequest(arg0 context.Context, arg1 *types.UpdateDomainRequest) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ValidateUpdateDomainRequest", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ValidateUpdateDomainRequest indicates an expected call of ValidateUpdateDomainRequest.
+func (mr *MockRequestValidatorMockRecorder) ValidateUpdateDomainRequest(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateUpdateDomainRequest", reflect.TypeOf((*MockRequestValidator)(nil).ValidateUpdateDomainRequest), arg0, arg1)
 }

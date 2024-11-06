@@ -49,6 +49,10 @@ type (
 		ValidateListOpenWorkflowExecutionsRequest(context.Context, *types.ListOpenWorkflowExecutionsRequest) error
 		ValidateListArchivedWorkflowExecutionsRequest(context.Context, *types.ListArchivedWorkflowExecutionsRequest) error
 		ValidateListClosedWorkflowExecutionsRequest(context.Context, *types.ListClosedWorkflowExecutionsRequest) error
+		ValidateRegisterDomainRequest(context.Context, *types.RegisterDomainRequest) error
+		ValidateDescribeDomainRequest(context.Context, *types.DescribeDomainRequest) error
+		ValidateUpdateDomainRequest(context.Context, *types.UpdateDomainRequest) error
+		ValidateDeprecateDomainRequest(context.Context, *types.DeprecateDomainRequest) error
 	}
 
 	requestValidatorImpl struct {
@@ -80,6 +84,24 @@ func (v *requestValidatorImpl) validateTaskList(t *types.TaskList, scope metrics
 		v.logger,
 		tag.IDTypeTaskListName) {
 		return validate.ErrTaskListTooLong
+	}
+	return nil
+}
+
+func checkRequiredDomainDataKVs(requiredDomainDataKeys map[string]interface{}, domainData map[string]string) error {
+	// check requiredDomainDataKeys
+	for k := range requiredDomainDataKeys {
+		_, ok := domainData[k]
+		if !ok {
+			return fmt.Errorf("domain data error, missing required key %v . All required keys: %v", k, requiredDomainDataKeys)
+		}
+	}
+	return nil
+}
+
+func checkFailOverPermission(config *config.Config, domainName string) error {
+	if config.Lockdown(domainName) {
+		return validate.ErrDomainInLockdown
 	}
 	return nil
 }
@@ -256,4 +278,78 @@ func (v *requestValidatorImpl) ValidateListClosedWorkflowExecutionsRequest(ctx c
 		return &types.BadRequestError{Message: fmt.Sprintf("Pagesize is larger than allow %d", v.config.ESIndexMaxResultWindow())}
 	}
 	return nil
+}
+
+func (v *requestValidatorImpl) ValidateRegisterDomainRequest(ctx context.Context, registerRequest *types.RegisterDomainRequest) error {
+	if registerRequest == nil {
+		return validate.ErrRequestNotSet
+	}
+	if registerRequest.GetName() == "" {
+		return validate.ErrDomainNotSet
+	}
+	domain := registerRequest.GetName()
+	scope := v.metricsClient.Scope(metrics.FrontendRegisterDomainScope).Tagged(metrics.DomainTag(domain)).Tagged(metrics.GetContextTags(ctx)...)
+	if !common.IsValidIDLength(
+		domain,
+		scope,
+		v.config.MaxIDLengthWarnLimit(),
+		v.config.DomainNameMaxLength(domain),
+		metrics.CadenceErrTaskListNameExceededWarnLimit,
+		domain,
+		v.logger,
+		tag.IDTypeDomainName) {
+		return validate.ErrDomainTooLong
+	}
+	if registerRequest.GetWorkflowExecutionRetentionPeriodInDays() > int32(v.config.DomainConfig.MaxRetentionDays()) {
+		return validate.ErrInvalidRetention
+	}
+	if err := checkRequiredDomainDataKVs(v.config.DomainConfig.RequiredDomainDataKeys(), registerRequest.GetData()); err != nil {
+		return err
+	}
+	return validate.CheckPermission(v.config, registerRequest.SecurityToken)
+}
+
+func (v *requestValidatorImpl) ValidateDescribeDomainRequest(ctx context.Context, describeRequest *types.DescribeDomainRequest) error {
+	if describeRequest == nil {
+		return validate.ErrRequestNotSet
+	}
+	if describeRequest.GetName() == "" && describeRequest.GetUUID() == "" {
+		return validate.ErrDomainNotSet
+	}
+	return nil
+}
+
+func (v *requestValidatorImpl) ValidateUpdateDomainRequest(ctx context.Context, updateRequest *types.UpdateDomainRequest) error {
+	if updateRequest == nil {
+		return validate.ErrRequestNotSet
+	}
+	if updateRequest.GetName() == "" {
+		return validate.ErrDomainNotSet
+	}
+	if updateRequest.WorkflowExecutionRetentionPeriodInDays != nil && *updateRequest.WorkflowExecutionRetentionPeriodInDays > int32(v.config.DomainConfig.MaxRetentionDays()) {
+		return validate.ErrInvalidRetention
+	}
+	isFailover := isFailoverRequest(updateRequest)
+	// don't require permission for failover request
+	if isFailover {
+		// reject the failover if the cluster is in lockdown
+		if err := checkFailOverPermission(v.config, updateRequest.GetName()); err != nil {
+			return err
+		}
+	} else {
+		if err := validate.CheckPermission(v.config, updateRequest.SecurityToken); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (v *requestValidatorImpl) ValidateDeprecateDomainRequest(ctx context.Context, deprecateRequest *types.DeprecateDomainRequest) error {
+	if deprecateRequest == nil {
+		return validate.ErrRequestNotSet
+	}
+	if deprecateRequest.GetName() == "" {
+		return validate.ErrDomainNotSet
+	}
+	return validate.CheckPermission(v.config, deprecateRequest.SecurityToken)
 }
