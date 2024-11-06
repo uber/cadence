@@ -112,7 +112,11 @@ func (s *transferQueueProcessorSuite) SetupTest() {
 func (s *transferQueueProcessorSuite) TearDownTest() {
 	s.controller.Finish()
 	s.mockShard.Finish(s.T())
-	defer goleak.VerifyNone(s.T())
+	// some goroutine leak not from this test
+	defer goleak.VerifyNone(s.T(),
+		// TODO(CDNC-8881):  TimerGate should not start background goroutine in constructor. Make it start/stoppable
+		goleak.IgnoreTopFunction("github.com/uber/cadence/service/history/queue.NewLocalTimerGate.func1"),
+	)
 }
 
 func (s *transferQueueProcessorSuite) NewProcessor() *transferQueueProcessor {
@@ -146,8 +150,6 @@ func (s *transferQueueProcessorSuite) NewProcessorWithConfig(cfg *config.Config)
 }
 
 func (s *transferQueueProcessorSuite) TestTransferQueueProcessor_RequireStartStop() {
-	defer goleak.VerifyNone(s.T())
-
 	processor := s.NewProcessor()
 
 	s.Equal(processor.status, common.DaemonStatusInitialized)
@@ -163,8 +165,6 @@ func (s *transferQueueProcessorSuite) TestTransferQueueProcessor_RequireStartSto
 }
 
 func (s *transferQueueProcessorSuite) TestTransferQueueProcessor_RequireStartNotGracefulStop() {
-	defer goleak.VerifyNone(s.T())
-
 	cfg := config.NewForTest()
 	cfg.QueueProcessorEnableGracefulSyncShutdown = dynamicconfig.GetBoolPropertyFn(false)
 
@@ -216,7 +216,6 @@ func (s *transferQueueProcessorSuite) TestNotifyNewTask() {
 
 	for name, tc := range tests {
 		s.T().Run(name, func(t *testing.T) {
-			defer goleak.VerifyNone(t)
 			processor := s.NewProcessor()
 
 			info := &hcommon.NotifyTaskInfo{
@@ -272,7 +271,6 @@ func (s *transferQueueProcessorSuite) TestFailoverDomain() {
 
 	for name, tc := range tests {
 		s.T().Run(name, func(t *testing.T) {
-			defer goleak.VerifyNone(t)
 			processor := s.NewProcessor()
 
 			if tc.processorStarted {
@@ -317,7 +315,6 @@ func (s *transferQueueProcessorSuite) TestHandleAction() {
 
 	for name, tc := range tests {
 		s.T().Run(name, func(t *testing.T) {
-			defer goleak.VerifyNone(t)
 			processor := s.NewProcessor()
 			defer processor.Stop()
 			processor.Start()
@@ -344,8 +341,6 @@ func (s *transferQueueProcessorSuite) TestHandleAction() {
 }
 
 func (s *transferQueueProcessorSuite) TestLockTaskProcessing() {
-	goleak.VerifyNone(s.T())
-
 	processor := s.NewProcessor()
 
 	locked := make(chan struct{}, 1)
@@ -398,7 +393,6 @@ func (s *transferQueueProcessorSuite) Test_completeTransfer() {
 
 	for name, tt := range tests {
 		s.T().Run(name, func(t *testing.T) {
-			defer goleak.VerifyNone(t)
 			processor := s.NewProcessor()
 			processor.ackLevel = tt.ackLevel
 
@@ -420,7 +414,6 @@ func (s *transferQueueProcessorSuite) Test_completeTransfer() {
 }
 
 func (s *transferQueueProcessorSuite) Test_completeTransferLoop() {
-	defer goleak.VerifyNone(s.T())
 	processor := s.NewProcessor()
 
 	processor.config.TransferProcessorCompleteTransferInterval = dynamicconfig.GetDurationPropertyFn(10 * time.Millisecond)
@@ -452,7 +445,6 @@ func (s *transferQueueProcessorSuite) Test_completeTransferLoop() {
 }
 
 func (s *transferQueueProcessorSuite) Test_completeTransferLoop_ErrShardClosed() {
-	defer goleak.VerifyNone(s.T())
 	processor := s.NewProcessor()
 
 	processor.config.TransferProcessorCompleteTransferInterval = dynamicconfig.GetDurationPropertyFn(30 * time.Millisecond)
@@ -482,8 +474,6 @@ func (s *transferQueueProcessorSuite) Test_completeTransferLoop_ErrShardClosed()
 }
 
 func (s *transferQueueProcessorSuite) Test_completeTransferLoop_ErrShardClosedNotGraceful() {
-	defer goleak.VerifyNone(s.T())
-
 	cfg := config.NewForTest()
 	cfg.QueueProcessorEnableGracefulSyncShutdown = dynamicconfig.GetBoolPropertyFn(false)
 
@@ -516,7 +506,6 @@ func (s *transferQueueProcessorSuite) Test_completeTransferLoop_ErrShardClosedNo
 }
 
 func (s *transferQueueProcessorSuite) Test_completeTransferLoop_OtherError() {
-	defer goleak.VerifyNone(s.T())
 	processor := s.NewProcessor()
 
 	processor.config.TransferProcessorCompleteTransferInterval = dynamicconfig.GetDurationPropertyFn(30 * time.Millisecond)
