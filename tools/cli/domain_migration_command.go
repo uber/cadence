@@ -399,7 +399,6 @@ func (d *domainMigrationCLIImpl) DynamicConfigCheck(c *cli.Context) (DomainMigra
 			})
 
 			currResp, err := d.frontendAdminClient.GetDynamicConfig(ctx, currRequest)
-			fmt.Println("this is the expected", configKey)
 			if err != nil {
 				// empty to indicate N/A
 				currResp = emptyGetDynamicConfigRequest
