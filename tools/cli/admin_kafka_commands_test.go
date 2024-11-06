@@ -26,8 +26,14 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"os"
+	"testing"
+
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/thriftrw/protocol/binary"
+	"go.uber.org/thriftrw/ptr"
+
 	"github.com/uber/cadence/.gen/go/indexer"
 	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/client/admin"
@@ -35,10 +41,6 @@ import (
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/tools/cli/clitest"
 	"github.com/uber/cadence/tools/common/commoncli"
-	"go.uber.org/thriftrw/protocol/binary"
-	"go.uber.org/thriftrw/ptr"
-	"os"
-	"testing"
 )
 
 func TestWriterChannel(t *testing.T) {
