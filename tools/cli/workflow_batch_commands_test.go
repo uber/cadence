@@ -21,30 +21,20 @@
 package cli
 
 import (
-	"fmt"
-	"errors"
-	"bytes"
 	"encoding/json"
+	"errors"
 	"flag"
-	"io"
 	"testing"
 
-	// "time"
-	"os"
-
-	"github.com/uber/cadence/common"
-	// "github.com/opentracing/opentracing-go"
-	// "github.com/opentracing/opentracing-go/mocktracer"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
-	"github.com/uber/cadence/common/types"
 	"github.com/urfave/cli/v2"
 
-	"github.com/uber/cadence/service/worker/batcher"
 	"github.com/uber/cadence/client/frontend"
+	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/service/worker/batcher"
 )
-
-
 
 func TestStartBatchJob(t *testing.T) {
 	tests := []struct {
@@ -52,7 +42,7 @@ func TestStartBatchJob(t *testing.T) {
 		setup          func(*frontend.MockClient)
 		flags          map[string]interface{}
 		expectedError  string
-		expectedOutput map[string]interface{}
+		expectedOutput string
 	}{
 		{
 			name: "Valid Start Batch Job",
@@ -61,8 +51,8 @@ func TestStartBatchJob(t *testing.T) {
 					Count: 100,
 				}, nil)
 				mockClient.EXPECT().StartWorkflowExecution(gomock.Any(), gomock.Any()).Return(&types.StartWorkflowExecutionResponse{
-					RunID: "run-id-example", 
-				},nil)
+					RunID: "run-id-example",
+				}, nil)
 			},
 			flags: map[string]interface{}{
 				FlagDomain:     "test-domain",
@@ -71,48 +61,49 @@ func TestStartBatchJob(t *testing.T) {
 				FlagBatchType:  batcher.BatchTypeSignal,
 				FlagSignalName: "test-signal",
 				FlagInput:      "test-input",
-				FlagYes:        true, // Automatically confirm
+				FlagYes:        true,
 			},
 			expectedError:  "",
+			expectedOutput: "batch job is started",
 		},
 		{
-			name: "Missing Domain",
+			name:  "Missing Domain",
 			setup: func(mockClient *frontend.MockClient) {},
 			flags: map[string]interface{}{
 				FlagListQuery: "workflowType='batch'",
 				FlagReason:    "Testing batch job",
 				FlagBatchType: batcher.BatchTypeSignal,
 			},
-			expectedError: "Option domain is required",
+			expectedError: "Required flag not found: : option domain is required",
 		},
 		{
-			name: "Missing ListQuery",
+			name:  "Missing ListQuery",
 			setup: func(mockClient *frontend.MockClient) {},
 			flags: map[string]interface{}{
-				FlagDomain: "test-domain",
-				FlagReason: "Testing batch job",
+				FlagDomain:    "test-domain",
+				FlagReason:    "Testing batch job",
 				FlagBatchType: batcher.BatchTypeSignal,
 			},
-			expectedError: "Option query is required",
+			expectedError: "Required flag not found: : option query is required",
 		},
 		{
-			name: "Missing Reason",
+			name:  "Missing Reason",
 			setup: func(mockClient *frontend.MockClient) {},
 			flags: map[string]interface{}{
 				FlagDomain:    "test-domain",
 				FlagListQuery: "workflowType='batch'",
 				FlagBatchType: batcher.BatchTypeSignal,
 			},
-			expectedError: "Option reason is required",
+			expectedError: "Required flag not found: : option reason is required",
 		},
 		{
-			name: "Invalid Batch Type",
+			name:  "Invalid Batch Type",
 			setup: func(mockClient *frontend.MockClient) {},
 			flags: map[string]interface{}{
-				FlagDomain:     "test-domain",
-				FlagListQuery:  "workflowType='batch'",
-				FlagReason:     "Testing batch job",
-				FlagBatchType:  "invalidBatchType",
+				FlagDomain:    "test-domain",
+				FlagListQuery: "workflowType='batch'",
+				FlagReason:    "Testing batch job",
+				FlagBatchType: "invalidBatchType",
 			},
 			expectedError: "batchType is not valid, supported:terminate,cancel,signal,replicate",
 		},
@@ -122,13 +113,13 @@ func TestStartBatchJob(t *testing.T) {
 				mockClient.EXPECT().CountWorkflowExecutions(gomock.Any(), gomock.Any()).Return(nil, errors.New("count error"))
 			},
 			flags: map[string]interface{}{
-				FlagDomain:    "test-domain",
-				FlagListQuery: "workflowType='batch'",
-				FlagReason:    "Testing batch job",
-				FlagBatchType: batcher.BatchTypeSignal,
+				FlagDomain:     "test-domain",
+				FlagListQuery:  "workflowType='batch'",
+				FlagReason:     "Testing batch job",
+				FlagBatchType:  batcher.BatchTypeSignal,
 				FlagSignalName: "test-signal",
-				FlagInput:     "test-input",
-				FlagYes:       true, // Automatically confirm
+				FlagInput:      "test-input",
+				FlagYes:        true,
 			},
 			expectedError: "Failed to count impacting workflows for starting a batch job: count error",
 		},
@@ -141,13 +132,13 @@ func TestStartBatchJob(t *testing.T) {
 				mockClient.EXPECT().StartWorkflowExecution(gomock.Any(), gomock.Any()).Return(nil, errors.New("start error"))
 			},
 			flags: map[string]interface{}{
-				FlagDomain:    "test-domain",
-				FlagListQuery: "workflowType='batch'",
-				FlagReason:    "Testing batch job",
-				FlagBatchType: batcher.BatchTypeSignal,
+				FlagDomain:     "test-domain",
+				FlagListQuery:  "workflowType='batch'",
+				FlagReason:     "Testing batch job",
+				FlagBatchType:  batcher.BatchTypeSignal,
 				FlagSignalName: "test-signal",
-				FlagInput:     "test-input",
-				FlagYes:       true, // Automatically confirm
+				FlagInput:      "test-input",
+				FlagYes:        true,
 			},
 			expectedError: "Failed to start batch job: start error",
 		},
@@ -158,9 +149,10 @@ func TestStartBatchJob(t *testing.T) {
 			mockCtrl := gomock.NewController(t)
 			defer mockCtrl.Finish()
 			mockClient := frontend.NewMockClient(mockCtrl)
+			ioHandler := &testIOHandler{}
 			app := NewCliApp(&clientFactoryMock{
 				serverFrontendClient: mockClient,
-			})
+			}, WithIOHandler(ioHandler))
 
 			set := flag.NewFlagSet("test", 0)
 			for k, v := range tt.flags {
@@ -176,31 +168,18 @@ func TestStartBatchJob(t *testing.T) {
 			c := cli.NewContext(app, set, nil)
 			tt.setup(mockClient)
 
-			// Redirect stdout to capture output
-			reader, writer, _ := os.Pipe()
-			oldStdout := os.Stdout
-			os.Stdout = writer
-
 			err := StartBatchJob(c)
-			writer.Close()
-			os.Stdout = oldStdout
-
-			var buf bytes.Buffer
-			_, _ = io.Copy(&buf, reader)
-			reader.Close()
-
-			fmt.Println("Captured Output:", buf.String())
 
 			if tt.expectedError != "" {
 				assert.Error(t, err)
 				assert.Contains(t, err.Error(), tt.expectedError)
 			} else {
 				assert.NoError(t, err)
-				var output map[string]interface{}
-				err = json.Unmarshal(buf.Bytes(), &output)
-				// fmt.Println(err)
-				// assert.NoError(t, err)
-				assert.Equal(t, tt.expectedOutput, output)
+				var actualOutput map[string]interface{}
+				err = json.Unmarshal(ioHandler.outputBytes.Bytes(), &actualOutput)
+				assert.NoError(t, err)
+				assert.Equal(t, tt.expectedOutput, actualOutput["msg"])
+				assert.Regexp(t, `^[a-f0-9\-]{36}$`, actualOutput["jobID"])
 			}
 		})
 	}
@@ -227,20 +206,20 @@ func TestTerminateBatchJob(t *testing.T) {
 			expectedOutput: map[string]interface{}{"msg": "batch job is terminated"},
 		},
 		{
-			name: "Missing JobID",
+			name:  "Missing JobID",
 			setup: func(mockClient *frontend.MockClient) {},
 			flags: map[string]interface{}{
 				FlagReason: "Testing termination",
 			},
-			expectedError: "Option job_id is required",
+			expectedError: "Required flag not found: : option job_id is required",
 		},
 		{
-			name: "Missing Reason",
+			name:  "Missing Reason",
 			setup: func(mockClient *frontend.MockClient) {},
 			flags: map[string]interface{}{
 				FlagJobID: "example-workflow-1",
 			},
-			expectedError: "Option reason is required",
+			expectedError: "Required flag not found: : option reason is required",
 		},
 		{
 			name: "Terminate Failure",
@@ -260,9 +239,10 @@ func TestTerminateBatchJob(t *testing.T) {
 			mockCtrl := gomock.NewController(t)
 			defer mockCtrl.Finish()
 			mockClient := frontend.NewMockClient(mockCtrl)
+			ioHandler := &testIOHandler{}
 			app := NewCliApp(&clientFactoryMock{
 				serverFrontendClient: mockClient,
-			})
+			}, WithIOHandler(ioHandler))
 
 			set := flag.NewFlagSet("test", 0)
 			for k, v := range tt.flags {
@@ -276,28 +256,17 @@ func TestTerminateBatchJob(t *testing.T) {
 			c := cli.NewContext(app, set, nil)
 			tt.setup(mockClient)
 
-			// Redirect stdout to capture output
-			reader, writer, _ := os.Pipe()
-			oldStdout := os.Stdout
-			os.Stdout = writer
-
 			err := TerminateBatchJob(c)
-			writer.Close()
-			os.Stdout = oldStdout
-
-			var buf bytes.Buffer
-			_, _ = io.Copy(&buf, reader)
-			reader.Close()
 
 			if tt.expectedError != "" {
 				assert.Error(t, err)
 				assert.Contains(t, err.Error(), tt.expectedError)
 			} else {
 				assert.NoError(t, err)
-				var output map[string]interface{}
-				err = json.Unmarshal(buf.Bytes(), &output)
+				var actualOutput map[string]interface{}
+				err = json.Unmarshal(ioHandler.outputBytes.Bytes(), &actualOutput)
 				assert.NoError(t, err)
-				assert.Equal(t, tt.expectedOutput, output)
+				assert.Equal(t, tt.expectedOutput, actualOutput)
 			}
 		})
 	}
@@ -311,7 +280,7 @@ func TestDescribeBatchJob(t *testing.T) {
 		expectedError  string
 		expectedOutput map[string]interface{}
 	}{
-				{
+		{
 			name: "Valid Batch Job",
 			setup: func(mockClient *frontend.MockClient) {
 				mockClient.EXPECT().DescribeWorkflowExecution(gomock.Any(), gomock.Any()).Return(&types.DescribeWorkflowExecutionResponse{
@@ -320,7 +289,7 @@ func TestDescribeBatchJob(t *testing.T) {
 						Execution: &types.WorkflowExecution{
 							WorkflowID: "example-workflow-1",
 						},
-						StartTime:   common.Int64Ptr(1697018400),
+						StartTime: common.Int64Ptr(1697018400),
 					},
 					PendingActivities: []*types.PendingActivityInfo{
 						{
@@ -381,9 +350,9 @@ func TestDescribeBatchJob(t *testing.T) {
 		},
 		{
 			name:          "Missing Job ID",
-			setup:        func(mockClient *frontend.MockClient) {},
-			flags:        map[string]interface{}{},
-			expectedError: "Option job_id is required",
+			setup:         func(mockClient *frontend.MockClient) {},
+			flags:         map[string]interface{}{},
+			expectedError: "Required flag not found: : option job_id is required",
 		},
 	}
 
@@ -392,9 +361,10 @@ func TestDescribeBatchJob(t *testing.T) {
 			mockCtrl := gomock.NewController(t)
 			defer mockCtrl.Finish()
 			mockClient := frontend.NewMockClient(mockCtrl)
+			ioHandler := &testIOHandler{}
 			app := NewCliApp(&clientFactoryMock{
 				serverFrontendClient: mockClient,
-			})
+			}, WithIOHandler(ioHandler))
 
 			set := flag.NewFlagSet("test", 0)
 			for k, v := range tt.flags {
@@ -408,39 +378,25 @@ func TestDescribeBatchJob(t *testing.T) {
 			c := cli.NewContext(app, set, nil)
 			tt.setup(mockClient)
 
-			// Redirect stdout to capture output
-			reader, writer, _ := os.Pipe()
-			oldStdout := os.Stdout
-			os.Stdout = writer
-
 			err := DescribeBatchJob(c)
-			writer.Close()
-			os.Stdout = oldStdout
-
-			var buf bytes.Buffer
-			_, _ = io.Copy(&buf, reader)
-			reader.Close()
 
 			if tt.expectedError != "" {
 				assert.Error(t, err)
 				assert.Contains(t, err.Error(), tt.expectedError)
 			} else {
 				assert.NoError(t, err)
-				var output map[string]interface{}
-				err = json.Unmarshal(buf.Bytes(), &output)
+				var actualOutput map[string]interface{}
+				err = json.Unmarshal(ioHandler.outputBytes.Bytes(), &actualOutput)
 				assert.NoError(t, err)
-	
-				// Type assertion for progress
-				if progressRaw, exists := output["progress"]; exists {
+				if progressRaw, exists := actualOutput["progress"]; exists {
 					var progress batcher.HeartBeatDetails
 					progressBytes, err := json.Marshal(progressRaw)
 					if err == nil {
 						json.Unmarshal(progressBytes, &progress)
-						output["progress"] = progress
+						actualOutput["progress"] = progress
 					}
 				}
-
-				assert.Equal(t, tt.expectedOutput, output)
+				assert.Equal(t, tt.expectedOutput, actualOutput)
 			}
 		})
 	}
@@ -448,17 +404,17 @@ func TestDescribeBatchJob(t *testing.T) {
 
 func TestListBatchJobs(t *testing.T) {
 	tests := []struct {
-        name            string
-        setup           func(*frontend.MockClient)
-        flags           map[string]interface{}
-        expectedError   string
-        expectedOutput  []map[string]string
-    }{
+		name           string
+		setup          func(*frontend.MockClient)
+		flags          map[string]interface{}
+		expectedError  string
+		expectedOutput []map[string]string
+	}{
 		{
 			name: "Valid Batch Job",
-			setup : func(mockClient *frontend.MockClient) {
-                mockClient.EXPECT().ListWorkflowExecutions(gomock.Any(), gomock.Any()).Return(&types.ListWorkflowExecutionsResponse{
-					Executions: []*types.WorkflowExecutionInfo {
+			setup: func(mockClient *frontend.MockClient) {
+				mockClient.EXPECT().ListWorkflowExecutions(gomock.Any(), gomock.Any()).Return(&types.ListWorkflowExecutionsResponse{
+					Executions: []*types.WorkflowExecutionInfo{
 						{
 							Execution: &types.WorkflowExecution{
 								WorkflowID: "example-workflow-1",
@@ -477,12 +433,12 @@ func TestListBatchJobs(t *testing.T) {
 							CloseStatus: types.WorkflowExecutionCloseStatusCompleted.Ptr(),
 						},
 					},
-					NextPageToken:  []byte("test-next-token"),
-                }, nil)
-            },
+					NextPageToken: []byte("test-next-token"),
+				}, nil)
+			},
 			flags: map[string]interface{}{
-				FlagDomain:       "test-domain",
-				FlagPageSize:     100,
+				FlagDomain:   "test-domain",
+				FlagPageSize: 100,
 			},
 			expectedError: "",
 			expectedOutput: []map[string]string{
@@ -497,87 +453,81 @@ func TestListBatchJobs(t *testing.T) {
 			},
 		},
 		{
-			name: "Missing Domain",
-            setup: func(mockClient *frontend.MockClient) {},
-            flags: map[string]interface{}{},
-			expectedError: "Option domain is required",
+			name:          "Missing Domain",
+			setup:         func(mockClient *frontend.MockClient) {},
+			flags:         map[string]interface{}{},
+			expectedError: "Required flag not found: : option domain is required",
 		},
-
 	}
 
-    for _, tt := range tests {
-        t.Run(tt.name, func(t *testing.T) {
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
 			mockCtrl := gomock.NewController(t)
-			serverFrontendClient := frontend.NewMockClient(mockCtrl)
+			mockClient := frontend.NewMockClient(mockCtrl)
+			ioHandler := &testIOHandler{}
 			app := NewCliApp(&clientFactoryMock{
-				serverFrontendClient: serverFrontendClient,
-			})
+				serverFrontendClient: mockClient,
+			}, WithIOHandler(ioHandler))
 			set := flag.NewFlagSet("test", 0)
-            for k, v := range tt.flags {
+			for k, v := range tt.flags {
 				switch val := v.(type) {
 				case string:
 					_ = set.String(k, val, "")
 				case int:
 					_ = set.Int(k, val, "")
 				}
-            }
+			}
 			c := cli.NewContext(app, set, nil)
-            tt.setup(serverFrontendClient)
-			reader, writer, _ := os.Pipe()
-			oldStdout := os.Stdout
-			os.Stdout = writer
+			tt.setup(mockClient)
+
 			err := ListBatchJobs(c)
-			writer.Close()
-			os.Stdout = oldStdout
-			var buf bytes.Buffer
-			_, _ = io.Copy(&buf, reader)
-			reader.Close()
+
 			if tt.expectedError != "" {
-                assert.Error(t, err)
-                assert.Contains(t, err.Error(), tt.expectedError)
-            } else {
-                assert.NoError(t, err)
-				var output []map[string]string
-				err = json.Unmarshal(buf.Bytes(), &output)
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tt.expectedError)
+			} else {
 				assert.NoError(t, err)
-				assert.Equal(t, tt.expectedOutput, output)
-            }
-        })
-    }
+				var actualOutput []map[string]string
+				err = json.Unmarshal(ioHandler.outputBytes.Bytes(), &actualOutput)
+				assert.NoError(t, err)
+				assert.Equal(t, tt.expectedOutput, actualOutput)
+			}
+		})
+	}
 }
 
 func TestValidateBatchType(t *testing.T) {
-    // Mock batch types for testing
-    batcher.AllBatchTypes = []string{"signal", "replicate", "terminate"}
+	// Mock batch types for testing
+	batcher.AllBatchTypes = []string{"signal", "replicate", "terminate"}
 
-    tests := []struct {
-        name       string
-        batchType  string
-        expected   bool
-    }{
-        {
-            name:      "Valid batch type - signal",
-            batchType: "signal",
-            expected:  true,
-        },
-        {
-            name:      "Valid batch type - replicate",
-            batchType: "replicate",
-            expected:  true,
-        },
-        {
-            name:      "Invalid batch type",
-            batchType: "invalid",
-            expected:  false,
-        },
-    }
+	tests := []struct {
+		name      string
+		batchType string
+		expected  bool
+	}{
+		{
+			name:      "Valid batch type - signal",
+			batchType: "signal",
+			expected:  true,
+		},
+		{
+			name:      "Valid batch type - replicate",
+			batchType: "replicate",
+			expected:  true,
+		},
+		{
+			name:      "Invalid batch type",
+			batchType: "invalid",
+			expected:  false,
+		},
+	}
 
-    for _, tt := range tests {
-        t.Run(tt.name, func(t *testing.T) {
-            result := validateBatchType(tt.batchType)
-            if result != tt.expected {
-                t.Errorf("expected %v, got %v for batch type %v", tt.expected, result, tt.batchType)
-            }
-        })
-    }
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := validateBatchType(tt.batchType)
+			if result != tt.expected {
+				t.Errorf("expected %v, got %v for batch type %v", tt.expected, result, tt.batchType)
+			}
+		})
+	}
 }

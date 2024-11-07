@@ -41,11 +41,11 @@ import (
 func TerminateBatchJob(c *cli.Context) error {
 	jobID, err := getRequiredOption(c, FlagJobID)
 	if err != nil {
-		return err
+		return commoncli.Problem("Required flag not found: ", err)
 	}
 	reason, err := getRequiredOption(c, FlagReason)
 	if err != nil {
-		return err
+		return commoncli.Problem("Required flag not found: ", err)
 	}
 	svcClient, err := getDeps(c).ServerFrontendClient(c)
 	if err != nil {
@@ -83,7 +83,7 @@ func TerminateBatchJob(c *cli.Context) error {
 func DescribeBatchJob(c *cli.Context) error {
 	jobID, err := getRequiredOption(c, FlagJobID)
 	if err != nil {
-		return err
+		return commoncli.Problem("Required flag not found: ", err)
 	}
 	svcClient, err := getDeps(c).ServerFrontendClient(c)
 	if err != nil {
@@ -136,7 +136,7 @@ func DescribeBatchJob(c *cli.Context) error {
 func ListBatchJobs(c *cli.Context) error {
 	domain, err := getRequiredOption(c, FlagDomain)
 	if err != nil {
-		return err
+		return commoncli.Problem("Required flag not found: ", err)
 	}
 	pageSize := c.Int(FlagPageSize)
 	svcClient, err := getDeps(c).ServerFrontendClient(c)
@@ -187,19 +187,19 @@ func ListBatchJobs(c *cli.Context) error {
 func StartBatchJob(c *cli.Context) error {
 	domain, err := getRequiredOption(c, FlagDomain)
 	if err != nil {
-		return err
+		return commoncli.Problem("Required flag not found: ", err)
 	}
 	query, err := getRequiredOption(c, FlagListQuery)
 	if err != nil {
-		return err
+		return commoncli.Problem("Required flag not found: ", err)
 	}
 	reason, err := getRequiredOption(c, FlagReason)
 	if err != nil {
-		return err
+		return commoncli.Problem("Required flag not found: ", err)
 	}
 	batchType, err := getRequiredOption(c, FlagBatchType)
 	if err != nil {
-		return err
+		return commoncli.Problem("Required flag not found: ", err)
 	}
 	if !validateBatchType(batchType) {
 		return commoncli.Problem("batchType is not valid, supported:"+strings.Join(batcher.AllBatchTypes, ","), nil)
@@ -220,11 +220,11 @@ func StartBatchJob(c *cli.Context) error {
 	if batchType == batcher.BatchTypeReplicate {
 		sourceCluster, err = getRequiredOption(c, FlagSourceCluster)
 		if err != nil {
-			return err
+			return commoncli.Problem("Required flag not found: ", err)
 		}
 		targetCluster, err = getRequiredOption(c, FlagTargetCluster)
 		if err != nil {
-			return err
+			return commoncli.Problem("Required flag not found: ", err)
 		}
 	}
 	rps := c.Int(FlagRPS)
