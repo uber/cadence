@@ -24,6 +24,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/goleak"
 	"go.uber.org/yarpc/api/transport"
@@ -31,10 +32,104 @@ import (
 
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log/testlogger"
+	"github.com/uber/cadence/common/membership"
 	"github.com/uber/cadence/common/metrics"
 )
 
-func TestDirectChooser(t *testing.T) {
+func TestDirectChooser_PeerUpdates(t *testing.T) {
+	logger := testlogger.New(t)
+	metricCl := metrics.NewNoopMetricsClient()
+	serviceName := "service"
+	directConnRetainFn := func(opts ...dynamicconfig.FilterOption) bool { return true }
+	grpcTransport := grpc.NewTransport()
+	chooser := newDirectChooser(serviceName, grpcTransport, logger, metricCl, directConnRetainFn)
+
+	choosePeers := func(peers ...string) {
+		t.Helper()
+		// Calling Choose() will create peers and they will be cached
+		for _, p := range peers {
+			_, onFinish, err := chooser.Choose(context.Background(), &transport.Request{
+				Caller:   "caller",
+				Service:  "service",
+				ShardKey: p,
+			})
+			assert.NoError(t, err, "Choose() failed")
+			onFinish(nil)
+		}
+	}
+
+	currentPeersMap := func() map[string]bool {
+		t.Helper()
+		chooser.mu.RLock()
+		defer chooser.mu.RUnlock()
+		peers := make(map[string]bool, len(chooser.peers))
+		for p := range chooser.peers {
+			peers[p] = true
+		}
+		return peers
+	}
+
+	newHost := func(peer string) membership.HostInfo {
+		return membership.NewDetailedHostInfo(peer+":80", peer, membership.PortMap{
+			membership.PortGRPC: 80,
+		})
+	}
+
+	t.Run("chooser not started so should discard membership updates", func(t *testing.T) {
+		choosePeers("peer1:80", "peer2:80")
+		chooser.UpdatePeers(serviceName, nil)
+		wantPeers := map[string]bool{"peer1:80": true, "peer2:80": true}
+		gotPeers := currentPeersMap()
+		if diff := cmp.Diff(wantPeers, gotPeers); diff != "" {
+			t.Fatalf("Peers mismatch (-want +got):\n%s", diff)
+		}
+	})
+
+	// Start chooser and do more validations
+	if err := chooser.Start(); err != nil {
+		t.Fatalf("failed to start direct peer chooser: %v", err)
+	}
+
+	defer chooser.Stop()
+
+	t.Run("peer1 and peer2 are chosen, peer2 is removed from members list", func(t *testing.T) {
+		choosePeers("peer1:80", "peer2:80")
+		chooser.UpdatePeers(serviceName, []membership.HostInfo{
+			newHost("peer1"),
+		})
+		wantPeers := map[string]bool{"peer1:80": true}
+		gotPeers := currentPeersMap()
+		if diff := cmp.Diff(wantPeers, gotPeers); diff != "" {
+			t.Fatalf("Peers mismatch (-want +got):\n%s", diff)
+		}
+	})
+
+	t.Run("peer3 and peer4 are also chosen, membership list has peer1 and peer4", func(t *testing.T) {
+		choosePeers("peer3:80", "peer4:80")
+		chooser.UpdatePeers(serviceName, []membership.HostInfo{
+			newHost("peer1"),
+			newHost("peer4"),
+		})
+		wantPeers := map[string]bool{"peer1:80": true, "peer4:80": true}
+		gotPeers := currentPeersMap()
+		if diff := cmp.Diff(wantPeers, gotPeers); diff != "" {
+			t.Fatalf("Peers mismatch (-want +got):\n%s", diff)
+		}
+	})
+
+	t.Run("membership list update for another service is ignored, should still keep peer1 and peer4", func(t *testing.T) {
+		chooser.UpdatePeers("another-service", []membership.HostInfo{
+			newHost("peer50"),
+		})
+		wantPeers := map[string]bool{"peer1:80": true, "peer4:80": true}
+		gotPeers := currentPeersMap()
+		if diff := cmp.Diff(wantPeers, gotPeers); diff != "" {
+			t.Fatalf("Peers mismatch (-want +got):\n%s", diff)
+		}
+	})
+}
+
+func TestDirectChooser_StartStop(t *testing.T) {
 	newReq := func(shardKey string) *transport.Request {
 		return &transport.Request{
 			Caller:   "caller",
