@@ -45,6 +45,11 @@ const (
 	factoryComponentName = "rpc-factory"
 )
 
+var (
+	// P2P outbounds are only needed for history and matching services
+	servicesToTalkP2P = []string{service.History, service.Matching}
+)
+
 // Factory is an implementation of rpc.Factory interface
 type FactoryImpl struct {
 	maxMessageSize int
@@ -179,7 +184,7 @@ func (d *FactoryImpl) GetMaxMessageSize() int {
 func (d *FactoryImpl) Start(peerLister PeerLister) error {
 	d.peerLister = peerLister
 	// subscribe to membership changes for history and matching. This is needed to update the peers for rpc
-	for _, svc := range []string{service.History, service.Matching} {
+	for _, svc := range servicesToTalkP2P {
 		ch := make(chan *membership.ChangedEvent, 1)
 		if err := d.peerLister.Subscribe(svc, factoryComponentName, ch); err != nil {
 			return fmt.Errorf("rpc factory failed to subscribe to membership updates for svc: %v, err: %v", svc, err)
@@ -194,7 +199,7 @@ func (d *FactoryImpl) Start(peerLister PeerLister) error {
 func (d *FactoryImpl) Stop() error {
 	d.logger.Info("stopping rpc factory")
 
-	for _, svc := range []string{service.History, service.Matching} {
+	for _, svc := range servicesToTalkP2P {
 		if err := d.peerLister.Unsubscribe(svc, factoryComponentName); err != nil {
 			d.logger.Error("rpc factory failed to unsubscribe from membership updates", tag.Error(err), tag.Service(svc))
 		}

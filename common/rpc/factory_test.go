@@ -21,6 +21,7 @@
 package rpc
 
 import (
+	"errors"
 	"sync"
 	"testing"
 	"time"
@@ -62,34 +63,6 @@ func TestNewFactory(t *testing.T) {
 }
 
 func TestStartStop(t *testing.T) {
-	defer goleak.VerifyNone(t)
-
-	ctrl := gomock.NewController(t)
-	logger := testlogger.New(t)
-	serviceName := "service"
-	ob := NewMockOutboundsBuilder(ctrl)
-	var mu sync.Mutex
-	gotMembers := make(map[string][]membership.HostInfo)
-	outbounds := &Outbounds{
-		onUpdatePeers: func(svc string, members []membership.HostInfo) {
-			mu.Lock()
-			defer mu.Unlock()
-			gotMembers[svc] = members
-		},
-	}
-	ob.EXPECT().Build(gomock.Any(), gomock.Any()).Return(outbounds, nil).Times(1)
-	grpcMsgSize := 4 * 1024 * 1024
-	f := NewFactory(logger, Params{
-		ServiceName:     serviceName,
-		TChannelAddress: "localhost:0",
-		GRPCMaxMsgSize:  grpcMsgSize,
-		GRPCAddress:     "localhost:0",
-		HTTP: &httpParams{
-			Address: "localhost:0",
-		},
-		OutboundsBuilder: ob,
-	})
-
 	membersBySvc := map[string][]membership.HostInfo{
 		service.Matching: {
 			membership.NewHostInfo("localhost:9191"),
@@ -100,29 +73,114 @@ func TestStartStop(t *testing.T) {
 		},
 	}
 
-	peerLister := membership.NewMockResolver(ctrl)
-	for _, svc := range []string{service.Matching, service.History} {
-		peerLister.EXPECT().Subscribe(svc, factoryComponentName, gomock.Any()).
-			DoAndReturn(func(service, name string, notifyChannel chan<- *membership.ChangedEvent) error {
-				// Notify the channel once to validate listening logic is working
-				notifyChannel <- &membership.ChangedEvent{}
-				return nil
-			}).Times(1)
-		peerLister.EXPECT().Unsubscribe(svc, factoryComponentName).Return(nil).Times(1)
-		peerLister.EXPECT().Members(svc).Return(membersBySvc[svc], nil).Times(1)
+	tests := []struct {
+		desc             string
+		wantMembersBySvc map[string][]membership.HostInfo
+		mockFn           func(*membership.MockResolver)
+		wantStartErr     bool
+	}{
+		{
+			desc:             "success",
+			wantMembersBySvc: membersBySvc,
+			mockFn: func(peerLister *membership.MockResolver) {
+				for _, svc := range servicesToTalkP2P {
+					peerLister.EXPECT().Subscribe(svc, factoryComponentName, gomock.Any()).
+						DoAndReturn(func(service, name string, notifyChannel chan<- *membership.ChangedEvent) error {
+							// Notify the channel once to validate listening logic is working
+							notifyChannel <- &membership.ChangedEvent{}
+							return nil
+						}).Times(1)
+
+					peerLister.EXPECT().Members(svc).Return(membersBySvc[svc], nil).Times(1)
+					peerLister.EXPECT().Unsubscribe(svc, factoryComponentName).Return(nil).Times(1)
+				}
+			},
+		},
+		{
+			desc:         "subscription to membership updates fail",
+			wantStartErr: true,
+			mockFn: func(peerLister *membership.MockResolver) {
+				for i, svc := range servicesToTalkP2P {
+					if i == 0 {
+						// subscribe will only be called for the first service and after failing, it should not be called for the rest
+						peerLister.EXPECT().Subscribe(svc, factoryComponentName, gomock.Any()).Return(errors.New("failed")).Times(1)
+					}
+
+					// subscribe will be called for all services during stop
+					peerLister.EXPECT().Unsubscribe(svc, factoryComponentName).Return(nil).Times(1)
+				}
+			},
+		},
+		{
+			desc:             "unsubscirption from membership updates fail",
+			wantMembersBySvc: membersBySvc,
+			mockFn: func(peerLister *membership.MockResolver) {
+				for _, svc := range servicesToTalkP2P {
+					peerLister.EXPECT().Subscribe(svc, factoryComponentName, gomock.Any()).
+						DoAndReturn(func(service, name string, notifyChannel chan<- *membership.ChangedEvent) error {
+							// Notify the channel once to validate listening logic is working
+							notifyChannel <- &membership.ChangedEvent{}
+							return nil
+						}).Times(1)
+					peerLister.EXPECT().Members(svc).Return(membersBySvc[svc], nil).Times(1)
+					peerLister.EXPECT().Unsubscribe(svc, factoryComponentName).Return(errors.New("failed")).Times(1)
+				}
+			},
+		},
 	}
 
-	if err := f.Start(peerLister); err != nil {
-		t.Fatalf("Factory.Start() returned error: %v", err)
-	}
+	for _, tc := range tests {
+		t.Run(tc.desc, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			logger := testlogger.New(t)
+			serviceName := "service"
+			ob := NewMockOutboundsBuilder(ctrl)
+			var mu sync.Mutex
+			gotMembers := make(map[string][]membership.HostInfo)
+			outbounds := &Outbounds{
+				onUpdatePeers: func(svc string, members []membership.HostInfo) {
+					mu.Lock()
+					defer mu.Unlock()
+					gotMembers[svc] = members
+				},
+			}
+			ob.EXPECT().Build(gomock.Any(), gomock.Any()).Return(outbounds, nil).Times(1)
+			grpcMsgSize := 4 * 1024 * 1024
+			f := NewFactory(logger, Params{
+				ServiceName:     serviceName,
+				TChannelAddress: "localhost:0",
+				GRPCMaxMsgSize:  grpcMsgSize,
+				GRPCAddress:     "localhost:0",
+				HTTP: &httpParams{
+					Address: "localhost:0",
+				},
+				OutboundsBuilder: ob,
+			})
 
-	// Wait for membership changes to be processed
-	time.Sleep(100 * time.Millisecond)
-	mu.Lock()
-	assert.Equal(t, membersBySvc, gotMembers, "UpdatePeers not called with expected members")
-	mu.Unlock()
+			peerLister := membership.NewMockResolver(ctrl)
+			tc.mockFn(peerLister)
 
-	if err := f.Stop(); err != nil {
-		t.Fatalf("Factory.Stop() returned error: %v", err)
+			if err := f.Start(peerLister); err != nil {
+				if !tc.wantStartErr {
+					t.Fatalf("Factory.Start() returned error: %v", err)
+				}
+
+				// start failed expectedly. do not proceed with rest of the validations
+				f.Stop()
+				return
+			}
+
+			// Wait for membership changes to be processed
+			time.Sleep(100 * time.Millisecond)
+			mu.Lock()
+			assert.Equal(t, tc.wantMembersBySvc, gotMembers, "UpdatePeers not called with expected members")
+			mu.Unlock()
+
+			if err := f.Stop(); err != nil {
+				t.Fatalf("Factory.Stop() returned error: %v", err)
+			}
+
+			goleak.VerifyNone(t)
+		})
 	}
 }
