@@ -159,11 +159,13 @@ func (g *directPeerChooser) Choose(ctx context.Context, req *transport.Request) 
 // Do not create actual yarpc peers for the members. They are created lazily when a request comes in (Choose is called).
 func (g *directPeerChooser) UpdatePeers(serviceName string, members []membership.HostInfo) {
 	if g.serviceName != serviceName {
-		// This is not the service this chooser is created for. Ignore such updates.
+		// TODO: convert to debug log
+		g.logger.Info("This is not the service this chooser is created for. Ignore such updates.", tag.Service(g.serviceName), tag.Dynamic("members-service", serviceName))
 		return
 	}
 
-	g.logger.Debug("direct peer chooser got a membership update", tag.Counter(len(members)))
+	// TODO: convert to debug log
+	g.logger.Info("direct peer chooser got a membership update", tag.Counter(len(members)))
 
 	// If the chooser is not started, do not act on membership changes.
 	// If membership updates arrive after chooser is stopped, ignore them.
@@ -197,6 +199,9 @@ func (g *directPeerChooser) updatePeersInternal(members []membership.HostInfo) {
 		peers[addr] = true
 	}
 	g.mu.RUnlock()
+
+	// TODO: remove this log after verifying the behavior
+	g.logger.Info(fmt.Sprintf("valid peers: %v, current peers: %v", validPeerAddresses, peers))
 
 	for addr := range peers {
 		if !validPeerAddresses[addr] {
