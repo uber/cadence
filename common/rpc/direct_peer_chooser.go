@@ -177,8 +177,6 @@ func (g *directPeerChooser) UpdatePeers(serviceName string, members []membership
 	}
 
 	g.updatePeersInternal(members)
-
-	g.scope.UpdateGauge(metrics.P2PPeersCount, float64(len(g.peers)))
 }
 
 func (g *directPeerChooser) updatePeersInternal(members []membership.HostInfo) {
@@ -219,11 +217,13 @@ func (g *directPeerChooser) removePeer(addr string) {
 	}
 
 	g.mu.Lock()
+	defer g.mu.Unlock()
+
 	delete(g.peers, addr)
-	g.mu.Unlock()
 	// TODO: change to debug level
 	g.logger.Info("removed peer from direct peer chooser", tag.Address(addr))
 	g.scope.IncCounter(metrics.P2PPeerRemoved)
+	g.scope.UpdateGauge(metrics.P2PPeersCount, float64(len(g.peers)))
 }
 
 func (g *directPeerChooser) addPeer(addr string) (peer.Peer, error) {
@@ -241,6 +241,7 @@ func (g *directPeerChooser) addPeer(addr string) (peer.Peer, error) {
 	// TODO: change to debug level
 	g.logger.Info("added peer to direct peer chooser", tag.Address(addr))
 	g.scope.IncCounter(metrics.P2PPeerAdded)
+	g.scope.UpdateGauge(metrics.P2PPeersCount, float64(len(g.peers)))
 	return p, nil
 }
 
