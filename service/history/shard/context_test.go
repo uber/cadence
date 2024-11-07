@@ -564,13 +564,8 @@ func (s *contextTestSuite) TestUpdateWorkflowExecution() {
 						WorkflowID: testWorkflowID,
 					},
 				},
-				NewWorkflowSnapshot: &persistence.WorkflowSnapshot{
-					TransferTasks:     nil,
-					CrossClusterTasks: nil,
-					ReplicationTasks:  nil,
-					TimerTasks:        nil,
-				},
-				DomainName: testDomain,
+				NewWorkflowSnapshot: &persistence.WorkflowSnapshot{},
+				DomainName:          testDomain,
 			}
 
 			domainCacheEntry := cache.NewLocalDomainCacheEntryForTest(
