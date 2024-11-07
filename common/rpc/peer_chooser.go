@@ -100,8 +100,9 @@ func (f *dnsPeerChooserFactory) CreatePeerChooser(transport peer.Transport, opts
 
 func NewDirectPeerChooserFactory(serviceName string, logger log.Logger, metricsCl metrics.Client) PeerChooserFactory {
 	return &directPeerChooserFactory{
-		logger:    logger,
-		metricsCl: metricsCl,
+		serviceName: serviceName,
+		logger:      logger,
+		metricsCl:   metricsCl,
 	}
 }
 

@@ -68,7 +68,7 @@ func newDirectChooser(
 ) *directPeerChooser {
 	return &directPeerChooser{
 		serviceName:          serviceName,
-		logger:               logger.WithTags(tag.Service(serviceName)),
+		logger:               logger.WithTags(tag.DestService(serviceName)),
 		scope:                metricsCl.Scope(metrics.P2PRPCPeerChooserScope).Tagged(metrics.DestServiceTag(serviceName)),
 		t:                    t,
 		enableConnRetainMode: enableConnRetainMode,
@@ -81,6 +81,8 @@ func (g *directPeerChooser) Start() error {
 	if !atomic.CompareAndSwapInt32(&g.status, common.DaemonStatusInitialized, common.DaemonStatusStarted) {
 		return nil
 	}
+
+	defer func() { g.logger.Info("direct peer chooser started") }()
 
 	if g.enableConnRetainMode != nil && !g.enableConnRetainMode() {
 		c, ok := g.getLegacyChooser()
@@ -107,6 +109,7 @@ func (g *directPeerChooser) Stop() error {
 	// Release all peers if there's any
 	g.updatePeersInternal(nil)
 
+	g.logger.Info("direct peer chooser stopped", tag.Error(err))
 	return err
 }
 
@@ -160,7 +163,7 @@ func (g *directPeerChooser) Choose(ctx context.Context, req *transport.Request) 
 func (g *directPeerChooser) UpdatePeers(serviceName string, members []membership.HostInfo) {
 	if g.serviceName != serviceName {
 		// TODO: convert to debug log
-		g.logger.Info("This is not the service this chooser is created for. Ignore such updates.", tag.Service(g.serviceName), tag.Dynamic("members-service", serviceName))
+		g.logger.Info("This is not the service this chooser is created for. Ignore such updates.", tag.Dynamic("members-service", serviceName))
 		return
 	}
 
