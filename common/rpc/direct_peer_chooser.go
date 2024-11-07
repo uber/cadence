@@ -87,10 +87,9 @@ func (g *directPeerChooser) Start() error {
 		if ok {
 			return c.Start()
 		}
-		return nil
 	}
 
-	return nil // no-op
+	return nil
 }
 
 // Stop statisfies the peer.Chooser interface.
@@ -99,17 +98,16 @@ func (g *directPeerChooser) Stop() error {
 		return nil
 	}
 
-	if g.enableConnRetainMode != nil && !g.enableConnRetainMode() {
-		c, ok := g.getLegacyChooser()
-		if ok {
-			return c.Stop()
-		}
-		return nil
+	var err error
+	// Stop legacy chooser if it was initialized
+	if g.legacyChooser != nil {
+		err = g.legacyChooser.Stop()
 	}
 
-	// Release all peers
+	// Release all peers if there's any
 	g.updatePeersInternal(nil)
-	return nil
+
+	return err
 }
 
 // IsRunning statisfies the peer.Chooser interface.
@@ -271,6 +269,14 @@ func (g *directPeerChooser) getLegacyChooser() (peer.Chooser, bool) {
 	if g.legacyChooserErr != nil {
 		g.logger.Error("failed to create legacy direct peer chooser", tag.Error(g.legacyChooserErr))
 		return nil, false
+	}
+
+	if atomic.LoadInt32(&g.status) == common.DaemonStatusStarted {
+		// Start the legacy chooser if the current chooser is started
+		if err := g.legacyChooser.Start(); err != nil {
+			g.logger.Error("failed to start legacy direct peer chooser", tag.Error(err))
+			return nil, false
+		}
 	}
 
 	return g.legacyChooser, true
