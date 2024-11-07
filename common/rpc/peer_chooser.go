@@ -57,7 +57,7 @@ type (
 		peer.Chooser
 
 		// UpdatePeers updates the list of peers if needed.
-		UpdatePeers([]membership.HostInfo)
+		UpdatePeers(serviceName string, members []membership.HostInfo)
 	}
 
 	dnsPeerChooserFactory struct {
@@ -78,7 +78,7 @@ type defaultPeerChooser struct {
 }
 
 // UpdatePeers is a no-op for defaultPeerChooser. It is added to satisfy the PeerChooser interface.
-func (d *defaultPeerChooser) UpdatePeers(peers []membership.HostInfo) {}
+func (d *defaultPeerChooser) UpdatePeers(string, []membership.HostInfo) {}
 
 func NewDNSPeerChooserFactory(interval time.Duration, logger log.Logger) PeerChooserFactory {
 	if interval <= 0 {

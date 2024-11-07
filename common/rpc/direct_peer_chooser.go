@@ -159,7 +159,12 @@ func (g *directPeerChooser) Choose(ctx context.Context, req *transport.Request) 
 
 // UpdatePeers removes peers that are not in the members list.
 // Do not create actual yarpc peers for the members. They are created lazily when a request comes in (Choose is called).
-func (g *directPeerChooser) UpdatePeers(members []membership.HostInfo) {
+func (g *directPeerChooser) UpdatePeers(serviceName string, members []membership.HostInfo) {
+	if g.serviceName != serviceName {
+		// This is not the service this chooser is created for. Ignore such updates.
+		return
+	}
+
 	g.logger.Debug("direct peer chooser got a membership update", tag.Counter(len(members)))
 
 	// If the chooser is not started, do not act on membership changes.

@@ -31,6 +31,7 @@ import (
 
 	"github.com/uber/cadence/common/log/testlogger"
 	"github.com/uber/cadence/common/membership"
+	"github.com/uber/cadence/common/service"
 )
 
 func TestNewFactory(t *testing.T) {
@@ -68,12 +69,12 @@ func TestStartStop(t *testing.T) {
 	serviceName := "service"
 	ob := NewMockOutboundsBuilder(ctrl)
 	var mu sync.Mutex
-	var gotMembers []membership.HostInfo
+	gotMembers := make(map[string][]membership.HostInfo)
 	outbounds := &Outbounds{
-		onUpdatePeers: func(members []membership.HostInfo) {
+		onUpdatePeers: func(svc string, members []membership.HostInfo) {
 			mu.Lock()
 			defer mu.Unlock()
-			gotMembers = members
+			gotMembers[svc] = members
 		},
 	}
 	ob.EXPECT().Build(gomock.Any(), gomock.Any()).Return(outbounds, nil).Times(1)
@@ -89,19 +90,27 @@ func TestStartStop(t *testing.T) {
 		OutboundsBuilder: ob,
 	})
 
-	members := []membership.HostInfo{
-		membership.NewHostInfo("localhost:9191"),
-		membership.NewHostInfo("localhost:9192"),
+	membersBySvc := map[string][]membership.HostInfo{
+		service.Matching: {
+			membership.NewHostInfo("localhost:9191"),
+			membership.NewHostInfo("localhost:9192"),
+		},
+		service.History: {
+			membership.NewHostInfo("localhost:8585"),
+		},
 	}
+
 	peerLister := membership.NewMockResolver(ctrl)
-	peerLister.EXPECT().Subscribe(serviceName, factoryComponentName, gomock.Any()).
-		DoAndReturn(func(service, name string, notifyChannel chan<- *membership.ChangedEvent) error {
-			// Notify the channel once to validate listening logic is working
-			notifyChannel <- &membership.ChangedEvent{}
-			return nil
-		}).Times(1)
-	peerLister.EXPECT().Unsubscribe(serviceName, factoryComponentName).Return(nil).Times(1)
-	peerLister.EXPECT().Members(serviceName).Return(members, nil).Times(1)
+	for _, svc := range []string{service.Matching, service.History} {
+		peerLister.EXPECT().Subscribe(svc, factoryComponentName, gomock.Any()).
+			DoAndReturn(func(service, name string, notifyChannel chan<- *membership.ChangedEvent) error {
+				// Notify the channel once to validate listening logic is working
+				notifyChannel <- &membership.ChangedEvent{}
+				return nil
+			}).Times(1)
+		peerLister.EXPECT().Unsubscribe(svc, factoryComponentName).Return(nil).Times(1)
+		peerLister.EXPECT().Members(svc).Return(membersBySvc[svc], nil).Times(1)
+	}
 
 	if err := f.Start(peerLister); err != nil {
 		t.Fatalf("Factory.Start() returned error: %v", err)
@@ -110,7 +119,7 @@ func TestStartStop(t *testing.T) {
 	// Wait for membership changes to be processed
 	time.Sleep(100 * time.Millisecond)
 	mu.Lock()
-	assert.Equal(t, members, gotMembers, "UpdatePeers not called with expected members")
+	assert.Equal(t, membersBySvc, gotMembers, "UpdatePeers not called with expected members")
 	mu.Unlock()
 
 	if err := f.Stop(); err != nil {

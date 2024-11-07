@@ -37,6 +37,7 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/membership"
+	"github.com/uber/cadence/common/service"
 )
 
 const (
@@ -176,22 +177,27 @@ func (d *FactoryImpl) GetMaxMessageSize() int {
 }
 
 func (d *FactoryImpl) Start(peerLister PeerLister) error {
-	// subscribe to membership changes and notify outbounds builder for peer updates
 	d.peerLister = peerLister
-	ch := make(chan *membership.ChangedEvent, 1)
-	if err := d.peerLister.Subscribe(d.serviceName, factoryComponentName, ch); err != nil {
-		return fmt.Errorf("rpc factory failed to subscribe to membership updates: %v", err)
+	// subscribe to membership changes for history and matching. This is needed to update the peers for rpc
+	for _, svc := range []string{service.History, service.Matching} {
+		ch := make(chan *membership.ChangedEvent, 1)
+		if err := d.peerLister.Subscribe(svc, factoryComponentName, ch); err != nil {
+			return fmt.Errorf("rpc factory failed to subscribe to membership updates for svc: %v, err: %v", svc, err)
+		}
+		d.wg.Add(1)
+		go d.listenMembershipChanges(svc, ch)
 	}
-	d.wg.Add(1)
-	go d.listenMembershipChanges(ch)
 
 	return nil
 }
 
 func (d *FactoryImpl) Stop() error {
 	d.logger.Info("stopping rpc factory")
-	if err := d.peerLister.Unsubscribe(d.serviceName, factoryComponentName); err != nil {
-		d.logger.Error("rpc factory failed to unsubscribe from membership updates", tag.Error(err))
+
+	for _, svc := range []string{service.History, service.Matching} {
+		if err := d.peerLister.Unsubscribe(svc, factoryComponentName); err != nil {
+			d.logger.Error("rpc factory failed to unsubscribe from membership updates", tag.Error(err), tag.Service(svc))
+		}
 	}
 
 	d.cancelFn()
@@ -201,22 +207,22 @@ func (d *FactoryImpl) Stop() error {
 	return nil
 }
 
-func (d *FactoryImpl) listenMembershipChanges(ch chan *membership.ChangedEvent) {
+func (d *FactoryImpl) listenMembershipChanges(svc string, ch chan *membership.ChangedEvent) {
 	defer d.wg.Done()
 
 	for {
 		select {
 		case <-ch:
-			d.logger.Debug("rpc factory received membership changed event")
-			members, err := d.peerLister.Members(d.serviceName)
+			d.logger.Debug("rpc factory received membership changed event", tag.Service(svc))
+			members, err := d.peerLister.Members(svc)
 			if err != nil {
-				d.logger.Error("rpc factory failed to get members from membership resolver", tag.Error(err))
+				d.logger.Error("rpc factory failed to get members from membership resolver", tag.Error(err), tag.Service(svc))
 				continue
 			}
 
-			d.outbounds.UpdatePeers(members)
+			d.outbounds.UpdatePeers(svc, members)
 		case <-d.ctx.Done():
-			d.logger.Info("rpc factory stopped so listenMembershipChanges returning")
+			d.logger.Info("rpc factory stopped so listenMembershipChanges returning", tag.Service(svc))
 			return
 		}
 	}
