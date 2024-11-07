@@ -26,6 +26,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -46,6 +47,7 @@ const (
 	testShardID      = 1234
 	testCluster      = "test-cluster"
 	testDomain       = "test-domain"
+	testDomainID     = "0000001-0000002-0000003"
 	testTaskList     = "test-tasklist"
 	testTaskListType = "decision"
 	testQueueType    = 2 // transfer queue
@@ -1216,6 +1218,164 @@ func TestAdminSetShardRangeID(t *testing.T) {
 			cliCtx := tt.testSetup(td)
 
 			err := AdminSetShardRangeID(cliCtx)
+			if tt.errContains == "" {
+				assert.NoError(t, err)
+			} else {
+				assert.ErrorContains(t, err, tt.errContains)
+			}
+			assert.Equal(t, tt.expectedOutput, td.consoleOutput())
+		})
+	}
+}
+
+func TestAdminGetDomainIDOrName(t *testing.T) {
+	tests := []struct {
+		name           string
+		testSetup      func(td *cliTestData) *cli.Context
+		errContains    string // empty if no error is expected
+		expectedOutput string
+	}{
+		{
+			name: "no DomainID or DomainName argument",
+			testSetup: func(td *cliTestData) *cli.Context {
+				return clitest.NewCLIContext(t, td.app /* arguments are missing */)
+			},
+			errContains: "Need either domainName or domainID",
+		},
+		{
+			name: "DomainID provided, valid response",
+			testSetup: func(td *cliTestData) *cli.Context {
+				cliCtx := clitest.NewCLIContext(
+					t,
+					td.app,
+					clitest.StringArgument(FlagDomainID, testDomainID),
+				)
+
+				mockDomainManager := persistence.NewMockDomainManager(td.ctrl)
+				mockDomainManager.EXPECT().GetDomain(
+					gomock.Any(),
+					&persistence.GetDomainRequest{ID: testDomainID},
+				).Return(&persistence.GetDomainResponse{
+					Info: &persistence.DomainInfo{
+						ID:   testDomainID,
+						Name: testDomain,
+					},
+				}, nil)
+
+				td.mockManagerFactory.EXPECT().initializeDomainManager(gomock.Any()).
+					Return(mockDomainManager, nil)
+
+				return cliCtx
+			},
+			errContains:    "",
+			expectedOutput: fmt.Sprintf("domainName for domainID %v is %v\n", testDomainID, testDomain),
+		},
+		{
+			name: "DomainName provided, valid response",
+			testSetup: func(td *cliTestData) *cli.Context {
+				cliCtx := clitest.NewCLIContext(
+					t,
+					td.app,
+					clitest.StringArgument(FlagDomain, testDomain),
+				)
+
+				mockDomainManager := persistence.NewMockDomainManager(td.ctrl)
+				mockDomainManager.EXPECT().GetDomain(
+					gomock.Any(),
+					&persistence.GetDomainRequest{Name: testDomain},
+				).Return(&persistence.GetDomainResponse{
+					Info: &persistence.DomainInfo{
+						ID:   testDomainID,
+						Name: testDomain,
+					},
+				}, nil)
+
+				td.mockManagerFactory.EXPECT().initializeDomainManager(gomock.Any()).
+					Return(mockDomainManager, nil)
+
+				return cliCtx
+			},
+			errContains:    "",
+			expectedOutput: fmt.Sprintf("domainID for domainName %v is %v\n", testDomain, testDomainID),
+		},
+		{
+			name: "DomainManager returns an error for domainID",
+			testSetup: func(td *cliTestData) *cli.Context {
+				cliCtx := clitest.NewCLIContext(
+					t,
+					td.app,
+					clitest.StringArgument(FlagDomainID, testDomainID),
+				)
+
+				mockDomainManager := persistence.NewMockDomainManager(td.ctrl)
+				mockDomainManager.EXPECT().GetDomain(gomock.Any(), gomock.Any()).
+					Return(nil, errors.New("critical error"))
+
+				td.mockManagerFactory.EXPECT().initializeDomainManager(gomock.Any()).
+					Return(mockDomainManager, nil)
+
+				return cliCtx
+			},
+			errContains: "GetDomain error",
+		},
+		{
+			name: "DomainManager returns an error for domainName",
+			testSetup: func(td *cliTestData) *cli.Context {
+				cliCtx := clitest.NewCLIContext(
+					t,
+					td.app,
+					clitest.StringArgument(FlagDomain, testDomain),
+				)
+
+				mockDomainManager := persistence.NewMockDomainManager(td.ctrl)
+				mockDomainManager.EXPECT().GetDomain(gomock.Any(), gomock.Any()).
+					Return(nil, errors.New("critical error"))
+
+				td.mockManagerFactory.EXPECT().initializeDomainManager(gomock.Any()).
+					Return(mockDomainManager, nil)
+
+				return cliCtx
+			},
+			errContains: "GetDomain error",
+		},
+		{
+			name: "failed to initializeDomainManager",
+			testSetup: func(td *cliTestData) *cli.Context {
+				cliCtx := clitest.NewCLIContext(
+					t,
+					td.app,
+					clitest.StringArgument(FlagDomainID, testDomainID),
+				)
+
+				td.mockManagerFactory.EXPECT().initializeDomainManager(gomock.Any()).
+					Return(nil, errors.New("failed to initializeDomainManager"))
+
+				return cliCtx
+			},
+			errContains: "failed to initializeDomainManager",
+		},
+		{
+			name: "both DomainID and DomainName provided",
+			testSetup: func(td *cliTestData) *cli.Context {
+				cliCtx := clitest.NewCLIContext(
+					t,
+					td.app,
+					clitest.StringArgument(FlagDomainID, testDomainID),
+					clitest.StringArgument(FlagDomain, testDomain),
+				)
+
+				return cliCtx
+			},
+			errContains: "Need either domainName or domainID", // Expecting the error when both are provided
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			td := newCLITestData(t)
+			cliCtx := tt.testSetup(td)
+
+			err := AdminGetDomainIDOrName(cliCtx)
 			if tt.errContains == "" {
 				assert.NoError(t, err)
 			} else {
