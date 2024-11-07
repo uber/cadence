@@ -23,9 +23,10 @@
 package queue
 
 import (
-	"go.uber.org/goleak"
 	"os"
 	"testing"
+
+	"go.uber.org/goleak"
 )
 
 func TestMain(m *testing.M) {
