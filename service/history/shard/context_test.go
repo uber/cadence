@@ -685,6 +685,69 @@ func (s *contextTestSuite) TestConflictResolveWorkflowExecution() {
 	}
 }
 
+func (s *contextTestSuite) TestAppendHistoryV2Events() {
+	cases := []struct {
+		name            string
+		err             error
+		domainLookupErr error
+		response        *persistence.AppendHistoryNodesResponse
+		setup           func()
+		asserts         func(*persistence.AppendHistoryNodesResponse, error)
+	}{
+		{
+			name:     "Success",
+			response: &persistence.AppendHistoryNodesResponse{},
+			asserts: func(response *persistence.AppendHistoryNodesResponse, err error) {
+				s.NoError(err)
+				s.NotNil(response)
+			},
+		},
+		{
+			name:            "Domain lookup failed",
+			domainLookupErr: assert.AnError,
+			asserts: func(resp *persistence.AppendHistoryNodesResponse, err error) {
+				s.ErrorIs(err, assert.AnError)
+			},
+		},
+		{
+			name: "History too big",
+			response: &persistence.AppendHistoryNodesResponse{
+				DataBlob: persistence.DataBlob{
+					Data: make([]byte, historySizeLogThreshold+1),
+				},
+			},
+			asserts: func(resp *persistence.AppendHistoryNodesResponse, err error) {
+				// We do not err on history too big here, we just log it
+				s.NoError(err)
+				s.NotNil(resp)
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		s.Run(tc.name, func() {
+			// Need setup the suite manually, since we are in a subtest
+			s.SetupTest()
+			ctx := context.Background()
+			request := &persistence.AppendHistoryNodesRequest{}
+			workflowExecution := types.WorkflowExecution{
+				WorkflowID: testWorkflowID,
+				RunID:      testWorkflowID,
+			}
+
+			s.mockResource.DomainCache.EXPECT().GetDomainName(testDomainID).Return(testDomain, tc.domainLookupErr)
+			if tc.setup != nil {
+				tc.setup()
+			}
+
+			s.mockResource.HistoryMgr.On("AppendHistoryNodes", ctx, mock.Anything).Once().Return(tc.response, tc.err)
+
+			resp, err := s.context.AppendHistoryV2Events(ctx, request, testDomainID, workflowExecution)
+			tc.asserts(resp, err)
+		})
+	}
+}
+
 func (s *contextTestSuite) TestValidateAndUpdateFailoverMarkers() {
 	domainFailoverVersion := 100
 	domainCacheEntryInactiveCluster := cache.NewGlobalDomainCacheEntryForTest(
