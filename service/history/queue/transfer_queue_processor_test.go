@@ -25,15 +25,12 @@ package queue
 import (
 	"context"
 	"errors"
-	"os"
 	"testing"
 	"time"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"go.uber.org/goleak"
-
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/dynamicconfig"
@@ -52,13 +49,7 @@ import (
 	"github.com/uber/cadence/service/worker/archiver"
 )
 
-func TestMain(m *testing.M) {
-	defer goleak.VerifyTestMain(m)
-
-	os.Exit(m.Run())
-}
-
-func setupMockEnvironment(t *testing.T, cfg *config.Config) (*gomock.Controller, *shard.TestContext) {
+func setupTransferQueueProcessor(t *testing.T, cfg *config.Config) (*gomock.Controller, *transferQueueProcessor) {
 	ctrl := gomock.NewController(t)
 
 	if cfg == nil {
@@ -75,11 +66,8 @@ func setupMockEnvironment(t *testing.T, cfg *config.Config) (*gomock.Controller,
 		},
 		cfg,
 	)
-	return ctrl, mockShard
-}
 
-func setupProcessor(ctrl *gomock.Controller, mockShard *shard.TestContext) *transferQueueProcessor {
-	return NewTransferQueueProcessor(
+	return ctrl, NewTransferQueueProcessor(
 		mockShard,
 		mockShard.GetEngine(),
 		task.NewMockProcessor(ctrl),
@@ -93,10 +81,8 @@ func setupProcessor(ctrl *gomock.Controller, mockShard *shard.TestContext) *tran
 }
 
 func TestTransferQueueProcessorRequireStartStop(t *testing.T) {
-	ctrl, mockShard := setupMockEnvironment(t, nil)
+	ctrl, processor := setupTransferQueueProcessor(t, nil)
 	defer ctrl.Finish()
-
-	processor := setupProcessor(ctrl, mockShard)
 
 	assert.Equal(t, common.DaemonStatusInitialized, processor.status)
 
@@ -117,10 +103,8 @@ func TestTransferQueueProcessorRequireStartNotGracefulStop(t *testing.T) {
 	cfg := config.NewForTest()
 	cfg.QueueProcessorEnableGracefulSyncShutdown = dynamicconfig.GetBoolPropertyFn(false)
 
-	ctrl, mockShard := setupMockEnvironment(t, cfg)
+	ctrl, processor := setupTransferQueueProcessor(t, cfg)
 	defer ctrl.Finish()
-
-	processor := setupProcessor(ctrl, mockShard)
 
 	assert.Equal(t, common.DaemonStatusInitialized, processor.status)
 	processor.Start()
@@ -173,7 +157,7 @@ func TestNotifyNewTask(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			ctrl, mockShard := setupMockEnvironment(t, nil)
+			ctrl, processor := setupTransferQueueProcessor(t, nil)
 			defer ctrl.Finish()
 
 			info := &hcommon.NotifyTaskInfo{
@@ -184,8 +168,6 @@ func TestNotifyNewTask(t *testing.T) {
 				},
 				Tasks: tc.tasks,
 			}
-
-			processor := setupProcessor(ctrl, mockShard)
 
 			if tc.shouldPanic {
 				assert.Panics(t, func() {
@@ -231,17 +213,15 @@ func TestFailoverDomain(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			ctrl, mockShard := setupMockEnvironment(t, nil)
+			ctrl, processor := setupTransferQueueProcessor(t, nil)
 			defer ctrl.Finish()
-
-			processor := setupProcessor(ctrl, mockShard)
 
 			if tc.processorStarted {
 				defer processor.Stop()
 				processor.Start()
 			}
 
-			tc.setupMocks(mockShard)
+			tc.setupMocks(processor.shard.(*shard.TestContext))
 
 			processor.FailoverDomain(tc.domainIDs)
 
@@ -278,10 +258,9 @@ func TestHandleAction(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			ctrl, mockShard := setupMockEnvironment(t, nil)
+			ctrl, processor := setupTransferQueueProcessor(t, nil)
 			defer ctrl.Finish()
 
-			processor := setupProcessor(ctrl, mockShard)
 			defer processor.Stop()
 			processor.Start()
 
@@ -307,10 +286,9 @@ func TestHandleAction(t *testing.T) {
 }
 
 func TestLockTaskProcessing(t *testing.T) {
-	ctrl, mockShard := setupMockEnvironment(t, nil)
+	ctrl, processor := setupTransferQueueProcessor(t, nil)
 	defer ctrl.Finish()
 
-	processor := setupProcessor(ctrl, mockShard)
 	locked := make(chan struct{}, 1)
 
 	processor.LockTaskProcessing()
@@ -361,14 +339,12 @@ func Test_completeTransfer(t *testing.T) {
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			ctrl, mockShard := setupMockEnvironment(t, nil)
+			ctrl, processor := setupTransferQueueProcessor(t, nil)
 			defer ctrl.Finish()
-
-			processor := setupProcessor(ctrl, mockShard)
 
 			processor.ackLevel = tt.ackLevel
 
-			tt.mockSetup(mockShard)
+			tt.mockSetup(processor.shard.(*shard.TestContext))
 
 			defer processor.Stop()
 			processor.Start()
@@ -386,10 +362,8 @@ func Test_completeTransfer(t *testing.T) {
 }
 
 func Test_completeTransferLoop(t *testing.T) {
-	ctrl, mockShard := setupMockEnvironment(t, nil)
+	ctrl, processor := setupTransferQueueProcessor(t, nil)
 	defer ctrl.Finish()
-
-	processor := setupProcessor(ctrl, mockShard)
 
 	processor.config.TransferProcessorCompleteTransferInterval = dynamicconfig.GetDurationPropertyFn(10 * time.Millisecond)
 
@@ -398,10 +372,10 @@ func Test_completeTransferLoop(t *testing.T) {
 		standbyQueueProcessor.Start()
 	}
 
-	mockShard.Resource.ExecutionMgr.On("RangeCompleteTransferTask", mock.Anything, mock.Anything).
+	processor.shard.(*shard.TestContext).Resource.ExecutionMgr.On("RangeCompleteTransferTask", mock.Anything, mock.Anything).
 		Return(&persistence.RangeCompleteTransferTaskResponse{}, nil)
 
-	mockShard.GetShardManager().(*mocks.ShardManager).On("UpdateShard", mock.Anything, mock.Anything).Return(nil)
+	processor.shard.(*shard.TestContext).GetShardManager().(*mocks.ShardManager).On("UpdateShard", mock.Anything, mock.Anything).Return(nil)
 
 	processor.shutdownWG.Add(1)
 
@@ -420,10 +394,8 @@ func Test_completeTransferLoop(t *testing.T) {
 }
 
 func Test_completeTransferLoop_ErrShardClosed(t *testing.T) {
-	ctrl, mockShard := setupMockEnvironment(t, nil)
+	ctrl, processor := setupTransferQueueProcessor(t, nil)
 	defer ctrl.Finish()
-
-	processor := setupProcessor(ctrl, mockShard)
 
 	processor.config.TransferProcessorCompleteTransferInterval = dynamicconfig.GetDurationPropertyFn(30 * time.Millisecond)
 
@@ -432,7 +404,7 @@ func Test_completeTransferLoop_ErrShardClosed(t *testing.T) {
 		standbyQueueProcessor.Start()
 	}
 
-	mockShard.Resource.ExecutionMgr.On("RangeCompleteTransferTask", mock.Anything, mock.Anything).
+	processor.shard.(*shard.TestContext).Resource.ExecutionMgr.On("RangeCompleteTransferTask", mock.Anything, mock.Anything).
 		Return(&persistence.RangeCompleteTransferTaskResponse{}, &shard.ErrShardClosed{}).Once()
 
 	processor.shutdownWG.Add(1)
@@ -455,10 +427,8 @@ func Test_completeTransferLoop_ErrShardClosedNotGraceful(t *testing.T) {
 	cfg := config.NewForTest()
 	cfg.QueueProcessorEnableGracefulSyncShutdown = dynamicconfig.GetBoolPropertyFn(false)
 
-	ctrl, mockShard := setupMockEnvironment(t, cfg)
+	ctrl, processor := setupTransferQueueProcessor(t, cfg)
 	defer ctrl.Finish()
-
-	processor := setupProcessor(ctrl, mockShard)
 
 	processor.config.TransferProcessorCompleteTransferInterval = dynamicconfig.GetDurationPropertyFn(30 * time.Millisecond)
 
@@ -467,7 +437,7 @@ func Test_completeTransferLoop_ErrShardClosedNotGraceful(t *testing.T) {
 		standbyQueueProcessor.Start()
 	}
 
-	mockShard.Resource.ExecutionMgr.On("RangeCompleteTransferTask", mock.Anything, mock.Anything).
+	processor.shard.(*shard.TestContext).Resource.ExecutionMgr.On("RangeCompleteTransferTask", mock.Anything, mock.Anything).
 		Return(&persistence.RangeCompleteTransferTaskResponse{}, &shard.ErrShardClosed{}).Once()
 
 	processor.shutdownWG.Add(1)
@@ -487,10 +457,8 @@ func Test_completeTransferLoop_ErrShardClosedNotGraceful(t *testing.T) {
 }
 
 func Test_completeTransferLoop_OtherError(t *testing.T) {
-	ctrl, mockShard := setupMockEnvironment(t, nil)
+	ctrl, processor := setupTransferQueueProcessor(t, nil)
 	defer ctrl.Finish()
-
-	processor := setupProcessor(ctrl, mockShard)
 
 	processor.config.TransferProcessorCompleteTransferInterval = dynamicconfig.GetDurationPropertyFn(30 * time.Millisecond)
 
@@ -499,7 +467,7 @@ func Test_completeTransferLoop_OtherError(t *testing.T) {
 		standbyQueueProcessor.Start()
 	}
 
-	mockShard.Resource.ExecutionMgr.On("RangeCompleteTransferTask", mock.Anything, mock.Anything).
+	processor.shard.(*shard.TestContext).Resource.ExecutionMgr.On("RangeCompleteTransferTask", mock.Anything, mock.Anything).
 		Return(&persistence.RangeCompleteTransferTaskResponse{}, assert.AnError)
 
 	processor.shutdownWG.Add(1)
@@ -581,12 +549,10 @@ func Test_transferQueueActiveProcessor_taskFilter(t *testing.T) {
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			ctrl, mockShard := setupMockEnvironment(t, nil)
+			ctrl, processor := setupTransferQueueProcessor(t, nil)
 			defer ctrl.Finish()
 
-			processor := setupProcessor(ctrl, mockShard)
-
-			tt.mockSetup(mockShard)
+			tt.mockSetup(processor.shard.(*shard.TestContext))
 
 			err := processor.activeQueueProcessor.taskInitializer(tt.task).Execute()
 
@@ -601,10 +567,8 @@ func Test_transferQueueActiveProcessor_taskFilter(t *testing.T) {
 }
 
 func Test_transferQueueActiveProcessor_updateClusterAckLevel(t *testing.T) {
-	ctrl, mockShard := setupMockEnvironment(t, nil)
+	ctrl, processor := setupTransferQueueProcessor(t, nil)
 	defer ctrl.Finish()
-
-	processor := setupProcessor(ctrl, mockShard)
 
 	taskID := int64(11)
 
@@ -612,19 +576,17 @@ func Test_transferQueueActiveProcessor_updateClusterAckLevel(t *testing.T) {
 		taskID: taskID,
 	}
 
-	mockShard.GetShardManager().(*mocks.ShardManager).On("UpdateShard", mock.Anything, mock.Anything).Return(nil).Once()
+	processor.shard.(*shard.TestContext).GetShardManager().(*mocks.ShardManager).On("UpdateShard", mock.Anything, mock.Anything).Return(nil).Once()
 
 	err := processor.activeQueueProcessor.processorBase.updateClusterAckLevel(key)
 
 	assert.NoError(t, err)
-	assert.Equal(t, taskID, mockShard.ShardInfo().ClusterTransferAckLevel[constants.TestClusterMetadata.GetCurrentClusterName()])
+	assert.Equal(t, taskID, processor.shard.(*shard.TestContext).ShardInfo().ClusterTransferAckLevel[constants.TestClusterMetadata.GetCurrentClusterName()])
 }
 
 func Test_transferQueueActiveProcessor_updateProcessingQueueStates(t *testing.T) {
-	ctrl, mockShard := setupMockEnvironment(t, nil)
+	ctrl, processor := setupTransferQueueProcessor(t, nil)
 	defer ctrl.Finish()
-
-	processor := setupProcessor(ctrl, mockShard)
 
 	taskID := int64(11)
 
@@ -636,21 +598,19 @@ func Test_transferQueueActiveProcessor_updateProcessingQueueStates(t *testing.T)
 
 	states := []ProcessingQueueState{state}
 
-	mockShard.GetShardManager().(*mocks.ShardManager).On("UpdateShard", mock.Anything, mock.Anything).Return(nil).Once()
+	processor.shard.(*shard.TestContext).GetShardManager().(*mocks.ShardManager).On("UpdateShard", mock.Anything, mock.Anything).Return(nil).Once()
 
 	err := processor.activeQueueProcessor.processorBase.updateProcessingQueueStates(states)
 
 	assert.NoError(t, err)
-	assert.Equal(t, taskID, mockShard.ShardInfo().ClusterTransferAckLevel[constants.TestClusterMetadata.GetCurrentClusterName()])
-	assert.Equal(t, 1, len(mockShard.ShardInfo().TransferProcessingQueueStates.StatesByCluster[constants.TestClusterMetadata.GetCurrentClusterName()]))
-	assert.Equal(t, int32(state.Level()), *mockShard.ShardInfo().TransferProcessingQueueStates.StatesByCluster[constants.TestClusterMetadata.GetCurrentClusterName()][0].Level)
+	assert.Equal(t, taskID, processor.shard.(*shard.TestContext).ShardInfo().ClusterTransferAckLevel[constants.TestClusterMetadata.GetCurrentClusterName()])
+	assert.Equal(t, 1, len(processor.shard.(*shard.TestContext).ShardInfo().TransferProcessingQueueStates.StatesByCluster[constants.TestClusterMetadata.GetCurrentClusterName()]))
+	assert.Equal(t, int32(state.Level()), *processor.shard.(*shard.TestContext).ShardInfo().TransferProcessingQueueStates.StatesByCluster[constants.TestClusterMetadata.GetCurrentClusterName()][0].Level)
 }
 
 func Test_transferQueueActiveProcessor_queueShutdown(t *testing.T) {
-	ctrl, mockShard := setupMockEnvironment(t, nil)
+	ctrl, processor := setupTransferQueueProcessor(t, nil)
 	defer ctrl.Finish()
-
-	processor := setupProcessor(ctrl, mockShard)
 
 	err := processor.activeQueueProcessor.queueShutdown()
 
@@ -779,12 +739,10 @@ func Test_transferQueueStandbyProcessor_taskFilter(t *testing.T) {
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			ctrl, mockShard := setupMockEnvironment(t, nil)
+			ctrl, processor := setupTransferQueueProcessor(t, nil)
 			defer ctrl.Finish()
 
-			processor := setupProcessor(ctrl, mockShard)
-
-			tt.mockSetup(mockShard)
+			tt.mockSetup(processor.shard.(*shard.TestContext))
 
 			err := processor.standbyQueueProcessors["standby"].taskInitializer(tt.task).Execute()
 
@@ -799,10 +757,8 @@ func Test_transferQueueStandbyProcessor_taskFilter(t *testing.T) {
 }
 
 func Test_transferQueueStandbyProcessor_updateClusterAckLevel(t *testing.T) {
-	ctrl, mockShard := setupMockEnvironment(t, nil)
+	ctrl, processor := setupTransferQueueProcessor(t, nil)
 	defer ctrl.Finish()
-
-	processor := setupProcessor(ctrl, mockShard)
 
 	taskID := int64(11)
 
@@ -810,19 +766,17 @@ func Test_transferQueueStandbyProcessor_updateClusterAckLevel(t *testing.T) {
 		taskID: taskID,
 	}
 
-	mockShard.GetShardManager().(*mocks.ShardManager).On("UpdateShard", mock.Anything, mock.Anything).Return(nil).Once()
+	processor.shard.(*shard.TestContext).GetShardManager().(*mocks.ShardManager).On("UpdateShard", mock.Anything, mock.Anything).Return(nil).Once()
 
 	err := processor.standbyQueueProcessors["standby"].processorBase.updateClusterAckLevel(key)
 
 	assert.NoError(t, err)
-	assert.Equal(t, taskID, mockShard.ShardInfo().ClusterTransferAckLevel["standby"])
+	assert.Equal(t, taskID, processor.shard.(*shard.TestContext).ShardInfo().ClusterTransferAckLevel["standby"])
 }
 
 func Test_transferQueueStandbyProcessor_updateProcessingQueueStates(t *testing.T) {
-	ctrl, mockShard := setupMockEnvironment(t, nil)
+	ctrl, processor := setupTransferQueueProcessor(t, nil)
 	defer ctrl.Finish()
-
-	processor := setupProcessor(ctrl, mockShard)
 
 	taskID := int64(11)
 
@@ -834,21 +788,19 @@ func Test_transferQueueStandbyProcessor_updateProcessingQueueStates(t *testing.T
 
 	states := []ProcessingQueueState{state}
 
-	mockShard.GetShardManager().(*mocks.ShardManager).On("UpdateShard", mock.Anything, mock.Anything).Return(nil).Once()
+	processor.shard.(*shard.TestContext).GetShardManager().(*mocks.ShardManager).On("UpdateShard", mock.Anything, mock.Anything).Return(nil).Once()
 
 	err := processor.standbyQueueProcessors["standby"].processorBase.updateProcessingQueueStates(states)
 
 	assert.NoError(t, err)
-	assert.Equal(t, taskID, mockShard.ShardInfo().ClusterTransferAckLevel["standby"])
-	assert.Equal(t, 1, len(mockShard.ShardInfo().TransferProcessingQueueStates.StatesByCluster["standby"]))
-	assert.Equal(t, int32(state.Level()), *mockShard.ShardInfo().TransferProcessingQueueStates.StatesByCluster["standby"][0].Level)
+	assert.Equal(t, taskID, processor.shard.(*shard.TestContext).ShardInfo().ClusterTransferAckLevel["standby"])
+	assert.Equal(t, 1, len(processor.shard.(*shard.TestContext).ShardInfo().TransferProcessingQueueStates.StatesByCluster["standby"]))
+	assert.Equal(t, int32(state.Level()), *processor.shard.(*shard.TestContext).ShardInfo().TransferProcessingQueueStates.StatesByCluster["standby"][0].Level)
 }
 
 func Test_transferQueueStandbyProcessor_queueShutdown(t *testing.T) {
-	ctrl, mockShard := setupMockEnvironment(t, nil)
+	ctrl, processor := setupTransferQueueProcessor(t, nil)
 	defer ctrl.Finish()
-
-	processor := setupProcessor(ctrl, mockShard)
 
 	err := processor.standbyQueueProcessors["standby"].queueShutdown()
 
@@ -916,12 +868,10 @@ func Test_transferQueueFailoverProcessor_taskFilter(t *testing.T) {
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			ctrl, mockShard := setupMockEnvironment(t, nil)
+			ctrl, processor := setupTransferQueueProcessor(t, nil)
 			defer ctrl.Finish()
 
-			processor := setupProcessor(ctrl, mockShard)
-
-			tt.mockSetup(mockShard)
+			tt.mockSetup(processor.shard.(*shard.TestContext))
 
 			domainIDs := map[string]struct{}{"standby": {}}
 
@@ -950,10 +900,8 @@ func Test_transferQueueFailoverProcessor_taskFilter(t *testing.T) {
 }
 
 func Test_transferQueueFailoverProcessor_updateClusterAckLevel(t *testing.T) {
-	ctrl, mockShard := setupMockEnvironment(t, nil)
+	ctrl, processor := setupTransferQueueProcessor(t, nil)
 	defer ctrl.Finish()
-
-	processor := setupProcessor(ctrl, mockShard)
 
 	taskID := int64(11)
 
@@ -981,10 +929,8 @@ func Test_transferQueueFailoverProcessor_updateClusterAckLevel(t *testing.T) {
 }
 
 func Test_transferQueueFailoverProcessor_queueShutdown(t *testing.T) {
-	ctrl, mockShard := setupMockEnvironment(t, nil)
+	ctrl, processor := setupTransferQueueProcessor(t, nil)
 	defer ctrl.Finish()
-
-	processor := setupProcessor(ctrl, mockShard)
 
 	domainIDs := map[string]struct{}{"standby": {}}
 
@@ -1029,7 +975,7 @@ func Test_loadTransferProcessingQueueStates(t *testing.T) {
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			ctrl, mockShard := setupMockEnvironment(t, nil)
+			ctrl, processor := setupTransferQueueProcessor(t, nil)
 			defer ctrl.Finish()
 
 			opts := &queueProcessorOptions{
@@ -1038,11 +984,11 @@ func Test_loadTransferProcessingQueueStates(t *testing.T) {
 				},
 			}
 
-			pqs := loadTransferProcessingQueueStates(tt.clusterName, mockShard, opts, mockShard.GetLogger())
+			pqs := loadTransferProcessingQueueStates(tt.clusterName, processor.shard.(*shard.TestContext), opts, processor.shard.(*shard.TestContext).GetLogger())
 
 			assert.NotNil(t, pqs)
 			assert.Equal(t, 1, len(pqs))
-			assert.Equal(t, tt.taskID(mockShard), pqs[0].AckLevel().(transferTaskKey).taskID)
+			assert.Equal(t, tt.taskID(processor.shard.(*shard.TestContext)), pqs[0].AckLevel().(transferTaskKey).taskID)
 		})
 	}
 }
