@@ -35,7 +35,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-go/tally"
-
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
@@ -481,6 +480,111 @@ func (s *contextTestSuite) TestCreateWorkflowExecution() {
 			s.mockResource.ExecutionMgr.On("CreateWorkflowExecution", ctx, mock.Anything).Once().Return(tc.response, tc.err)
 
 			resp, err := s.context.CreateWorkflowExecution(ctx, request)
+			tc.asserts(resp, err)
+		})
+	}
+}
+
+func (s *contextTestSuite) TestUpdateWorkflowExecution() {
+	cases := []struct {
+		name            string
+		err             error
+		domainLookupErr error
+		response        *persistence.UpdateWorkflowExecutionResponse
+		setup           func()
+		asserts         func(*persistence.UpdateWorkflowExecutionResponse, error)
+	}{
+		{
+			name:     "Success",
+			response: &persistence.UpdateWorkflowExecutionResponse{},
+			asserts: func(response *persistence.UpdateWorkflowExecutionResponse, err error) {
+				s.NoError(err)
+				s.NotNil(response)
+			},
+		},
+		{
+			name: "No special handling",
+			err:  &types.ServiceBusyError{},
+			asserts: func(resp *persistence.UpdateWorkflowExecutionResponse, err error) {
+				s.Equal(err, &types.ServiceBusyError{})
+				s.NoError(s.context.closedError())
+			},
+		},
+		{
+			name: "Shard ownership lost error",
+			err:  &persistence.ShardOwnershipLostError{},
+			asserts: func(resp *persistence.UpdateWorkflowExecutionResponse, err error) {
+				s.Equal(err, &persistence.ShardOwnershipLostError{})
+				s.ErrorContains(s.context.closedError(), "shard closed")
+			},
+		},
+		{
+			name: "Other error - update shard succeed",
+			err:  assert.AnError,
+			setup: func() {
+				s.mockShardManager.On("UpdateShard", mock.Anything, mock.Anything).Return(nil)
+			},
+			asserts: func(resp *persistence.UpdateWorkflowExecutionResponse, err error) {
+				s.Equal(assert.AnError, err)
+				s.NoError(s.context.closedError())
+			},
+		},
+		{
+			name: "Other error - update shard failed",
+			err:  assert.AnError,
+			setup: func() {
+				s.mockShardManager.On("UpdateShard", mock.Anything, mock.Anything).Return(assert.AnError)
+			},
+			asserts: func(resp *persistence.UpdateWorkflowExecutionResponse, err error) {
+				s.Equal(assert.AnError, err)
+				s.ErrorContains(s.context.closedError(), "shard closed")
+			},
+		},
+		{
+			name:            "Domain lookup failed",
+			domainLookupErr: assert.AnError,
+			asserts: func(resp *persistence.UpdateWorkflowExecutionResponse, err error) {
+				s.ErrorIs(err, assert.AnError)
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		s.Run(tc.name, func() {
+			// Need setup the suite manually, since we are in a subtest
+			s.SetupTest()
+			ctx := context.Background()
+			request := &persistence.UpdateWorkflowExecutionRequest{
+				RangeID: 123,
+				Mode:    persistence.UpdateWorkflowModeUpdateCurrent,
+				UpdateWorkflowMutation: persistence.WorkflowMutation{
+					ExecutionInfo: &persistence.WorkflowExecutionInfo{
+						DomainID:   testDomainID,
+						WorkflowID: testWorkflowID,
+					},
+				},
+				NewWorkflowSnapshot: &persistence.WorkflowSnapshot{
+					TransferTasks:     nil,
+					CrossClusterTasks: nil,
+					ReplicationTasks:  nil,
+					TimerTasks:        nil,
+				},
+				DomainName: testDomain,
+			}
+
+			domainCacheEntry := cache.NewLocalDomainCacheEntryForTest(
+				&persistence.DomainInfo{ID: testDomainID},
+				&persistence.DomainConfig{Retention: 7},
+				testCluster,
+			)
+			s.mockResource.DomainCache.EXPECT().GetDomainByID(testDomainID).Return(domainCacheEntry, tc.domainLookupErr)
+			if tc.setup != nil {
+				tc.setup()
+			}
+
+			s.mockResource.ExecutionMgr.On("UpdateWorkflowExecution", ctx, mock.Anything).Once().Return(tc.response, tc.err)
+
+			resp, err := s.context.UpdateWorkflowExecution(ctx, request)
 			tc.asserts(resp, err)
 		})
 	}
