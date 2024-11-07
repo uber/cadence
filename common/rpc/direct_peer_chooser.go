@@ -68,7 +68,7 @@ func newDirectChooser(
 ) *directPeerChooser {
 	return &directPeerChooser{
 		serviceName:          serviceName,
-		logger:               logger,
+		logger:               logger.WithTags(tag.Service(serviceName)),
 		scope:                metricsCl.Scope(metrics.P2PRPCPeerChooserScope).Tagged(metrics.DestServiceTag(serviceName)),
 		t:                    t,
 		enableConnRetainMode: enableConnRetainMode,
