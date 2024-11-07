@@ -81,7 +81,7 @@ func setupTransferQueueProcessor(t *testing.T, cfg *config.Config) (*gomock.Cont
 	).(*transferQueueProcessor)
 }
 
-func TestTransferQueueProcessorRequireStartStop(t *testing.T) {
+func TestTransferQueueProcessor_StartStop(t *testing.T) {
 	ctrl, processor := setupTransferQueueProcessor(t, nil)
 	defer ctrl.Finish()
 
@@ -100,7 +100,7 @@ func TestTransferQueueProcessorRequireStartStop(t *testing.T) {
 	processor.Stop()
 }
 
-func TestTransferQueueProcessorRequireStartNotGracefulStop(t *testing.T) {
+func TestTransferQueueProcessor_StartNotGracefulStop(t *testing.T) {
 	cfg := config.NewForTest()
 	cfg.QueueProcessorEnableGracefulSyncShutdown = dynamicconfig.GetBoolPropertyFn(false)
 
@@ -116,7 +116,7 @@ func TestTransferQueueProcessorRequireStartNotGracefulStop(t *testing.T) {
 	assert.Equal(t, common.DaemonStatusStopped, processor.status)
 }
 
-func TestNotifyNewTask(t *testing.T) {
+func TestTransferQueueProcessor_NotifyNewTask(t *testing.T) {
 	tests := map[string]struct {
 		tasks             []persistence.Task
 		clusterName       string
@@ -182,7 +182,7 @@ func TestNotifyNewTask(t *testing.T) {
 	}
 }
 
-func TestFailoverDomain(t *testing.T) {
+func TestTransferQueueProcessor_FailoverDomain(t *testing.T) {
 	tests := map[string]struct {
 		domainIDs        map[string]struct{}
 		setupMocks       func(mockShard *shard.TestContext)
@@ -240,7 +240,7 @@ func TestFailoverDomain(t *testing.T) {
 	}
 }
 
-func TestHandleAction(t *testing.T) {
+func TestTransferQueueProcessor_HandleAction(t *testing.T) {
 	tests := map[string]struct {
 		clusterName string
 		err         error
@@ -286,7 +286,7 @@ func TestHandleAction(t *testing.T) {
 	}
 }
 
-func TestLockTaskProcessing(t *testing.T) {
+func TestTransferQueueProcessor_LockTaskProcessing(t *testing.T) {
 	ctrl, processor := setupTransferQueueProcessor(t, nil)
 	defer ctrl.Finish()
 
@@ -309,7 +309,7 @@ func TestLockTaskProcessing(t *testing.T) {
 	}
 }
 
-func Test_completeTransfer(t *testing.T) {
+func TestTransferQueueProcessor_completeTransfer(t *testing.T) {
 	tests := map[string]struct {
 		ackLevel  int64
 		mockSetup func(*shard.TestContext)
@@ -362,7 +362,7 @@ func Test_completeTransfer(t *testing.T) {
 	}
 }
 
-func Test_completeTransferLoop(t *testing.T) {
+func TestTransferQueueProcessor_completeTransferLoop(t *testing.T) {
 	ctrl, processor := setupTransferQueueProcessor(t, nil)
 	defer ctrl.Finish()
 
@@ -394,7 +394,7 @@ func Test_completeTransferLoop(t *testing.T) {
 	processor.completeTransferLoop()
 }
 
-func Test_completeTransferLoop_ErrShardClosed(t *testing.T) {
+func TestTransferQueueProcessor_completeTransferLoop_ErrShardClosed(t *testing.T) {
 	ctrl, processor := setupTransferQueueProcessor(t, nil)
 	defer ctrl.Finish()
 
@@ -424,7 +424,7 @@ func Test_completeTransferLoop_ErrShardClosed(t *testing.T) {
 	processor.completeTransferLoop()
 }
 
-func Test_completeTransferLoop_ErrShardClosedNotGraceful(t *testing.T) {
+func TestTransferQueueProcessor_completeTransferLoop_ErrShardClosedNotGraceful(t *testing.T) {
 	cfg := config.NewForTest()
 	cfg.QueueProcessorEnableGracefulSyncShutdown = dynamicconfig.GetBoolPropertyFn(false)
 
@@ -457,7 +457,7 @@ func Test_completeTransferLoop_ErrShardClosedNotGraceful(t *testing.T) {
 	processor.completeTransferLoop()
 }
 
-func Test_completeTransferLoop_OtherError(t *testing.T) {
+func TestTransferQueueProcessor_completeTransferLoop_OtherError(t *testing.T) {
 	ctrl, processor := setupTransferQueueProcessor(t, nil)
 	defer ctrl.Finish()
 
