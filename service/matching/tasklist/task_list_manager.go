@@ -703,7 +703,7 @@ func (c *taskListManagerImpl) getIsolationGroupForTask(ctx context.Context, task
 		group, err := c.partitioner.GetIsolationGroupByDomainID(ctx,
 			partition.PollerInfo{
 				DomainID:                 taskInfo.DomainID,
-				Tasklist:                 c.taskListID.name,
+				TasklistName:             c.taskListID.name,
 				AvailableIsolationGroups: pollerIsolationGroups,
 			}, partitionConfig)
 		if err != nil {
