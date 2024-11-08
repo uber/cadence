@@ -87,6 +87,29 @@ func TestStartBatchJob(t *testing.T) {
 			expectedError: "Required flag not found: : option query is required",
 		},
 		{
+			name:  "Missing Signal",
+			setup: func(mockClient *frontend.MockClient) {},
+			flags: map[string]interface{}{
+				FlagDomain:    "test-domain",
+				FlagListQuery: "workflowType='batch'",
+				FlagReason:    "Testing batch job",
+				FlagBatchType: batcher.BatchTypeSignal,
+			},
+			expectedError: "Required flag not found: : option signal_name is required",
+		},
+		{
+			name:  "Missing Input",
+			setup: func(mockClient *frontend.MockClient) {},
+			flags: map[string]interface{}{
+				FlagDomain:     "test-domain",
+				FlagListQuery:  "workflowType='batch'",
+				FlagReason:     "Testing batch job",
+				FlagBatchType:  batcher.BatchTypeSignal,
+				FlagSignalName: "test-signal",
+			},
+			expectedError: "Required flag not found: : option input is required",
+		},
+		{
 			name:  "Missing Reason",
 			setup: func(mockClient *frontend.MockClient) {},
 			flags: map[string]interface{}{

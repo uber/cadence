@@ -209,11 +209,11 @@ func StartBatchJob(c *cli.Context) error {
 	if batchType == batcher.BatchTypeSignal {
 		sigName, err = getRequiredOption(c, FlagSignalName)
 		if err != nil {
-			return err
+			return commoncli.Problem("Required flag not found: ", err)
 		}
 		sigVal, err = getRequiredOption(c, FlagInput)
 		if err != nil {
-			return err
+			return commoncli.Problem("Required flag not found: ", err)
 		}
 	}
 	var sourceCluster, targetCluster string
