@@ -381,12 +381,49 @@ func (s *contextTestSuite) TestUpdateClusterReplicationLevel_FailsWhenUpdateShar
 	s.True(shardClosed, "the shard should have been closed on ShardOwnershipLostError")
 }
 
-func (s *contextTestSuite) TestReplicateFailoverMarkersSuccess() {
-	s.mockResource.ExecutionMgr.On("CreateFailoverMarkerTasks", mock.Anything, mock.Anything).Once().Return(nil)
+func (s *contextTestSuite) TestReplicateFailoverMarkers() {
+	cases := []struct {
+		name    string
+		markers []*persistence.FailoverMarkerTask
+		err     error
+		asserts func()
+	}{
+		{
+			name: "Success",
+			markers: []*persistence.FailoverMarkerTask{{
+				TaskData: persistence.TaskData{},
+				DomainID: testDomainID,
+			}},
+			asserts: func() {
+				s.NoError(s.context.closedError())
+			},
+		},
+		{
+			name: "Shard ownership lost error",
+			err:  &persistence.ShardOwnershipLostError{},
+			asserts: func() {
+				s.ErrorContains(s.context.closedError(), "shard closed")
+			},
+		},
+		{
+			name: "Other error",
+			err:  assert.AnError,
+			asserts: func() {
+				s.NoError(s.context.closedError())
+			},
+		},
+	}
 
-	markers := make([]*persistence.FailoverMarkerTask, 0)
-	err := s.context.ReplicateFailoverMarkers(context.Background(), markers)
-	s.NoError(err)
+	for _, tc := range cases {
+		s.Run(tc.name, func() {
+			// Need setup the suite manually, since we are in a subtest
+			s.SetupTest()
+			s.mockResource.ExecutionMgr.On("CreateFailoverMarkerTasks", mock.Anything, mock.Anything).Once().Return(tc.err)
+
+			err := s.context.ReplicateFailoverMarkers(context.Background(), tc.markers)
+			s.Equal(tc.err, err)
+		})
+	}
 }
 
 func (s *contextTestSuite) TestCreateWorkflowExecution() {
