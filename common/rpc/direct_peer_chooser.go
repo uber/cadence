@@ -66,7 +66,7 @@ func newDirectChooser(
 	metricsCl metrics.Client,
 	enableConnRetainMode dynamicconfig.BoolPropertyFn,
 ) *directPeerChooser {
-	return &directPeerChooser{
+	dpc := &directPeerChooser{
 		serviceName:          serviceName,
 		logger:               logger.WithTags(tag.DestService(serviceName)),
 		scope:                metricsCl.Scope(metrics.P2PRPCPeerChooserScope).Tagged(metrics.DestServiceTag(serviceName)),
@@ -74,6 +74,12 @@ func newDirectChooser(
 		enableConnRetainMode: enableConnRetainMode,
 		peers:                make(map[string]peer.Peer),
 	}
+
+	if dpc.enableConnRetainMode == nil {
+		dpc.enableConnRetainMode = func(opts ...dynamicconfig.FilterOption) bool { return false }
+	}
+
+	return dpc
 }
 
 // Start statisfies the peer.Chooser interface.
@@ -82,9 +88,15 @@ func (g *directPeerChooser) Start() (err error) {
 		return nil
 	}
 
-	defer func() { g.logger.Info("direct peer chooser started", tag.Error(err)) }()
+	defer func() {
+		if err != nil {
+			g.logger.Error("direct peer chooser failed to start", tag.Error(err))
+			return
+		}
+		g.logger.Info("direct peer chooser started")
+	}()
 
-	if g.enableConnRetainMode != nil && !g.enableConnRetainMode() {
+	if !g.enableConnRetainMode() {
 		c, ok := g.getLegacyChooser()
 		if ok {
 			return c.Start()
@@ -121,7 +133,7 @@ func (g *directPeerChooser) IsRunning() bool {
 		return false
 	}
 
-	if g.enableConnRetainMode != nil && !g.enableConnRetainMode() {
+	if !g.enableConnRetainMode() {
 		c, ok := g.getLegacyChooser()
 		if ok {
 			return c.IsRunning()
@@ -135,7 +147,7 @@ func (g *directPeerChooser) IsRunning() bool {
 // Choose returns an existing peer for the shard key.
 // ShardKey is {host}:{port} of the peer. It could be tchannel or grpc address.
 func (g *directPeerChooser) Choose(ctx context.Context, req *transport.Request) (peer peer.Peer, onFinish func(error), err error) {
-	if g.enableConnRetainMode != nil && !g.enableConnRetainMode() {
+	if !g.enableConnRetainMode() {
 		return g.chooseFromLegacyDirectPeerChooser(ctx, req)
 	}
 
@@ -211,9 +223,11 @@ func (g *directPeerChooser) updatePeersInternal(members []membership.HostInfo) {
 }
 
 func (g *directPeerChooser) removePeer(addr string) {
+	g.mu.RLock()
 	if err := g.t.ReleasePeer(g.peers[addr], noOpSubscriberInstance); err != nil {
 		g.logger.Error("failed to release peer", tag.Error(err), tag.Address(addr))
 	}
+	g.mu.RUnlock()
 
 	g.mu.Lock()
 	defer g.mu.Unlock()
