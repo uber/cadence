@@ -179,7 +179,7 @@ func Test__RootCause(t *testing.T) {
 		err            error
 	}{
 		{
-			name: "customer side failure",
+			name: "customer side known failure",
 			input: []invariant.InvariantCheckResult{
 				{
 					InvariantType: ActivityFailed.String(),
@@ -187,7 +187,35 @@ func Test__RootCause(t *testing.T) {
 					Metadata:      metadataInBytes,
 				}},
 			expectedResult: []invariant.InvariantRootCauseResult{{
+				RootCause: invariant.RootCauseTypeServiceSideCustomError,
+				Metadata:  metadataInBytes,
+			}},
+			err: nil,
+		},
+		{
+			name: "customer side error",
+			input: []invariant.InvariantCheckResult{
+				{
+					InvariantType: ActivityFailed.String(),
+					Reason:        GenericError.String(),
+					Metadata:      metadataInBytes,
+				}},
+			expectedResult: []invariant.InvariantRootCauseResult{{
 				RootCause: invariant.RootCauseTypeServiceSideIssue,
+				Metadata:  metadataInBytes,
+			}},
+			err: nil,
+		},
+		{
+			name: "customer side panic",
+			input: []invariant.InvariantCheckResult{
+				{
+					InvariantType: ActivityFailed.String(),
+					Reason:        PanicError.String(),
+					Metadata:      metadataInBytes,
+				}},
+			expectedResult: []invariant.InvariantRootCauseResult{{
+				RootCause: invariant.RootCauseTypeServiceSidePanic,
 				Metadata:  metadataInBytes,
 			}},
 			err: nil,
