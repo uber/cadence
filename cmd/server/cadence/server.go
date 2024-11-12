@@ -155,8 +155,9 @@ func (s *server) startService() common.Daemon {
 	)
 
 	params.MetricScope = svcCfg.Metrics.NewScope(params.Logger, params.Name)
+	params.MetricsClient = metrics.NewClient(params.MetricScope, service.GetMetricsServiceIdx(params.Name, params.Logger))
 
-	rpcParams, err := rpc.NewParams(params.Name, s.cfg, dc, params.Logger)
+	rpcParams, err := rpc.NewParams(params.Name, s.cfg, dc, params.Logger, params.MetricsClient)
 	if err != nil {
 		log.Fatalf("error creating rpc factory params: %v", err)
 	}
@@ -181,8 +182,6 @@ func (s *server) startService() common.Daemon {
 	if err != nil {
 		log.Fatalf("ringpop provider failed: %v", err)
 	}
-
-	params.MetricsClient = metrics.NewClient(params.MetricScope, service.GetMetricsServiceIdx(params.Name, params.Logger))
 
 	params.MembershipResolver, err = membership.NewResolver(
 		peerProvider,

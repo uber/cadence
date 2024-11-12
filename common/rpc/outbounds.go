@@ -55,12 +55,12 @@ type OutboundsBuilder interface {
 
 type Outbounds struct {
 	yarpc.Outbounds
-	onUpdatePeers func([]membership.HostInfo)
+	onUpdatePeers func(serviceName string, members []membership.HostInfo)
 }
 
-func (o *Outbounds) UpdatePeers(peers []membership.HostInfo) {
+func (o *Outbounds) UpdatePeers(serviceName string, peers []membership.HostInfo) {
 	if o.onUpdatePeers != nil {
-		o.onUpdatePeers(peers)
+		o.onUpdatePeers(serviceName, peers)
 	}
 }
 
@@ -76,7 +76,7 @@ func CombineOutbounds(builders ...OutboundsBuilder) OutboundsBuilder {
 func (b multiOutboundsBuilder) Build(grpc *grpc.Transport, tchannel *tchannel.Transport) (*Outbounds, error) {
 	outbounds := yarpc.Outbounds{}
 	var errs error
-	var callbacks []func([]membership.HostInfo)
+	var callbacks []func(string, []membership.HostInfo)
 	for _, builder := range b.builders {
 		builderOutbounds, err := builder.Build(grpc, tchannel)
 		if err != nil {
@@ -99,9 +99,9 @@ func (b multiOutboundsBuilder) Build(grpc *grpc.Transport, tchannel *tchannel.Tr
 
 	return &Outbounds{
 		Outbounds: outbounds,
-		onUpdatePeers: func(peers []membership.HostInfo) {
+		onUpdatePeers: func(serviceName string, members []membership.HostInfo) {
 			for _, callback := range callbacks {
-				callback(peers)
+				callback(serviceName, members)
 			}
 		},
 	}, errs

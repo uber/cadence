@@ -408,6 +408,11 @@ func Service(sv string) Tag {
 	return newStringTag("service", sv)
 }
 
+// DestService returns tag for destination service
+func DestService(sv string) Tag {
+	return newStringTag("dest-service", sv)
+}
+
 // Addresses returns tag for Addresses
 func Addresses(ads []string) Tag {
 	return newObjectTag("addresses", ads)

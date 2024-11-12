@@ -37,6 +37,7 @@ import (
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log/testlogger"
+	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/service"
 )
 
@@ -163,15 +164,16 @@ func TestDirectOutbound(t *testing.T) {
 	grpc := &grpc.Transport{}
 	tchannel := &tchannel.Transport{}
 	logger := testlogger.New(t)
+	metricCl := metrics.NewNoopMetricsClient()
 	falseFn := func(opts ...dynamicconfig.FilterOption) bool { return false }
 
-	o, err := NewDirectOutboundBuilder("cadence-history", false, nil, NewDirectPeerChooserFactory("cadence-history", logger), falseFn).Build(grpc, tchannel)
+	o, err := NewDirectOutboundBuilder("cadence-history", false, nil, NewDirectPeerChooserFactory("cadence-history", logger, metricCl), falseFn).Build(grpc, tchannel)
 	assert.NoError(t, err)
 	outbounds := o.Outbounds
 	assert.Equal(t, "cadence-history", outbounds["cadence-history"].ServiceName)
 	assert.NotNil(t, outbounds["cadence-history"].Unary)
 
-	o, err = NewDirectOutboundBuilder("cadence-history", true, nil, NewDirectPeerChooserFactory("cadence-history", logger), falseFn).Build(grpc, tchannel)
+	o, err = NewDirectOutboundBuilder("cadence-history", true, nil, NewDirectPeerChooserFactory("cadence-history", logger, metricCl), falseFn).Build(grpc, tchannel)
 	assert.NoError(t, err)
 	outbounds = o.Outbounds
 	assert.Equal(t, "cadence-history", outbounds["cadence-history"].ServiceName)

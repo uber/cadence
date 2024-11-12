@@ -34,6 +34,7 @@ import (
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/testlogger"
+	"github.com/uber/cadence/common/metrics"
 )
 
 type (
@@ -82,8 +83,9 @@ func TestDNSPeerChooserFactory(t *testing.T) {
 
 func TestDirectPeerChooserFactory(t *testing.T) {
 	logger := testlogger.New(t)
+	metricCl := metrics.NewNoopMetricsClient()
 	serviceName := "service"
-	pcf := NewDirectPeerChooserFactory(serviceName, logger)
+	pcf := NewDirectPeerChooserFactory(serviceName, logger, metricCl)
 	directConnRetainFn := func(opts ...dynamicconfig.FilterOption) bool { return false }
 	grpcTransport := grpc.NewTransport()
 	chooser, err := pcf.CreatePeerChooser(grpcTransport, PeerChooserOptions{

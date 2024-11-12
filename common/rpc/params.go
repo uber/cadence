@@ -34,6 +34,7 @@ import (
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/service"
 )
 
@@ -62,7 +63,7 @@ type httpParams struct {
 }
 
 // NewParams creates parameters for rpc.Factory from the given config
-func NewParams(serviceName string, config *config.Config, dc *dynamicconfig.Collection, logger log.Logger) (Params, error) {
+func NewParams(serviceName string, config *config.Config, dc *dynamicconfig.Collection, logger log.Logger, metricsCl metrics.Client) (Params, error) {
 	serviceConfig, err := config.GetServiceConfig(serviceName)
 	if err != nil {
 		return Params{}, err
@@ -143,14 +144,14 @@ func NewParams(serviceName string, config *config.Config, dc *dynamicconfig.Coll
 				service.History,
 				enableGRPCOutbound,
 				outboundTLS[service.History],
-				NewDirectPeerChooserFactory(service.History, logger),
+				NewDirectPeerChooserFactory(service.History, logger, metricsCl),
 				dc.GetBoolProperty(dynamicconfig.EnableConnectionRetainingDirectChooser),
 			),
 			NewDirectOutboundBuilder(
 				service.Matching,
 				enableGRPCOutbound,
 				outboundTLS[service.Matching],
-				NewDirectPeerChooserFactory(service.Matching, logger),
+				NewDirectPeerChooserFactory(service.Matching, logger, metricsCl),
 				dc.GetBoolProperty(dynamicconfig.EnableConnectionRetainingDirectChooser),
 			),
 			publicClientOutbound,

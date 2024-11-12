@@ -395,7 +395,9 @@ func (h *Impl) Start() {
 		h.logger.WithTags(tag.Error(err)).Fatal("fail to start PProf")
 	}
 
-	h.rpcFactory.Start(h.membershipResolver)
+	if err := h.rpcFactory.Start(h.membershipResolver); err != nil {
+		h.logger.WithTags(tag.Error(err)).Fatal("fail to start RPC factory")
+	}
 
 	if err := h.dispatcher.Start(); err != nil {
 		h.logger.WithTags(tag.Error(err)).Fatal("fail to start dispatcher")
