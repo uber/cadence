@@ -163,7 +163,7 @@ func Test__rootCauseIssues(t *testing.T) {
 			Metadata:  taskListBacklogInBytes,
 		},
 		{
-			RootCause: invariant.RootCauseTypeServiceSideIssue,
+			RootCause: invariant.RootCauseTypeServiceSideCustomError,
 			Metadata:  actMetadataInBytes,
 		},
 	}
