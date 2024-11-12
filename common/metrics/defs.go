@@ -598,6 +598,8 @@ const (
 	AdminClientGetDomainAsyncWorkflowConfiguratonScope
 	// AdminClientGetWorkflowExecutionRawHistoryScope is the metric scope for admin.UpdateDomainAsyncWorkflowConfiguration
 	AdminClientUpdateDomainAsyncWorkflowConfiguratonScope
+	// AdminClientUpdateTaskListPartitionConfigScope is the metrics scope for admin.UpdateTaskListPartitionConfig
+	AdminClientUpdateTaskListPartitionConfigScope
 
 	// DCRedirectionDeprecateDomainScope tracks RPC calls for dc redirection
 	DCRedirectionDeprecateDomainScope
@@ -1627,6 +1629,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		AdminClientGetReplicationMessagesScope:                {operation: "AdminClientGetReplicationMessages", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
 		AdminClientGetDomainAsyncWorkflowConfiguratonScope:    {operation: "AdminClientGetDomainAsyncWorkflowConfiguraton", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
 		AdminClientUpdateDomainAsyncWorkflowConfiguratonScope: {operation: "AdminClientUpdateDomainAsyncWorkflowConfiguraton", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientUpdateTaskListPartitionConfigScope:         {operation: "AdminClientUpdateTaskListPartitionConfig", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
 
 		DCRedirectionDeprecateDomainScope:                       {operation: "DCRedirectionDeprecateDomain", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
 		DCRedirectionDescribeDomainScope:                        {operation: "DCRedirectionDescribeDomain", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},

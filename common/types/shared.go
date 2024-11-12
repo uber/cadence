@@ -1690,8 +1690,9 @@ func (v *DescribeTaskListRequest) GetIncludeTaskListStatus() (o bool) {
 
 // DescribeTaskListResponse is an internal type (TBD...)
 type DescribeTaskListResponse struct {
-	Pollers        []*PollerInfo   `json:"pollers,omitempty"`
-	TaskListStatus *TaskListStatus `json:"taskListStatus,omitempty"`
+	Pollers         []*PollerInfo   `json:"pollers,omitempty"`
+	TaskListStatus  *TaskListStatus `json:"taskListStatus,omitempty"`
+	PartitionConfig *TaskListPartitionConfig
 }
 
 // GetPollers is an internal getter (TBD...)

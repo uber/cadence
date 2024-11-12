@@ -323,6 +323,7 @@ var (
 	AdminClientOperationUpdateDomainAsyncWorkflowConfiguraton = clientOperation("admin-update-domain-async-workflow-configuration")
 	AdminDeleteWorkflow                                       = clientOperation("admin-delete-workflow")
 	MaintainCorruptWorkflow                                   = clientOperation("maintain-corrupt-workflow")
+	AdminClientOperationUpdateTaskListPartitionConfig         = clientOperation("admin-update-task-list-partition-config")
 
 	FrontendClientOperationDeprecateDomain                       = clientOperation("frontend-deprecate-domain")
 	FrontendClientOperationDescribeDomain                        = clientOperation("frontend-describe-domain")
