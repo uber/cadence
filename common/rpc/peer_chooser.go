@@ -23,9 +23,11 @@
 package rpc
 
 import (
+	"context"
 	"time"
 
 	"go.uber.org/yarpc/api/peer"
+	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/peer/roundrobin"
 
 	"github.com/uber/cadence/common/dynamicconfig"
@@ -74,18 +76,42 @@ type (
 )
 
 type defaultPeerChooser struct {
-	peer.Chooser
+	actual peer.Chooser
+	onStop func()
 }
 
 // UpdatePeers is a no-op for defaultPeerChooser. It is added to satisfy the PeerChooser interface.
 func (d *defaultPeerChooser) UpdatePeers(string, []membership.HostInfo) {}
+
+// Choose a Peer for the next call, block until a peer is available (or timeout)
+func (d *defaultPeerChooser) Choose(ctx context.Context, req *transport.Request) (peer peer.Peer, onFinish func(error), err error) {
+	return d.actual.Choose(ctx, req)
+}
+
+func (d *defaultPeerChooser) Start() error {
+	return d.actual.Start()
+}
+
+func (d *defaultPeerChooser) Stop() error {
+	if d.onStop != nil {
+		d.onStop()
+	}
+	return d.actual.Stop()
+}
+
+func (d *defaultPeerChooser) IsRunning() bool {
+	return d.actual.IsRunning()
+}
 
 func NewDNSPeerChooserFactory(interval time.Duration, logger log.Logger) PeerChooserFactory {
 	if interval <= 0 {
 		interval = defaultDNSRefreshInterval
 	}
 
-	return &dnsPeerChooserFactory{interval, logger}
+	return &dnsPeerChooserFactory{
+		interval: interval,
+		logger:   logger,
+	}
 }
 
 func (f *dnsPeerChooserFactory) CreatePeerChooser(transport peer.Transport, opts PeerChooserOptions) (PeerChooser, error) {
@@ -95,7 +121,10 @@ func (f *dnsPeerChooserFactory) CreatePeerChooser(transport peer.Transport, opts
 		return nil, err
 	}
 	peerListUpdater.Start()
-	return &defaultPeerChooser{Chooser: peerList}, nil
+	return &defaultPeerChooser{
+		actual: peerList,
+		onStop: peerListUpdater.Stop,
+	}, nil
 }
 
 func NewDirectPeerChooserFactory(serviceName string, logger log.Logger, metricsCl metrics.Client) PeerChooserFactory {
