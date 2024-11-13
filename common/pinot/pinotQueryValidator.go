@@ -271,7 +271,7 @@ func (qv *VisibilityQueryValidator) processSystemKey(expr sqlparser.Expr) (strin
 			return "", fmt.Errorf("right comparison is invalid: %v", comparisonExpr.Right)
 		}
 		colValStr := string(colVal.Val)
-		return fmt.Sprintf("TEXT_MATCH(%s, '%s')", colNameStr, colValStr), nil
+		return fmt.Sprintf("TEXT_MATCH(%s, '/.*%s.*/')", colNameStr, colValStr), nil
 	}
 
 	if comparisonExpr.Operator != sqlparser.EqualStr && comparisonExpr.Operator != sqlparser.NotEqualStr {

@@ -126,9 +126,20 @@ func fetchStartedEvent(attr *types.ActivityTaskFailedEventAttributes, events []*
 func (f *failure) RootCause(ctx context.Context, issues []invariant.InvariantCheckResult) ([]invariant.InvariantRootCauseResult, error) {
 	result := make([]invariant.InvariantRootCauseResult, 0)
 	for _, issue := range issues {
-		if issue.Reason == CustomError.String() || issue.Reason == PanicError.String() {
+		switch issue.Reason {
+		case GenericError.String():
 			result = append(result, invariant.InvariantRootCauseResult{
 				RootCause: invariant.RootCauseTypeServiceSideIssue,
+				Metadata:  issue.Metadata,
+			})
+		case PanicError.String():
+			result = append(result, invariant.InvariantRootCauseResult{
+				RootCause: invariant.RootCauseTypeServiceSidePanic,
+				Metadata:  issue.Metadata,
+			})
+		case CustomError.String():
+			result = append(result, invariant.InvariantRootCauseResult{
+				RootCause: invariant.RootCauseTypeServiceSideCustomError,
 				Metadata:  issue.Metadata,
 			})
 		}
