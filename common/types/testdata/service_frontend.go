@@ -419,8 +419,9 @@ var (
 		IncludeTaskListStatus: true,
 	}
 	DescribeTaskListResponse = types.DescribeTaskListResponse{
-		Pollers:        PollerInfoArray,
-		TaskListStatus: &TaskListStatus,
+		Pollers:         PollerInfoArray,
+		TaskListStatus:  &TaskListStatus,
+		PartitionConfig: &TaskListPartitionConfig,
 	}
 	ListTaskListPartitionsRequest = types.ListTaskListPartitionsRequest{
 		Domain:   DomainName,

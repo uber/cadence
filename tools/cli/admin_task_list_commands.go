@@ -145,3 +145,52 @@ func printTaskListStatus(taskListStatus *types.TaskListStatus) error {
 	}}
 	return RenderTable(os.Stdout, table, RenderOptions{Color: true})
 }
+
+func AdminUpdateTaskListPartitionConfig(c *cli.Context) error {
+	adminClient, err := getDeps(c).ServerAdminClient(c)
+	if err != nil {
+		return err
+	}
+	domain, err := getRequiredOption(c, FlagDomain)
+	if err != nil {
+		return commoncli.Problem("Required flag not found: ", err)
+	}
+	taskList, err := getRequiredOption(c, FlagTaskList)
+	if err != nil {
+		return commoncli.Problem("Required flag not found: ", err)
+	}
+	var taskListType *types.TaskListType
+	if strings.ToLower(c.String(FlagTaskListType)) == "activity" {
+		taskListType = types.TaskListTypeActivity.Ptr()
+	} else if strings.ToLower(c.String(FlagTaskListType)) == "decision" {
+		taskListType = types.TaskListTypeDecision.Ptr()
+	} else {
+		return commoncli.Problem("Invalid task list type: valid types are [activity, decision]", nil)
+	}
+	numReadPartitions, err := getRequiredIntOption(c, FlagNumReadPartitions)
+	if err != nil {
+		return commoncli.Problem("Required flag not found: ", err)
+	}
+	numWritePartitions, err := getRequiredIntOption(c, FlagNumWritePartitions)
+	if err != nil {
+		return commoncli.Problem("Required flag not found: ", err)
+	}
+	ctx, cancel, err := newContext(c)
+	defer cancel()
+	if err != nil {
+		return commoncli.Problem("Error in creating context:", err)
+	}
+	_, err = adminClient.UpdateTaskListPartitionConfig(ctx, &types.UpdateTaskListPartitionConfigRequest{
+		Domain:       domain,
+		TaskList:     &types.TaskList{Name: taskList},
+		TaskListType: taskListType,
+		PartitionConfig: &types.TaskListPartitionConfig{
+			NumReadPartitions:  int32(numReadPartitions),
+			NumWritePartitions: int32(numWritePartitions),
+		},
+	})
+	if err != nil {
+		return commoncli.Problem("Operation UpdateTaskListPartitionConfig failed.", err)
+	}
+	return nil
+}

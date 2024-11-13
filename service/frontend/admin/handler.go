@@ -1777,6 +1777,10 @@ func (adh *adminHandlerImpl) UpdateDomainAsyncWorkflowConfiguraton(ctx context.C
 	return resp, nil
 }
 
+func (adh *adminHandlerImpl) UpdateTaskListPartitionConfig(ctx context.Context, request *types.UpdateTaskListPartitionConfigRequest) (_ *types.UpdateTaskListPartitionConfigResponse, retError error) {
+	return nil, errors.New("not implemented")
+}
+
 func convertFromDataBlob(blob *types.DataBlob) (interface{}, error) {
 	switch *blob.EncodingType {
 	case types.EncodingTypeJSON:

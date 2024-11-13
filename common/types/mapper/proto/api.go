@@ -1204,8 +1204,9 @@ func FromDescribeTaskListResponse(t *types.DescribeTaskListResponse) *apiv1.Desc
 		return nil
 	}
 	return &apiv1.DescribeTaskListResponse{
-		Pollers:        FromPollerInfoArray(t.Pollers),
-		TaskListStatus: FromTaskListStatus(t.TaskListStatus),
+		Pollers:         FromPollerInfoArray(t.Pollers),
+		TaskListStatus:  FromTaskListStatus(t.TaskListStatus),
+		PartitionConfig: FromAPITaskListPartitionConfig(t.PartitionConfig),
 	}
 }
 
@@ -1214,8 +1215,9 @@ func ToDescribeTaskListResponse(t *apiv1.DescribeTaskListResponse) *types.Descri
 		return nil
 	}
 	return &types.DescribeTaskListResponse{
-		Pollers:        ToPollerInfoArray(t.Pollers),
-		TaskListStatus: ToTaskListStatus(t.TaskListStatus),
+		Pollers:         ToPollerInfoArray(t.Pollers),
+		TaskListStatus:  ToTaskListStatus(t.TaskListStatus),
+		PartitionConfig: ToAPITaskListPartitionConfig(t.PartitionConfig),
 	}
 }
 
@@ -6066,4 +6068,26 @@ func ToResetStickyTaskListResponse(t *apiv1.ResetStickyTaskListResponse) *types.
 		return nil
 	}
 	return &types.ResetStickyTaskListResponse{}
+}
+
+func FromAPITaskListPartitionConfig(t *types.TaskListPartitionConfig) *apiv1.TaskListPartitionConfig {
+	if t == nil {
+		return nil
+	}
+	return &apiv1.TaskListPartitionConfig{
+		Version:            t.Version,
+		NumReadPartitions:  t.NumReadPartitions,
+		NumWritePartitions: t.NumWritePartitions,
+	}
+}
+
+func ToAPITaskListPartitionConfig(t *apiv1.TaskListPartitionConfig) *types.TaskListPartitionConfig {
+	if t == nil {
+		return nil
+	}
+	return &types.TaskListPartitionConfig{
+		Version:            t.Version,
+		NumReadPartitions:  t.NumReadPartitions,
+		NumWritePartitions: t.NumWritePartitions,
+	}
 }

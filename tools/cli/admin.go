@@ -711,6 +711,34 @@ func newAdminTaskListCommands() []*cli.Command {
 			},
 			Action: AdminListTaskList,
 		},
+		{
+			Name:    "update-partition",
+			Aliases: []string{"up"},
+			Usage:   "Update tasklist's partition config",
+			Flags: []cli.Flag{
+				&cli.StringFlag{
+					Name:    FlagTaskList,
+					Aliases: []string{"tl"},
+					Usage:   "TaskList Name",
+				},
+				&cli.StringFlag{
+					Name:    FlagTaskListType,
+					Aliases: []string{"tlt"},
+					Usage:   "TaskList type [decision|activity]",
+				},
+				&cli.IntFlag{
+					Name:    FlagNumReadPartitions,
+					Aliases: []string{"nrp"},
+					Usage:   "Number of read partitions",
+				},
+				&cli.IntFlag{
+					Name:    FlagNumWritePartitions,
+					Aliases: []string{"nwp"},
+					Usage:   "Number of write partitions",
+				},
+			},
+			Action: AdminUpdateTaskListPartitionConfig,
+		},
 	}
 }
 

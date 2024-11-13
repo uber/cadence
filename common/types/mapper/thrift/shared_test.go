@@ -1102,7 +1102,10 @@ func TestDescribeTaskListResponseConversion(t *testing.T) {
 	for _, original := range testCases {
 		thriftObj := FromDescribeTaskListResponse(original)
 		roundTripObj := ToDescribeTaskListResponse(thriftObj)
-		assert.Equal(t, original, roundTripObj)
+		opt := cmpopts.IgnoreFields(types.DescribeTaskListResponse{}, "PartitionConfig")
+		if diff := cmp.Diff(original, roundTripObj, opt); diff != "" {
+			t.Fatalf("Mismatch (-want +got):\n%s", diff)
+		}
 	}
 }
 
@@ -1775,7 +1778,10 @@ func TestDescribeTaskListResponseMapConversion(t *testing.T) {
 	for _, original := range testCases {
 		thriftObj := FromDescribeTaskListResponseMap(original)
 		roundTripObj := ToDescribeTaskListResponseMap(thriftObj)
-		assert.Equal(t, original, roundTripObj)
+		opt := cmpopts.IgnoreFields(types.DescribeTaskListResponse{}, "PartitionConfig")
+		if diff := cmp.Diff(original, roundTripObj, opt); diff != "" {
+			t.Fatalf("Mismatch (-want +got):\n%s", diff)
+		}
 	}
 }
 

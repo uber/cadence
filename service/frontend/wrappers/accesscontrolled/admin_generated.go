@@ -610,3 +610,19 @@ func (a *adminHandler) UpdateGlobalIsolationGroups(ctx context.Context, request 
 	}
 	return a.handler.UpdateGlobalIsolationGroups(ctx, request)
 }
+
+func (a *adminHandler) UpdateTaskListPartitionConfig(ctx context.Context, up1 *types.UpdateTaskListPartitionConfigRequest) (up2 *types.UpdateTaskListPartitionConfigResponse, err error) {
+	attr := &authorization.Attributes{
+		APIName:     "UpdateTaskListPartitionConfig",
+		Permission:  authorization.PermissionAdmin,
+		RequestBody: authorization.NewFilteredRequestBody(up1),
+	}
+	isAuthorized, err := a.isAuthorized(ctx, attr)
+	if err != nil {
+		return nil, err
+	}
+	if !isAuthorized {
+		return nil, errUnauthorized
+	}
+	return a.handler.UpdateTaskListPartitionConfig(ctx, up1)
+}

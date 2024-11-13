@@ -219,6 +219,8 @@ const (
 	FlagIsolationGroupSetDrains        = "set-drains"
 	FlagIsolationGroupsRemoveAllDrains = "remove-all-drains"
 	FlagSearchAttribute                = "search_attr"
+	FlagNumReadPartitions              = "num_read_partitions"
+	FlagNumWritePartitions             = "num_write_partitions"
 )
 
 var flagsForExecution = []cli.Flag{
