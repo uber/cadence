@@ -217,5 +217,5 @@ func (f fakePeerChooserFactory) CreatePeerChooser(transport peer.Transport, opts
 	if err != nil {
 		return nil, err
 	}
-	return &defaultPeerChooser{Chooser: chooser}, nil
+	return &defaultPeerChooser{actual: chooser}, nil
 }
