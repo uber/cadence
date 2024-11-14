@@ -156,6 +156,7 @@ func (w *dw) DiagnosticsWorkflow(ctx workflow.Context, params DiagnosticsWorkflo
 	failureResult.Issues = failureIssues
 
 	failureResult.RootCause = retrieveFailureRootCause(rootCauseResult)
+	failureResult.Runbooks = []string{linkToFailuresRunbook}
 
 	scope.IncCounter(metrics.DiagnosticsWorkflowSuccess)
 	return &DiagnosticsWorkflowResult{
