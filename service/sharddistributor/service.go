@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package shardmanager
+package sharddistributor
 
 import (
 	"sync/atomic"
@@ -27,10 +27,10 @@ import (
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/common/service"
-	"github.com/uber/cadence/service/shardmanager/config"
+	"github.com/uber/cadence/service/sharddistributor/config"
 )
 
-// Service represents the shard manager service
+// Service represents the shard distributor service
 type Service struct {
 	resource.Resource
 
@@ -57,13 +57,13 @@ func NewService(
 
 	serviceResource, err := factory.NewResource(
 		params,
-		service.ShardManager,
+		service.ShardDistributor,
 		&service.Config{
 			PersistenceMaxQPS:        serviceConfig.PersistenceMaxQPS,
 			PersistenceGlobalMaxQPS:  serviceConfig.PersistenceGlobalMaxQPS,
 			ThrottledLoggerMaxRPS:    serviceConfig.ThrottledLogRPS,
 			IsErrorRetryableFunction: common.IsServiceTransientError,
-			// shard manager doesn't need visibility config as it never read or write visibility
+			// shard distributor doesn't need visibility config as it never read or write visibility
 		},
 	)
 	if err != nil {
@@ -85,7 +85,7 @@ func (s *Service) Start() {
 	}
 
 	logger := s.GetLogger()
-	logger.Info("shard manager starting")
+	logger.Info("shard distributor starting")
 
 	// setup the handler
 
@@ -103,5 +103,5 @@ func (s *Service) Stop() {
 
 	s.Resource.Stop()
 
-	s.GetLogger().Info("shard manager stopped")
+	s.GetLogger().Info("shard distributor stopped")
 }
