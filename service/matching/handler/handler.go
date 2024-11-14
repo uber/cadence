@@ -457,9 +457,8 @@ func (h *handlerImpl) RefreshTaskListPartitionConfig(
 	sw := hCtx.startProfiling(&h.startWG)
 	defer sw.Stop()
 
-	if ok := h.userRateLimiter.Allow(quotas.Info{Domain: domainName}); !ok {
-		return nil, hCtx.handleErr(errMatchingHostThrottle)
-	}
+	// Count the request in the RPS, but we still accept it even if RPS is exceeded
+	h.userRateLimiter.Allow(quotas.Info{Domain: domainName})
 
 	response, err := h.engine.RefreshTaskListPartitionConfig(hCtx, request)
 	return response, hCtx.handleErr(err)

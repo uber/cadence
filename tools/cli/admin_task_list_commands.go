@@ -22,6 +22,7 @@ package cli
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"strings"
 
@@ -92,21 +93,21 @@ func AdminDescribeTaskList(c *cli.Context) error {
 	if taskListStatus == nil {
 		return commoncli.Problem(colorMagenta("No tasklist status information."), nil)
 	}
-	if err := printTaskListStatus(taskListStatus); err != nil {
+	if err := printTaskListStatus(getDeps(c).Output(), taskListStatus); err != nil {
 		return fmt.Errorf("failed to print task list status: %w", err)
 	}
-	fmt.Printf("\n")
+	getDeps(c).Output().Write([]byte("\n"))
 	if response.PartitionConfig != nil {
-		if err := printTaskListPartitionConfig(response.PartitionConfig); err != nil {
+		if err := printTaskListPartitionConfig(getDeps(c).Output(), response.PartitionConfig); err != nil {
 			return fmt.Errorf("failed to print task list partition config: %w", err)
 		}
-		fmt.Printf("\n")
+		getDeps(c).Output().Write([]byte("\n"))
 	}
 	pollers := response.Pollers
 	if len(pollers) == 0 {
 		return commoncli.Problem(colorMagenta("No poller for tasklist: "+taskList), nil)
 	}
-	return printTaskListPollers(pollers, taskListType)
+	return printTaskListPollers(getDeps(c).Output(), pollers, taskListType)
 }
 
 // AdminListTaskList displays all task lists under a domain.
@@ -144,7 +145,7 @@ func AdminListTaskList(c *cli.Context) error {
 	return RenderTable(os.Stdout, table, RenderOptions{Color: true, Border: true})
 }
 
-func printTaskListStatus(taskListStatus *types.TaskListStatus) error {
+func printTaskListStatus(w io.Writer, taskListStatus *types.TaskListStatus) error {
 	table := []TaskListStatusRow{{
 		ReadLevel: taskListStatus.GetReadLevel(),
 		AckLevel:  taskListStatus.GetAckLevel(),
@@ -153,16 +154,16 @@ func printTaskListStatus(taskListStatus *types.TaskListStatus) error {
 		StartID:   taskListStatus.GetTaskIDBlock().GetStartID(),
 		EndID:     taskListStatus.GetTaskIDBlock().GetEndID(),
 	}}
-	return RenderTable(os.Stdout, table, RenderOptions{Color: true})
+	return RenderTable(w, table, RenderOptions{Color: true})
 }
 
-func printTaskListPartitionConfig(config *types.TaskListPartitionConfig) error {
+func printTaskListPartitionConfig(w io.Writer, config *types.TaskListPartitionConfig) error {
 	table := TaskListPartitionConfigRow{
 		Version:            config.Version,
 		NumReadPartitions:  config.NumReadPartitions,
 		NumWritePartitions: config.NumWritePartitions,
 	}
-	return RenderTable(os.Stdout, table, RenderOptions{Color: true})
+	return RenderTable(w, table, RenderOptions{Color: true})
 }
 
 func AdminUpdateTaskListPartitionConfig(c *cli.Context) error {

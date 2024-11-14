@@ -810,13 +810,6 @@ func (s *handlerSuite) TestRefreshTaskListPartitionConfig() {
 			want: &types.MatchingRefreshTaskListPartitionConfigResponse{},
 		},
 		{
-			name: "Error case - rate limiter not allowed",
-			setupMocks: func() {
-				s.mockLimiter.EXPECT().Allow().Return(false).Times(1)
-			},
-			err: &types.ServiceBusyError{Message: "Matching host rps exceeded"},
-		},
-		{
 			name: "Error case - RefreshTaskListPartitionConfig failed",
 			setupMocks: func() {
 				s.mockLimiter.EXPECT().Allow().Return(true).Times(1)

@@ -151,7 +151,7 @@ func (cf *rpcClientFactory) NewMatchingClientWithTimeout(
 
 	peerResolver := matching.NewPeerResolver(cf.resolver, namedPort)
 
-	partitionConfigProvider := matching.NewPartitionConfigProvider(cf.logger, domainIDToName, cf.dynConfig)
+	partitionConfigProvider := matching.NewPartitionConfigProvider(cf.logger, cf.metricsClient, domainIDToName, cf.dynConfig)
 	defaultLoadBalancer := matching.NewLoadBalancer(partitionConfigProvider)
 	roundRobinLoadBalancer := matching.NewRoundRobinLoadBalancer(partitionConfigProvider)
 	weightedLoadBalancer := matching.NewWeightedLoadBalancer(roundRobinLoadBalancer, partitionConfigProvider, cf.logger)

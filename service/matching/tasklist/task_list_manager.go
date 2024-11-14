@@ -300,17 +300,16 @@ func (c *taskListManagerImpl) handleErr(err error) error {
 
 func (c *taskListManagerImpl) TaskListPartitionConfig() *types.TaskListPartitionConfig {
 	c.partitionConfigLock.RLock()
-	if c.partitionConfig != nil {
-		config := *c.partitionConfig
-		c.partitionConfigLock.RUnlock()
-		c.logger.Debug("get task list partition config from db", tag.Dynamic("root-partition", c.taskListID.GetRoot()), tag.Dynamic("config", config))
-		c.scope.Tagged(metrics.TaskListRootPartitionTag(c.taskListID.GetRoot())).UpdateGauge(metrics.TaskListPartitionConfigNumReadGauge, float64(config.NumReadPartitions))
-		c.scope.Tagged(metrics.TaskListRootPartitionTag(c.taskListID.GetRoot())).UpdateGauge(metrics.TaskListPartitionConfigNumWriteGauge, float64(config.NumWritePartitions))
-		c.scope.Tagged(metrics.TaskListRootPartitionTag(c.taskListID.GetRoot())).UpdateGauge(metrics.TaskListPartitionConfigVersionGauge, float64(config.Version))
-		return &config
+	defer c.partitionConfigLock.RUnlock()
+	if c.partitionConfig == nil {
+		return nil
 	}
-	c.partitionConfigLock.RUnlock()
-	return nil
+	config := *c.partitionConfig
+	c.logger.Debug("get task list partition config from db", tag.Dynamic("root-partition", c.taskListID.GetRoot()), tag.Dynamic("config", config))
+	c.scope.Tagged(metrics.TaskListRootPartitionTag(c.taskListID.GetRoot())).UpdateGauge(metrics.TaskListPartitionConfigNumReadGauge, float64(config.NumReadPartitions))
+	c.scope.Tagged(metrics.TaskListRootPartitionTag(c.taskListID.GetRoot())).UpdateGauge(metrics.TaskListPartitionConfigNumWriteGauge, float64(config.NumWritePartitions))
+	c.scope.Tagged(metrics.TaskListRootPartitionTag(c.taskListID.GetRoot())).UpdateGauge(metrics.TaskListPartitionConfigVersionGauge, float64(config.Version))
+	return &config
 }
 
 func isTaskListPartitionConfigEqual(a types.TaskListPartitionConfig, b types.TaskListPartitionConfig) bool {

@@ -856,6 +856,9 @@ const (
 	// P2PRPCPeerChooserScope is the metrics scope for P2P RPC peer chooser
 	P2PRPCPeerChooserScope
 
+	// PartitionConfigProviderScope is the metrics scope for Partition Config Provider
+	PartitionConfigProviderScope
+
 	NumCommonScopes
 )
 
@@ -1762,7 +1765,8 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		GlobalRatelimiter:           {operation: "GlobalRatelimiter"},
 		GlobalRatelimiterAggregator: {operation: "GlobalRatelimiterAggregator"},
 
-		P2PRPCPeerChooserScope: {operation: "P2PRPCPeerChooser"},
+		P2PRPCPeerChooserScope:       {operation: "P2PRPCPeerChooser"},
+		PartitionConfigProviderScope: {operation: "PartitionConfigProvider"},
 	},
 	// Frontend Scope Names
 	Frontend: {
