@@ -54,7 +54,7 @@ import (
 	"github.com/uber/cadence/service/frontend"
 	"github.com/uber/cadence/service/history"
 	"github.com/uber/cadence/service/matching"
-	"github.com/uber/cadence/service/shardmanager"
+	"github.com/uber/cadence/service/sharddistributor"
 	"github.com/uber/cadence/service/worker"
 )
 
@@ -272,8 +272,8 @@ func (s *server) startService() common.Daemon {
 		daemon, err = matching.NewService(&params)
 	case service.Worker:
 		daemon, err = worker.NewService(&params)
-	case service.ShardManager:
-		daemon, err = shardmanager.NewService(&params, resource.NewResourceFactory())
+	case service.ShardDistributor:
+		daemon, err = sharddistributor.NewService(&params, resource.NewResourceFactory())
 	}
 	if err != nil {
 		params.Logger.Fatal("Fail to start "+s.name+" service ", tag.Error(err))
