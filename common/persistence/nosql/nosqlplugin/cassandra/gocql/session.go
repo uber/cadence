@@ -72,8 +72,8 @@ func initSession(
 	cluster.SerialConsistency = mustConvertSerialConsistency(config.SerialConsistency)
 	cluster.Timeout = config.Timeout
 	cluster.ConnectTimeout = config.ConnectTimeout
-	cluster.IgnorePeerAddr = true // testing
-	
+	cluster.DisableInitialHostLookup = true // testing
+
 	return cluster.CreateSession()
 }
 
