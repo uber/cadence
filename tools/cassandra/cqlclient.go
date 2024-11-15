@@ -126,8 +126,8 @@ func NewCQLClient(cfg *CQLClientConfig, expectedConsistency gocql.Consistency) (
 		AllowedAuthenticators: cfg.AllowedAuthenticators,
 		Keyspace:              cfg.Keyspace,
 		TLS:                   cfg.TLS,
-		Timeout:               time.Duration(cfg.Timeout) * time.Second,
-		ConnectTimeout:        time.Duration(cfg.ConnectTimeout) * time.Second,
+		Timeout:               time.Second,
+		ConnectTimeout:        time.Second,
 		ProtoVersion:          cfg.ProtoVersion,
 		Consistency:           expectedConsistency,
 	})
