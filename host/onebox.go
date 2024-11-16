@@ -188,6 +188,8 @@ type (
 		Pollers []SimulationPollerConfiguration
 
 		Tasks []SimulationTaskConfiguration
+
+		GetPartitionConfigFromDB bool
 	}
 
 	SimulationPollerConfiguration struct {
