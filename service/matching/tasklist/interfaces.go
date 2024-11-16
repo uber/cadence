@@ -60,6 +60,8 @@ type (
 		GetTaskListKind() types.TaskListKind
 		TaskListID() *Identifier
 		TaskListPartitionConfig() *types.TaskListPartitionConfig
+		UpdateTaskListPartitionConfig(context.Context, *types.TaskListPartitionConfig) error
+		RefreshTaskListPartitionConfig(context.Context, *types.TaskListPartitionConfig) error
 	}
 
 	TaskMatcher interface {

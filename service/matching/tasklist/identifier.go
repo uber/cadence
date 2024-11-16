@@ -99,10 +99,10 @@ func (tn *qualifiedTaskListName) Parent(degree int) string {
 		return ""
 	}
 	pid := (tn.partition+degree-1)/degree - 1
-	return tn.mkName(pid)
+	return tn.GetPartition(pid)
 }
 
-func (tn *qualifiedTaskListName) mkName(partition int) string {
+func (tn *qualifiedTaskListName) GetPartition(partition int) string {
 	if partition == 0 {
 		return tn.baseName
 	}

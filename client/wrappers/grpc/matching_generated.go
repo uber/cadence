@@ -80,7 +80,17 @@ func (g matchingClient) QueryWorkflow(ctx context.Context, mp1 *types.MatchingQu
 	return proto.ToMatchingQueryWorkflowResponse(response), proto.ToError(err)
 }
 
+func (g matchingClient) RefreshTaskListPartitionConfig(ctx context.Context, mp1 *types.MatchingRefreshTaskListPartitionConfigRequest, p1 ...yarpc.CallOption) (mp2 *types.MatchingRefreshTaskListPartitionConfigResponse, err error) {
+	response, err := g.c.RefreshTaskListPartitionConfig(ctx, proto.FromMatchingRefreshTaskListPartitionConfigRequest(mp1), p1...)
+	return proto.ToMatchingRefreshTaskListPartitionConfigResponse(response), proto.ToError(err)
+}
+
 func (g matchingClient) RespondQueryTaskCompleted(ctx context.Context, mp1 *types.MatchingRespondQueryTaskCompletedRequest, p1 ...yarpc.CallOption) (err error) {
 	_, err = g.c.RespondQueryTaskCompleted(ctx, proto.FromMatchingRespondQueryTaskCompletedRequest(mp1), p1...)
 	return proto.ToError(err)
+}
+
+func (g matchingClient) UpdateTaskListPartitionConfig(ctx context.Context, mp1 *types.MatchingUpdateTaskListPartitionConfigRequest, p1 ...yarpc.CallOption) (mp2 *types.MatchingUpdateTaskListPartitionConfigResponse, err error) {
+	response, err := g.c.UpdateTaskListPartitionConfig(ctx, proto.FromMatchingUpdateTaskListPartitionConfigRequest(mp1), p1...)
+	return proto.ToMatchingUpdateTaskListPartitionConfigResponse(response), proto.ToError(err)
 }

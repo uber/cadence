@@ -217,8 +217,9 @@ func FromMatchingDescribeTaskListResponse(t *types.DescribeTaskListResponse) *ma
 		return nil
 	}
 	return &matchingv1.DescribeTaskListResponse{
-		Pollers:        FromPollerInfoArray(t.Pollers),
-		TaskListStatus: FromTaskListStatus(t.TaskListStatus),
+		Pollers:         FromPollerInfoArray(t.Pollers),
+		TaskListStatus:  FromTaskListStatus(t.TaskListStatus),
+		PartitionConfig: FromAPITaskListPartitionConfig(t.PartitionConfig),
 	}
 }
 
@@ -227,8 +228,9 @@ func ToMatchingDescribeTaskListResponse(t *matchingv1.DescribeTaskListResponse) 
 		return nil
 	}
 	return &types.DescribeTaskListResponse{
-		Pollers:        ToPollerInfoArray(t.Pollers),
-		TaskListStatus: ToTaskListStatus(t.TaskListStatus),
+		Pollers:         ToPollerInfoArray(t.Pollers),
+		TaskListStatus:  ToTaskListStatus(t.TaskListStatus),
+		PartitionConfig: ToAPITaskListPartitionConfig(t.PartitionConfig),
 	}
 }
 
@@ -578,4 +580,80 @@ func ToMatchingRespondQueryTaskCompletedRequest(t *matchingv1.RespondQueryTaskCo
 		TaskList:         ToTaskList(t.TaskList),
 		TaskID:           t.TaskId,
 	}
+}
+
+func FromMatchingUpdateTaskListPartitionConfigRequest(t *types.MatchingUpdateTaskListPartitionConfigRequest) *matchingv1.UpdateTaskListPartitionConfigRequest {
+	if t == nil {
+		return nil
+	}
+	return &matchingv1.UpdateTaskListPartitionConfigRequest{
+		DomainId:        t.DomainUUID,
+		TaskList:        FromTaskList(t.TaskList),
+		TaskListType:    FromTaskListType(t.TaskListType),
+		PartitionConfig: FromAPITaskListPartitionConfig(t.PartitionConfig),
+	}
+}
+
+func ToMatchingUpdateTaskListPartitionConfigRequest(t *matchingv1.UpdateTaskListPartitionConfigRequest) *types.MatchingUpdateTaskListPartitionConfigRequest {
+	if t == nil {
+		return nil
+	}
+	return &types.MatchingUpdateTaskListPartitionConfigRequest{
+		DomainUUID:      t.DomainId,
+		TaskList:        ToTaskList(t.TaskList),
+		TaskListType:    ToTaskListType(t.TaskListType),
+		PartitionConfig: ToAPITaskListPartitionConfig(t.PartitionConfig),
+	}
+}
+
+func FromMatchingRefreshTaskListPartitionConfigRequest(t *types.MatchingRefreshTaskListPartitionConfigRequest) *matchingv1.RefreshTaskListPartitionConfigRequest {
+	if t == nil {
+		return nil
+	}
+	return &matchingv1.RefreshTaskListPartitionConfigRequest{
+		DomainId:        t.DomainUUID,
+		TaskList:        FromTaskList(t.TaskList),
+		TaskListType:    FromTaskListType(t.TaskListType),
+		PartitionConfig: FromAPITaskListPartitionConfig(t.PartitionConfig),
+	}
+}
+
+func ToMatchingRefreshTaskListPartitionConfigRequest(t *matchingv1.RefreshTaskListPartitionConfigRequest) *types.MatchingRefreshTaskListPartitionConfigRequest {
+	if t == nil {
+		return nil
+	}
+	return &types.MatchingRefreshTaskListPartitionConfigRequest{
+		DomainUUID:      t.DomainId,
+		TaskList:        ToTaskList(t.TaskList),
+		TaskListType:    ToTaskListType(t.TaskListType),
+		PartitionConfig: ToAPITaskListPartitionConfig(t.PartitionConfig),
+	}
+}
+
+func FromMatchingUpdateTaskListPartitionConfigResponse(t *types.MatchingUpdateTaskListPartitionConfigResponse) *matchingv1.UpdateTaskListPartitionConfigResponse {
+	if t == nil {
+		return nil
+	}
+	return &matchingv1.UpdateTaskListPartitionConfigResponse{}
+}
+
+func ToMatchingUpdateTaskListPartitionConfigResponse(t *matchingv1.UpdateTaskListPartitionConfigResponse) *types.MatchingUpdateTaskListPartitionConfigResponse {
+	if t == nil {
+		return nil
+	}
+	return &types.MatchingUpdateTaskListPartitionConfigResponse{}
+}
+
+func FromMatchingRefreshTaskListPartitionConfigResponse(t *types.MatchingRefreshTaskListPartitionConfigResponse) *matchingv1.RefreshTaskListPartitionConfigResponse {
+	if t == nil {
+		return nil
+	}
+	return &matchingv1.RefreshTaskListPartitionConfigResponse{}
+}
+
+func ToMatchingRefreshTaskListPartitionConfigResponse(t *matchingv1.RefreshTaskListPartitionConfigResponse) *types.MatchingRefreshTaskListPartitionConfigResponse {
+	if t == nil {
+		return nil
+	}
+	return &types.MatchingRefreshTaskListPartitionConfigResponse{}
 }

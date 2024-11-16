@@ -186,6 +186,20 @@ func (mr *MockManagerMockRecorder) HasPollerAfter(accessTime interface{}) *gomoc
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasPollerAfter", reflect.TypeOf((*MockManager)(nil).HasPollerAfter), accessTime)
 }
 
+// RefreshTaskListPartitionConfig mocks base method.
+func (m *MockManager) RefreshTaskListPartitionConfig(arg0 context.Context, arg1 *types.TaskListPartitionConfig) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RefreshTaskListPartitionConfig", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// RefreshTaskListPartitionConfig indicates an expected call of RefreshTaskListPartitionConfig.
+func (mr *MockManagerMockRecorder) RefreshTaskListPartitionConfig(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RefreshTaskListPartitionConfig", reflect.TypeOf((*MockManager)(nil).RefreshTaskListPartitionConfig), arg0, arg1)
+}
+
 // Start mocks base method.
 func (m *MockManager) Start() error {
 	m.ctrl.T.Helper()
@@ -252,6 +266,20 @@ func (m *MockManager) TaskListPartitionConfig() *types.TaskListPartitionConfig {
 func (mr *MockManagerMockRecorder) TaskListPartitionConfig() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TaskListPartitionConfig", reflect.TypeOf((*MockManager)(nil).TaskListPartitionConfig))
+}
+
+// UpdateTaskListPartitionConfig mocks base method.
+func (m *MockManager) UpdateTaskListPartitionConfig(arg0 context.Context, arg1 *types.TaskListPartitionConfig) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateTaskListPartitionConfig", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateTaskListPartitionConfig indicates an expected call of UpdateTaskListPartitionConfig.
+func (mr *MockManagerMockRecorder) UpdateTaskListPartitionConfig(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateTaskListPartitionConfig", reflect.TypeOf((*MockManager)(nil).UpdateTaskListPartitionConfig), arg0, arg1)
 }
 
 // MockTaskMatcher is a mock of TaskMatcher interface.

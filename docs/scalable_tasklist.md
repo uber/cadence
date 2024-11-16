@@ -20,6 +20,17 @@ The number of partitions of a tasklist is configured by 2 dynamicconfigs:
 1. [matching.numTasklistReadPartitions](https://github.com/uber/cadence/blob/v1.2.13/common/dynamicconfig/constants.go#L3350)
 2. [matching.numTasklistWritePartitions](https://github.com/uber/cadence/blob/v1.2.13/common/dynamicconfig/constants.go#L3344)
 
+We're migrating this configuration from dynamicconfig to database. The following dynamicconfig is used to control where to read the number of partitions from:
+- [matching.enableGetNumberOfPartitionsFromCache](https://github.com/uber/cadence/blob/v1.2.15-prerelease02/common/dynamicconfig/constants.go#L4008)
+To update the number of partitions, use the following CLI command:
+```
+cadence admin tasklist update-partition -h
+```
+To get the number of partitions from database, use the following CLI command:
+```
+cadence admin tasklist describe -h
+```
+
 The tree-structure and forwarding mechanism is configured by these dynamicconfigs:
 
 1. [matching.forwarderMaxChildrenPerNode](https://github.com/uber/cadence/blob/v1.2.13/common/dynamicconfig/constants.go#L3374)

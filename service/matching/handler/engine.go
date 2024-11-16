@@ -1011,6 +1011,85 @@ func (e *matchingEngineImpl) GetTaskListsByDomain(
 	return e.getTaskListByDomainLocked(domainID), nil
 }
 
+func (e *matchingEngineImpl) UpdateTaskListPartitionConfig(
+	hCtx *handlerContext,
+	request *types.MatchingUpdateTaskListPartitionConfigRequest,
+) (*types.MatchingUpdateTaskListPartitionConfigResponse, error) {
+	domainID := request.DomainUUID
+	taskListName := request.TaskList.GetName()
+	taskListKind := request.TaskList.GetKind()
+	taskListType := persistence.TaskListTypeDecision
+	if request.GetTaskListType() == types.TaskListTypeActivity {
+		taskListType = persistence.TaskListTypeActivity
+	}
+	if taskListKind != types.TaskListKindNormal {
+		return nil, &types.BadRequestError{Message: "Only normal tasklist's partition config can be updated."}
+	}
+	if request.PartitionConfig == nil {
+		return nil, &types.BadRequestError{Message: "Task list partition config is not set in the request."}
+	}
+	if request.PartitionConfig.NumWritePartitions > request.PartitionConfig.NumReadPartitions {
+		return nil, &types.BadRequestError{Message: "The number of write partitions cannot be larger than the number of read partitions."}
+	}
+	if request.PartitionConfig.NumWritePartitions <= 0 {
+		return nil, &types.BadRequestError{Message: "The number of partitions must be larger than 0."}
+	}
+	taskListID, err := tasklist.NewIdentifier(domainID, taskListName, taskListType)
+	if err != nil {
+		return nil, err
+	}
+	if !taskListID.IsRoot() {
+		return nil, &types.BadRequestError{Message: "Only root partition's partition config can be updated."}
+	}
+	tlMgr, err := e.getTaskListManager(taskListID, &taskListKind)
+	if err != nil {
+		return nil, err
+	}
+	err = tlMgr.UpdateTaskListPartitionConfig(hCtx.Context, request.PartitionConfig)
+	if err != nil {
+		return nil, err
+	}
+	return &types.MatchingUpdateTaskListPartitionConfigResponse{}, nil
+}
+
+func (e *matchingEngineImpl) RefreshTaskListPartitionConfig(
+	hCtx *handlerContext,
+	request *types.MatchingRefreshTaskListPartitionConfigRequest,
+) (*types.MatchingRefreshTaskListPartitionConfigResponse, error) {
+	domainID := request.DomainUUID
+	taskListName := request.TaskList.GetName()
+	taskListKind := request.TaskList.GetKind()
+	taskListType := persistence.TaskListTypeDecision
+	if request.GetTaskListType() == types.TaskListTypeActivity {
+		taskListType = persistence.TaskListTypeActivity
+	}
+	if taskListKind != types.TaskListKindNormal {
+		return nil, &types.BadRequestError{Message: "Only normal tasklist's partition config can be updated."}
+	}
+	if request.PartitionConfig != nil && request.PartitionConfig.NumWritePartitions > request.PartitionConfig.NumReadPartitions {
+		return nil, &types.BadRequestError{Message: "The number of write partitions cannot be larger than the number of read partitions."}
+	}
+	if request.PartitionConfig != nil && request.PartitionConfig.NumWritePartitions <= 0 {
+		return nil, &types.BadRequestError{Message: "The number of partitions must be larger than 0."}
+	}
+	taskListID, err := tasklist.NewIdentifier(domainID, taskListName, taskListType)
+	if err != nil {
+		return nil, err
+	}
+	if taskListID.IsRoot() && request.PartitionConfig != nil {
+		return nil, &types.BadRequestError{Message: "PartitionConfig must be nil for root partition."}
+	}
+	tlMgr, err := e.getTaskListManager(taskListID, &taskListKind)
+	if err != nil {
+		return nil, err
+	}
+	err = tlMgr.RefreshTaskListPartitionConfig(hCtx.Context, request.PartitionConfig)
+	if err != nil {
+		return nil, err
+	}
+	return &types.MatchingRefreshTaskListPartitionConfigResponse{}, nil
+}
+
 func (e *matchingEngineImpl) getHostInfo(partitionKey string) (string, error) {
 	host, err := e.membershipResolver.Lookup(service.Matching, partitionKey)
 	if err != nil {

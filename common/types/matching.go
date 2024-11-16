@@ -646,3 +646,35 @@ const (
 	// TaskSourceDbBacklog is an option for TaskSource
 	TaskSourceDbBacklog
 )
+
+type MatchingUpdateTaskListPartitionConfigRequest struct {
+	DomainUUID      string
+	TaskList        *TaskList
+	TaskListType    *TaskListType
+	PartitionConfig *TaskListPartitionConfig
+}
+
+func (v *MatchingUpdateTaskListPartitionConfigRequest) GetTaskListType() (o TaskListType) {
+	if v != nil && v.TaskListType != nil {
+		return *v.TaskListType
+	}
+	return
+}
+
+type MatchingUpdateTaskListPartitionConfigResponse struct{}
+
+type MatchingRefreshTaskListPartitionConfigRequest struct {
+	DomainUUID      string
+	TaskList        *TaskList
+	TaskListType    *TaskListType
+	PartitionConfig *TaskListPartitionConfig
+}
+
+func (v *MatchingRefreshTaskListPartitionConfigRequest) GetTaskListType() (o TaskListType) {
+	if v != nil && v.TaskListType != nil {
+		return *v.TaskListType
+	}
+	return
+}
+
+type MatchingRefreshTaskListPartitionConfigResponse struct{}

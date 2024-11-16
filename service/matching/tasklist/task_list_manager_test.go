@@ -33,7 +33,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/uber-go/tally"
+	"golang.org/x/sync/errgroup"
 
+	"github.com/uber/cadence/client/matching"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/clock"
@@ -49,6 +51,50 @@ import (
 	"github.com/uber/cadence/service/matching/config"
 	"github.com/uber/cadence/service/matching/poller"
 )
+
+type mockDeps struct {
+	mockDomainCache    *cache.MockDomainCache
+	mockTaskManager    *persistence.MockTaskManager
+	mockPartitioner    *partition.MockPartitioner
+	mockMatchingClient *matching.MockClient
+	mockTimeSource     clock.MockedTimeSource
+	dynamicClient      dynamicconfig.Client
+}
+
+func setupMocksForTaskListManager(t *testing.T, taskListID *Identifier, taskListKind types.TaskListKind) (*taskListManagerImpl, *mockDeps) {
+	ctrl := gomock.NewController(t)
+	dynamicClient := dynamicconfig.NewInMemoryClient()
+	logger := testlogger.New(t)
+	metricsClient := metrics.NewNoopMetricsClient()
+	clusterMetadata := cluster.GetTestClusterMetadata(true)
+	deps := &mockDeps{
+		mockDomainCache:    cache.NewMockDomainCache(ctrl),
+		mockTaskManager:    persistence.NewMockTaskManager(ctrl),
+		mockPartitioner:    partition.NewMockPartitioner(ctrl),
+		mockMatchingClient: matching.NewMockClient(ctrl),
+		mockTimeSource:     clock.NewMockedTimeSource(),
+		dynamicClient:      dynamicClient,
+	}
+	deps.mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return("domainName", nil).Times(1)
+	config := config.NewConfig(dynamicconfig.NewCollection(dynamicClient, logger), "hostname", getIsolationgroupsHelper)
+	tlm, err := NewManager(
+		deps.mockDomainCache,
+		logger,
+		metricsClient,
+		deps.mockTaskManager,
+		clusterMetadata,
+		deps.mockPartitioner,
+		deps.mockMatchingClient,
+		func(Manager) {},
+		taskListID,
+		&taskListKind,
+		config,
+		deps.mockTimeSource,
+		deps.mockTimeSource.Now(),
+	)
+	require.NoError(t, err)
+	return tlm.(*taskListManagerImpl), deps
+}
 
 func defaultTestConfig() *config.Config {
 	config := config.NewConfig(dynamicconfig.NewNopCollection(), "some random hostname", getIsolationgroupsHelper)
@@ -929,55 +975,418 @@ func getIsolationgroupsHelper() []string {
 	return []string{"datacenterA", "datacenterB"}
 }
 
-func TestLoadTaskListPartitionConfig(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	mockPartitioner := partition.NewMockPartitioner(ctrl)
-	mockPartitioner.EXPECT().GetIsolationGroupByDomainID(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("", nil).AnyTimes()
-	mockDomainCache := cache.NewMockDomainCache(ctrl)
-	mockDomainCache.EXPECT().GetDomainByID(gomock.Any()).Return(cache.CreateDomainCacheEntry("domainName"), nil).AnyTimes()
-	mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return("domainName", nil).AnyTimes()
+func TestRefreshTaskListPartitionConfig(t *testing.T) {
+	testCases := []struct {
+		name           string
+		req            *types.TaskListPartitionConfig
+		originalConfig *types.TaskListPartitionConfig
+		setupMocks     func(*mockDeps)
+		expectedConfig *types.TaskListPartitionConfig
+		expectError    bool
+		expectedError  string
+	}{
+		{
+			name: "success - refresh from request",
+			req: &types.TaskListPartitionConfig{
+				Version:            2,
+				NumReadPartitions:  3,
+				NumWritePartitions: 3,
+			},
+			setupMocks: func(m *mockDeps) {},
+			expectedConfig: &types.TaskListPartitionConfig{
+				Version:            2,
+				NumReadPartitions:  3,
+				NumWritePartitions: 3,
+			},
+		},
+		{
+			name: "success - ignore older version",
+			req: &types.TaskListPartitionConfig{
+				Version:            2,
+				NumReadPartitions:  3,
+				NumWritePartitions: 3,
+			},
+			originalConfig: &types.TaskListPartitionConfig{
+				Version:            3,
+				NumReadPartitions:  2,
+				NumWritePartitions: 2,
+			},
+			setupMocks: func(m *mockDeps) {},
+			expectedConfig: &types.TaskListPartitionConfig{
+				Version:            3,
+				NumReadPartitions:  2,
+				NumWritePartitions: 2,
+			},
+		},
+		{
+			name: "success - refresh from database",
+			originalConfig: &types.TaskListPartitionConfig{
+				Version:            3,
+				NumReadPartitions:  2,
+				NumWritePartitions: 2,
+			},
+			setupMocks: func(deps *mockDeps) {
+				deps.mockTaskManager.EXPECT().GetTaskList(gomock.Any(), &persistence.GetTaskListRequest{
+					DomainID:   "domain-id",
+					DomainName: "domainName",
+					TaskList:   "tl",
+					TaskType:   persistence.TaskListTypeDecision,
+				}).Return(&persistence.GetTaskListResponse{
+					TaskListInfo: &persistence.TaskListInfo{
+						AdaptivePartitionConfig: &persistence.TaskListPartitionConfig{
+							Version:            4,
+							NumReadPartitions:  10,
+							NumWritePartitions: 10,
+						},
+					},
+				}, nil)
+			},
+			expectedConfig: &types.TaskListPartitionConfig{
+				Version:            4,
+				NumReadPartitions:  10,
+				NumWritePartitions: 10,
+			},
+		},
+		{
+			name: "failed to refresh from database",
+			originalConfig: &types.TaskListPartitionConfig{
+				Version:            3,
+				NumReadPartitions:  2,
+				NumWritePartitions: 2,
+			},
+			setupMocks: func(deps *mockDeps) {
+				deps.mockTaskManager.EXPECT().GetTaskList(gomock.Any(), &persistence.GetTaskListRequest{
+					DomainID:   "domain-id",
+					DomainName: "domainName",
+					TaskList:   "tl",
+					TaskType:   persistence.TaskListTypeDecision,
+				}).Return(nil, errors.New("some error"))
+			},
+			expectedConfig: &types.TaskListPartitionConfig{
+				Version:            3,
+				NumReadPartitions:  2,
+				NumWritePartitions: 2,
+			},
+			expectError:   true,
+			expectedError: "some error",
+		},
+	}
 
-	mockTm := persistence.NewMockTaskManager(ctrl)
-	mockTm.EXPECT().GetTaskList(gomock.Any(), &persistence.GetTaskListRequest{
-		DomainID:   "domain",
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			tlID, err := NewIdentifier("domain-id", "tl", persistence.TaskListTypeDecision)
+			require.NoError(t, err)
+			tlm, deps := setupMocksForTaskListManager(t, tlID, types.TaskListKindNormal)
+			tc.setupMocks(deps)
+			tlm.partitionConfig = tc.originalConfig
+			tlm.startWG.Done()
+
+			err = tlm.RefreshTaskListPartitionConfig(context.Background(), tc.req)
+			if tc.expectError {
+				assert.ErrorContains(t, err, tc.expectedError)
+				assert.Equal(t, tc.expectedConfig, tlm.TaskListPartitionConfig())
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tc.expectedConfig, tlm.TaskListPartitionConfig())
+			}
+		})
+	}
+}
+
+func TestUpdateTaskListPartitionConfig(t *testing.T) {
+	testCases := []struct {
+		name           string
+		req            *types.TaskListPartitionConfig
+		originalConfig *types.TaskListPartitionConfig
+		setupMocks     func(*mockDeps)
+		expectedConfig *types.TaskListPartitionConfig
+		expectError    bool
+		expectedError  string
+	}{
+		{
+			name: "success - no op",
+			req: &types.TaskListPartitionConfig{
+				NumReadPartitions:  3,
+				NumWritePartitions: 3,
+			},
+			originalConfig: &types.TaskListPartitionConfig{
+				Version:            1,
+				NumReadPartitions:  3,
+				NumWritePartitions: 3,
+			},
+			setupMocks: func(m *mockDeps) {},
+			expectedConfig: &types.TaskListPartitionConfig{
+				Version:            1,
+				NumReadPartitions:  3,
+				NumWritePartitions: 3,
+			},
+		},
+		{
+			name: "success - update",
+			req: &types.TaskListPartitionConfig{
+				NumReadPartitions:  3,
+				NumWritePartitions: 1,
+			},
+			originalConfig: &types.TaskListPartitionConfig{
+				Version:            1,
+				NumReadPartitions:  3,
+				NumWritePartitions: 3,
+			},
+			setupMocks: func(deps *mockDeps) {
+				deps.mockTaskManager.EXPECT().UpdateTaskList(gomock.Any(), &persistence.UpdateTaskListRequest{
+					DomainName: "domainName",
+					TaskListInfo: &persistence.TaskListInfo{
+						DomainID: "domain-id",
+						Name:     "tl",
+						AckLevel: 0,
+						RangeID:  0,
+						Kind:     persistence.TaskListKindNormal,
+						AdaptivePartitionConfig: &persistence.TaskListPartitionConfig{
+							Version:            2,
+							NumReadPartitions:  3,
+							NumWritePartitions: 1,
+						},
+					},
+				}).Return(&persistence.UpdateTaskListResponse{}, nil)
+				deps.mockMatchingClient.EXPECT().RefreshTaskListPartitionConfig(gomock.Any(), &types.MatchingRefreshTaskListPartitionConfigRequest{
+					DomainUUID:   "domain-id",
+					TaskList:     &types.TaskList{Name: "/__cadence_sys/tl/1"},
+					TaskListType: types.TaskListTypeDecision.Ptr(),
+					PartitionConfig: &types.TaskListPartitionConfig{
+						Version:            2,
+						NumReadPartitions:  3,
+						NumWritePartitions: 1,
+					},
+				}).Return(&types.MatchingRefreshTaskListPartitionConfigResponse{}, nil)
+				deps.mockMatchingClient.EXPECT().RefreshTaskListPartitionConfig(gomock.Any(), &types.MatchingRefreshTaskListPartitionConfigRequest{
+					DomainUUID:   "domain-id",
+					TaskList:     &types.TaskList{Name: "/__cadence_sys/tl/2"},
+					TaskListType: types.TaskListTypeDecision.Ptr(),
+					PartitionConfig: &types.TaskListPartitionConfig{
+						Version:            2,
+						NumReadPartitions:  3,
+						NumWritePartitions: 1,
+					},
+				}).Return(&types.MatchingRefreshTaskListPartitionConfigResponse{}, nil)
+			},
+			expectedConfig: &types.TaskListPartitionConfig{
+				Version:            2,
+				NumReadPartitions:  3,
+				NumWritePartitions: 1,
+			},
+		},
+		{
+			name: "success - push failures are ignored",
+			req: &types.TaskListPartitionConfig{
+				NumReadPartitions:  3,
+				NumWritePartitions: 1,
+			},
+			originalConfig: &types.TaskListPartitionConfig{
+				Version:            1,
+				NumReadPartitions:  3,
+				NumWritePartitions: 3,
+			},
+			setupMocks: func(deps *mockDeps) {
+				deps.mockTaskManager.EXPECT().UpdateTaskList(gomock.Any(), &persistence.UpdateTaskListRequest{
+					DomainName: "domainName",
+					TaskListInfo: &persistence.TaskListInfo{
+						DomainID: "domain-id",
+						Name:     "tl",
+						AckLevel: 0,
+						RangeID:  0,
+						Kind:     persistence.TaskListKindNormal,
+						AdaptivePartitionConfig: &persistence.TaskListPartitionConfig{
+							Version:            2,
+							NumReadPartitions:  3,
+							NumWritePartitions: 1,
+						},
+					},
+				}).Return(&persistence.UpdateTaskListResponse{}, nil)
+				deps.mockMatchingClient.EXPECT().RefreshTaskListPartitionConfig(gomock.Any(), &types.MatchingRefreshTaskListPartitionConfigRequest{
+					DomainUUID:   "domain-id",
+					TaskList:     &types.TaskList{Name: "/__cadence_sys/tl/1"},
+					TaskListType: types.TaskListTypeDecision.Ptr(),
+					PartitionConfig: &types.TaskListPartitionConfig{
+						Version:            2,
+						NumReadPartitions:  3,
+						NumWritePartitions: 1,
+					},
+				}).Return(nil, errors.New("matching client error"))
+				deps.mockMatchingClient.EXPECT().RefreshTaskListPartitionConfig(gomock.Any(), &types.MatchingRefreshTaskListPartitionConfigRequest{
+					DomainUUID:   "domain-id",
+					TaskList:     &types.TaskList{Name: "/__cadence_sys/tl/2"},
+					TaskListType: types.TaskListTypeDecision.Ptr(),
+					PartitionConfig: &types.TaskListPartitionConfig{
+						Version:            2,
+						NumReadPartitions:  3,
+						NumWritePartitions: 1,
+					},
+				}).Return(nil, errors.New("matching client error"))
+			},
+			expectedConfig: &types.TaskListPartitionConfig{
+				Version:            2,
+				NumReadPartitions:  3,
+				NumWritePartitions: 1,
+			},
+		},
+		{
+			name: "failed to update",
+			req: &types.TaskListPartitionConfig{
+				NumReadPartitions:  3,
+				NumWritePartitions: 1,
+			},
+			originalConfig: &types.TaskListPartitionConfig{
+				Version:            1,
+				NumReadPartitions:  3,
+				NumWritePartitions: 3,
+			},
+			setupMocks: func(deps *mockDeps) {
+				deps.mockTaskManager.EXPECT().UpdateTaskList(gomock.Any(), &persistence.UpdateTaskListRequest{
+					DomainName: "domainName",
+					TaskListInfo: &persistence.TaskListInfo{
+						DomainID: "domain-id",
+						Name:     "tl",
+						AckLevel: 0,
+						RangeID:  0,
+						Kind:     persistence.TaskListKindNormal,
+						AdaptivePartitionConfig: &persistence.TaskListPartitionConfig{
+							Version:            2,
+							NumReadPartitions:  3,
+							NumWritePartitions: 1,
+						},
+					},
+				}).Return(nil, errors.New("some error"))
+			},
+			expectedConfig: &types.TaskListPartitionConfig{
+				Version:            1,
+				NumReadPartitions:  3,
+				NumWritePartitions: 3,
+			},
+			expectError:   true,
+			expectedError: "some error",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			tlID, err := NewIdentifier("domain-id", "tl", persistence.TaskListTypeDecision)
+			require.NoError(t, err)
+			tlm, deps := setupMocksForTaskListManager(t, tlID, types.TaskListKindNormal)
+			tc.setupMocks(deps)
+			tlm.partitionConfig = tc.originalConfig
+			tlm.startWG.Done()
+
+			err = tlm.UpdateTaskListPartitionConfig(context.Background(), tc.req)
+			if tc.expectError {
+				assert.ErrorContains(t, err, tc.expectedError)
+				assert.Equal(t, int32(1), tlm.stopped)
+			} else {
+				assert.NoError(t, err)
+			}
+			assert.Equal(t, tc.expectedConfig, tlm.TaskListPartitionConfig())
+		})
+	}
+}
+
+func TestRefreshTaskListPartitionConfigConcurrency(t *testing.T) {
+	tlID, err := NewIdentifier("domain-id", "/__cadence_sys/tl/1", persistence.TaskListTypeDecision)
+	require.NoError(t, err)
+	tlm, _ := setupMocksForTaskListManager(t, tlID, types.TaskListKindNormal)
+	tlm.startWG.Done()
+
+	var g errgroup.Group
+	for i := 0; i < 100; i++ {
+		v := i
+		g.Go(func() error {
+			return tlm.RefreshTaskListPartitionConfig(context.Background(), &types.TaskListPartitionConfig{Version: int64(v), NumReadPartitions: int32(v), NumWritePartitions: int32(v)})
+		})
+	}
+	require.NoError(t, g.Wait())
+	assert.Equal(t, int64(99), tlm.TaskListPartitionConfig().Version)
+}
+
+func TestUpdateTaskListPartitionConfigConcurrency(t *testing.T) {
+	tlID, err := NewIdentifier("domain-id", "/__cadence_sys/tl/1", persistence.TaskListTypeDecision)
+	require.NoError(t, err)
+	tlm, deps := setupMocksForTaskListManager(t, tlID, types.TaskListKindNormal)
+	deps.mockTaskManager.EXPECT().UpdateTaskList(gomock.Any(), gomock.Any()).Return(&persistence.UpdateTaskListResponse{}, nil).AnyTimes()
+	deps.mockMatchingClient.EXPECT().RefreshTaskListPartitionConfig(gomock.Any(), gomock.Any()).Return(&types.MatchingRefreshTaskListPartitionConfigResponse{}, nil).AnyTimes()
+	tlm.startWG.Done()
+
+	var g errgroup.Group
+	for i := 0; i < 100; i++ {
+		v := i
+		g.Go(func() error {
+			return tlm.UpdateTaskListPartitionConfig(context.Background(), &types.TaskListPartitionConfig{NumReadPartitions: int32(v), NumWritePartitions: int32(v)})
+		})
+	}
+	require.NoError(t, g.Wait())
+	assert.Equal(t, int64(100), tlm.TaskListPartitionConfig().Version)
+}
+
+func TestManagerStart_RootPartition(t *testing.T) {
+	tlID, err := NewIdentifier("domain-id", "tl", persistence.TaskListTypeDecision)
+	require.NoError(t, err)
+	tlm, deps := setupMocksForTaskListManager(t, tlID, types.TaskListKindNormal)
+	deps.mockTaskManager.EXPECT().LeaseTaskList(gomock.Any(), &persistence.LeaseTaskListRequest{
+		DomainID:   "domain-id",
 		DomainName: "domainName",
-		TaskList:   "tasklist",
-		TaskType:   persistence.TaskListTypeActivity,
-	}).Return(nil, errors.New("error")).Times(1)
-	mockTm.EXPECT().GetTaskList(gomock.Any(), &persistence.GetTaskListRequest{
-		DomainID:   "domain",
+		TaskList:   "tl",
+		TaskType:   persistence.TaskListTypeDecision,
+	}).Return(&persistence.LeaseTaskListResponse{
+		TaskListInfo: &persistence.TaskListInfo{
+			DomainID: "domain-id",
+			Name:     "tl",
+			Kind:     persistence.TaskListKindNormal,
+			AckLevel: 0,
+			RangeID:  0,
+		},
+	}, nil)
+	assert.NoError(t, tlm.Start())
+	assert.Nil(t, tlm.TaskListPartitionConfig())
+}
+
+func TestManagerStart_NonRootPartition(t *testing.T) {
+	tlID, err := NewIdentifier("domain-id", "/__cadence_sys/tl/1", persistence.TaskListTypeDecision)
+	require.NoError(t, err)
+	tlm, deps := setupMocksForTaskListManager(t, tlID, types.TaskListKindNormal)
+	deps.mockTaskManager.EXPECT().GetTaskList(gomock.Any(), &persistence.GetTaskListRequest{
+		DomainID:   "domain-id",
 		DomainName: "domainName",
-		TaskList:   "tasklist",
-		TaskType:   persistence.TaskListTypeActivity,
+		TaskList:   "tl",
+		TaskType:   persistence.TaskListTypeDecision,
 	}).Return(&persistence.GetTaskListResponse{
 		TaskListInfo: &persistence.TaskListInfo{
-			AdaptivePartitionConfig: nil,
+			DomainID: "domain-id",
+			Name:     "tl",
+			Kind:     persistence.TaskListKindNormal,
+			AckLevel: 0,
+			RangeID:  0,
+			AdaptivePartitionConfig: &persistence.TaskListPartitionConfig{
+				Version:            1,
+				NumReadPartitions:  3,
+				NumWritePartitions: 3,
+			},
 		},
-	}, nil).Times(1)
-
-	tlID, err := NewIdentifier("domain", "/__cadence_sys/tasklist/1", persistence.TaskListTypeActivity)
-	require.NoError(t, err)
-
-	tlMgr, err := NewManager(
-		mockDomainCache,
-		testlogger.New(t),
-		metrics.NewClient(tally.NoopScope, metrics.Matching),
-		mockTm,
-		cluster.GetTestClusterMetadata(true),
-		mockPartitioner,
-		nil,
-		func(Manager) {},
-		tlID,
-		types.TaskListKindNormal.Ptr(),
-		defaultTestConfig(),
-		clock.NewRealTimeSource(),
-		time.Now())
-
-	tlm := tlMgr.(*taskListManagerImpl)
-	tlm.loadTaskListPartitionConfig()
-	assert.Nil(t, tlm.TaskListPartitionConfig())
-	tlm.loadTaskListPartitionConfig()
-	assert.Equal(t, &types.TaskListPartitionConfig{NumReadPartitions: 1, NumWritePartitions: 1}, tlm.TaskListPartitionConfig())
-	tlm.loadTaskListPartitionConfig()
-	assert.Equal(t, &types.TaskListPartitionConfig{NumReadPartitions: 1, NumWritePartitions: 1}, tlm.TaskListPartitionConfig())
+	}, nil)
+	deps.mockTaskManager.EXPECT().LeaseTaskList(gomock.Any(), &persistence.LeaseTaskListRequest{
+		DomainID:   "domain-id",
+		DomainName: "domainName",
+		TaskList:   "/__cadence_sys/tl/1",
+		TaskType:   persistence.TaskListTypeDecision,
+	}).Return(&persistence.LeaseTaskListResponse{
+		TaskListInfo: &persistence.TaskListInfo{
+			DomainID: "domain-id",
+			Name:     "/__cadence_sys/tl/1",
+			Kind:     persistence.TaskListKindNormal,
+			AckLevel: 0,
+			RangeID:  0,
+		},
+	}, nil)
+	assert.NoError(t, tlm.Start())
+	assert.Equal(t, &types.TaskListPartitionConfig{
+		Version:            1,
+		NumReadPartitions:  3,
+		NumWritePartitions: 3,
+	}, tlm.TaskListPartitionConfig())
 }

@@ -31,6 +31,8 @@ import (
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -55,6 +57,7 @@ type (
 	partitionConfigProviderImpl struct {
 		configCache         cache.Cache
 		logger              log.Logger
+		metricsClient       metrics.Client
 		domainIDToName      func(string) (string, error)
 		enableReadFromCache dynamicconfig.BoolPropertyFnWithTaskListInfoFilters
 		nReadPartitions     dynamicconfig.IntPropertyFnWithTaskListInfoFilters
@@ -74,11 +77,13 @@ func (c *syncedTaskListPartitionConfig) updateConfig(newConfig types.TaskListPar
 
 func NewPartitionConfigProvider(
 	logger log.Logger,
+	metricsClient metrics.Client,
 	domainIDToName func(string) (string, error),
 	dc *dynamicconfig.Collection,
 ) PartitionConfigProvider {
 	return &partitionConfigProviderImpl{
 		logger:              logger,
+		metricsClient:       metricsClient,
 		domainIDToName:      domainIDToName,
 		enableReadFromCache: dc.GetBoolPropertyFilteredByTaskListInfo(dynamicconfig.MatchingEnableGetNumberOfPartitionsFromCache),
 		nReadPartitions:     dc.GetIntPropertyFilteredByTaskListInfo(dynamicconfig.MatchingNumTasklistReadPartitions),
@@ -106,8 +111,15 @@ func (p *partitionConfigProviderImpl) GetNumberOfReadPartitions(domainID string,
 		return 1
 	}
 	c.RLock()
-	defer c.RUnlock()
-	return int(c.NumReadPartitions)
+	v := c.Version
+	w := c.NumWritePartitions
+	r := c.NumReadPartitions
+	c.RUnlock()
+	scope := p.metricsClient.Scope(metrics.PartitionConfigProviderScope, metrics.DomainTag(domainName), metrics.TaskListRootPartitionTag(taskList.GetName()), getTaskListTypeTag(taskListType))
+	scope.UpdateGauge(metrics.TaskListPartitionConfigNumReadGauge, float64(r))
+	scope.UpdateGauge(metrics.TaskListPartitionConfigNumWriteGauge, float64(w))
+	scope.UpdateGauge(metrics.TaskListPartitionConfigVersionGauge, float64(v))
+	return int(r)
 }
 
 func (p *partitionConfigProviderImpl) GetNumberOfWritePartitions(domainID string, taskList types.TaskList, taskListType int) int {
@@ -133,6 +145,10 @@ func (p *partitionConfigProviderImpl) GetNumberOfWritePartitions(domainID string
 	w := c.NumWritePartitions
 	r := c.NumReadPartitions
 	c.RUnlock()
+	scope := p.metricsClient.Scope(metrics.PartitionConfigProviderScope, metrics.DomainTag(domainName), metrics.TaskListRootPartitionTag(taskList.GetName()), getTaskListTypeTag(taskListType))
+	scope.UpdateGauge(metrics.TaskListPartitionConfigNumReadGauge, float64(r))
+	scope.UpdateGauge(metrics.TaskListPartitionConfigNumWriteGauge, float64(w))
+	scope.UpdateGauge(metrics.TaskListPartitionConfigVersionGauge, float64(v))
 	if w > r {
 		p.logger.Warn("Number of write partitions exceeds number of read partitions, using number of read partitions", tag.WorkflowDomainID(domainID), tag.WorkflowTaskListName(taskList.GetName()), tag.WorkflowTaskListType(taskListType), tag.Dynamic("read-partition", r), tag.Dynamic("write-partition", w), tag.Dynamic("config-version", v))
 		return int(r)
@@ -187,4 +203,15 @@ func (p *partitionConfigProviderImpl) getPartitionConfig(domainID string, taskLi
 		return nil
 	}
 	return c
+}
+
+func getTaskListTypeTag(taskListType int) metrics.Tag {
+	switch taskListType {
+	case persistence.TaskListTypeActivity:
+		return metrics.TaskListTypeTag("activity")
+	case persistence.TaskListTypeDecision:
+		return metrics.TaskListTypeTag("decision")
+	default:
+		return metrics.TaskListTypeTag("")
+	}
 }

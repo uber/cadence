@@ -148,3 +148,27 @@ func TestMatchingGetTaskListsByDomainResponse(t *testing.T) {
 		assert.Equal(t, item, ToMatchingGetTaskListsByDomainResponse(FromMatchingGetTaskListsByDomainResponse(item)))
 	}
 }
+
+func TestMatchingUpdateTaskListPartitionConfigRequest(t *testing.T) {
+	for _, item := range []*types.MatchingUpdateTaskListPartitionConfigRequest{nil, {}, &testdata.MatchingUpdateTaskListPartitionConfigRequest} {
+		assert.Equal(t, item, ToMatchingUpdateTaskListPartitionConfigRequest(FromMatchingUpdateTaskListPartitionConfigRequest(item)))
+	}
+}
+
+func TestMatchingUpdateTaskListPartitionConfigResponse(t *testing.T) {
+	for _, item := range []*types.MatchingUpdateTaskListPartitionConfigResponse{nil, {}} {
+		assert.Equal(t, item, ToMatchingUpdateTaskListPartitionConfigResponse(FromMatchingUpdateTaskListPartitionConfigResponse(item)))
+	}
+}
+
+func TestMatchingRefreshTaskListPartitionConfigRequest(t *testing.T) {
+	for _, item := range []*types.MatchingRefreshTaskListPartitionConfigRequest{nil, {}, &testdata.MatchingRefreshTaskListPartitionConfigRequest} {
+		assert.Equal(t, item, ToMatchingRefreshTaskListPartitionConfigRequest(FromMatchingRefreshTaskListPartitionConfigRequest(item)))
+	}
+}
+
+func TestMatchingRefreshTaskListPartitionConfigResponse(t *testing.T) {
+	for _, item := range []*types.MatchingRefreshTaskListPartitionConfigResponse{nil, {}} {
+		assert.Equal(t, item, ToMatchingRefreshTaskListPartitionConfigResponse(FromMatchingRefreshTaskListPartitionConfigResponse(item)))
+	}
+}

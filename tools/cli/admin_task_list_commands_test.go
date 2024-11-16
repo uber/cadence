@@ -280,7 +280,7 @@ func TestAdminUpdateTaskListPartitionConfig(t *testing.T) {
 				client.EXPECT().
 					UpdateTaskListPartitionConfig(gomock.Any(), &types.UpdateTaskListPartitionConfigRequest{
 						Domain:       "test-domain",
-						TaskList:     &types.TaskList{Name: "test-tasklist"},
+						TaskList:     &types.TaskList{Name: "test-tasklist", Kind: types.TaskListKindNormal.Ptr()},
 						TaskListType: types.TaskListTypeDecision.Ptr(),
 						PartitionConfig: &types.TaskListPartitionConfig{
 							NumReadPartitions:  2,

@@ -788,3 +788,109 @@ func (s *handlerSuite) TestDomainName() {
 
 	}
 }
+func (s *handlerSuite) TestRefreshTaskListPartitionConfig() {
+	request := types.MatchingRefreshTaskListPartitionConfigRequest{
+		DomainUUID: "test-domain-id",
+		TaskList:   &types.TaskList{Name: "test-task-list"},
+	}
+
+	testCases := []struct {
+		name       string
+		setupMocks func()
+		want       *types.MatchingRefreshTaskListPartitionConfigResponse
+		err        error
+	}{
+		{
+			name: "Success case",
+			setupMocks: func() {
+				s.mockLimiter.EXPECT().Allow().Return(true).Times(1)
+				s.mockEngine.EXPECT().RefreshTaskListPartitionConfig(gomock.Any(), &request).
+					Return(&types.MatchingRefreshTaskListPartitionConfigResponse{}, nil).Times(1)
+			},
+			want: &types.MatchingRefreshTaskListPartitionConfigResponse{},
+		},
+		{
+			name: "Error case - RefreshTaskListPartitionConfig failed",
+			setupMocks: func() {
+				s.mockLimiter.EXPECT().Allow().Return(true).Times(1)
+				s.mockEngine.EXPECT().RefreshTaskListPartitionConfig(gomock.Any(), &request).
+					Return(nil, errors.New("refresh-tasklist-error")).Times(1)
+			},
+			err: &types.InternalServiceError{Message: "refresh-tasklist-error"},
+		},
+	}
+
+	for _, tc := range testCases {
+		s.T().Run(tc.name, func(t *testing.T) {
+			tc.setupMocks()
+			s.mockDomainCache.EXPECT().GetDomainName(request.DomainUUID).Return(s.testDomain, nil).Times(1)
+
+			resp, err := s.handler.RefreshTaskListPartitionConfig(context.Background(), &request)
+
+			if tc.err != nil {
+				s.Error(err)
+				s.Equal(tc.err, err)
+			} else {
+				s.NoError(err)
+				s.Equal(tc.want, resp)
+			}
+		})
+	}
+}
+
+func (s *handlerSuite) TestUpdateTaskListPartitionConfig() {
+	request := types.MatchingUpdateTaskListPartitionConfigRequest{
+		DomainUUID: "test-domain-id",
+		TaskList:   &types.TaskList{Name: "test-task-list"},
+	}
+
+	testCases := []struct {
+		name       string
+		setupMocks func()
+		want       *types.MatchingUpdateTaskListPartitionConfigResponse
+		err        error
+	}{
+		{
+			name: "Success case",
+			setupMocks: func() {
+				s.mockLimiter.EXPECT().Allow().Return(true).Times(1)
+				s.mockEngine.EXPECT().UpdateTaskListPartitionConfig(gomock.Any(), &request).
+					Return(&types.MatchingUpdateTaskListPartitionConfigResponse{}, nil).Times(1)
+			},
+			want: &types.MatchingUpdateTaskListPartitionConfigResponse{},
+		},
+		{
+			name: "Error case - rate limiter not allowed",
+			setupMocks: func() {
+				s.mockLimiter.EXPECT().Allow().Return(false).Times(1)
+			},
+			err: &types.ServiceBusyError{Message: "Matching host rps exceeded"},
+		},
+		{
+			name: "Error case - UpdateTaskListPartitionConfig failed",
+			setupMocks: func() {
+				s.mockLimiter.EXPECT().Allow().Return(true).Times(1)
+				s.mockEngine.EXPECT().UpdateTaskListPartitionConfig(gomock.Any(), &request).
+					Return(nil, errors.New("update-tasklist-error")).Times(1)
+			},
+			err: &types.InternalServiceError{Message: "update-tasklist-error"},
+		},
+	}
+
+	for _, tc := range testCases {
+		s.T().Run(tc.name, func(t *testing.T) {
+			tc.setupMocks()
+			s.mockDomainCache.EXPECT().GetDomainName(request.DomainUUID).Return(s.testDomain, nil).Times(1)
+
+			resp, err := s.handler.UpdateTaskListPartitionConfig(context.Background(), &request)
+
+			if tc.err != nil {
+				s.Error(err)
+				s.Equal(tc.err, err)
+			} else {
+				s.NoError(err)
+				s.Equal(tc.want, resp)
+			}
+		})
+	}
+}

@@ -83,6 +83,18 @@ service MatchingAPI {
 
   // GetTaskListsByDomain returns all tasklist for a given domain
   rpc GetTaskListsByDomain(GetTaskListsByDomainRequest) returns (GetTaskListsByDomainResponse);
+
+  // UpdateTaskListPartitionConfig is called to update the partition config of a task list in the database
+  // and notify all partitions of the task list to update the cache of partition config of the task list
+  // his API is used by frontend service to forward update request initiated mostly from CLI tool to update
+  // the partition config of a task list and notify all partitions of the task list to update their cache of task list partition config.
+  rpc UpdateTaskListPartitionConfig(UpdateTaskListPartitionConfigRequest) returns (UpdateTaskListPartitionConfigResponse);
+
+  // RefreshTaskListPartitionConfig is called to update the cache of partition config of a task list
+  // This API is mainly used by matching service to notify a task list partition to update its cache
+  // of task list partition config. It can also be used by frontend service to forward request initiated
+  // from admin CLI tool to sync the cache of task list partition config if something goes wrong.
+  rpc RefreshTaskListPartitionConfig(RefreshTaskListPartitionConfigRequest) returns (RefreshTaskListPartitionConfigResponse);
 }
 
 message TaskListPartitionConfig {
@@ -231,6 +243,7 @@ message DescribeTaskListRequest {
 message DescribeTaskListResponse {
   repeated api.v1.PollerInfo pollers = 1;
   api.v1.TaskListStatus task_list_status = 2;
+  api.v1.TaskListPartitionConfig partition_config = 3;
 }
 
 message ListTaskListPartitionsRequest {
@@ -250,4 +263,24 @@ message GetTaskListsByDomainRequest {
 message GetTaskListsByDomainResponse {
   map <string,DescribeTaskListResponse> decision_task_list_map = 1;
   map <string,DescribeTaskListResponse> activity_task_list_map = 2;
+}
+
+message UpdateTaskListPartitionConfigRequest {
+  string domain_id = 1;
+  api.v1.TaskList task_list = 2;
+  api.v1.TaskListType task_list_type = 3;
+  api.v1.TaskListPartitionConfig partition_config = 4;
+}
+
+message UpdateTaskListPartitionConfigResponse {}
+
+message RefreshTaskListPartitionConfigRequest {
+  string domain_id = 1;
+  api.v1.TaskList task_list = 2;
+  api.v1.TaskListType task_list_type = 3;
+  api.v1.TaskListPartitionConfig partition_config = 4;
+}
+
+message RefreshTaskListPartitionConfigResponse {
+
 }
