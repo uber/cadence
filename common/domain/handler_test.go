@@ -96,9 +96,11 @@ func TestRegisterDomain(t *testing.T) {
 			request: &types.RegisterDomainRequest{
 				Name:                                   "test-domain",
 				WorkflowExecutionRetentionPeriodInDays: 3,
+				DomainID:                               "b0f8f271-bfb8-40ee-aca0-846f2e8d4d2d",
 			},
 			mockSetup: func(mockDomainMgr *persistence.MockDomainManager, replicator *MockReplicator, request *types.RegisterDomainRequest) {
 				mockDomainMgr.EXPECT().GetDomain(gomock.Any(), &persistence.GetDomainRequest{Name: request.Name}).Return(nil, &types.EntityNotExistsError{})
+				mockDomainMgr.EXPECT().GetDomain(gomock.Any(), &persistence.GetDomainRequest{ID: request.DomainID}).Return(nil, &types.EntityNotExistsError{})
 				mockDomainMgr.EXPECT().CreateDomain(gomock.Any(), gomock.Any()).Return(&persistence.CreateDomainResponse{ID: "test-domain-id"}, nil)
 			},
 			wantErr: false,
@@ -116,11 +118,26 @@ func TestRegisterDomain(t *testing.T) {
 			wantErr: true,
 		},
 		{
+			name:             "domain already exists with ID",
+			isPrimaryCluster: true,
+			request: &types.RegisterDomainRequest{
+				Name:                                   "existing-domain",
+				WorkflowExecutionRetentionPeriodInDays: 3,
+				DomainID:                               "b0f8f271-bfb8-40ee-aca0-846f2e8d4d2d",
+			},
+			mockSetup: func(mockDomainMgr *persistence.MockDomainManager, replicator *MockReplicator, request *types.RegisterDomainRequest) {
+				mockDomainMgr.EXPECT().GetDomain(gomock.Any(), &persistence.GetDomainRequest{Name: request.Name}).Return(nil, &types.EntityNotExistsError{})
+				mockDomainMgr.EXPECT().GetDomain(gomock.Any(), &persistence.GetDomainRequest{ID: request.DomainID}).Return(&persistence.GetDomainResponse{}, nil)
+			},
+			wantErr: true,
+		},
+		{
 			name:             "global domain registration on non-primary cluster",
 			isPrimaryCluster: false,
 			request: &types.RegisterDomainRequest{
 				Name:           "global-test-domain",
 				IsGlobalDomain: true,
+				DomainID:       "b0f8f271-bfb8-40ee-aca0-846f2e8d4d2d",
 			},
 			mockSetup: func(mockDomainMgr *persistence.MockDomainManager, replicator *MockReplicator, request *types.RegisterDomainRequest) {
 				mockDomainMgr.EXPECT().
@@ -150,10 +167,39 @@ func TestRegisterDomain(t *testing.T) {
 			expectedErr: &types.InternalServiceError{},
 		},
 		{
+			name: "unexpected error on domain lookup using ID",
+			request: &types.RegisterDomainRequest{
+				Name:                                   "test-domain-with-lookup-error",
+				WorkflowExecutionRetentionPeriodInDays: 3,
+				DomainID:                               "b0f8f271-bfb8-40ee-aca0-846f2e8d4d2d",
+			},
+			mockSetup: func(mockDomainMgr *persistence.MockDomainManager, replicator *MockReplicator, request *types.RegisterDomainRequest) {
+				unexpectedErr := &types.InternalServiceError{Message: "Internal server error."}
+				mockDomainMgr.EXPECT().GetDomain(gomock.Any(), &persistence.GetDomainRequest{Name: request.Name}).Return(nil, &types.EntityNotExistsError{})
+				mockDomainMgr.EXPECT().GetDomain(gomock.Any(), &persistence.GetDomainRequest{ID: request.DomainID}).Return(nil, unexpectedErr)
+			},
+			wantErr:     true,
+			expectedErr: &types.InternalServiceError{},
+		},
+		{
 			name: "domain name does not match regex",
 			request: &types.RegisterDomainRequest{
 				Name:                                   "invalid_domain!",
 				WorkflowExecutionRetentionPeriodInDays: 3,
+				DomainID:                               "b0f8f271-bfb8-40ee-aca0-846f2e8d4d2d",
+			},
+			mockSetup: func(mockDomainMgr *persistence.MockDomainManager, replicator *MockReplicator, request *types.RegisterDomainRequest) {
+				mockDomainMgr.EXPECT().GetDomain(gomock.Any(), &persistence.GetDomainRequest{Name: request.Name}).Return(nil, &types.EntityNotExistsError{})
+			},
+			wantErr:     true,
+			expectedErr: errInvalidDomainName,
+		},
+		{
+			name: "invalid domain id",
+			request: &types.RegisterDomainRequest{
+				Name:                                   "invalid_domain!",
+				WorkflowExecutionRetentionPeriodInDays: 3,
+				DomainID:                               "invaid-domain-uuid",
 			},
 			mockSetup: func(mockDomainMgr *persistence.MockDomainManager, replicator *MockReplicator, request *types.RegisterDomainRequest) {
 				mockDomainMgr.EXPECT().GetDomain(gomock.Any(), &persistence.GetDomainRequest{Name: request.Name}).Return(nil, &types.EntityNotExistsError{})
@@ -167,11 +213,12 @@ func TestRegisterDomain(t *testing.T) {
 				Name:                                   "test-domain-with-active-cluster",
 				WorkflowExecutionRetentionPeriodInDays: 3,
 				ActiveClusterName:                      "active",
+				DomainID:                               "b0f8f271-bfb8-40ee-aca0-846f2e8d4d2d",
 			},
 			isPrimaryCluster: true,
 			mockSetup: func(mockDomainMgr *persistence.MockDomainManager, replicator *MockReplicator, request *types.RegisterDomainRequest) {
 				mockDomainMgr.EXPECT().GetDomain(gomock.Any(), &persistence.GetDomainRequest{Name: request.Name}).Return(nil, &types.EntityNotExistsError{})
-
+				mockDomainMgr.EXPECT().GetDomain(gomock.Any(), &persistence.GetDomainRequest{ID: request.DomainID}).Return(nil, &types.EntityNotExistsError{})
 				mockDomainMgr.EXPECT().CreateDomain(gomock.Any(), gomock.Any()).DoAndReturn(
 					func(ctx context.Context, req *persistence.CreateDomainRequest) (*persistence.CreateDomainResponse, error) {
 						return &persistence.CreateDomainResponse{ID: "test-domain-id"}, nil
@@ -188,10 +235,12 @@ func TestRegisterDomain(t *testing.T) {
 					{ClusterName: "invalid-cluster"},
 				},
 				IsGlobalDomain: true,
+				DomainID:       "b0f8f271-bfb8-40ee-aca0-846f2e8d4d2d",
 			},
 			isPrimaryCluster: true,
 			mockSetup: func(mockDomainMgr *persistence.MockDomainManager, replicator *MockReplicator, request *types.RegisterDomainRequest) {
 				mockDomainMgr.EXPECT().GetDomain(gomock.Any(), &persistence.GetDomainRequest{Name: request.Name}).Return(nil, &types.EntityNotExistsError{})
+				mockDomainMgr.EXPECT().GetDomain(gomock.Any(), &persistence.GetDomainRequest{ID: request.DomainID}).Return(nil, &types.EntityNotExistsError{})
 			},
 			wantErr:     true,
 			expectedErr: &types.BadRequestError{},
@@ -203,10 +252,12 @@ func TestRegisterDomain(t *testing.T) {
 				HistoryArchivalStatus: types.ArchivalStatusEnabled.Ptr(),
 				HistoryArchivalURI:    "invalid-uri",
 				IsGlobalDomain:        true,
+				DomainID:              "b0f8f271-bfb8-40ee-aca0-846f2e8d4d2d",
 			},
 			isPrimaryCluster: true,
 			mockSetup: func(mockDomainMgr *persistence.MockDomainManager, replicator *MockReplicator, request *types.RegisterDomainRequest) {
 				mockDomainMgr.EXPECT().GetDomain(gomock.Any(), &persistence.GetDomainRequest{Name: request.Name}).Return(nil, &types.EntityNotExistsError{})
+				mockDomainMgr.EXPECT().GetDomain(gomock.Any(), &persistence.GetDomainRequest{ID: request.DomainID}).Return(nil, &types.EntityNotExistsError{})
 			},
 			wantErr:     true,
 			expectedErr: &url.Error{},
@@ -217,11 +268,12 @@ func TestRegisterDomain(t *testing.T) {
 				Name:                                   "domain-creation-error",
 				WorkflowExecutionRetentionPeriodInDays: 2,
 				IsGlobalDomain:                         false,
+				DomainID:                               "b0f8f271-bfb8-40ee-aca0-846f2e8d4d2d",
 			},
 			isPrimaryCluster: true,
 			mockSetup: func(mockDomainMgr *persistence.MockDomainManager, replicator *MockReplicator, request *types.RegisterDomainRequest) {
 				mockDomainMgr.EXPECT().GetDomain(gomock.Any(), &persistence.GetDomainRequest{Name: request.Name}).Return(nil, &types.EntityNotExistsError{})
-
+				mockDomainMgr.EXPECT().GetDomain(gomock.Any(), &persistence.GetDomainRequest{ID: request.DomainID}).Return(nil, &types.EntityNotExistsError{})
 				mockDomainMgr.EXPECT().CreateDomain(gomock.Any(), gomock.Any()).Return(nil, errors.New("creation failed"))
 			},
 			wantErr: true,
@@ -232,10 +284,12 @@ func TestRegisterDomain(t *testing.T) {
 				Name:                                   "global-domain-with-replication",
 				IsGlobalDomain:                         true,
 				WorkflowExecutionRetentionPeriodInDays: 3,
+				DomainID:                               "b0f8f271-bfb8-40ee-aca0-846f2e8d4d2d",
 			},
 			isPrimaryCluster: true,
 			mockSetup: func(mockDomainMgr *persistence.MockDomainManager, replicator *MockReplicator, request *types.RegisterDomainRequest) {
 				mockDomainMgr.EXPECT().GetDomain(gomock.Any(), &persistence.GetDomainRequest{Name: request.Name}).Return(nil, &types.EntityNotExistsError{})
+				mockDomainMgr.EXPECT().GetDomain(gomock.Any(), &persistence.GetDomainRequest{ID: request.DomainID}).Return(nil, &types.EntityNotExistsError{})
 				mockDomainMgr.EXPECT().CreateDomain(gomock.Any(), gomock.Any()).Return(&persistence.CreateDomainResponse{ID: "domain-id"}, nil)
 				replicator.EXPECT().HandleTransmissionTask(gomock.Any(), types.DomainOperationCreate, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), common.InitialPreviousFailoverVersion, true).Return(nil)
 			},
@@ -247,10 +301,12 @@ func TestRegisterDomain(t *testing.T) {
 				Name:                                   "global-domain-replication-failure",
 				IsGlobalDomain:                         true,
 				WorkflowExecutionRetentionPeriodInDays: 3,
+				DomainID:                               "b0f8f271-bfb8-40ee-aca0-846f2e8d4d2d",
 			},
 			isPrimaryCluster: true,
 			mockSetup: func(mockDomainMgr *persistence.MockDomainManager, mockReplicator *MockReplicator, request *types.RegisterDomainRequest) {
 				mockDomainMgr.EXPECT().GetDomain(gomock.Any(), &persistence.GetDomainRequest{Name: request.Name}).Return(nil, &types.EntityNotExistsError{})
+				mockDomainMgr.EXPECT().GetDomain(gomock.Any(), &persistence.GetDomainRequest{ID: request.DomainID}).Return(nil, &types.EntityNotExistsError{})
 				mockDomainMgr.EXPECT().CreateDomain(gomock.Any(), gomock.Any()).Return(&persistence.CreateDomainResponse{ID: "domain-id"}, nil)
 				mockReplicator.EXPECT().HandleTransmissionTask(
 					gomock.Any(),
@@ -274,10 +330,12 @@ func TestRegisterDomain(t *testing.T) {
 				VisibilityArchivalStatus: types.ArchivalStatusEnabled.Ptr(),
 				VisibilityArchivalURI:    "invalid-visibility-uri",
 				IsGlobalDomain:           true,
+				DomainID:                 "b0f8f271-bfb8-40ee-aca0-846f2e8d4d2d",
 			},
 			isPrimaryCluster: true,
 			mockSetup: func(mockDomainMgr *persistence.MockDomainManager, mockReplicator *MockReplicator, request *types.RegisterDomainRequest) {
 				mockDomainMgr.EXPECT().GetDomain(gomock.Any(), &persistence.GetDomainRequest{Name: request.Name}).Return(nil, &types.EntityNotExistsError{})
+				mockDomainMgr.EXPECT().GetDomain(gomock.Any(), &persistence.GetDomainRequest{ID: request.DomainID}).Return(nil, &types.EntityNotExistsError{})
 			},
 			wantErr:     true,
 			expectedErr: &url.Error{},
@@ -293,10 +351,12 @@ func TestRegisterDomain(t *testing.T) {
 					{ClusterName: "non-current-cluster2"},
 				},
 				WorkflowExecutionRetentionPeriodInDays: 3,
+				DomainID:                               "b0f8f271-bfb8-40ee-aca0-846f2e8d4d2d",
 			},
 			isPrimaryCluster: true,
 			mockSetup: func(mockDomainMgr *persistence.MockDomainManager, mockReplicator *MockReplicator, request *types.RegisterDomainRequest) {
 				mockDomainMgr.EXPECT().GetDomain(gomock.Any(), &persistence.GetDomainRequest{Name: request.Name}).Return(nil, &types.EntityNotExistsError{})
+				mockDomainMgr.EXPECT().GetDomain(gomock.Any(), &persistence.GetDomainRequest{ID: request.DomainID}).Return(nil, &types.EntityNotExistsError{})
 			},
 			wantErr:     true,
 			expectedErr: &types.BadRequestError{Message: "Invalid local domain active cluster"},
@@ -312,10 +372,12 @@ func TestRegisterDomain(t *testing.T) {
 					{ClusterName: "non-current-cluster3"},
 				},
 				WorkflowExecutionRetentionPeriodInDays: 3,
+				DomainID:                               "b0f8f271-bfb8-40ee-aca0-846f2e8d4d2d",
 			},
 			isPrimaryCluster: true,
 			mockSetup: func(mockDomainMgr *persistence.MockDomainManager, mockReplicator *MockReplicator, request *types.RegisterDomainRequest) {
 				mockDomainMgr.EXPECT().GetDomain(gomock.Any(), &persistence.GetDomainRequest{Name: request.Name}).Return(nil, &types.EntityNotExistsError{})
+				mockDomainMgr.EXPECT().GetDomain(gomock.Any(), &persistence.GetDomainRequest{ID: request.DomainID}).Return(nil, &types.EntityNotExistsError{})
 			},
 			wantErr:     true,
 			expectedErr: &types.BadRequestError{Message: "Invalid local domain active cluster"},

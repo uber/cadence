@@ -41,6 +41,7 @@ var (
 		HistoryArchivalURI:                     HistoryArchivalURI,
 		VisibilityArchivalStatus:               &ArchivalStatus,
 		VisibilityArchivalURI:                  VisibilityArchivalURI,
+		DomainID:                               DomainID,
 	}
 	DescribeDomainRequest_ID = types.DescribeDomainRequest{
 		UUID: common.StringPtr(DomainID),

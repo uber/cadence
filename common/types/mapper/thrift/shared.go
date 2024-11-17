@@ -4095,6 +4095,7 @@ func FromRegisterDomainRequest(t *types.RegisterDomainRequest) *shared.RegisterD
 		HistoryArchivalURI:                     &t.HistoryArchivalURI,
 		VisibilityArchivalStatus:               FromArchivalStatus(t.VisibilityArchivalStatus),
 		VisibilityArchivalURI:                  &t.VisibilityArchivalURI,
+		DomainId:                               &t.DomainID,
 	}
 }
 
@@ -4118,6 +4119,7 @@ func ToRegisterDomainRequest(t *shared.RegisterDomainRequest) *types.RegisterDom
 		HistoryArchivalURI:                     t.GetHistoryArchivalURI(),
 		VisibilityArchivalStatus:               ToArchivalStatus(t.VisibilityArchivalStatus),
 		VisibilityArchivalURI:                  t.GetVisibilityArchivalURI(),
+		DomainID:                               t.GetDomainId(),
 	}
 }
 

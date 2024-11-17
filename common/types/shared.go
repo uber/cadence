@@ -4475,12 +4475,20 @@ type RegisterDomainRequest struct {
 	HistoryArchivalURI                     string                             `json:"historyArchivalURI,omitempty"`
 	VisibilityArchivalStatus               *ArchivalStatus                    `json:"visibilityArchivalStatus,omitempty"`
 	VisibilityArchivalURI                  string                             `json:"visibilityArchivalURI,omitempty"`
+	DomainID                               string                             `json:"domainId,omitempty"`
 }
 
 // GetName is an internal getter (TBD...)
 func (v *RegisterDomainRequest) GetName() (o string) {
 	if v != nil {
 		return v.Name
+	}
+	return
+}
+
+func (v *RegisterDomainRequest) GetDomainID() (o string) {
+	if v != nil {
+		return v.DomainID
 	}
 	return
 }
