@@ -116,7 +116,7 @@ func NewCliApp(cf ClientFactory, opts ...CLIAppOptions) *cli.App {
 		&cli.StringFlag{
 			Name:    FlagTransport,
 			Aliases: []string{"t"},
-			Usage:   "optional argument for transport protocol format, either 'grpc' or 'tchannel'. Defaults to grpc if not provided",
+			Usage:   "optional argument for transport protocol format, either 'grpc' or 'tchannel'. Defaults to tchannel if not provided",
 			EnvVars: []string{"CADENCE_CLI_TRANSPORT_PROTOCOL"},
 		},
 		&cli.StringFlag{
