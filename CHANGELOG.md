@@ -9,8 +9,6 @@ You can find a list of previous releases on the [github releases](https://github
 ## [Unreleased]
 Global ratelimiter, see [detailed doc](https://github.com/uber/cadence/blob/master/common/quotas/global/doc.go)
 
-Update CLI to use GRPC transport by default (originally tchannel).
-
 ## [1.2.13] - 2024-09-25
 See [Release Note](https://github.com/uber/cadence/releases/tag/v1.2.13) for details
 

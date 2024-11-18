@@ -124,15 +124,15 @@ func (b *clientFactory) ServerFrontendClient(c *cli.Context) (frontend.Client, e
 		return nil, commoncli.Problem("failed to create frontend client dependency", err)
 	}
 	clientConfig := b.dispatcher.ClientConfig(cadenceFrontendService)
-	if c.String(FlagTransport) == thriftTransport {
-		return thrift.NewFrontendClient(serverFrontend.New(clientConfig)), nil
+	if c.String(FlagTransport) == grpcTransport {
+		return grpcClient.NewFrontendClient(
+			apiv1.NewDomainAPIYARPCClient(clientConfig),
+			apiv1.NewWorkflowAPIYARPCClient(clientConfig),
+			apiv1.NewWorkerAPIYARPCClient(clientConfig),
+			apiv1.NewVisibilityAPIYARPCClient(clientConfig),
+		), nil
 	}
-	return grpcClient.NewFrontendClient(
-		apiv1.NewDomainAPIYARPCClient(clientConfig),
-		apiv1.NewWorkflowAPIYARPCClient(clientConfig),
-		apiv1.NewWorkerAPIYARPCClient(clientConfig),
-		apiv1.NewVisibilityAPIYARPCClient(clientConfig),
-	), nil
+	return thrift.NewFrontendClient(serverFrontend.New(clientConfig)), nil
 }
 
 // ServerAdminClient builds an admin client (based on server side thrift interface)
@@ -142,10 +142,10 @@ func (b *clientFactory) ServerAdminClient(c *cli.Context) (admin.Client, error) 
 		return nil, commoncli.Problem("failed to create admin client dependency", err)
 	}
 	clientConfig := b.dispatcher.ClientConfig(cadenceFrontendService)
-	if c.String(FlagTransport) == thriftTransport {
-		return thrift.NewAdminClient(serverAdmin.New(clientConfig)), nil
+	if c.String(FlagTransport) == grpcTransport {
+		return grpcClient.NewAdminClient(adminv1.NewAdminAPIYARPCClient(clientConfig)), nil
 	}
-	return grpcClient.NewAdminClient(adminv1.NewAdminAPIYARPCClient(clientConfig)), nil
+	return thrift.NewAdminClient(serverAdmin.New(clientConfig)), nil
 }
 
 // ServerFrontendClientForMigration builds a frontend client (based on server side thrift interface)
@@ -155,15 +155,15 @@ func (b *clientFactory) ServerFrontendClientForMigration(c *cli.Context) (fronte
 		return nil, commoncli.Problem("failed to create frontend client dependency", err)
 	}
 	clientConfig := b.dispatcherMigration.ClientConfig(cadenceFrontendService)
-	if c.String(FlagTransport) == thriftTransport {
-		return thrift.NewFrontendClient(serverFrontend.New(clientConfig)), nil
+	if c.String(FlagTransport) == grpcTransport {
+		return grpcClient.NewFrontendClient(
+			apiv1.NewDomainAPIYARPCClient(clientConfig),
+			apiv1.NewWorkflowAPIYARPCClient(clientConfig),
+			apiv1.NewWorkerAPIYARPCClient(clientConfig),
+			apiv1.NewVisibilityAPIYARPCClient(clientConfig),
+		), nil
 	}
-	return grpcClient.NewFrontendClient(
-		apiv1.NewDomainAPIYARPCClient(clientConfig),
-		apiv1.NewWorkflowAPIYARPCClient(clientConfig),
-		apiv1.NewWorkerAPIYARPCClient(clientConfig),
-		apiv1.NewVisibilityAPIYARPCClient(clientConfig),
-	), nil
+	return thrift.NewFrontendClient(serverFrontend.New(clientConfig)), nil
 }
 
 // ServerAdminClientForMigration builds an admin client (based on server side thrift interface)
@@ -173,10 +173,10 @@ func (b *clientFactory) ServerAdminClientForMigration(c *cli.Context) (admin.Cli
 		return nil, commoncli.Problem("failed to create admin client dependency", err)
 	}
 	clientConfig := b.dispatcherMigration.ClientConfig(cadenceFrontendService)
-	if c.String(FlagTransport) == thriftTransport {
-		return thrift.NewAdminClient(serverAdmin.New(clientConfig)), nil
+	if c.String(FlagTransport) == grpcTransport {
+		return grpcClient.NewAdminClient(adminv1.NewAdminAPIYARPCClient(clientConfig)), nil
 	}
-	return grpcClient.NewAdminClient(adminv1.NewAdminAPIYARPCClient(clientConfig)), nil
+	return thrift.NewAdminClient(serverAdmin.New(clientConfig)), nil
 }
 
 // ElasticSearchClient builds an ElasticSearch client
@@ -235,7 +235,7 @@ func (b *clientFactory) ensureDispatcherForMigration(c *cli.Context) error {
 }
 
 func (b *clientFactory) newClientDispatcher(c *cli.Context, hostPortOverride string) (*yarpc.Dispatcher, error) {
-	shouldUseGrpc := c.String(FlagTransport) != thriftTransport
+	shouldUseGrpc := c.String(FlagTransport) == grpcTransport
 
 	hostPort := tchannelPort
 	if shouldUseGrpc {
