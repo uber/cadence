@@ -38,6 +38,7 @@ import (
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
+	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/testlogger"
@@ -287,6 +288,9 @@ func (s *contextTestSuite) TestDomainNotificationVersion() {
 }
 
 func (s *contextTestSuite) TestTimerMaxReadLevel() {
+	// this test requires mocked time since we're comparing timestamps
+	s.mockResource.TimeSource = clock.NewMockedTimeSource()
+
 	// get current cluster's level
 	gotLevel := s.context.UpdateTimerMaxReadLevel(cluster.TestCurrentClusterName)
 	wantLevel := s.mockResource.TimeSource.Now().Add(s.context.config.TimerProcessorMaxTimeShift()).Truncate(time.Millisecond)
