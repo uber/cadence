@@ -47,9 +47,9 @@ const (
 	RootCauseTypePollersStatus                       RootCause = "There are pollers for the tasklist. Check backlog status"
 	RootCauseTypeHeartBeatingNotEnabled              RootCause = "HeartBeating not enabled for activity"
 	RootCauseTypeHeartBeatingEnabledMissingHeartbeat RootCause = "HeartBeating enabled for activity but timed out due to missing heartbeat"
-	RootCauseTypeServiceSideIssue                    RootCause = "There is an issue in the worker service that is causing this failure. Check identity for service logs"
-	RootCauseTypeServiceSidePanic                    RootCause = "There is a panic in the activity/workflow that is causing this failure"
-	RootCauseTypeServiceSideCustomError              RootCause = "This is a customised error returned by the activity/workflow"
+	RootCauseTypeServiceSideIssue                    RootCause = "There is an issue in the worker service that is causing a failure. Check identity for service logs"
+	RootCauseTypeServiceSidePanic                    RootCause = "There is a panic in the activity/workflow that is causing a failure"
+	RootCauseTypeServiceSideCustomError              RootCause = "Customised error returned by the activity/workflow"
 )
 
 func (r RootCause) String() string {
