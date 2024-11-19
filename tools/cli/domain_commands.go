@@ -86,6 +86,7 @@ func (d *domainCLIImpl) RegisterDomain(c *cli.Context) error {
 	if err != nil {
 		return commoncli.Problem("Required flag not found: ", err)
 	}
+	domainID := c.String(FlagDomainID)
 	description := c.String(FlagDescription)
 	ownerEmail := c.String(FlagOwnerEmail)
 	retentionDays := defaultDomainRetentionDays
@@ -155,6 +156,7 @@ func (d *domainCLIImpl) RegisterDomain(c *cli.Context) error {
 		VisibilityArchivalStatus:               vas,
 		VisibilityArchivalURI:                  c.String(FlagVisibilityArchivalURI),
 		IsGlobalDomain:                         isGlobalDomain,
+		DomainID:                               domainID,
 	}
 
 	ctx, cancel, err := newContext(c)

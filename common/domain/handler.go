@@ -47,6 +47,7 @@ import (
 var (
 	errDomainUpdateTooFrequent = &types.ServiceBusyError{Message: "Domain update too frequent."}
 	errInvalidDomainName       = &types.BadRequestError{Message: "Domain name can only include alphanumeric and dash characters."}
+	errInvalidDomainID         = &types.BadRequestError{Message: "Please input a valid UUID"}
 )
 
 type (
@@ -161,7 +162,7 @@ func (d *handlerImpl) RegisterDomain(
 	switch err.(type) {
 	case nil:
 		// domain already exists, cannot proceed
-		return &types.DomainAlreadyExistsError{Message: "Domain already exists."}
+		return &types.DomainAlreadyExistsError{Message: "Domain with given name already exists."}
 	case *types.EntityNotExistsError:
 		// domain does not exists, proceeds
 	default:
@@ -176,6 +177,25 @@ func (d *handlerImpl) RegisterDomain(
 	}
 	if !matchedRegex {
 		return errInvalidDomainName
+	}
+
+	domainID := registerRequest.GetDomainID()
+	if domainID == "" {
+		domainID = uuid.New()
+	}
+	if uuid.Parse(domainID) == nil {
+		return errInvalidDomainID
+	}
+	_, err = d.domainManager.GetDomain(ctx, &persistence.GetDomainRequest{ID: domainID})
+	switch err.(type) {
+	case nil:
+		// domain already exists, cannot proceed
+		return &types.DomainAlreadyExistsError{Message: "Domain with given ID already exists."}
+	case *types.EntityNotExistsError:
+		// domain does not exists, proceeds
+	default:
+		// other err
+		return err
 	}
 
 	activeClusterName := d.clusterMetadata.GetCurrentClusterName()
@@ -231,7 +251,7 @@ func (d *handlerImpl) RegisterDomain(
 	}
 
 	info := &persistence.DomainInfo{
-		ID:          uuid.New(),
+		ID:          domainID,
 		Name:        registerRequest.GetName(),
 		Status:      persistence.DomainStatusRegistered,
 		OwnerEmail:  registerRequest.GetOwnerEmail(),
