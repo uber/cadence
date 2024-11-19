@@ -269,7 +269,7 @@ func retrieveFailureIssues(issues []invariant.InvariantCheckResult) ([]*failures
 func retrieveFailureRootCause(rootCause []invariant.InvariantRootCauseResult) []string {
 	result := make([]string, 0)
 	for _, rc := range rootCause {
-		if rc.RootCause == invariant.RootCauseTypeServiceSideIssue {
+		if rc.RootCause == invariant.RootCauseTypeServiceSideIssue || rc.RootCause == invariant.RootCauseTypeServiceSidePanic || rc.RootCause == invariant.RootCauseTypeServiceSideCustomError {
 			result = append(result, rc.RootCause.String())
 		}
 	}
