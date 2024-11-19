@@ -2,6 +2,7 @@
 [![Build Status](https://badge.buildkite.com/159887afd42000f11126f85237317d4090de97b26c287ebc40.svg?theme=github&branch=master)](https://buildkite.com/uberopensource/cadence-server)
 [![Coverage](https://codecov.io/gh/uber/cadence/graph/badge.svg?token=7SD244ImNF)](https://codecov.io/gh/uber/cadence)
 [![Slack Status](https://img.shields.io/badge/slack-join_chat-white.svg?logo=slack&style=social)](http://t.uber.com/cadence-slack)
+[![Gurubase](https://img.shields.io/badge/Gurubase-Ask%20Cadence%20Guru-006BFF)](https://gurubase.io/g/cadence)
 
 [![Github release](https://img.shields.io/github/v/release/uber/cadence.svg)](https://GitHub.com/uber/cadence/releases)
 [![License](https://img.shields.io/github/license/uber/cadence.svg)](http://www.apache.org/licenses/LICENSE-2.0)
