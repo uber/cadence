@@ -27,4 +27,4 @@ jobs:
           file: .build/coverage/unit_cover.out
           exclude: ./
           token: ${{ secrets.CODECOV_TOKEN }}
-          slug: uber/cadence
+          slug: cadence-workflow/cadence
