@@ -3604,6 +3604,7 @@ type PendingActivityInfo struct {
 	StartedWorkerIdentity  string                `json:"startedWorkerIdentity,omitempty"`
 	LastWorkerIdentity     string                `json:"lastWorkerIdentity,omitempty"`
 	LastFailureDetails     []byte                `json:"lastFailureDetails,omitempty"`
+	ScheduleID             int64                 `json:"scheduleID,omitempty"`
 }
 
 // GetActivityID is an internal getter (TBD...)
@@ -3682,6 +3683,14 @@ func (v *PendingActivityInfo) GetLastWorkerIdentity() (o string) {
 func (v *PendingActivityInfo) GetLastFailureDetails() (o []byte) {
 	if v != nil && v.LastFailureDetails != nil {
 		return v.LastFailureDetails
+	}
+	return
+}
+
+// GetScheduleID is an internal getter (TBD...)
+func (v *PendingActivityInfo) GetScheduleID() (o int64) {
+	if v != nil {
+		return v.ScheduleID
 	}
 	return
 }
@@ -3793,6 +3802,7 @@ type PendingDecisionInfo struct {
 	StartedTimestamp           *int64                `json:"startedTimestamp,omitempty"`
 	Attempt                    int64                 `json:"attempt,omitempty"`
 	OriginalScheduledTimestamp *int64                `json:"originalScheduledTimestamp,omitempty"`
+	ScheduleID                 int64                 `json:"scheduleID,omitempty"`
 }
 
 // PendingDecisionState is an internal type (TBD...)
