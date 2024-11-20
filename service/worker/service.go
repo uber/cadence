@@ -150,6 +150,7 @@ func NewConfig(params *resource.Params) *Config {
 			},
 			MaxWorkflowRetentionInDays: dc.GetIntProperty(dynamicconfig.MaxRetentionDays),
 		},
+		KafkaCfg: params.KafkaConfig,
 		BatcherCfg: &batcher.Config{
 			AdminOperationToken: dc.GetStringProperty(dynamicconfig.AdminOperationToken),
 			ClusterMetadata:     params.ClusterMetadata,
