@@ -1,5 +1,6 @@
 name: Workflow for Codecov integration
 on: [push, pull_request]
+
 jobs:
   codecov:
     runs-on: ubuntu-latest
