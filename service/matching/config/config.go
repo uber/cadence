@@ -140,7 +140,7 @@ type (
 		// task gc configuration
 		MaxTimeBetweenTaskDeletes time.Duration
 		// standby task completion configuration
-		EnableStandByTaskCompletion func() bool
+		EnableStandbyTaskCompletion func() bool
 	}
 )
 
@@ -192,6 +192,6 @@ func NewConfig(dc *dynamicconfig.Collection, hostName string, getIsolationGroups
 		TaskDispatchRPSTTL:                   time.Minute,
 		MaxTimeBetweenTaskDeletes:            time.Second,
 		AllIsolationGroups:                   getIsolationGroups,
-		EnableStandByTaskCompletion:          dc.GetBoolPropertyFilteredByTaskListInfo(dynamicconfig.MatchingEnableStandbyTaskCompletion),
+		EnableStandbyTaskCompletion:          dc.GetBoolPropertyFilteredByTaskListInfo(dynamicconfig.MatchingEnableStandbyTaskCompletion),
 	}
 }
