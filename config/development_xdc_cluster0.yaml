@@ -69,7 +69,7 @@ services:
       port: 7941
 
 
-  shard-manager:
+  shard-distributor:
     rpc:
       port: 7951
       bindOnLocalHost: true
