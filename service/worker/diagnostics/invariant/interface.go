@@ -43,13 +43,15 @@ type InvariantRootCauseResult struct {
 type RootCause string
 
 const (
-	RootCauseTypeMissingPollers                      RootCause = "There are no pollers for the tasklist"
-	RootCauseTypePollersStatus                       RootCause = "There are pollers for the tasklist. Check backlog status"
-	RootCauseTypeHeartBeatingNotEnabled              RootCause = "HeartBeating not enabled for activity"
-	RootCauseTypeHeartBeatingEnabledMissingHeartbeat RootCause = "HeartBeating enabled for activity but timed out due to missing heartbeat"
-	RootCauseTypeServiceSideIssue                    RootCause = "There is an issue in the worker service that is causing a failure. Check identity for service logs"
-	RootCauseTypeServiceSidePanic                    RootCause = "There is a panic in the activity/workflow that is causing a failure"
-	RootCauseTypeServiceSideCustomError              RootCause = "Customised error returned by the activity/workflow"
+	RootCauseTypeMissingPollers                        RootCause = "There are no pollers for the tasklist"
+	RootCauseTypePollersStatus                         RootCause = "There are pollers for the tasklist. Check backlog status"
+	RootCauseTypeNoHeartBeatTimeoutNoRetryPolicy       RootCause = "Heartbeat timeout and retry policy are not configured"
+	RootCauseTypeHeartBeatingNotEnabledWithRetryPolicy RootCause = "Heartbeat timeout not enabled for activity but there is a retry policy configured"
+	RootCauseTypeHeartBeatingEnabledWithoutRetryPolicy RootCause = "Heartbeat timeout enabled for activity but there is no retry policy configured"
+	RootCauseTypeHeartBeatingEnabledMissingHeartbeat   RootCause = "Heartbeat timeout enabled for activity but timed out due to missing heartbeat"
+	RootCauseTypeServiceSideIssue                      RootCause = "There is an issue in the worker service that is causing a failure. Check identity for service logs"
+	RootCauseTypeServiceSidePanic                      RootCause = "There is a panic in the activity/workflow that is causing a failure"
+	RootCauseTypeServiceSideCustomError                RootCause = "Customised error returned by the activity/workflow"
 )
 
 func (r RootCause) String() string {
