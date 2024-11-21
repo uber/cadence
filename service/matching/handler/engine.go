@@ -333,8 +333,9 @@ func (e *matchingEngineImpl) AddDecisionTask(
 		TaskListKind: taskListKind,
 		TaskListType: taskListType,
 		TaskInfo: persistence.TaskInfo{
-			DomainID:   domainID,
-			ScheduleID: request.GetScheduleID(),
+			DomainID:        domainID,
+			ScheduleID:      request.GetScheduleID(),
+			PartitionConfig: request.GetPartitionConfig(),
 		},
 		EventName: "Received AddDecisionTask",
 		Host:      e.config.HostName,
@@ -514,6 +515,7 @@ func (e *matchingEngineImpl) PollForDecisionTask(
 		Host:      e.config.HostName,
 		Payload: map[string]any{
 			"RequestForwardedFrom": req.GetForwardedFrom(),
+			"IsolationGroup":       req.GetIsolationGroup(),
 		},
 	})
 pollLoop:
@@ -666,6 +668,7 @@ pollLoop:
 				"TaskIsForwarded":      task.IsForwarded(),
 				"RequestForwardedFrom": req.GetForwardedFrom(),
 				"Latency":              time.Since(task.Info().CreatedTime).Milliseconds(),
+				"IsolationGroup":       req.GetIsolationGroup(),
 			},
 		})
 

@@ -8,8 +8,8 @@ historyconfig:
 matchingconfig:
   nummatchinghosts: 4
   simulationconfig:
-    tasklistwritepartitions: 4
-    tasklistreadpartitions: 4
+    tasklistwritepartitions: 1
+    tasklistreadpartitions: 1
     forwardermaxoutstandingpolls: 1
     forwardermaxoutstandingtasks: 1
     forwardermaxratepersecond: 10
@@ -23,20 +23,20 @@ matchingconfig:
         isolationgroups: ['a', 'b', 'c', 'd']
     pollers:
       - isolationgroup: 'a'
-        taskprocesstime: 25ms
-        numpollers: 8
+        taskprocesstime: 1ms
+        numpollers: 2
         polltimeout: 60s
       - isolationgroup: 'b'
-        taskprocesstime: 25ms
-        numpollers: 8
+        taskprocesstime: 1ms
+        numpollers: 2
         polltimeout: 60s
       - isolationgroup: 'c'
-        taskprocesstime: 25ms
-        numpollers: 8
+        taskprocesstime: 1ms
+        numpollers: 2
         polltimeout: 60s
       - isolationgroup: 'd'
-        taskprocesstime: 25ms
-        numpollers: 8
+        taskprocesstime: 1ms
+        numpollers: 2
         polltimeout: 60s
 workerconfig:
   enableasyncwfconsumer: false
