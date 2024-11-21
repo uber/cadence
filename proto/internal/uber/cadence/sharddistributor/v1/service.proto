@@ -38,4 +38,5 @@ message GetShardOwnerRequest {
 
 message GetShardOwnerResponse {
   string owner = 1;
+  string namespace = 2;
 }
