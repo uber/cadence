@@ -188,18 +188,34 @@ func checkHeartbeatStatus(issue invariant.InvariantCheckResult) ([]invariant.Inv
 		return nil, err
 	}
 
-	heartbeatingMetadataInBytes := invariant.MarshalData(HeartbeatingMetadata{TimeElapsed: metadata.TimeElapsed})
+	heartbeatingMetadataInBytes := invariant.MarshalData(HeartbeatingMetadata{TimeElapsed: metadata.TimeElapsed, RetryPolicy: metadata.RetryPolicy})
 
 	if metadata.HeartBeatTimeout == 0 && activityStarted(metadata) {
+		if metadata.RetryPolicy != nil {
+			return []invariant.InvariantRootCauseResult{
+				{
+					RootCause: invariant.RootCauseTypeHeartBeatingNotEnabledWithRetryPolicy,
+					Metadata:  heartbeatingMetadataInBytes,
+				},
+			}, nil
+		}
 		return []invariant.InvariantRootCauseResult{
 			{
-				RootCause: invariant.RootCauseTypeHeartBeatingNotEnabled,
+				RootCause: invariant.RootCauseTypeNoHeartBeatTimeoutNoRetryPolicy,
 				Metadata:  heartbeatingMetadataInBytes,
 			},
 		}, nil
 	}
 
 	if metadata.HeartBeatTimeout > 0 && metadata.TimeoutType.String() == types.TimeoutTypeHeartbeat.String() {
+		if metadata.RetryPolicy == nil {
+			return []invariant.InvariantRootCauseResult{
+				{
+					RootCause: invariant.RootCauseTypeHeartBeatingEnabledWithoutRetryPolicy,
+					Metadata:  heartbeatingMetadataInBytes,
+				},
+			}, nil
+		}
 		return []invariant.InvariantRootCauseResult{
 			{
 				RootCause: invariant.RootCauseTypeHeartBeatingEnabledMissingHeartbeat,
