@@ -33,6 +33,7 @@ service ShardDistributorAPI {
 
 message GetShardOwnerRequest {
   string shard_key = 1;
+  string namespace = 2;
 }
 
 message GetShardOwnerResponse {
