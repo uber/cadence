@@ -2634,6 +2634,8 @@ const (
 	EstimatedAddTaskQPSGauge
 	TaskListPartitionUpscaleThresholdGauge
 	TaskListPartitionDownscaleThresholdGauge
+	StandbyClusterTasksCompletedCounterPerTaskList
+	StandbyClusterTasksNotStartedCounterPerTaskList
 
 	NumMatchingMetrics
 )
@@ -3326,6 +3328,8 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		EstimatedAddTaskQPSGauge:                                {metricName: "estimated_add_task_qps_per_tl", metricType: Gauge},
 		TaskListPartitionUpscaleThresholdGauge:                  {metricName: "tasklist_partition_upscale_threshold", metricType: Gauge},
 		TaskListPartitionDownscaleThresholdGauge:                {metricName: "tasklist_partition_downscale_threshold", metricType: Gauge},
+		StandbyClusterTasksCompletedCounterPerTaskList:          {metricName: "standby_cluster_tasks_completed_per_tl", metricType: Counter},
+		StandbyClusterTasksNotStartedCounterPerTaskList:         {metricName: "standby_cluster_tasks_not_started_per_tl", metricType: Counter},
 	},
 	Worker: {
 		ReplicatorMessages:                            {metricName: "replicator_messages"},
