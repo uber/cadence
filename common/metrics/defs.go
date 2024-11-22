@@ -2638,7 +2638,8 @@ const (
 	StandbyClusterTasksCompletedCounterPerTaskList
 	StandbyClusterTasksNotStartedCounterPerTaskList
 	StandbyClusterTasksCompletionFailurePerTaskList
-
+	TaskIsolationExpiredPerTaskList
+	TaskIsolationErrorPerTaskList
 	NumMatchingMetrics
 )
 
@@ -3334,6 +3335,8 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		StandbyClusterTasksCompletedCounterPerTaskList:          {metricName: "standby_cluster_tasks_completed_per_tl", metricType: Counter},
 		StandbyClusterTasksNotStartedCounterPerTaskList:         {metricName: "standby_cluster_tasks_not_started_per_tl", metricType: Counter},
 		StandbyClusterTasksCompletionFailurePerTaskList:         {metricName: "standby_cluster_tasks_completion_failure_per_tl", metricType: Counter},
+		TaskIsolationExpiredPerTaskList:                         {metricName: "task_isolation_expired_per_tl", metricRollupName: "task_isolation_expired"},
+		TaskIsolationErrorPerTaskList:                           {metricName: "task_isolation_error_per_tl", metricRollupName: "task_isolation_error"},
 	},
 	Worker: {
 		ReplicatorMessages:                            {metricName: "replicator_messages"},

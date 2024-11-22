@@ -53,6 +53,8 @@ type (
 		AsyncTaskDispatchTimeout             dynamicconfig.DurationPropertyFnWithTaskListInfoFilters
 		LocalPollWaitTime                    dynamicconfig.DurationPropertyFnWithTaskListInfoFilters
 		LocalTaskWaitTime                    dynamicconfig.DurationPropertyFnWithTaskListInfoFilters
+		TaskIsolationDuration                dynamicconfig.DurationPropertyFnWithTaskListInfoFilters
+		TaskIsolationPollerWindow            dynamicconfig.DurationPropertyFnWithTaskListInfoFilters
 		EnableGetNumberOfPartitionsFromCache dynamicconfig.BoolPropertyFnWithTaskListInfoFilters
 		PartitionUpscaleRPS                  dynamicconfig.IntPropertyFnWithTaskListInfoFilters
 		PartitionDownscaleFactor             dynamicconfig.FloatPropertyFnWithTaskListInfoFilters
@@ -132,7 +134,9 @@ type (
 		// isolation configuration
 		EnableTasklistIsolation func() bool
 		// A function which returns all the isolation groups
-		AllIsolationGroups func() []string
+		AllIsolationGroups        func() []string
+		TaskIsolationDuration     func() time.Duration
+		TaskIsolationPollerWindow func() time.Duration
 		// hostname
 		HostName string
 		// rate limiter configuration
@@ -189,6 +193,8 @@ func NewConfig(dc *dynamicconfig.Collection, hostName string, getIsolationGroups
 		PartitionDownscaleSustainedDuration:  dc.GetDurationPropertyFilteredByTaskListInfo(dynamicconfig.MatchingPartitionDownscaleSustainedDuration),
 		AdaptiveScalerUpdateInterval:         dc.GetDurationPropertyFilteredByTaskListInfo(dynamicconfig.MatchingAdaptiveScalerUpdateInterval),
 		EnableAdaptiveScaler:                 dc.GetBoolPropertyFilteredByTaskListInfo(dynamicconfig.MatchingEnableAdaptiveScaler),
+		TaskIsolationDuration:                dc.GetDurationPropertyFilteredByTaskListInfo(dynamicconfig.TaskIsolationDuration),
+		TaskIsolationPollerWindow:            dc.GetDurationPropertyFilteredByTaskListInfo(dynamicconfig.TaskIsolationPollerWindow),
 		HostName:                             hostName,
 		TaskDispatchRPS:                      100000.0,
 		TaskDispatchRPSTTL:                   time.Minute,

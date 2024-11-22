@@ -89,6 +89,8 @@ func TestNewConfig(t *testing.T) {
 		"EnableAdaptiveScaler":                 {dynamicconfig.MatchingEnableAdaptiveScaler, true},
 		"EnableStandbyTaskCompletion":          {dynamicconfig.MatchingEnableStandbyTaskCompletion, false},
 		"EnableClientAutoConfig":               {dynamicconfig.MatchingEnableClientAutoConfig, false},
+		"TaskIsolationDuration":                {dynamicconfig.TaskIsolationDuration, time.Duration(35)},
+		"TaskIsolationPollerWindow":            {dynamicconfig.TaskIsolationPollerWindow, time.Duration(36)},
 	}
 	client := dynamicconfig.NewInMemoryClient()
 	for fieldName, expected := range fields {

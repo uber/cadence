@@ -42,6 +42,7 @@ import (
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/dynamicconfig"
+	"github.com/uber/cadence/common/isolationgroup"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/log/testlogger"
@@ -530,6 +531,167 @@ func TestMisconfiguredZoneDoesNotBlock(t *testing.T) {
 	breakDispatcher, breakRetryLoop := tlm.taskReader.dispatchSingleTaskFromBuffer(&persistence.TaskInfo{})
 	assert.False(t, breakDispatcher, "dispatch isn't shutting down")
 	assert.True(t, breakRetryLoop, "task should be dispatched to default channel")
+}
+
+func TestGetIsolationGroupForTask(t *testing.T) {
+	defaultAvailableIsolationGroups := []string{
+		"a", "b", "c",
+	}
+	taskIsolationPollerWindow := time.Second * 10
+	testCases := []struct {
+		name                     string
+		taskIsolationGroup       string
+		taskIsolationDuration    time.Duration
+		taskLatency              time.Duration
+		availableIsolationGroups []string
+		recentPollers            []string
+		expectedGroup            string
+		expectedDuration         time.Duration
+		disableTaskIsolation     bool
+	}{
+		{
+			name:                     "success - recent poller allows group",
+			taskIsolationGroup:       "a",
+			availableIsolationGroups: defaultAvailableIsolationGroups,
+			expectedGroup:            "a",
+			expectedDuration:         0,
+			recentPollers:            []string{"a"},
+		},
+		{
+			name:                     "success - with isolation duration",
+			taskIsolationGroup:       "b",
+			taskIsolationDuration:    time.Second,
+			availableIsolationGroups: defaultAvailableIsolationGroups,
+			expectedGroup:            "b",
+			expectedDuration:         time.Second,
+			recentPollers:            []string{"b"},
+		},
+		{
+			name:                     "success - low task latency",
+			taskIsolationGroup:       "a",
+			taskIsolationDuration:    time.Second,
+			taskLatency:              time.Millisecond * 300,
+			availableIsolationGroups: defaultAvailableIsolationGroups,
+			expectedGroup:            "a",
+			expectedDuration:         time.Second - (time.Millisecond * 300),
+			recentPollers:            []string{"a"},
+		},
+		{
+			name:                     "leak - no recent pollers",
+			taskIsolationGroup:       "a",
+			availableIsolationGroups: defaultAvailableIsolationGroups,
+			expectedGroup:            "",
+			expectedDuration:         0,
+			recentPollers:            nil,
+		},
+		{
+			name:                     "leak - no matching recent poller",
+			taskIsolationGroup:       "a",
+			taskIsolationDuration:    time.Second,
+			availableIsolationGroups: defaultAvailableIsolationGroups,
+			expectedGroup:            "",
+			expectedDuration:         0,
+			recentPollers:            []string{"b"},
+		},
+		{
+			name:                     "leak - task latency",
+			taskIsolationGroup:       "a",
+			taskIsolationDuration:    time.Second,
+			taskLatency:              time.Second,
+			availableIsolationGroups: defaultAvailableIsolationGroups,
+			expectedGroup:            "",
+			expectedDuration:         0,
+		},
+		{
+			name:                     "leak - task latency close to taskIsolationDuration",
+			taskIsolationGroup:       "a",
+			taskIsolationDuration:    time.Second,
+			taskLatency:              time.Second - minimumIsolationDuration,
+			availableIsolationGroups: defaultAvailableIsolationGroups,
+			expectedGroup:            "",
+			expectedDuration:         0,
+		},
+		{
+			name:                  "leak - partitioner error",
+			taskIsolationGroup:    "a",
+			taskIsolationDuration: time.Second,
+			// No isolation groups causes an error
+			// availableIsolationGroups: defaultAvailableIsolationGroups,
+			expectedGroup:    "",
+			expectedDuration: 0,
+		},
+		{
+			name:                     "leak - task isolation disabled",
+			taskIsolationGroup:       "a",
+			taskIsolationDuration:    time.Second,
+			availableIsolationGroups: defaultAvailableIsolationGroups,
+			expectedGroup:            "",
+			expectedDuration:         0,
+			disableTaskIsolation:     true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			controller := gomock.NewController(t)
+			logger := testlogger.New(t)
+
+			config := defaultTestConfig()
+			config.EnableTasklistIsolation = func(domain string) bool { return !tc.disableTaskIsolation }
+			config.TaskIsolationDuration = func(domain string, taskList string, taskType int) time.Duration {
+				return tc.taskIsolationDuration
+			}
+			config.TaskIsolationPollerWindow = func(domain string, taskList string, taskType int) time.Duration {
+				return taskIsolationPollerWindow
+			}
+			config.AllIsolationGroups = func() []string {
+				return tc.availableIsolationGroups
+			}
+			mockClock := clock.NewMockedTimeSource()
+			tlm := createTestTaskListManagerWithConfig(t, logger, controller, config, mockClock)
+
+			mockIsolationGroupState := isolationgroup.NewMockState(controller)
+			mockIsolationGroupState.EXPECT().IsDrained(gomock.Any(), gomock.Any(), gomock.Any()).Return(false, nil).AnyTimes()
+			mockIsolationGroupState.EXPECT().IsDrainedByDomainID(gomock.Any(), gomock.Any(), gomock.Any()).Return(false, nil).AnyTimes()
+			mockIsolationGroupState.EXPECT().AvailableIsolationGroupsByDomainID(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, domainId string, taskListName string, available []string) (types.IsolationGroupConfiguration, error) {
+				// Report all available isolation groups as healthy
+				isolationGroupStates := make(types.IsolationGroupConfiguration, len(available))
+				for _, availableGroup := range available {
+					isolationGroupStates[availableGroup] = types.IsolationGroupPartition{
+						Name:  availableGroup,
+						State: types.IsolationGroupStateHealthy,
+					}
+				}
+				return isolationGroupStates, nil
+			}).AnyTimes()
+			partitioner := partition.NewDefaultPartitioner(log.NewNoop(), mockIsolationGroupState)
+			tlm.partitioner = partitioner
+
+			for _, pollerGroup := range tc.recentPollers {
+				tlm.pollerHistory.UpdatePollerInfo(poller.Identity(pollerGroup), poller.Info{IsolationGroup: pollerGroup})
+			}
+
+			taskInfo := &persistence.TaskInfo{
+				DomainID:                      "domainId",
+				RunID:                         "run1",
+				WorkflowID:                    "workflow1",
+				ScheduleID:                    5,
+				ScheduleToStartTimeoutSeconds: 1,
+				PartitionConfig: map[string]string{
+					partition.IsolationGroupKey: tc.taskIsolationGroup,
+					partition.WorkflowIDKey:     "workflow1",
+				},
+				CreatedTime: mockClock.Now().Add(-1 * tc.taskLatency),
+			}
+
+			actual, actualDuration, err := tlm.getIsolationGroupForTask(context.Background(), taskInfo)
+
+			assert.Equal(t, tc.expectedGroup, actual)
+			assert.Equal(t, tc.expectedDuration, actualDuration)
+			// There are no longer any error cases
+			assert.Nil(t, err)
+		})
+	}
 }
 
 func TestTaskWriterShutdown(t *testing.T) {

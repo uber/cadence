@@ -74,6 +74,12 @@ echo "Max Task latency (ms): $tmp" | tee -a $testSummaryFile
 
 tmp=$(cat "$eventLogsFile" \
   | jq -c 'select(.EventName == "PollForDecisionTask returning task")' \
+  | jq -s 'map(if .Payload.IsolationGroup == .PartitionConfig."original-isolation-group" then 1 else 0 end) | add / length')
+echo "Task Containment: $tmp" | tee -a $testSummaryFile
+
+
+tmp=$(cat "$eventLogsFile" \
+  | jq -c 'select(.EventName == "PollForDecisionTask returning task")' \
   | jq '{ScheduleID,TaskListName,EventName,Payload}' \
   | jq -c '.' | wc -l)
 echo "Worker Polls that returned a task: $tmp" | tee -a $testSummaryFile
@@ -191,13 +197,13 @@ cat "$eventLogsFile" \
 echo "AddDecisionTask request per isolation group (excluding forwarded):" | tee -a $testSummaryFile
 cat "$eventLogsFile" \
   | jq -c 'select(.EventName == "Received AddDecisionTask" and .Payload.RequestForwardedFrom == "")' \
-  | jq '.PartitionConfig."isolation-group"' \
+  | jq '.PartitionConfig."original-isolation-group" // .PartitionConfig."isolation-group"' \
   | jq -c '.' | sort -n | uniq -c | sed -e 's/^/     /' | tee -a $testSummaryFile
 
 echo "AddDecisionTask request per isolation group (forwarded):" | tee -a $testSummaryFile
 cat "$eventLogsFile" \
   | jq -c 'select(.EventName == "Received AddDecisionTask" and .Payload.RequestForwardedFrom != "")' \
-  | jq '.PartitionConfig."isolation-group"' \
+  | jq '.PartitionConfig."original-isolation-group" // .PartitionConfig."isolation-group"' \
   | jq -c '.' | sort -n | uniq -c | sed -e 's/^/     /' | tee -a $testSummaryFile
 
 echo "PollForDecisionTask request per isolation group  (excluding forwarded):" | tee -a $testSummaryFile
@@ -215,7 +221,7 @@ cat "$eventLogsFile" \
 echo "Latency per isolation group:" | tee -a $testSummaryFile
 cat "$eventLogsFile" \
   | jq -c 'select(.EventName == "PollForDecisionTask returning task")' \
-  | jq -s 'group_by(.Payload.IsolationGroup)[] | {"IsolationGroup": .[0].Payload.IsolationGroup,
+  | jq -s 'group_by(.PartitionConfig."original-isolation-group")[] | {"IsolationGroup": .[0].PartitionConfig."original-isolation-group",
    "Avg": (map(.Payload.Latency | tonumber) | add / length), "Median": (map(.Payload.Latency | tonumber) | sort | .[length/2]), "Max":(map(.Payload.Latency | tonumber) | max) }'\
   | jq -s 'sort_by(.IsolationGroup)[]'\
   | jq -r '[.IsolationGroup, .Median, .Avg, .Max] | @tsv' \
@@ -225,7 +231,7 @@ cat "$eventLogsFile" \
 echo "Latency per isolation group and task list:" | tee -a $testSummaryFile
 cat "$eventLogsFile" \
   | jq -c 'select(.EventName == "PollForDecisionTask returning task")' \
-  | jq -s 'group_by(.Payload.IsolationGroup, .TaskListName)[] | {"IsolationGroup": .[0].Payload.IsolationGroup, "TaskListName": .[0].TaskListName,
+  | jq -s 'group_by(.PartitionConfig."original-isolation-group", .TaskListName)[] | {"IsolationGroup": .[0].PartitionConfig."original-isolation-group", "TaskListName": .[0].TaskListName,
    "Avg": (map(.Payload.Latency | tonumber) | add / length), "Median": (map(.Payload.Latency | tonumber) | sort | .[length/2]), "Max":(map(.Payload.Latency | tonumber) | max) }'\
   | jq -s 'sort_by(.TaskListName, .IsolationGroup)[]'\
   | jq -r '[.TaskListName, .IsolationGroup, .Median, .Avg, .Max] | @tsv' \
@@ -234,8 +240,8 @@ cat "$eventLogsFile" \
 echo "Task Containment per isolation group and task list:" | tee -a $testSummaryFile
 cat "$eventLogsFile"\
   | jq -c 'select(.EventName == "PollForDecisionTask returning task")' \
-  | jq -s 'group_by(.PartitionConfig."isolation-group", .TaskListName)[] | {"IsolationGroup": .[0].PartitionConfig."isolation-group", "TaskListName": .[0].TaskListName,
-   "Containment": (map(if .Payload.IsolationGroup == .PartitionConfig."isolation-group" then 1 else 0 end) | add / length) }'\
+  | jq -s 'group_by(.PartitionConfig."original-isolation-group", (.Payload.RequestForwardedFrom // .TaskListName))[] | {"IsolationGroup": .[0].PartitionConfig."original-isolation-group", "TaskListName": (.[0].Payload.RequestForwardedFrom // .[0].TaskListName),
+   "Containment": (map(if .Payload.IsolationGroup == .PartitionConfig."original-isolation-group" then 1 else 0 end) | add / length) }'\
   | jq -s 'sort_by(.TaskListName, .IsolationGroup)[]'\
   | jq -r '[.TaskListName, .IsolationGroup, .Containment] | @tsv' \
   | sort -n | column -t  | sed -e 's/^/     /' | tee -a $testSummaryFile

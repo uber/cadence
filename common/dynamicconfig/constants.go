@@ -2796,6 +2796,20 @@ const (
 	// Allowed filters: domainName, taskListName, taskListType
 	LocalTaskWaitTime
 
+	// TaskIsolationDuration is the time period for which we attempt to respect tasklist isolation before allowing any poller to process the task
+	// KeyName: matching.taskIsolationDuration
+	// Value type: Duration
+	// Default value: 0
+	// Allowed filters: domainName, taskListName, taskListType
+	TaskIsolationDuration
+
+	// TaskIsolationPollerWindow is the time period for which pollers are remembered when deciding whether to skip tasklist isolation due to unpolled isolation groups.
+	// KeyName: matching.taskIsolationPollerWindow
+	// Value type: Duration
+	// Default value: 10s
+	// Allowed filters: domainName, taskListName, taskListType
+	TaskIsolationPollerWindow
+
 	// LastDurationKey must be the last one in this const group
 	LastDurationKey
 )
@@ -5076,6 +5090,18 @@ var DurationKeys = map[DurationKey]DynamicDuration{
 		Filters:      []Filter{DomainName, TaskListName, TaskType},
 		Description:  "LocalTaskWaitTime is the time a task waits for a poller to arrive before considering task forwarding",
 		DefaultValue: time.Millisecond * 10,
+	},
+	TaskIsolationDuration: {
+		KeyName:      "matching.taskIsolationDuration",
+		Filters:      []Filter{DomainName, TaskListName, TaskType},
+		Description:  "TaskIsolationDuration is the time period for which we attempt to respect tasklist isolation before allowing any poller to process the task",
+		DefaultValue: 0,
+	},
+	TaskIsolationPollerWindow: {
+		KeyName:      "matching.taskIsolationPollerWindow",
+		Filters:      []Filter{DomainName, TaskListName, TaskType},
+		Description:  "TaskIsolationDuration is the time period for which we attempt to respect tasklist isolation before allowing any poller to process the task",
+		DefaultValue: time.Second * 10,
 	},
 }
 

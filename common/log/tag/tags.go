@@ -982,6 +982,14 @@ func IsolationGroup(group string) Tag {
 	return newStringTag("isolation-group", group)
 }
 
+func TaskLatency(duration time.Duration) Tag {
+	return newDurationTag("task-latency", duration)
+}
+
+func IsolationDuration(duration time.Duration) Tag {
+	return newDurationTag("isolation-duration", duration)
+}
+
 func PartitionConfig(p map[string]string) Tag {
 	return newObjectTag("partition-config", p)
 }
