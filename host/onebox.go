@@ -193,6 +193,8 @@ type (
 		Backlogs []SimulationBacklogConfiguration
 
 		GetPartitionConfigFromDB bool
+
+		TaskIsolationDuration time.Duration
 	}
 
 	SimulationPollerConfiguration struct {
@@ -1066,7 +1068,10 @@ func (c *cadenceImpl) newRPCFactory(serviceName string, host membership.HostInfo
 		TChannelAddress: tchannelAddress,
 		GRPCAddress:     grpcAddress,
 		InboundMiddleware: yarpc.InboundMiddleware{
-			Unary: &versionMiddleware{},
+			Unary: yarpc.UnaryInboundMiddleware(&versionMiddleware{}, &rpc.ClientPartitionConfigMiddleware{}, &rpc.ForwardPartitionConfigMiddleware{}),
+		},
+		OutboundMiddleware: yarpc.OutboundMiddleware{
+			Unary: &rpc.ForwardPartitionConfigMiddleware{},
 		},
 
 		// For integration tests to generate client out of the same outbound.

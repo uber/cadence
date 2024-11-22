@@ -1331,8 +1331,12 @@ func (e *matchingEngineImpl) emitTaskIsolationMetrics(
 	partitionConfig map[string]string,
 	pollerIsolationGroup string,
 ) {
-	if len(partitionConfig) > 0 {
-		scope.Tagged(metrics.PartitionConfigTags(partitionConfig)...).Tagged(metrics.PollerIsolationGroupTag(pollerIsolationGroup)).IncCounter(metrics.IsolationTaskMatchPerTaskListCounter)
+	if currentGroup, ok := partitionConfig[partition.IsolationGroupKey]; ok {
+		originalGroup, ok := partitionConfig[partition.OriginalIsolationGroupKey]
+		if !ok {
+			originalGroup = currentGroup
+		}
+		scope.Tagged(metrics.OriginalIsolationGroupTag(originalGroup), metrics.IsolationGroupTag(currentGroup), metrics.PollerIsolationGroupTag(pollerIsolationGroup)).IncCounter(metrics.IsolationTaskMatchPerTaskListCounter)
 	}
 }
 
