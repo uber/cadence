@@ -2636,6 +2636,7 @@ const (
 	TaskListPartitionDownscaleThresholdGauge
 	StandbyClusterTasksCompletedCounterPerTaskList
 	StandbyClusterTasksNotStartedCounterPerTaskList
+	StandbyClusterTasksCompletionFailurePerTaskList
 
 	NumMatchingMetrics
 )
@@ -3330,6 +3331,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		TaskListPartitionDownscaleThresholdGauge:                {metricName: "tasklist_partition_downscale_threshold", metricType: Gauge},
 		StandbyClusterTasksCompletedCounterPerTaskList:          {metricName: "standby_cluster_tasks_completed_per_tl", metricType: Counter},
 		StandbyClusterTasksNotStartedCounterPerTaskList:         {metricName: "standby_cluster_tasks_not_started_per_tl", metricType: Counter},
+		StandbyClusterTasksCompletionFailurePerTaskList:         {metricName: "standby_cluster_tasks_completion_failure_per_tl", metricType: Counter},
 	},
 	Worker: {
 		ReplicatorMessages:                            {metricName: "replicator_messages"},
