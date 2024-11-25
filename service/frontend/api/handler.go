@@ -1876,6 +1876,7 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 		currentBranchToken []byte,
 		versionHistoryItem *persistence.VersionHistoryItem,
 	) ([]byte, string, int64, int64, bool, *types.VersionHistoryItem, error) {
+
 		response, err := wh.GetHistoryClient().PollMutableState(ctx, &types.PollMutableStateRequest{
 			DomainUUID:          domainUUID,
 			Execution:           execution,
