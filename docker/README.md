@@ -17,7 +17,6 @@ docker-compose up
 To update your `master-auto-setup` image to the latest version
 ```
 docker pull ubercadence/server:master-auto-setup
-
 ```
 
 * View Cadence-Web at http://localhost:8088
@@ -115,6 +114,7 @@ Note that Docker has been making changes to its build system, and the new system
 that the old one had, and makes major changes to how you control it.
 When searching for workarounds, make sure you are looking at modern answers, and consider specifically searching for
 "buildkit" solutions.
+
 You can also disable buildkit explicitly with `DOCKER_BUILDKIT=0 docker build ...`.
 
 For output limiting (e.g. `[output clipped ...]` messages), or for anything that requires changing buildkit environment
