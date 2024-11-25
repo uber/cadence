@@ -288,9 +288,9 @@ func (p *PollMutableStateRequest) GetVersionHistoryItem() *VersionHistoryItem {
 }
 
 // GetDomainUUID is an internal getter (TBD...)
-func (v *PollMutableStateRequest) GetDomainUUID() (o string) {
-	if v != nil {
-		return v.DomainUUID
+func (p *PollMutableStateRequest) GetDomainUUID() (o string) {
+	if p != nil {
+		return p.DomainUUID
 	}
 	return
 }
