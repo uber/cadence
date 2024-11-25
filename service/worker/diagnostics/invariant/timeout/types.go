@@ -73,4 +73,5 @@ type PollersMetadata struct {
 
 type HeartbeatingMetadata struct {
 	TimeElapsed time.Duration
+	RetryPolicy *types.RetryPolicy
 }

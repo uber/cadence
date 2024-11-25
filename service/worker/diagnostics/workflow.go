@@ -221,8 +221,7 @@ func retrieveTimeoutIssues(issues []invariant.InvariantCheckResult) ([]*timeoutI
 func retrieveTimeoutRootCause(rootCause []invariant.InvariantRootCauseResult) ([]*timeoutRootCauseResult, error) {
 	result := make([]*timeoutRootCauseResult, 0)
 	for _, rc := range rootCause {
-		switch rc.RootCause {
-		case invariant.RootCauseTypePollersStatus, invariant.RootCauseTypeMissingPollers:
+		if rootCausePollersRelated(rc.RootCause) {
 			var metadata timeout.PollersMetadata
 			err := json.Unmarshal(rc.Metadata, &metadata)
 			if err != nil {
@@ -232,7 +231,7 @@ func retrieveTimeoutRootCause(rootCause []invariant.InvariantRootCauseResult) ([
 				RootCauseType:   rc.RootCause.String(),
 				PollersMetadata: &metadata,
 			})
-		case invariant.RootCauseTypeHeartBeatingNotEnabled, invariant.RootCauseTypeHeartBeatingEnabledMissingHeartbeat:
+		} else if rootCauseHeartBeatRelated(rc.RootCause) {
 			var metadata timeout.HeartbeatingMetadata
 			err := json.Unmarshal(rc.Metadata, &metadata)
 			if err != nil {
@@ -244,6 +243,7 @@ func retrieveTimeoutRootCause(rootCause []invariant.InvariantRootCauseResult) ([
 			})
 		}
 	}
+
 	return result, nil
 }
 
@@ -269,9 +269,30 @@ func retrieveFailureIssues(issues []invariant.InvariantCheckResult) ([]*failures
 func retrieveFailureRootCause(rootCause []invariant.InvariantRootCauseResult) []string {
 	result := make([]string, 0)
 	for _, rc := range rootCause {
-		if rc.RootCause == invariant.RootCauseTypeServiceSideIssue {
+		if rc.RootCause == invariant.RootCauseTypeServiceSideIssue || rc.RootCause == invariant.RootCauseTypeServiceSidePanic || rc.RootCause == invariant.RootCauseTypeServiceSideCustomError {
 			result = append(result, rc.RootCause.String())
 		}
 	}
 	return result
+}
+
+func rootCauseHeartBeatRelated(rootCause invariant.RootCause) bool {
+	for _, rc := range []invariant.RootCause{invariant.RootCauseTypeNoHeartBeatTimeoutNoRetryPolicy,
+		invariant.RootCauseTypeHeartBeatingNotEnabledWithRetryPolicy,
+		invariant.RootCauseTypeHeartBeatingEnabledWithoutRetryPolicy,
+		invariant.RootCauseTypeHeartBeatingEnabledMissingHeartbeat} {
+		if rc == rootCause {
+			return true
+		}
+	}
+	return false
+}
+
+func rootCausePollersRelated(rootCause invariant.RootCause) bool {
+	for _, rc := range []invariant.RootCause{invariant.RootCauseTypePollersStatus, invariant.RootCauseTypeMissingPollers} {
+		if rc == rootCause {
+			return true
+		}
+	}
+	return false
 }

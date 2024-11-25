@@ -3383,6 +3383,7 @@ func FromPendingActivityInfo(t *types.PendingActivityInfo) *shared.PendingActivi
 		LastWorkerIdentity:     &t.LastWorkerIdentity,
 		LastFailureDetails:     t.LastFailureDetails,
 		StartedWorkerIdentity:  &t.StartedWorkerIdentity,
+		ScheduleID:             &t.ScheduleID,
 	}
 }
 
@@ -3406,6 +3407,7 @@ func ToPendingActivityInfo(t *shared.PendingActivityInfo) *types.PendingActivity
 		LastWorkerIdentity:     t.GetLastWorkerIdentity(),
 		LastFailureDetails:     t.LastFailureDetails,
 		StartedWorkerIdentity:  t.GetStartedWorkerIdentity(),
+		ScheduleID:             t.GetScheduleID(),
 	}
 }
 
@@ -3488,6 +3490,7 @@ func FromPendingDecisionInfo(t *types.PendingDecisionInfo) *shared.PendingDecisi
 		StartedTimestamp:           t.StartedTimestamp,
 		Attempt:                    &t.Attempt,
 		OriginalScheduledTimestamp: t.OriginalScheduledTimestamp,
+		ScheduleID:                 &t.ScheduleID,
 	}
 }
 
@@ -3502,6 +3505,7 @@ func ToPendingDecisionInfo(t *shared.PendingDecisionInfo) *types.PendingDecision
 		StartedTimestamp:           t.StartedTimestamp,
 		Attempt:                    t.GetAttempt(),
 		OriginalScheduledTimestamp: t.OriginalScheduledTimestamp,
+		ScheduleID:                 t.GetScheduleID(),
 	}
 }
 

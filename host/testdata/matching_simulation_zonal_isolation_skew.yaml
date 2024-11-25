@@ -17,10 +17,14 @@ matchingconfig:
     localpollwaittime: 10ms
     localtaskwaittime: 10ms
     tasks:
-      - numtaskgenerators: 30
-        taskspersecond: 500
-        maxtasktogenerate:  5000
-        isolationgroups: ['a', 'b', 'c', 'd']
+      - numtaskgenerators: 10
+        taskspersecond: 180
+        maxtasktogenerate:  1800
+        isolationgroups: ['a', 'b', 'c']
+      - numtaskgenerators: 20
+        taskspersecond: 320
+        maxtasktogenerate: 3200
+        isolationgroups: [ 'd' ]
     pollers:
       - isolationgroup: 'a'
         taskprocesstime: 25ms

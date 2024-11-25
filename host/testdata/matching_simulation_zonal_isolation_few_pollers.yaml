@@ -23,20 +23,20 @@ matchingconfig:
         isolationgroups: ['a', 'b', 'c', 'd']
     pollers:
       - isolationgroup: 'a'
-        taskprocesstime: 25ms
-        numpollers: 8
+        taskprocesstime: 1ms
+        numpollers: 2
         polltimeout: 60s
       - isolationgroup: 'b'
-        taskprocesstime: 25ms
-        numpollers: 8
+        taskprocesstime: 1ms
+        numpollers: 2
         polltimeout: 60s
       - isolationgroup: 'c'
-        taskprocesstime: 25ms
-        numpollers: 8
+        taskprocesstime: 1ms
+        numpollers: 2
         polltimeout: 60s
       - isolationgroup: 'd'
-        taskprocesstime: 25ms
-        numpollers: 8
+        taskprocesstime: 1ms
+        numpollers: 2
         polltimeout: 60s
 workerconfig:
   enableasyncwfconsumer: false
