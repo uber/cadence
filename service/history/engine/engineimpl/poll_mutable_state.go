@@ -83,6 +83,12 @@ func (e *historyEngineImpl) getMutableState(
 	}
 	defer func() { release(retError) }()
 
+	err := wfContext.Lock(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("couldn't lock workflow context: %w", err)
+	}
+	defer wfContext.Unlock()
+
 	mutableState, retError := wfContext.LoadWorkflowExecution(ctx)
 	if retError != nil {
 		return
