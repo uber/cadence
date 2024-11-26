@@ -91,7 +91,7 @@ func (tc *taskCompleterImpl) CompleteTaskIfStarted(ctx context.Context, task *In
 			return fmt.Errorf("unable to fetch domain from cache: %w", err)
 		}
 
-		if _, err = domainEntry.IsActiveIn(tc.clusterMetadata.GetCurrentClusterName()); err == nil {
+		if isActive, _ := domainEntry.IsActiveIn(tc.clusterMetadata.GetCurrentClusterName()); isActive {
 			return errDomainIsActive
 		}
 
@@ -109,7 +109,7 @@ func (tc *taskCompleterImpl) CompleteTaskIfStarted(ctx context.Context, task *In
 		workflowExecutionResponse, err := tc.historyService.DescribeWorkflowExecution(ctx, req)
 
 		if errors.As(err, new(*types.EntityNotExistsError)) {
-			tc.logger.Info("Workflow execution not found while attempting to complete task on standby cluster", tag.WorkflowID(task.Event.WorkflowID), tag.WorkflowRunID(task.Event.RunID))
+			tc.logger.Warn("Workflow execution not found while attempting to complete task on standby cluster", tag.WorkflowID(task.Event.WorkflowID), tag.WorkflowRunID(task.Event.RunID))
 			return nil
 		} else if err != nil {
 			return fmt.Errorf("unable to fetch workflow execution from the history service: %w", err)

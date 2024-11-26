@@ -541,7 +541,7 @@ func (c *taskListManagerImpl) DispatchTask(ctx context.Context, task *InternalTa
 		return fmt.Errorf("unable to fetch domain from cache: %w", err)
 	}
 
-	if _, err = domainEntry.IsActiveIn(c.clusterMetadata.GetCurrentClusterName()); err == nil {
+	if isActive, _ := domainEntry.IsActiveIn(c.clusterMetadata.GetCurrentClusterName()); isActive {
 		return c.matcher.MustOffer(ctx, task)
 	}
 
