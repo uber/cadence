@@ -405,6 +405,9 @@ func NewVersionHistoriesFromInternalType(
 
 // Duplicate duplicate VersionHistories
 func (h *VersionHistories) Duplicate() *VersionHistories {
+	if h == nil {
+		return nil
+	}
 
 	currentVersionHistoryIndex := h.CurrentVersionHistoryIndex
 	histories := []*VersionHistory{}
