@@ -589,6 +589,5 @@ func (h *VersionHistories) GetCurrentVersionHistoryIndex() int {
 
 // GetCurrentVersionHistory get the current version history
 func (h *VersionHistories) GetCurrentVersionHistory() (*VersionHistory, error) {
-
 	return h.GetVersionHistory(h.GetCurrentVersionHistoryIndex())
 }

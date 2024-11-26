@@ -607,7 +607,7 @@ func (c *contextImpl) ConflictResolveWorkflowExecution(
 		resetMutableState.GetPreviousStartedEventID(),
 		workflowState,
 		workflowCloseState,
-		resetMutableState.GetVersionHistories(),
+		resetMutableState.GetVersionHistories().Duplicate(),
 	))
 
 	c.notifyTasksFromWorkflowSnapshotFn(resetWorkflow, persistedBlobs, false)
@@ -850,7 +850,7 @@ func (c *contextImpl) UpdateWorkflowExecutionWithNew(
 		c.mutableState.GetPreviousStartedEventID(),
 		workflowState,
 		workflowCloseState,
-		c.mutableState.GetVersionHistories(),
+		c.mutableState.GetVersionHistories().Duplicate(),
 	))
 
 	// notify current workflow tasks
