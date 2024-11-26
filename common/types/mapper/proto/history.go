@@ -21,7 +21,6 @@
 package proto
 
 import (
-	adminv1 "github.com/uber/cadence-idl/go/proto/admin/v1"
 	apiv1 "github.com/uber/cadence-idl/go/proto/api/v1"
 
 	historyv1 "github.com/uber/cadence/.gen/proto/history/v1"
@@ -293,21 +292,12 @@ func FromHistoryGetMutableStateRequest(t *types.GetMutableStateRequest) *history
 	if t == nil {
 		return nil
 	}
-
-	var versionHistoryItem *adminv1.VersionHistoryItem
-	if t.VersionHistoryItem != nil {
-		versionHistoryItem = &adminv1.VersionHistoryItem{
-			EventId: t.VersionHistoryItem.EventID,
-			Version: t.VersionHistoryItem.Version,
-		}
-	}
-
 	return &historyv1.GetMutableStateRequest{
 		DomainId:            t.DomainUUID,
 		WorkflowExecution:   FromWorkflowExecution(t.Execution),
 		ExpectedNextEventId: t.ExpectedNextEventID,
 		CurrentBranchToken:  t.CurrentBranchToken,
-		VersionHistoryItem:  versionHistoryItem,
+		VersionHistoryItem:  FromVersionHistoryItem(t.VersionHistoryItem),
 	}
 }
 
@@ -315,19 +305,12 @@ func ToHistoryGetMutableStateRequest(t *historyv1.GetMutableStateRequest) *types
 	if t == nil {
 		return nil
 	}
-	var versionHistoryItem *types.VersionHistoryItem
-	if t.VersionHistoryItem != nil {
-		versionHistoryItem = &types.VersionHistoryItem{
-			EventID: t.VersionHistoryItem.EventId,
-			Version: t.VersionHistoryItem.Version,
-		}
-	}
 	return &types.GetMutableStateRequest{
 		DomainUUID:          t.DomainId,
 		Execution:           ToWorkflowExecution(t.WorkflowExecution),
 		ExpectedNextEventID: t.ExpectedNextEventId,
 		CurrentBranchToken:  t.CurrentBranchToken,
-		VersionHistoryItem:  versionHistoryItem,
+		VersionHistoryItem:  ToVersionHistoryItem(t.VersionHistoryItem),
 	}
 }
 

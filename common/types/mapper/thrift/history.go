@@ -22,7 +22,6 @@ package thrift
 
 import (
 	"github.com/uber/cadence/.gen/go/history"
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -228,21 +227,12 @@ func FromHistoryGetMutableStateRequest(t *types.GetMutableStateRequest) *history
 	if t == nil {
 		return nil
 	}
-
-	var versionHistoryItem *shared.VersionHistoryItem
-	if t.VersionHistoryItem != nil {
-		versionHistoryItem = &shared.VersionHistoryItem{
-			EventID: &t.VersionHistoryItem.EventID,
-			Version: &t.VersionHistoryItem.Version,
-		}
-	}
-
 	return &history.GetMutableStateRequest{
 		DomainUUID:          &t.DomainUUID,
 		Execution:           FromWorkflowExecution(t.Execution),
 		ExpectedNextEventId: &t.ExpectedNextEventID,
 		CurrentBranchToken:  t.CurrentBranchToken,
-		VersionHistoryItem:  versionHistoryItem,
+		VersionHistoryItem:  FromVersionHistoryItem(t.VersionHistoryItem),
 	}
 }
 
@@ -251,24 +241,12 @@ func ToHistoryGetMutableStateRequest(t *history.GetMutableStateRequest) *types.G
 	if t == nil {
 		return nil
 	}
-
-	var versionHistoryItem *types.VersionHistoryItem
-	if t.VersionHistoryItem != nil {
-		versionHistoryItem = &types.VersionHistoryItem{}
-		if t.VersionHistoryItem.EventID != nil {
-			versionHistoryItem.EventID = *t.VersionHistoryItem.EventID
-		}
-		if t.VersionHistoryItem.Version != nil {
-			versionHistoryItem.Version = *t.VersionHistoryItem.Version
-		}
-	}
-
 	return &types.GetMutableStateRequest{
 		DomainUUID:          t.GetDomainUUID(),
 		Execution:           ToWorkflowExecution(t.Execution),
 		ExpectedNextEventID: t.GetExpectedNextEventId(),
 		CurrentBranchToken:  t.CurrentBranchToken,
-		VersionHistoryItem:  versionHistoryItem,
+		VersionHistoryItem:  ToVersionHistoryItem(t.VersionHistoryItem),
 	}
 }
 
