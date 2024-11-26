@@ -40,16 +40,22 @@ func TestPollerWeight(t *testing.T) {
 	n := 4
 	pw := newWeightSelector(n, 100)
 	// uninitialized weights should return -1
-	assert.Equal(t, -1, pw.pick())
+	p, cumulativeWeights := pw.pick()
+	assert.Equal(t, -1, p)
+	assert.Equal(t, []int64{0, 0, 0, 0}, cumulativeWeights)
 	// all 0 weights should return -1
 	for i := 0; i < n; i++ {
 		pw.update(n, i, 0)
-		assert.Equal(t, -1, pw.pick())
+		p, cumulativeWeights := pw.pick()
+		assert.Equal(t, -1, p)
+		assert.Equal(t, []int64{0, 0, 0, 0}, cumulativeWeights)
 	}
 	// if only one item has non-zero weight, always pick that item
 	pw.update(n, 3, 400)
 	for i := 0; i < 100; i++ {
-		assert.Equal(t, 3, pw.pick())
+		p, cumulativeWeights := pw.pick()
+		assert.Equal(t, 3, p)
+		assert.Equal(t, []int64{0, 0, 0, 400}, cumulativeWeights)
 	}
 	pw.update(n, 2, 300)
 	pw.update(n, 1, 200)
@@ -74,7 +80,7 @@ func testPickProbHelper(t *testing.T, pw *weightSelector, seed int64) {
 	results := make(map[int]int)
 	numPicks := 1000000
 	for i := 0; i < numPicks; i++ {
-		index := pw.pick()
+		index, _ := pw.pick()
 		results[index]++
 	}
 	// Calculate expected probabilities

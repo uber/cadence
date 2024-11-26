@@ -64,13 +64,13 @@ func newWeightSelector(n int, threshold int64) *weightSelector {
 	return pw
 }
 
-func (pw *weightSelector) pick() int {
+func (pw *weightSelector) pick() (int, []int64) {
 	cumulativeWeights := make([]int64, len(pw.weights))
 	totalWeight := int64(0)
 	pw.RLock()
 	defer pw.RUnlock()
 	if !pw.initialized {
-		return -1
+		return -1, cumulativeWeights
 	}
 	shouldDrain := false
 	for i, w := range pw.weights {
@@ -81,13 +81,13 @@ func (pw *weightSelector) pick() int {
 		}
 	}
 	if totalWeight <= 0 || !shouldDrain {
-		return -1
+		return -1, cumulativeWeights
 	}
 	r := rand.Int63n(totalWeight)
 	index := sort.Search(len(cumulativeWeights), func(i int) bool {
 		return cumulativeWeights[i] > r
 	})
-	return index
+	return index, cumulativeWeights
 }
 
 func (pw *weightSelector) update(n, p int, weight int64) {
@@ -111,12 +111,6 @@ func (pw *weightSelector) update(n, p int, weight int64) {
 		}
 	}
 	pw.initialized = true
-}
-
-func (pw *weightSelector) getWeights() []int64 {
-	pw.RLock()
-	defer pw.RUnlock()
-	return pw.weights
 }
 
 func NewWeightedLoadBalancer(
@@ -172,8 +166,8 @@ func (lb *weightedLoadBalancer) PickReadPartition(
 	if !ok {
 		return lb.fallbackLoadBalancer.PickReadPartition(domainID, taskList, taskListType, forwardedFrom)
 	}
-	p := w.pick()
-	lb.logger.Debug("pick read partition", tag.WorkflowDomainID(domainID), tag.WorkflowTaskListName(taskList.GetName()), tag.WorkflowTaskListType(taskListType), tag.Dynamic("weights", w.weights), tag.Dynamic("task-list-partition", p))
+	p, cumulativeWeights := w.pick()
+	lb.logger.Debug("pick read partition", tag.WorkflowDomainID(domainID), tag.WorkflowTaskListName(taskList.GetName()), tag.WorkflowTaskListType(taskListType), tag.Dynamic("cumulative-weights", cumulativeWeights), tag.Dynamic("task-list-partition", p))
 	if p < 0 {
 		return lb.fallbackLoadBalancer.PickReadPartition(domainID, taskList, taskListType, forwardedFrom)
 	}
