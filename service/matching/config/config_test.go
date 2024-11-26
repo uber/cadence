@@ -87,6 +87,7 @@ func TestNewConfig(t *testing.T) {
 		"PartitionDownscaleSustainedDuration":  {dynamicconfig.MatchingPartitionDownscaleSustainedDuration, time.Duration(33)},
 		"AdaptiveScalerUpdateInterval":         {dynamicconfig.MatchingAdaptiveScalerUpdateInterval, time.Duration(34)},
 		"EnableAdaptiveScaler":                 {dynamicconfig.MatchingEnableAdaptiveScaler, true},
+		"EnableStandbyTaskCompletion":          {dynamicconfig.MatchingEnableStandbyTaskCompletion, false},
 	}
 	client := dynamicconfig.NewInMemoryClient()
 	for fieldName, expected := range fields {
