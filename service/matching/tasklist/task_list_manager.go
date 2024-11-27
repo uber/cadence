@@ -123,6 +123,7 @@ type (
 		outstandingPollsLock sync.Mutex
 		outstandingPollsMap  map[string]outstandingPollerInfo
 		startWG              sync.WaitGroup // ensures that background processes do not start until setup is ready
+		stopWG               sync.WaitGroup
 		stopped              int32
 		closeCallback        func(Manager)
 		throttleRetry        *backoff.ThrottleRetry
@@ -274,6 +275,14 @@ func (c *taskListManagerImpl) Start() error {
 	if c.taskListID.IsRoot() && c.taskListKind == types.TaskListKindNormal {
 		c.partitionConfig = c.db.PartitionConfig().ToInternalType()
 		c.logger.Info("get task list partition config from db", tag.Dynamic("root-partition", c.taskListID.GetRoot()), tag.Dynamic("task-list-partition-config", c.partitionConfig))
+		if c.partitionConfig != nil {
+			// push update notification to all non-root partitions on start
+			c.stopWG.Add(1)
+			go func() {
+				defer c.stopWG.Done()
+				c.notifyPartitionConfig(context.Background(), *c.partitionConfig, int(c.partitionConfig.NumReadPartitions))
+			}()
+		}
 	}
 	c.liveness.Start()
 	c.taskReader.Start()
@@ -299,6 +308,7 @@ func (c *taskListManagerImpl) Stop() {
 	c.taskWriter.Stop()
 	c.taskReader.Stop()
 	c.matcher.DisconnectBlockedPollers()
+	c.stopWG.Wait()
 	c.logger.Info("Task list manager state changed", tag.LifeCycleStopped)
 }
 
@@ -423,7 +433,7 @@ func (c *taskListManagerImpl) notifyPartitionConfig(ctx context.Context, config 
 
 			_, e = c.matchingClient.RefreshTaskListPartitionConfig(ctx, &types.MatchingRefreshTaskListPartitionConfigRequest{
 				DomainUUID:      c.taskListID.GetDomainID(),
-				TaskList:        &types.TaskList{Name: taskListName},
+				TaskList:        &types.TaskList{Name: taskListName, Kind: &c.taskListKind},
 				TaskListType:    taskListType,
 				PartitionConfig: &config,
 			})

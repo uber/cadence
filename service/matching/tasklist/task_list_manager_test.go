@@ -1131,7 +1131,7 @@ func TestUpdateTaskListPartitionConfig(t *testing.T) {
 				}).Return(&persistence.UpdateTaskListResponse{}, nil)
 				deps.mockMatchingClient.EXPECT().RefreshTaskListPartitionConfig(gomock.Any(), &types.MatchingRefreshTaskListPartitionConfigRequest{
 					DomainUUID:   "domain-id",
-					TaskList:     &types.TaskList{Name: "/__cadence_sys/tl/1"},
+					TaskList:     &types.TaskList{Name: "/__cadence_sys/tl/1", Kind: types.TaskListKindNormal.Ptr()},
 					TaskListType: types.TaskListTypeDecision.Ptr(),
 					PartitionConfig: &types.TaskListPartitionConfig{
 						Version:            2,
@@ -1141,7 +1141,7 @@ func TestUpdateTaskListPartitionConfig(t *testing.T) {
 				}).Return(&types.MatchingRefreshTaskListPartitionConfigResponse{}, nil)
 				deps.mockMatchingClient.EXPECT().RefreshTaskListPartitionConfig(gomock.Any(), &types.MatchingRefreshTaskListPartitionConfigRequest{
 					DomainUUID:   "domain-id",
-					TaskList:     &types.TaskList{Name: "/__cadence_sys/tl/2"},
+					TaskList:     &types.TaskList{Name: "/__cadence_sys/tl/2", Kind: types.TaskListKindNormal.Ptr()},
 					TaskListType: types.TaskListTypeDecision.Ptr(),
 					PartitionConfig: &types.TaskListPartitionConfig{
 						Version:            2,
@@ -1185,7 +1185,7 @@ func TestUpdateTaskListPartitionConfig(t *testing.T) {
 				}).Return(&persistence.UpdateTaskListResponse{}, nil)
 				deps.mockMatchingClient.EXPECT().RefreshTaskListPartitionConfig(gomock.Any(), &types.MatchingRefreshTaskListPartitionConfigRequest{
 					DomainUUID:   "domain-id",
-					TaskList:     &types.TaskList{Name: "/__cadence_sys/tl/1"},
+					TaskList:     &types.TaskList{Name: "/__cadence_sys/tl/1", Kind: types.TaskListKindNormal.Ptr()},
 					TaskListType: types.TaskListTypeDecision.Ptr(),
 					PartitionConfig: &types.TaskListPartitionConfig{
 						Version:            2,
@@ -1195,7 +1195,7 @@ func TestUpdateTaskListPartitionConfig(t *testing.T) {
 				}).Return(nil, errors.New("matching client error"))
 				deps.mockMatchingClient.EXPECT().RefreshTaskListPartitionConfig(gomock.Any(), &types.MatchingRefreshTaskListPartitionConfigRequest{
 					DomainUUID:   "domain-id",
-					TaskList:     &types.TaskList{Name: "/__cadence_sys/tl/2"},
+					TaskList:     &types.TaskList{Name: "/__cadence_sys/tl/2", Kind: types.TaskListKindNormal.Ptr()},
 					TaskListType: types.TaskListTypeDecision.Ptr(),
 					PartitionConfig: &types.TaskListPartitionConfig{
 						Version:            2,
@@ -1321,10 +1321,26 @@ func TestManagerStart_RootPartition(t *testing.T) {
 			Kind:     persistence.TaskListKindNormal,
 			AckLevel: 0,
 			RangeID:  0,
+			AdaptivePartitionConfig: &persistence.TaskListPartitionConfig{
+				Version:            1,
+				NumReadPartitions:  2,
+				NumWritePartitions: 2,
+			},
 		},
 	}, nil)
+	deps.mockMatchingClient.EXPECT().RefreshTaskListPartitionConfig(gomock.Any(), &types.MatchingRefreshTaskListPartitionConfigRequest{
+		DomainUUID:   "domain-id",
+		TaskList:     &types.TaskList{Name: "/__cadence_sys/tl/1", Kind: types.TaskListKindNormal.Ptr()},
+		TaskListType: types.TaskListTypeDecision.Ptr(),
+		PartitionConfig: &types.TaskListPartitionConfig{
+			Version:            1,
+			NumReadPartitions:  2,
+			NumWritePartitions: 2,
+		},
+	}).Return(&types.MatchingRefreshTaskListPartitionConfigResponse{}, nil)
 	assert.NoError(t, tlm.Start())
-	assert.Nil(t, tlm.TaskListPartitionConfig())
+	assert.Equal(t, &types.TaskListPartitionConfig{Version: 1, NumReadPartitions: 2, NumWritePartitions: 2}, tlm.TaskListPartitionConfig())
+	tlm.stopWG.Wait()
 }
 
 func TestManagerStart_NonRootPartition(t *testing.T) {
