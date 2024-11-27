@@ -26,6 +26,7 @@ import (
 	"context"
 	"sync"
 
+	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/client/matching"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/metrics"
@@ -36,14 +37,16 @@ func NewHandler(
 	logger log.Logger,
 	metricsClient metrics.Client,
 	matchingPeerResolver matching.PeerResolver,
+	historyPeerResolver history.PeerResolver,
 ) Handler {
 	handler := &handlerImpl{
 		logger:               logger,
 		metricsClient:        metricsClient,
 		matchingPeerResolver: matchingPeerResolver,
+		historyPeerResolver:  historyPeerResolver,
 	}
 
-	// prevent us from trying to serve requests before matching engine is started and ready
+	// prevent us from trying to serve requests before shard distributor is started and ready
 	handler.startWG.Add(1)
 	return handler
 }
@@ -52,6 +55,7 @@ type handlerImpl struct {
 	logger               log.Logger
 	metricsClient        metrics.Client
 	matchingPeerResolver matching.PeerResolver
+	historyPeerResolver  history.PeerResolver
 	startWG              sync.WaitGroup
 }
 

@@ -23,6 +23,7 @@ package sharddistributor
 import (
 	"sync/atomic"
 
+	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/client/matching"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/dynamicconfig"
@@ -38,10 +39,11 @@ import (
 type Service struct {
 	resource.Resource
 
-	status  int32
-	handler handler.Handler
-	stopC   chan struct{}
-	config  *config.Config
+	status           int32
+	handler          handler.Handler
+	stopC            chan struct{}
+	config           *config.Config
+	numHistoryShards int
 }
 
 // NewService builds a new task manager service
@@ -75,10 +77,11 @@ func NewService(
 	}
 
 	return &Service{
-		Resource: serviceResource,
-		status:   common.DaemonStatusInitialized,
-		config:   serviceConfig,
-		stopC:    make(chan struct{}),
+		Resource:         serviceResource,
+		status:           common.DaemonStatusInitialized,
+		config:           serviceConfig,
+		stopC:            make(chan struct{}),
+		numHistoryShards: params.PersistenceConfig.NumHistoryShards,
 	}, nil
 }
 
@@ -92,8 +95,9 @@ func (s *Service) Start() {
 	logger.Info("shard distributor starting")
 
 	matchingPeerResolver := matching.NewPeerResolver(s.GetMembershipResolver(), membership.PortGRPC)
+	historyPeerResolver := history.NewPeerResolver(s.numHistoryShards, s.GetMembershipResolver(), membership.PortGRPC)
 
-	s.handler = handler.NewHandler(s.GetLogger(), s.GetMetricsClient(), matchingPeerResolver)
+	s.handler = handler.NewHandler(s.GetLogger(), s.GetMetricsClient(), matchingPeerResolver, historyPeerResolver)
 
 	grpcHandler := grpc.NewGRPCHandler(s.handler)
 	grpcHandler.Register(s.GetDispatcher())
