@@ -24,10 +24,10 @@ package retry
 
 import (
 	"context"
-	"github.com/uber/cadence/service/worker/diagnostics/invariant/failure"
 
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/worker/diagnostics/invariant"
+	"github.com/uber/cadence/service/worker/diagnostics/invariant/failure"
 )
 
 // Retry is an invariant that will be used to identify the issues regarding retries in the workflow execution history
