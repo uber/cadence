@@ -56,7 +56,7 @@ func Test__Check(t *testing.T) {
 			expectedResult: []invariant.InvariantCheckResult{
 				{
 					InvariantType: WorkflowRetry.String(),
-					Reason:        "cadenceInternal:Timeout START_TO_CLOSE",
+					Reason:        "The failure is caused by a timeout during the execution",
 					Metadata:      metadataInBytes,
 				},
 			},

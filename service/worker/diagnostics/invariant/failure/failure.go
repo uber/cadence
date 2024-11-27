@@ -60,7 +60,7 @@ func (f *failure) Check(context.Context) ([]invariant.InvariantCheckResult, erro
 			identity := fetchIdentity(attr, events)
 			result = append(result, invariant.InvariantCheckResult{
 				InvariantType: WorkflowFailed.String(),
-				Reason:        errorTypeFromReason(*reason).String(),
+				Reason:        ErrorTypeFromReason(*reason).String(),
 				Metadata:      invariant.MarshalData(FailureMetadata{Identity: identity}),
 			})
 		}
@@ -71,7 +71,7 @@ func (f *failure) Check(context.Context) ([]invariant.InvariantCheckResult, erro
 			started := fetchStartedEvent(attr, events)
 			result = append(result, invariant.InvariantCheckResult{
 				InvariantType: ActivityFailed.String(),
-				Reason:        errorTypeFromReason(*reason).String(),
+				Reason:        ErrorTypeFromReason(*reason).String(),
 				Metadata: invariant.MarshalData(FailureMetadata{
 					Identity:          attr.Identity,
 					ActivityScheduled: scheduled,
@@ -83,7 +83,7 @@ func (f *failure) Check(context.Context) ([]invariant.InvariantCheckResult, erro
 	return result, nil
 }
 
-func errorTypeFromReason(reason string) ErrorType {
+func ErrorTypeFromReason(reason string) ErrorType {
 	if strings.Contains(reason, "Generic") {
 		return GenericError
 	}
