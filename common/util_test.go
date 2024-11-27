@@ -718,7 +718,7 @@ func TestValidateRetryPolicy_Success(t *testing.T) {
 			InitialIntervalInSeconds:    2,
 			BackoffCoefficient:          1,
 			MaximumIntervalInSeconds:    0,
-			MaximumAttempts:             1,
+			MaximumAttempts:             2,
 			ExpirationIntervalInSeconds: 0,
 		},
 		"ExpirationIntervalInSeconds is no zero": &types.RetryPolicy{
@@ -726,21 +726,14 @@ func TestValidateRetryPolicy_Success(t *testing.T) {
 			BackoffCoefficient:          1,
 			MaximumIntervalInSeconds:    0,
 			MaximumAttempts:             0,
-			ExpirationIntervalInSeconds: 1,
+			ExpirationIntervalInSeconds: 3,
 		},
 		"MaximumIntervalInSeconds is greater than InitialIntervalInSeconds": &types.RetryPolicy{
 			InitialIntervalInSeconds:    2,
 			BackoffCoefficient:          1,
 			MaximumIntervalInSeconds:    0,
 			MaximumAttempts:             0,
-			ExpirationIntervalInSeconds: 1,
-		},
-		"MaximumIntervalInSeconds equals InitialIntervalInSeconds": &types.RetryPolicy{
-			InitialIntervalInSeconds:    2,
-			BackoffCoefficient:          1,
-			MaximumIntervalInSeconds:    2,
-			MaximumAttempts:             0,
-			ExpirationIntervalInSeconds: 1,
+			ExpirationIntervalInSeconds: 3,
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -797,6 +790,25 @@ func TestValidateRetryPolicy_Error(t *testing.T) {
 				MaximumAttempts:          -1,
 			},
 			wantErr: &types.BadRequestError{Message: "MaximumAttempts cannot be less than 0 on retry policy."},
+		},
+		"MaximumAttempts equals 1": {
+			policy: &types.RetryPolicy{
+				InitialIntervalInSeconds: 2,
+				BackoffCoefficient:       1,
+				MaximumIntervalInSeconds: 0,
+				MaximumAttempts:          1,
+			},
+			wantErr: &types.BadRequestError{Message: "MaximumAttempts set to 1 will not retry since maximum attempts includes the first attempt."},
+		},
+		"ExpirationIntervalInSeconds less than InitialIntervalInSeconds": {
+			policy: &types.RetryPolicy{
+				InitialIntervalInSeconds:    2,
+				BackoffCoefficient:          1,
+				MaximumIntervalInSeconds:    0,
+				MaximumAttempts:             0,
+				ExpirationIntervalInSeconds: 1,
+			},
+			wantErr: &types.BadRequestError{Message: "ExpirationIntervalInSeconds less than  InitialIntervalInSeconds  will not retry."},
 		},
 		"ExpirationIntervalInSeconds equals -1": {
 			policy: &types.RetryPolicy{
