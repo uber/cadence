@@ -547,6 +547,12 @@ func ValidateRetryPolicy(policy *types.RetryPolicy) error {
 	if policy.GetMaximumAttempts() == 0 && policy.GetExpirationIntervalInSeconds() == 0 {
 		return &types.BadRequestError{Message: "MaximumAttempts and ExpirationIntervalInSeconds are both 0. At least one of them must be specified."}
 	}
+	if policy.GetExpirationIntervalInSeconds() == 0 && policy.GetMaximumAttempts() == 1 {
+		return &types.BadRequestError{Message: "MaximumAttempts set to 1 will not retry since maximum attempts includes the first attempt."}
+	}
+	if policy.GetMaximumAttempts() == 0 && policy.GetExpirationIntervalInSeconds() < policy.GetInitialIntervalInSeconds() {
+		return &types.BadRequestError{Message: "ExpirationIntervalInSeconds less than  InitialIntervalInSeconds  will not retry."}
+	}
 	return nil
 }
 
