@@ -27,6 +27,7 @@ import (
 
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/worker/diagnostics/invariant"
+	"github.com/uber/cadence/service/worker/diagnostics/invariant/failure"
 )
 
 // Retry is an invariant that will be used to identify the issues regarding retries in the workflow execution history
@@ -55,7 +56,7 @@ func (r *retry) Check(context.Context) ([]invariant.InvariantCheckResult, error)
 		if startedEvent.RetryPolicy != nil {
 			result = append(result, invariant.InvariantCheckResult{
 				InvariantType: WorkflowRetry.String(),
-				Reason:        *lastEvent.FailureReason,
+				Reason:        failure.ErrorTypeFromReason(*lastEvent.FailureReason).String(),
 				Metadata: invariant.MarshalData(RetryMetadata{
 					RetryPolicy: startedEvent.RetryPolicy,
 					Attempt:     startedEvent.Attempt,
@@ -85,6 +86,8 @@ func fetchStartedEvent(events []*types.HistoryEvent) *types.WorkflowExecutionSta
 }
 
 func (r *retry) RootCause(ctx context.Context, issues []invariant.InvariantCheckResult) ([]invariant.InvariantRootCauseResult, error) {
+	// Not implemented since this invariant does not have any root cause.
+	// Issue identified in Check() is a workflow retry which is essentially handled by failure invariant
 	result := make([]invariant.InvariantRootCauseResult, 0)
 	return result, nil
 }
