@@ -50,20 +50,44 @@ func NewInvariant(p Params) Retry {
 func (r *retry) Check(context.Context) ([]invariant.InvariantCheckResult, error) {
 	result := make([]invariant.InvariantCheckResult, 0)
 	events := r.workflowExecutionHistory.GetHistory().GetEvents()
+
 	lastEvent := fetchContinuedAsNewEvent(events)
-	startedEvent := fetchStartedEvent(events)
-	if lastEvent != nil && startedEvent != nil {
-		if startedEvent.RetryPolicy != nil {
-			result = append(result, invariant.InvariantCheckResult{
-				InvariantType: WorkflowRetry.String(),
-				Reason:        failure.ErrorTypeFromReason(*lastEvent.FailureReason).String(),
-				Metadata: invariant.MarshalData(RetryMetadata{
-					RetryPolicy: startedEvent.RetryPolicy,
-					Attempt:     startedEvent.Attempt,
-				}),
-			})
+	startedEvent := fetchWfStartedEvent(events)
+	if lastEvent != nil && startedEvent != nil && startedEvent.RetryPolicy != nil {
+		result = append(result, invariant.InvariantCheckResult{
+			InvariantType: WorkflowRetryInfo.String(),
+			Reason:        failure.ErrorTypeFromReason(*lastEvent.FailureReason).String(),
+			Metadata: invariant.MarshalData(RetryMetadata{
+				RetryPolicy: startedEvent.RetryPolicy,
+			}),
+		})
+	}
+
+	if issue := checkRetryPolicy(startedEvent.RetryPolicy); issue != "" {
+		result = append(result, invariant.InvariantCheckResult{
+			InvariantType: WorkflowRetryIssue.String(),
+			Reason:        issue.String(),
+			Metadata: invariant.MarshalData(RetryMetadata{
+				RetryPolicy: startedEvent.RetryPolicy,
+			}),
+		})
+	}
+
+	for _, event := range events {
+		if event.GetActivityTaskScheduledEventAttributes() != nil {
+			attr := event.GetActivityTaskScheduledEventAttributes()
+			if issue := checkRetryPolicy(attr.RetryPolicy); issue != "" {
+				result = append(result, invariant.InvariantCheckResult{
+					InvariantType: ActivityRetryIssue.String(),
+					Reason:        issue.String(),
+					Metadata: invariant.MarshalData(RetryMetadata{
+						RetryPolicy: attr.RetryPolicy,
+					}),
+				})
+			}
 		}
 	}
+
 	return result, nil
 }
 
@@ -76,7 +100,7 @@ func fetchContinuedAsNewEvent(events []*types.HistoryEvent) *types.WorkflowExecu
 	return nil
 }
 
-func fetchStartedEvent(events []*types.HistoryEvent) *types.WorkflowExecutionStartedEventAttributes {
+func fetchWfStartedEvent(events []*types.HistoryEvent) *types.WorkflowExecutionStartedEventAttributes {
 	for _, event := range events {
 		if event.GetWorkflowExecutionStartedEventAttributes() != nil {
 			return event.GetWorkflowExecutionStartedEventAttributes()
@@ -85,9 +109,22 @@ func fetchStartedEvent(events []*types.HistoryEvent) *types.WorkflowExecutionSta
 	return nil
 }
 
+func checkRetryPolicy(policy *types.RetryPolicy) IssueType {
+	if policy == nil {
+		return ""
+	}
+	if policy.GetExpirationIntervalInSeconds() == 0 && policy.GetMaximumAttempts() == 1 {
+		return RetryPolicyValidationMaxAttempts
+	}
+	if policy.GetMaximumAttempts() == 0 && policy.GetExpirationIntervalInSeconds() < policy.GetInitialIntervalInSeconds() {
+		return RetryPolicyValidationExpInterval
+	}
+	return ""
+}
+
 func (r *retry) RootCause(ctx context.Context, issues []invariant.InvariantCheckResult) ([]invariant.InvariantRootCauseResult, error) {
 	// Not implemented since this invariant does not have any root cause.
-	// Issue identified in Check() is a workflow retry which is essentially handled by failure invariant
+	// Issue identified in Check() are the root cause.
 	result := make([]invariant.InvariantRootCauseResult, 0)
 	return result, nil
 }

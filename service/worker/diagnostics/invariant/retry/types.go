@@ -27,14 +27,26 @@ import "github.com/uber/cadence/common/types"
 type RetryType string
 
 const (
-	WorkflowRetry RetryType = "Workflow Retry"
+	WorkflowRetryInfo  RetryType = "Workflow Retry configured and applied"
+	WorkflowRetryIssue RetryType = "Workflow Retry configured but invalid"
+	ActivityRetryIssue RetryType = "Activity Retry configured but invalid"
 )
 
 func (r RetryType) String() string {
 	return string(r)
 }
 
+type IssueType string
+
+const (
+	RetryPolicyValidationMaxAttempts IssueType = "MaximumAttempts set to 1 will not retry since maximum attempts includes the first attempt."
+	RetryPolicyValidationExpInterval IssueType = "ExpirationIntervalInSeconds less than  InitialIntervalInSeconds  will not retry."
+)
+
+func (i IssueType) String() string {
+	return string(i)
+}
+
 type RetryMetadata struct {
 	RetryPolicy *types.RetryPolicy
-	Attempt     int32
 }
