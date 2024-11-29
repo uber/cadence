@@ -23,21 +23,27 @@ package sharddistributor
 import (
 	"sync/atomic"
 
+	"github.com/uber/cadence/client/history"
+	"github.com/uber/cadence/client/matching"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/dynamicconfig"
+	"github.com/uber/cadence/common/membership"
 	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/service/sharddistributor/config"
+	"github.com/uber/cadence/service/sharddistributor/handler"
+	"github.com/uber/cadence/service/sharddistributor/wrappers/grpc"
 )
 
 // Service represents the shard distributor service
 type Service struct {
 	resource.Resource
 
-	status int32
-	//  handler handler.Handler
-	stopC  chan struct{}
-	config *config.Config
+	status           int32
+	handler          handler.Handler
+	stopC            chan struct{}
+	config           *config.Config
+	numHistoryShards int
 }
 
 // NewService builds a new task manager service
@@ -71,10 +77,11 @@ func NewService(
 	}
 
 	return &Service{
-		Resource: serviceResource,
-		status:   common.DaemonStatusInitialized,
-		config:   serviceConfig,
-		stopC:    make(chan struct{}),
+		Resource:         serviceResource,
+		status:           common.DaemonStatusInitialized,
+		config:           serviceConfig,
+		stopC:            make(chan struct{}),
+		numHistoryShards: params.PersistenceConfig.NumHistoryShards,
 	}, nil
 }
 
@@ -87,9 +94,18 @@ func (s *Service) Start() {
 	logger := s.GetLogger()
 	logger.Info("shard distributor starting")
 
-	// setup the handler
+	matchingPeerResolver := matching.NewPeerResolver(s.GetMembershipResolver(), membership.PortGRPC)
+	historyPeerResolver := history.NewPeerResolver(s.numHistoryShards, s.GetMembershipResolver(), membership.PortGRPC)
+
+	s.handler = handler.NewHandler(s.GetLogger(), s.GetMetricsClient(), matchingPeerResolver, historyPeerResolver)
+
+	grpcHandler := grpc.NewGRPCHandler(s.handler)
+	grpcHandler.Register(s.GetDispatcher())
 
 	s.Resource.Start()
+	s.handler.Start()
+
+	logger.Info("shard distributor started")
 
 	<-s.stopC
 }
@@ -101,6 +117,7 @@ func (s *Service) Stop() {
 
 	close(s.stopC)
 
+	s.handler.Stop()
 	s.Resource.Stop()
 
 	s.GetLogger().Info("shard distributor stopped")
