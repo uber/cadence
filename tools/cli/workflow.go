@@ -536,6 +536,11 @@ func newBatchCommands() []*cli.Command {
 					Value: batcher.DefaultConcurrency,
 					Usage: "Concurrency of batch activity",
 				},
+				&cli.IntFlag{
+					Name:  FlagMaxActivityRetries,
+					Value: batcher.DefaultMaxActivityRetries,
+					Usage: "Max retries of batch activity, before retrying the whole workflow (0 means unlimited)",
+				},
 			},
 			Action: StartBatchJob,
 		},

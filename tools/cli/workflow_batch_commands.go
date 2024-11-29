@@ -232,6 +232,7 @@ func StartBatchJob(c *cli.Context) error {
 	concurrency := c.Int(FlagConcurrency)
 	retryAttempt := c.Int(FlagRetryAttempts)
 	heartBeatTimeout := time.Duration(c.Int(FlagActivityHeartBeatTimeout)) * time.Second
+	maxActivityRetries := c.Int(FlagMaxActivityRetries)
 
 	svcClient, err := getDeps(c).ServerFrontendClient(c)
 	if err != nil {
@@ -295,6 +296,7 @@ func StartBatchJob(c *cli.Context) error {
 		PageSize:                 pageSize,
 		AttemptsOnRetryableError: retryAttempt,
 		ActivityHeartBeatTimeout: heartBeatTimeout,
+		MaxActivityRetries:       maxActivityRetries,
 	}
 	input, err := json.Marshal(params)
 	if err != nil {
@@ -323,6 +325,7 @@ func StartBatchJob(c *cli.Context) error {
 		TaskList:                            &types.TaskList{Name: batcher.BatcherTaskListName},
 		Memo:                                memo,
 		SearchAttributes:                    searchAttributes,
+		RetryPolicy:                         copyRetryPolicyFromWorkflow(),
 		WorkflowType:                        &types.WorkflowType{Name: batcher.BatchWFTypeName},
 		Input:                               input,
 	}
@@ -336,6 +339,16 @@ func StartBatchJob(c *cli.Context) error {
 	}
 	prettyPrintJSONObject(getDeps(c).Output(), output)
 	return nil
+}
+
+func copyRetryPolicyFromWorkflow() *types.RetryPolicy {
+	return &types.RetryPolicy{
+		InitialIntervalInSeconds:    int32(batcher.BatchActivityRetryPolicy.InitialInterval.Seconds()),
+		BackoffCoefficient:          batcher.BatchActivityRetryPolicy.BackoffCoefficient,
+		MaximumIntervalInSeconds:    int32(batcher.BatchActivityRetryPolicy.MaximumInterval.Seconds()),
+		NonRetriableErrorReasons:    batcher.BatchActivityRetryPolicy.NonRetriableErrorReasons,
+		ExpirationIntervalInSeconds: int32(batcher.BatchActivityRetryPolicy.ExpirationInterval.Seconds()),
+	}
 }
 
 func validateBatchType(bt string) bool {

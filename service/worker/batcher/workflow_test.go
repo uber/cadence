@@ -88,23 +88,7 @@ func (s *workflowSuite) SetupTest() {
 }
 
 func (s *workflowSuite) TestWorkflow() {
-	params := BatchParams{
-		DomainName:               "test-domain",
-		Query:                    "Closetime=missing",
-		Reason:                   "unit-test",
-		BatchType:                BatchTypeCancel,
-		TerminateParams:          TerminateParams{},
-		CancelParams:             CancelParams{},
-		SignalParams:             SignalParams{},
-		ReplicateParams:          ReplicateParams{},
-		RPS:                      0,
-		Concurrency:              5,
-		PageSize:                 10,
-		AttemptsOnRetryableError: 0,
-		ActivityHeartBeatTimeout: 0,
-		NonRetryableErrors:       []string{"HeartbeatTimeoutError"},
-		_nonRetryableErrors:      nil,
-	}
+	params := createParams(BatchTypeCancel)
 	activityHeartBeatDeatils := HeartBeatDetails{}
 	s.workflowEnv.OnActivity(batchActivityName, mock.Anything, mock.Anything).Return(activityHeartBeatDeatils, nil)
 	s.workflowEnv.ExecuteWorkflow(BatchWorkflow, params)
@@ -113,163 +97,98 @@ func (s *workflowSuite) TestWorkflow() {
 }
 
 func (s *workflowSuite) TestActivity_BatchCancel() {
-	params := BatchParams{
-		DomainName:      "test-domain",
-		Query:           "Closetime=missing",
-		Reason:          "unit-test",
-		BatchType:       BatchTypeCancel,
-		TerminateParams: TerminateParams{},
-		CancelParams: CancelParams{
-			CancelChildren: common.BoolPtr(true),
-		},
-		SignalParams:             SignalParams{},
-		ReplicateParams:          ReplicateParams{},
-		RPS:                      5,
-		Concurrency:              5,
-		PageSize:                 10,
-		AttemptsOnRetryableError: 0,
-		ActivityHeartBeatTimeout: 0,
-		NonRetryableErrors:       []string{"HeartbeatTimeoutError"},
-		_nonRetryableErrors:      nil,
-	}
-
+	params := createParams(BatchTypeCancel)
 	_, err := s.activityEnv.ExecuteActivity(BatchActivity, params)
 	s.NoError(err)
 }
 
 func (s *workflowSuite) TestActivity_BatchTerminate() {
-	params := BatchParams{
-		DomainName:               "test-domain",
-		Query:                    "Closetime=missing",
-		Reason:                   "unit-test",
-		BatchType:                BatchTypeTerminate,
-		TerminateParams:          TerminateParams{},
-		CancelParams:             CancelParams{},
-		SignalParams:             SignalParams{},
-		ReplicateParams:          ReplicateParams{},
-		RPS:                      5,
-		Concurrency:              5,
-		PageSize:                 10,
-		AttemptsOnRetryableError: 0,
-		ActivityHeartBeatTimeout: 0,
-		NonRetryableErrors:       []string{"HeartbeatTimeoutError"},
-		_nonRetryableErrors:      nil,
-	}
-
+	params := createParams(BatchTypeTerminate)
 	_, err := s.activityEnv.ExecuteActivity(BatchActivity, params)
 	s.NoError(err)
 }
 
 func (s *workflowSuite) TestActivity_BatchSignal() {
-	params := BatchParams{
-		DomainName:               "test-domain",
-		Query:                    "Closetime=missing",
-		Reason:                   "unit-test",
-		BatchType:                BatchTypeSignal,
-		TerminateParams:          TerminateParams{},
-		CancelParams:             CancelParams{},
-		SignalParams:             SignalParams{},
-		ReplicateParams:          ReplicateParams{},
-		RPS:                      5,
-		Concurrency:              5,
-		PageSize:                 10,
-		AttemptsOnRetryableError: 0,
-		ActivityHeartBeatTimeout: 0,
-		NonRetryableErrors:       []string{"HeartbeatTimeoutError"},
-		_nonRetryableErrors:      nil,
-	}
-
+	params := createParams(BatchTypeSignal)
 	_, err := s.activityEnv.ExecuteActivity(BatchActivity, params)
 	s.NoError(err)
 }
 
 func (s *workflowSuite) TestActivity_BatchReplicate() {
-	params := BatchParams{
-		DomainName:               "test-domain",
-		Query:                    "Closetime=missing",
-		Reason:                   "unit-test",
-		BatchType:                BatchTypeReplicate,
-		TerminateParams:          TerminateParams{},
-		CancelParams:             CancelParams{},
-		SignalParams:             SignalParams{},
-		ReplicateParams:          ReplicateParams{},
-		RPS:                      5,
-		Concurrency:              5,
-		PageSize:                 10,
-		AttemptsOnRetryableError: 0,
-		ActivityHeartBeatTimeout: 0,
-		NonRetryableErrors:       []string{"HeartbeatTimeoutError"},
-		_nonRetryableErrors:      nil,
-	}
-
+	params := createParams(BatchTypeReplicate)
 	_, err := s.activityEnv.ExecuteActivity(BatchActivity, params)
 	s.NoError(err)
 }
 
-func (s *workflowSuite) TestWorkflow_ValidationError() {
-	params := BatchParams{
-		DomainName: "test-domain",
-		Query:      "",
-		Reason:     "unit-test",
-		BatchType:  BatchTypeCancel,
-	}
+func (s *workflowSuite) TestWorkflow_BatchTypeCancelValidationError() {
+	params := createParams(BatchTypeCancel)
+	params.Query = ""
 	s.workflowEnv.ExecuteWorkflow(BatchWorkflow, params)
 	s.True(s.workflowEnv.IsWorkflowCompleted())
 	s.ErrorContains(s.workflowEnv.GetWorkflowError(), "must provide required parameters: BatchType/Reason/DomainName/Query")
 }
 
 func (s *workflowSuite) TestWorkflow_UnsupportedBatchType() {
-	params := BatchParams{
-		DomainName: "test-domain",
-		Query:      "Closetime=missing",
-		Reason:     "unit-test",
-		BatchType:  "invalid",
-	}
+	params := createParams("invalid-batch-type")
 	s.workflowEnv.ExecuteWorkflow(BatchWorkflow, params)
 	s.True(s.workflowEnv.IsWorkflowCompleted())
 	s.ErrorContains(s.workflowEnv.GetWorkflowError(), "not supported batch type")
 }
 
 func (s *workflowSuite) TestWorkflow_BatchTypeSignalValidation() {
-	params := BatchParams{
-		DomainName: "test-domain",
-		Query:      "Closetime=missing",
-		Reason:     "unit-test",
-		BatchType:  BatchTypeSignal,
-	}
+	params := createParams(BatchTypeSignal)
+	params.SignalParams.SignalName = ""
 	s.workflowEnv.ExecuteWorkflow(BatchWorkflow, params)
 	s.True(s.workflowEnv.IsWorkflowCompleted())
 	s.ErrorContains(s.workflowEnv.GetWorkflowError(), "must provide signal name")
 }
 
 func (s *workflowSuite) TestWorkflow_BatchTypeReplicateSourceCLusterValidation() {
-	paramsWithoutSourceCluster := BatchParams{
-		DomainName: "test-domain",
-		Query:      "Closetime=missing",
-		Reason:     "unit-test",
-		BatchType:  BatchTypeReplicate,
-	}
-	s.workflowEnv.ExecuteWorkflow(BatchWorkflow, paramsWithoutSourceCluster)
+	params := createParams(BatchTypeReplicate)
+	params.ReplicateParams.SourceCluster = ""
+	s.workflowEnv.ExecuteWorkflow(BatchWorkflow, params)
 	s.True(s.workflowEnv.IsWorkflowCompleted())
 	s.ErrorContains(s.workflowEnv.GetWorkflowError(), "must provide source cluster")
 }
 
 func (s *workflowSuite) TestWorkflow_BatchTypeReplicateTargetCLusterValidation() {
-	paramsWithSourceCluster := BatchParams{
-		DomainName: "test-domain",
-		Query:      "Closetime=missing",
-		Reason:     "unit-test",
-		BatchType:  BatchTypeReplicate,
-		ReplicateParams: ReplicateParams{
-			SourceCluster: "test-dca",
-			TargetCluster: "",
-		},
-	}
-	s.workflowEnv.ExecuteWorkflow(BatchWorkflow, paramsWithSourceCluster)
+	params := createParams(BatchTypeReplicate)
+	params.ReplicateParams.TargetCluster = ""
+	s.workflowEnv.ExecuteWorkflow(BatchWorkflow, params)
 	s.True(s.workflowEnv.IsWorkflowCompleted())
 	s.ErrorContains(s.workflowEnv.GetWorkflowError(), "must provide target cluster")
 }
 
 func (s *workflowSuite) TearDownTest() {
 	s.workflowEnv.AssertExpectations(s.T())
+}
+
+func createParams(batchType string) BatchParams {
+	return BatchParams{
+		DomainName: "test-domain",
+		Query:      "Closetime=missing",
+		Reason:     "unit-test",
+		BatchType:  batchType,
+		TerminateParams: TerminateParams{
+			TerminateChildren: common.BoolPtr(true),
+		},
+		CancelParams: CancelParams{
+			CancelChildren: common.BoolPtr(true),
+		},
+		SignalParams: SignalParams{
+			SignalName: "test-signal-name",
+		},
+		ReplicateParams: ReplicateParams{
+			SourceCluster: "test-primary-cluster",
+			TargetCluster: "test-secondary-cluster",
+		},
+		RPS:                      5,
+		Concurrency:              5,
+		PageSize:                 10,
+		AttemptsOnRetryableError: 0,
+		ActivityHeartBeatTimeout: 0,
+		MaxActivityRetries:       0,
+		NonRetryableErrors:       []string{"HeartbeatTimeoutError"},
+		_nonRetryableErrors:      nil,
+	}
 }
