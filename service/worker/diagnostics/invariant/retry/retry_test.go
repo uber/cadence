@@ -35,14 +35,29 @@ import (
 )
 
 func Test__Check(t *testing.T) {
-	metadata := RetryMetadata{
+	retriedWfMetadata := RetryMetadata{
 		RetryPolicy: &types.RetryPolicy{
 			InitialIntervalInSeconds: 1,
 			MaximumAttempts:          2,
 		},
-		Attempt: 0,
 	}
-	metadataInBytes, err := json.Marshal(metadata)
+	retriedWfMetadataInBytes, err := json.Marshal(retriedWfMetadata)
+	require.NoError(t, err)
+	invalidAttemptsMetadata := RetryMetadata{
+		RetryPolicy: &types.RetryPolicy{
+			InitialIntervalInSeconds: 1,
+			MaximumAttempts:          1,
+		},
+	}
+	invalidAttemptsMetadataInBytes, err := json.Marshal(invalidAttemptsMetadata)
+	require.NoError(t, err)
+	invalidExpIntervalMetadata := RetryMetadata{
+		RetryPolicy: &types.RetryPolicy{
+			InitialIntervalInSeconds:    10,
+			ExpirationIntervalInSeconds: 5,
+		},
+	}
+	invalidExpIntervalMetadataInBytes, err := json.Marshal(invalidExpIntervalMetadata)
 	require.NoError(t, err)
 	testCases := []struct {
 		name           string
@@ -55,9 +70,26 @@ func Test__Check(t *testing.T) {
 			testData: retriedWfHistory(),
 			expectedResult: []invariant.InvariantCheckResult{
 				{
-					InvariantType: WorkflowRetry.String(),
+					InvariantType: WorkflowRetryInfo.String(),
 					Reason:        "The failure is caused by a timeout during the execution",
-					Metadata:      metadataInBytes,
+					Metadata:      retriedWfMetadataInBytes,
+				},
+			},
+			err: nil,
+		},
+		{
+			name:     "invalid retry policy",
+			testData: invalidRetryPolicyWfHistory(),
+			expectedResult: []invariant.InvariantCheckResult{
+				{
+					InvariantType: ActivityRetryIssue.String(),
+					Reason:        RetryPolicyValidationMaxAttempts.String(),
+					Metadata:      invalidAttemptsMetadataInBytes,
+				},
+				{
+					InvariantType: WorkflowRetryIssue.String(),
+					Reason:        RetryPolicyValidationExpInterval.String(),
+					Metadata:      invalidExpIntervalMetadataInBytes,
 				},
 			},
 			err: nil,
@@ -92,6 +124,39 @@ func retriedWfHistory() *types.GetWorkflowExecutionHistoryResponse {
 					WorkflowExecutionContinuedAsNewEventAttributes: &types.WorkflowExecutionContinuedAsNewEventAttributes{
 						FailureReason:                common.StringPtr("cadenceInternal:Timeout START_TO_CLOSE"),
 						DecisionTaskCompletedEventID: 10,
+					},
+				},
+			},
+		},
+	}
+}
+
+func invalidRetryPolicyWfHistory() *types.GetWorkflowExecutionHistoryResponse {
+	return &types.GetWorkflowExecutionHistoryResponse{
+		History: &types.History{
+			Events: []*types.HistoryEvent{
+				{
+					ID: 1,
+					WorkflowExecutionStartedEventAttributes: &types.WorkflowExecutionStartedEventAttributes{
+						RetryPolicy: &types.RetryPolicy{
+							InitialIntervalInSeconds:    10,
+							ExpirationIntervalInSeconds: 5,
+						},
+					},
+				},
+				{
+					ID: 5,
+					ActivityTaskScheduledEventAttributes: &types.ActivityTaskScheduledEventAttributes{
+						RetryPolicy: &types.RetryPolicy{
+							InitialIntervalInSeconds: 1,
+							MaximumAttempts:          1,
+						},
+					},
+				},
+				{
+					ID: 6,
+					ActivityTaskScheduledEventAttributes: &types.ActivityTaskScheduledEventAttributes{
+						RetryPolicy: nil,
 					},
 				},
 			},
