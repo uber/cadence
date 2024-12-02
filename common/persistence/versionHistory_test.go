@@ -708,6 +708,8 @@ func (s *versionHistoriesSuite) TestCurrentVersionHistoryIndexIsInReplay() {
 func TestNilHandling(t *testing.T) {
 	assert.Nil(t, NewVersionHistoriesFromInternalType(nil))
 	assert.Nil(t, NewVersionHistories(nil))
+	assert.Nil(t, NewVersionHistoryItemFromInternalType(nil))
+	assert.Nil(t, NewVersionHistoryFromInternalType(nil))
 	var vh *VersionHistory
 	assert.Nil(t, vh.ToInternalType())
 }
