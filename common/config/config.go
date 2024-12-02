@@ -260,6 +260,8 @@ type (
 		// Otherwise please add new fields to the struct for better documentation
 		// If being used in any database, update this comment here to make it clear
 		ConnectAttributes map[string]string `yaml:"connectAttributes"`
+		// HostSelectionPolicy sets gocql policy for selecting host for a query
+		HostSelectionPolicy string `yaml:"hostSelectionPolicy"`
 	}
 
 	// ShardedNoSQL contains configuration to connect to a set of NoSQL Database clusters in a sharded manner
