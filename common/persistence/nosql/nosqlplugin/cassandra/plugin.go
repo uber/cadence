@@ -21,7 +21,6 @@
 package cassandra
 
 import (
-	"errors"
 	"fmt"
 	"time"
 
@@ -163,6 +162,6 @@ func toHostSelectionPolicy(policy string) (gogocql.HostSelectionPolicy, error) {
 	case "roundrobin":
 		return gogocql.RoundRobinHostPolicy(), nil
 	default:
-		return nil, errors.New(fmt.Sprintf("unknown gocql host selection policy: %q", policy))
+		return nil, fmt.Errorf("unknown gocql host selection policy: %q", policy)
 	}
 }
