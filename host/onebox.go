@@ -190,6 +190,8 @@ type (
 
 		Tasks []SimulationTaskConfiguration
 
+		Backlogs []SimulationBacklogConfiguration
+
 		GetPartitionConfigFromDB bool
 	}
 
@@ -223,6 +225,15 @@ type (
 		// Upper limit of tasks to generate. Task generators will stop if total number of tasks generated reaches MaxTaskToGenerate during simulation
 		// Defaults to 2k
 		MaxTaskToGenerate int
+	}
+
+	SimulationBacklogConfiguration struct {
+		// The partition number
+		Partition int // Do not set it to 0, because it's not guaranteed to add backlog to partition 0
+		// The backlog count
+		BacklogCount int
+		// The weight of each isolation group, can be empty
+		IsolationGroups map[string]int
 	}
 
 	// CadenceParams contains everything needed to bootstrap Cadence

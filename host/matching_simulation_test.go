@@ -41,6 +41,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"math/rand"
 	"os"
 	"reflect"
 	"strings"
@@ -57,6 +58,7 @@ import (
 	"golang.org/x/time/rate"
 
 	"github.com/uber/cadence/client/history"
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/partition"
 	"github.com/uber/cadence/common/persistence"
@@ -209,11 +211,31 @@ func (s *MatchingSimulationSuite) TestMatchingSimulation() {
 	go s.collectStats(statsCh, aggStats, &collectorWG)
 
 	totalTaskCount := getTotalTasks(s.testClusterConfig.MatchingConfig.SimulationConfig.Tasks)
+	seed := time.Now().UnixNano()
+	rand.Seed(seed)
+	totalBacklogCount := 0
+	for idx, backlogConfig := range s.testClusterConfig.MatchingConfig.SimulationConfig.Backlogs {
+		totalBacklogCount += backlogConfig.BacklogCount
+		partition := getPartitionTaskListName(tasklist, backlogConfig.Partition)
+		for i := 0; i < backlogConfig.BacklogCount; i++ {
+			isolationGroup := ""
+			if len(backlogConfig.IsolationGroups) > 0 {
+				isolationGroup = randomlyPickKey(backlogConfig.IsolationGroups)
+			}
+			decisionTask := newDecisionTask(domainID, partition, isolationGroup, idx)
+			reqCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
+			_, err := matchingClients[0].AddDecisionTask(reqCtx, decisionTask)
+			cancel()
+			if err != nil {
+				s.log("Error when adding decision task, err: %v", err)
+			}
+		}
+	}
 
 	// Start pollers
 	numPollers := 0
 	var tasksToReceive sync.WaitGroup
-	tasksToReceive.Add(totalTaskCount)
+	tasksToReceive.Add(totalTaskCount + totalBacklogCount)
 	var pollerWG sync.WaitGroup
 	for idx, pollerConfig := range s.testClusterConfig.MatchingConfig.SimulationConfig.Pollers {
 		for i := 0; i < pollerConfig.getNumPollers(); i++ {
@@ -266,6 +288,7 @@ func (s *MatchingSimulationSuite) TestMatchingSimulation() {
 	// Don't change the start/end line format as it is used by scripts to parse the summary info
 	testSummary := []string{}
 	testSummary = append(testSummary, "Simulation Summary:")
+	testSummary = append(testSummary, fmt.Sprintf("Random seed: %v", seed))
 	testSummary = append(testSummary, fmt.Sprintf("Task generate Duration: %v", aggStats[operationAddDecisionTask].lastUpdated.Sub(startTime)))
 	testSummary = append(testSummary, fmt.Sprintf("Simulation Duration: %v", executionTime))
 	testSummary = append(testSummary, fmt.Sprintf("Num of Pollers: %d", numPollers))
@@ -614,4 +637,33 @@ func getTasklistLoadBalancerStrategy(strategy string) string {
 		return "random"
 	}
 	return strategy
+}
+
+func getPartitionTaskListName(root string, partition int) string {
+	if partition <= 0 {
+		return root
+	}
+	return fmt.Sprintf("%v%v/%v", common.ReservedTaskListPrefix, root, partition)
+}
+
+func randomlyPickKey(weights map[string]int) string {
+	// Calculate the total weight
+	totalWeight := 0
+	for _, weight := range weights {
+		totalWeight += weight
+	}
+
+	// Generate a random number between 0 and totalWeight - 1
+	randomWeight := rand.Intn(totalWeight)
+
+	// Iterate through the map to find the key corresponding to the random weight
+	for key, weight := range weights {
+		if randomWeight < weight {
+			return key
+		}
+		randomWeight -= weight
+	}
+
+	// Return an empty string as a fallback (should not happen if weights are positive)
+	return ""
 }
