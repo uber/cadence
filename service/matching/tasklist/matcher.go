@@ -66,6 +66,8 @@ type taskMatcherImpl struct {
 
 	tasklist     *Identifier
 	tasklistKind types.TaskListKind
+
+	numReadPartitionsFn func(*config.TaskListConfig) int
 }
 
 // ErrTasklistThrottled implies a tasklist was throttled
@@ -81,7 +83,9 @@ func newTaskMatcher(
 	isolationGroups []string,
 	log log.Logger,
 	tasklist *Identifier,
-	tasklistKind types.TaskListKind) TaskMatcher {
+	tasklistKind types.TaskListKind,
+	numReadPartitionsFn func(*config.TaskListConfig) int,
+) TaskMatcher {
 	dPtr := config.TaskDispatchRPS
 	limiter := quotas.NewRateLimiter(&dPtr, config.TaskDispatchRPSTTL, config.MinTaskThrottlingBurstSize())
 	isolatedTaskC := make(map[string]chan *InternalTask)
@@ -92,18 +96,19 @@ func newTaskMatcher(
 	cancelCtx, cancelFunc := context.WithCancel(context.Background())
 
 	return &taskMatcherImpl{
-		log:           log,
-		limiter:       limiter,
-		scope:         scope,
-		fwdr:          fwdr,
-		taskC:         make(chan *InternalTask),
-		isolatedTaskC: isolatedTaskC,
-		queryTaskC:    make(chan *InternalTask),
-		config:        config,
-		tasklist:      tasklist,
-		tasklistKind:  tasklistKind,
-		cancelCtx:     cancelCtx,
-		cancelFunc:    cancelFunc,
+		log:                 log,
+		limiter:             limiter,
+		scope:               scope,
+		fwdr:                fwdr,
+		taskC:               make(chan *InternalTask),
+		isolatedTaskC:       isolatedTaskC,
+		queryTaskC:          make(chan *InternalTask),
+		config:              config,
+		tasklist:            tasklist,
+		tasklistKind:        tasklistKind,
+		cancelCtx:           cancelCtx,
+		cancelFunc:          cancelFunc,
+		numReadPartitionsFn: numReadPartitionsFn,
 	}
 }
 
@@ -449,7 +454,7 @@ func (tm *taskMatcherImpl) UpdateRatelimit(rps *float64) {
 		return
 	}
 	rate := *rps
-	nPartitions := tm.config.NumReadPartitions()
+	nPartitions := tm.numReadPartitionsFn(tm.config)
 	if rate > float64(nPartitions) {
 		// divide the rate equally across all partitions
 		rate = rate / float64(nPartitions)
@@ -530,6 +535,9 @@ func (tm *taskMatcherImpl) pollOrForward(
 			TaskListType: tm.tasklist.GetType(),
 			TaskListKind: tm.tasklistKind.Ptr(),
 			EventName:    "Attempting to Forward Poll",
+			Payload: map[string]any{
+				"IsolationGroup": isolationGroup,
+			},
 		})
 		if task, err := tm.fwdr.ForwardPoll(ctx); err == nil {
 			token.release(isolationGroup)

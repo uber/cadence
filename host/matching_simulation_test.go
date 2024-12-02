@@ -105,17 +105,18 @@ func TestMatchingSimulationSuite(t *testing.T) {
 	isolationGroups := getIsolationGroups(&clusterConfig.MatchingConfig.SimulationConfig)
 
 	clusterConfig.MatchingDynamicConfigOverrides = map[dynamicconfig.Key]interface{}{
-		dynamicconfig.MatchingNumTasklistWritePartitions:   getPartitions(clusterConfig.MatchingConfig.SimulationConfig.TaskListWritePartitions),
-		dynamicconfig.MatchingNumTasklistReadPartitions:    getPartitions(clusterConfig.MatchingConfig.SimulationConfig.TaskListReadPartitions),
-		dynamicconfig.MatchingForwarderMaxOutstandingPolls: getForwarderMaxOutstandingPolls(clusterConfig.MatchingConfig.SimulationConfig.ForwarderMaxOutstandingPolls),
-		dynamicconfig.MatchingForwarderMaxOutstandingTasks: getForwarderMaxOutstandingTasks(clusterConfig.MatchingConfig.SimulationConfig.ForwarderMaxOutstandingTasks),
-		dynamicconfig.MatchingForwarderMaxRatePerSecond:    getForwarderMaxRPS(clusterConfig.MatchingConfig.SimulationConfig.ForwarderMaxRatePerSecond),
-		dynamicconfig.MatchingForwarderMaxChildrenPerNode:  getForwarderMaxChildPerNode(clusterConfig.MatchingConfig.SimulationConfig.ForwarderMaxChildrenPerNode),
-		dynamicconfig.LocalPollWaitTime:                    clusterConfig.MatchingConfig.SimulationConfig.LocalPollWaitTime,
-		dynamicconfig.LocalTaskWaitTime:                    clusterConfig.MatchingConfig.SimulationConfig.LocalTaskWaitTime,
-		dynamicconfig.EnableTasklistIsolation:              len(isolationGroups) > 0,
-		dynamicconfig.AllIsolationGroups:                   isolationGroups,
-		dynamicconfig.TasklistLoadBalancerStrategy:         getTasklistLoadBalancerStrategy(clusterConfig.MatchingConfig.SimulationConfig.TasklistLoadBalancerStrategy),
+		dynamicconfig.MatchingNumTasklistWritePartitions:           getPartitions(clusterConfig.MatchingConfig.SimulationConfig.TaskListWritePartitions),
+		dynamicconfig.MatchingNumTasklistReadPartitions:            getPartitions(clusterConfig.MatchingConfig.SimulationConfig.TaskListReadPartitions),
+		dynamicconfig.MatchingForwarderMaxOutstandingPolls:         getForwarderMaxOutstandingPolls(clusterConfig.MatchingConfig.SimulationConfig.ForwarderMaxOutstandingPolls),
+		dynamicconfig.MatchingForwarderMaxOutstandingTasks:         getForwarderMaxOutstandingTasks(clusterConfig.MatchingConfig.SimulationConfig.ForwarderMaxOutstandingTasks),
+		dynamicconfig.MatchingForwarderMaxRatePerSecond:            getForwarderMaxRPS(clusterConfig.MatchingConfig.SimulationConfig.ForwarderMaxRatePerSecond),
+		dynamicconfig.MatchingForwarderMaxChildrenPerNode:          getForwarderMaxChildPerNode(clusterConfig.MatchingConfig.SimulationConfig.ForwarderMaxChildrenPerNode),
+		dynamicconfig.LocalPollWaitTime:                            clusterConfig.MatchingConfig.SimulationConfig.LocalPollWaitTime,
+		dynamicconfig.LocalTaskWaitTime:                            clusterConfig.MatchingConfig.SimulationConfig.LocalTaskWaitTime,
+		dynamicconfig.EnableTasklistIsolation:                      len(isolationGroups) > 0,
+		dynamicconfig.AllIsolationGroups:                           isolationGroups,
+		dynamicconfig.TasklistLoadBalancerStrategy:                 getTasklistLoadBalancerStrategy(clusterConfig.MatchingConfig.SimulationConfig.TasklistLoadBalancerStrategy),
+		dynamicconfig.MatchingEnableGetNumberOfPartitionsFromCache: clusterConfig.MatchingConfig.SimulationConfig.GetPartitionConfigFromDB,
 	}
 
 	ctrl := gomock.NewController(t)
@@ -186,6 +187,19 @@ func (s *MatchingSimulationSuite) TestMatchingSimulation() {
 
 	domainID := s.domainID(ctx)
 	tasklist := "my-tasklist"
+
+	if s.testClusterConfig.MatchingConfig.SimulationConfig.GetPartitionConfigFromDB {
+		_, err := s.testCluster.GetMatchingClient().UpdateTaskListPartitionConfig(ctx, &types.MatchingUpdateTaskListPartitionConfigRequest{
+			DomainUUID:   domainID,
+			TaskList:     &types.TaskList{Name: tasklist, Kind: types.TaskListKindNormal.Ptr()},
+			TaskListType: types.TaskListTypeDecision.Ptr(),
+			PartitionConfig: &types.TaskListPartitionConfig{
+				NumReadPartitions:  int32(getPartitions(s.testClusterConfig.MatchingConfig.SimulationConfig.TaskListReadPartitions)),
+				NumWritePartitions: int32(getPartitions(s.testClusterConfig.MatchingConfig.SimulationConfig.TaskListWritePartitions)),
+			},
+		})
+		s.NoError(err)
+	}
 
 	// Start stat collector
 	statsCh := make(chan *operationStats, 200000)
@@ -259,6 +273,7 @@ func (s *MatchingSimulationSuite) TestMatchingSimulation() {
 	testSummary = append(testSummary, fmt.Sprintf("Record Decision Task Started Time: %v", s.testClusterConfig.MatchingConfig.SimulationConfig.RecordDecisionTaskStartedTime))
 	testSummary = append(testSummary, fmt.Sprintf("Num of Write Partitions: %d", s.testClusterConfig.MatchingDynamicConfigOverrides[dynamicconfig.MatchingNumTasklistWritePartitions]))
 	testSummary = append(testSummary, fmt.Sprintf("Num of Read Partitions: %d", s.testClusterConfig.MatchingDynamicConfigOverrides[dynamicconfig.MatchingNumTasklistReadPartitions]))
+	testSummary = append(testSummary, fmt.Sprintf("Get Num of Partitions from DB: %v", s.testClusterConfig.MatchingDynamicConfigOverrides[dynamicconfig.MatchingEnableGetNumberOfPartitionsFromCache]))
 	testSummary = append(testSummary, fmt.Sprintf("Tasklist load balancer strategy: %v", s.testClusterConfig.MatchingDynamicConfigOverrides[dynamicconfig.TasklistLoadBalancerStrategy]))
 	testSummary = append(testSummary, fmt.Sprintf("Forwarder Max Outstanding Polls: %d", s.testClusterConfig.MatchingDynamicConfigOverrides[dynamicconfig.MatchingForwarderMaxOutstandingPolls]))
 	testSummary = append(testSummary, fmt.Sprintf("Forwarder Max Outstanding Tasks: %d", s.testClusterConfig.MatchingDynamicConfigOverrides[dynamicconfig.MatchingForwarderMaxOutstandingTasks]))
@@ -318,7 +333,7 @@ func (s *MatchingSimulationSuite) generate(
 			start := time.Now()
 			decisionTask := newDecisionTask(domainID, tasklist, isolationGroup, scheduleID)
 			reqCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
-			err := matchingClient.AddDecisionTask(reqCtx, decisionTask)
+			_, err := matchingClient.AddDecisionTask(reqCtx, decisionTask)
 			statsCh <- &operationStats{
 				op:        operationAddDecisionTask,
 				dur:       time.Since(start),

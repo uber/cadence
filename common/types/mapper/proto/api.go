@@ -1204,8 +1204,9 @@ func FromDescribeTaskListResponse(t *types.DescribeTaskListResponse) *apiv1.Desc
 		return nil
 	}
 	return &apiv1.DescribeTaskListResponse{
-		Pollers:        FromPollerInfoArray(t.Pollers),
-		TaskListStatus: FromTaskListStatus(t.TaskListStatus),
+		Pollers:         FromPollerInfoArray(t.Pollers),
+		TaskListStatus:  FromTaskListStatus(t.TaskListStatus),
+		PartitionConfig: FromAPITaskListPartitionConfig(t.PartitionConfig),
 	}
 }
 
@@ -1214,8 +1215,9 @@ func ToDescribeTaskListResponse(t *apiv1.DescribeTaskListResponse) *types.Descri
 		return nil
 	}
 	return &types.DescribeTaskListResponse{
-		Pollers:        ToPollerInfoArray(t.Pollers),
-		TaskListStatus: ToTaskListStatus(t.TaskListStatus),
+		Pollers:         ToPollerInfoArray(t.Pollers),
+		TaskListStatus:  ToTaskListStatus(t.TaskListStatus),
+		PartitionConfig: ToAPITaskListPartitionConfig(t.PartitionConfig),
 	}
 }
 
@@ -1995,6 +1997,7 @@ func FromPendingActivityInfo(t *types.PendingActivityInfo) *apiv1.PendingActivit
 		LastFailure:           FromFailure(t.LastFailureReason, t.LastFailureDetails),
 		LastWorkerIdentity:    t.LastWorkerIdentity,
 		StartedWorkerIdentity: t.StartedWorkerIdentity,
+		ScheduleId:            t.ScheduleID,
 	}
 }
 
@@ -2017,6 +2020,7 @@ func ToPendingActivityInfo(t *apiv1.PendingActivityInfo) *types.PendingActivityI
 		LastFailureDetails:     ToFailureDetails(t.LastFailure),
 		LastWorkerIdentity:     t.LastWorkerIdentity,
 		StartedWorkerIdentity:  t.StartedWorkerIdentity,
+		ScheduleID:             t.ScheduleId,
 	}
 }
 
@@ -2086,6 +2090,7 @@ func FromPendingDecisionInfo(t *types.PendingDecisionInfo) *apiv1.PendingDecisio
 		StartedTime:           unixNanoToTime(t.StartedTimestamp),
 		Attempt:               int32(t.Attempt),
 		OriginalScheduledTime: unixNanoToTime(t.OriginalScheduledTimestamp),
+		ScheduleId:            t.ScheduleID,
 	}
 }
 
@@ -2099,6 +2104,7 @@ func ToPendingDecisionInfo(t *apiv1.PendingDecisionInfo) *types.PendingDecisionI
 		StartedTimestamp:           timeToUnixNano(t.StartedTime),
 		Attempt:                    int64(t.Attempt),
 		OriginalScheduledTimestamp: timeToUnixNano(t.OriginalScheduledTime),
+		ScheduleID:                 t.ScheduleId,
 	}
 }
 
@@ -6066,4 +6072,26 @@ func ToResetStickyTaskListResponse(t *apiv1.ResetStickyTaskListResponse) *types.
 		return nil
 	}
 	return &types.ResetStickyTaskListResponse{}
+}
+
+func FromAPITaskListPartitionConfig(t *types.TaskListPartitionConfig) *apiv1.TaskListPartitionConfig {
+	if t == nil {
+		return nil
+	}
+	return &apiv1.TaskListPartitionConfig{
+		Version:            t.Version,
+		NumReadPartitions:  t.NumReadPartitions,
+		NumWritePartitions: t.NumWritePartitions,
+	}
+}
+
+func ToAPITaskListPartitionConfig(t *apiv1.TaskListPartitionConfig) *types.TaskListPartitionConfig {
+	if t == nil {
+		return nil
+	}
+	return &types.TaskListPartitionConfig{
+		Version:            t.Version,
+		NumReadPartitions:  t.NumReadPartitions,
+		NumWritePartitions: t.NumWritePartitions,
+	}
 }

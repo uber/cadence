@@ -43,6 +43,7 @@ const (
 	activeCluster             = "active_cluster"
 	taskList                  = "tasklist"
 	taskListType              = "tasklistType"
+	taskListRootPartition     = "tasklist_root_partition"
 	workflowType              = "workflowType"
 	activityType              = "activityType"
 	decisionType              = "decisionType"
@@ -53,6 +54,7 @@ const (
 	transport                 = "transport"
 	caller                    = "caller"
 	service                   = "service"
+	destService               = "dest_service"
 	signalName                = "signalName"
 	workflowVersion           = "workflow_version"
 	shardID                   = "shard_id"
@@ -174,6 +176,14 @@ func TaskListTypeTag(value string) Tag {
 	return metricWithUnknown(taskListType, value)
 }
 
+// TaskListRootPartition returns a new task list root partition tag.
+func TaskListRootPartitionTag(value string) Tag {
+	if len(value) == 0 {
+		value = unknownValue
+	}
+	return simpleMetric{key: taskListRootPartition, value: sanitizer.Value(value)}
+}
+
 // WorkflowTypeTag returns a new workflow type tag.
 func WorkflowTypeTag(value string) Tag {
 	return metricWithUnknown(workflowType, value)
@@ -219,9 +229,14 @@ func CallerTag(value string) Tag {
 	return simpleMetric{key: caller, value: value}
 }
 
-// CallerTag returns a new RPC Caller type tag.
+// ServiceTag returns a new service tag.
 func ServiceTag(value string) Tag {
 	return simpleMetric{key: service, value: value}
+}
+
+// DestServiceTag returns a new destination service tag.
+func DestServiceTag(value string) Tag {
+	return simpleMetric{key: destService, value: value}
 }
 
 // Hosttag emits the host identifier

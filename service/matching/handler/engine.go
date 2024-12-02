@@ -245,6 +245,7 @@ func (e *matchingEngineImpl) getTaskListManager(taskList *tasklist.Identifier, t
 		e.config,
 		e.timeSource,
 		e.timeSource.Now(),
+		e.historyService,
 	)
 	if err != nil {
 		e.taskListsLock.Unlock()
@@ -333,8 +334,9 @@ func (e *matchingEngineImpl) AddDecisionTask(
 		TaskListKind: taskListKind,
 		TaskListType: taskListType,
 		TaskInfo: persistence.TaskInfo{
-			DomainID:   domainID,
-			ScheduleID: request.GetScheduleID(),
+			DomainID:        domainID,
+			ScheduleID:      request.GetScheduleID(),
+			PartitionConfig: request.GetPartitionConfig(),
 		},
 		EventName: "Received AddDecisionTask",
 		Host:      e.config.HostName,
@@ -514,6 +516,7 @@ func (e *matchingEngineImpl) PollForDecisionTask(
 		Host:      e.config.HostName,
 		Payload: map[string]any{
 			"RequestForwardedFrom": req.GetForwardedFrom(),
+			"IsolationGroup":       req.GetIsolationGroup(),
 		},
 	})
 pollLoop:
@@ -559,7 +562,8 @@ pollLoop:
 					},
 				})
 				return &types.MatchingPollForDecisionTaskResponse{
-					PartitionConfig: tlMgr.TaskListPartitionConfig(),
+					PartitionConfig:   tlMgr.TaskListPartitionConfig(),
+					LoadBalancerHints: tlMgr.LoadBalancerHints(),
 				}, nil
 			}
 			return nil, fmt.Errorf("couldn't get task: %w", err)
@@ -575,8 +579,8 @@ pollLoop:
 				Host:         e.config.HostName,
 			})
 			resp := task.PollForDecisionResponse()
-			// set the backlog count to the current partition's backlog count
-			resp.BacklogCountHint = task.BacklogCountHint
+			resp.PartitionConfig = tlMgr.TaskListPartitionConfig()
+			resp.LoadBalancerHints = tlMgr.LoadBalancerHints()
 			return resp, nil
 			// TODO: Maybe add history expose here?
 		}
@@ -595,7 +599,8 @@ pollLoop:
 				// will notify query client that the query task failed
 				e.deliverQueryResult(task.Query.TaskID, &queryResult{internalError: err}) //nolint:errcheck
 				return &types.MatchingPollForDecisionTaskResponse{
-					PartitionConfig: tlMgr.TaskListPartitionConfig(),
+					PartitionConfig:   tlMgr.TaskListPartitionConfig(),
+					LoadBalancerHints: tlMgr.LoadBalancerHints(),
 				}, nil
 			}
 
@@ -613,7 +618,7 @@ pollLoop:
 				BranchToken:               mutableStateResp.CurrentBranchToken,
 				HistorySize:               mutableStateResp.HistorySize,
 			}
-			return e.createPollForDecisionTaskResponse(task, resp, hCtx.scope, tlMgr.TaskListPartitionConfig()), nil
+			return e.createPollForDecisionTaskResponse(task, resp, hCtx.scope, tlMgr.TaskListPartitionConfig(), tlMgr.LoadBalancerHints()), nil
 		}
 
 		e.emitTaskIsolationMetrics(hCtx.scope, task.Event.PartitionConfig, req.GetIsolationGroup())
@@ -666,10 +671,11 @@ pollLoop:
 				"TaskIsForwarded":      task.IsForwarded(),
 				"RequestForwardedFrom": req.GetForwardedFrom(),
 				"Latency":              time.Since(task.Info().CreatedTime).Milliseconds(),
+				"IsolationGroup":       req.GetIsolationGroup(),
 			},
 		})
 
-		return e.createPollForDecisionTaskResponse(task, resp, hCtx.scope, tlMgr.TaskListPartitionConfig()), nil
+		return e.createPollForDecisionTaskResponse(task, resp, hCtx.scope, tlMgr.TaskListPartitionConfig(), tlMgr.LoadBalancerHints()), nil
 	}
 }
 
@@ -720,7 +726,8 @@ pollLoop:
 			// TODO: Is empty poll the best reply for errPumpClosed?
 			if errors.Is(err, tasklist.ErrNoTasks) || errors.Is(err, errPumpClosed) {
 				return &types.MatchingPollForActivityTaskResponse{
-					PartitionConfig: tlMgr.TaskListPartitionConfig(),
+					PartitionConfig:   tlMgr.TaskListPartitionConfig(),
+					LoadBalancerHints: tlMgr.LoadBalancerHints(),
 				}, nil
 			}
 			e.logger.Error("Received unexpected err while getting task",
@@ -733,13 +740,16 @@ pollLoop:
 
 		if task.IsStarted() {
 			// tasks received from remote are already started. So, simply forward the response
-			return task.PollForActivityResponse(), nil
+			resp := task.PollForActivityResponse()
+			resp.PartitionConfig = tlMgr.TaskListPartitionConfig()
+			resp.LoadBalancerHints = tlMgr.LoadBalancerHints()
+			return resp, nil
 		}
 		e.emitForwardedFromStats(hCtx.scope, task.IsForwarded(), req.GetForwardedFrom())
 		e.emitTaskIsolationMetrics(hCtx.scope, task.Event.PartitionConfig, req.GetIsolationGroup())
 		if task.ActivityTaskDispatchInfo != nil {
 			task.Finish(nil)
-			return e.createSyncMatchPollForActivityTaskResponse(task, task.ActivityTaskDispatchInfo, tlMgr.TaskListPartitionConfig()), nil
+			return e.createSyncMatchPollForActivityTaskResponse(task, task.ActivityTaskDispatchInfo, tlMgr.TaskListPartitionConfig(), tlMgr.LoadBalancerHints()), nil
 		}
 
 		resp, err := e.recordActivityTaskStarted(hCtx.Context, request, task)
@@ -771,7 +781,7 @@ pollLoop:
 			continue pollLoop
 		}
 		task.Finish(nil)
-		return e.createPollForActivityTaskResponse(task, resp, hCtx.scope, tlMgr.TaskListPartitionConfig()), nil
+		return e.createPollForActivityTaskResponse(task, resp, hCtx.scope, tlMgr.TaskListPartitionConfig(), tlMgr.LoadBalancerHints()), nil
 	}
 }
 
@@ -779,6 +789,7 @@ func (e *matchingEngineImpl) createSyncMatchPollForActivityTaskResponse(
 	task *tasklist.InternalTask,
 	activityTaskDispatchInfo *types.ActivityTaskDispatchInfo,
 	partitionConfig *types.TaskListPartitionConfig,
+	loadBalancerHints *types.LoadBalancerHints,
 ) *types.MatchingPollForActivityTaskResponse {
 
 	scheduledEvent := activityTaskDispatchInfo.ScheduledEvent
@@ -813,6 +824,7 @@ func (e *matchingEngineImpl) createSyncMatchPollForActivityTaskResponse(
 	response.WorkflowType = activityTaskDispatchInfo.WorkflowType
 	response.WorkflowDomain = activityTaskDispatchInfo.WorkflowDomain
 	response.PartitionConfig = partitionConfig
+	response.LoadBalancerHints = loadBalancerHints
 	return response
 }
 
@@ -1011,6 +1023,92 @@ func (e *matchingEngineImpl) GetTaskListsByDomain(
 	return e.getTaskListByDomainLocked(domainID), nil
 }
 
+func (e *matchingEngineImpl) UpdateTaskListPartitionConfig(
+	hCtx *handlerContext,
+	request *types.MatchingUpdateTaskListPartitionConfigRequest,
+) (*types.MatchingUpdateTaskListPartitionConfigResponse, error) {
+	domainID := request.DomainUUID
+	taskListName := request.TaskList.GetName()
+	taskListKind := request.TaskList.GetKind()
+	taskListType := persistence.TaskListTypeDecision
+	if request.GetTaskListType() == types.TaskListTypeActivity {
+		taskListType = persistence.TaskListTypeActivity
+	}
+	domainName, err := e.domainCache.GetDomainName(domainID)
+	if err != nil {
+		return nil, err
+	}
+	if e.config.EnableAdaptiveScaler(domainName, taskListName, taskListType) {
+		return nil, &types.BadRequestError{Message: "Manual update is not allowed because adaptive scaler is enabled."}
+	}
+	if taskListKind != types.TaskListKindNormal {
+		return nil, &types.BadRequestError{Message: "Only normal tasklist's partition config can be updated."}
+	}
+	if request.PartitionConfig == nil {
+		return nil, &types.BadRequestError{Message: "Task list partition config is not set in the request."}
+	}
+	if request.PartitionConfig.NumWritePartitions > request.PartitionConfig.NumReadPartitions {
+		return nil, &types.BadRequestError{Message: "The number of write partitions cannot be larger than the number of read partitions."}
+	}
+	if request.PartitionConfig.NumWritePartitions <= 0 {
+		return nil, &types.BadRequestError{Message: "The number of partitions must be larger than 0."}
+	}
+	taskListID, err := tasklist.NewIdentifier(domainID, taskListName, taskListType)
+	if err != nil {
+		return nil, err
+	}
+	if !taskListID.IsRoot() {
+		return nil, &types.BadRequestError{Message: "Only root partition's partition config can be updated."}
+	}
+	tlMgr, err := e.getTaskListManager(taskListID, &taskListKind)
+	if err != nil {
+		return nil, err
+	}
+	err = tlMgr.UpdateTaskListPartitionConfig(hCtx.Context, request.PartitionConfig)
+	if err != nil {
+		return nil, err
+	}
+	return &types.MatchingUpdateTaskListPartitionConfigResponse{}, nil
+}
+
+func (e *matchingEngineImpl) RefreshTaskListPartitionConfig(
+	hCtx *handlerContext,
+	request *types.MatchingRefreshTaskListPartitionConfigRequest,
+) (*types.MatchingRefreshTaskListPartitionConfigResponse, error) {
+	domainID := request.DomainUUID
+	taskListName := request.TaskList.GetName()
+	taskListKind := request.TaskList.GetKind()
+	taskListType := persistence.TaskListTypeDecision
+	if request.GetTaskListType() == types.TaskListTypeActivity {
+		taskListType = persistence.TaskListTypeActivity
+	}
+	if taskListKind != types.TaskListKindNormal {
+		return nil, &types.BadRequestError{Message: "Only normal tasklist's partition config can be updated."}
+	}
+	if request.PartitionConfig != nil && request.PartitionConfig.NumWritePartitions > request.PartitionConfig.NumReadPartitions {
+		return nil, &types.BadRequestError{Message: "The number of write partitions cannot be larger than the number of read partitions."}
+	}
+	if request.PartitionConfig != nil && request.PartitionConfig.NumWritePartitions <= 0 {
+		return nil, &types.BadRequestError{Message: "The number of partitions must be larger than 0."}
+	}
+	taskListID, err := tasklist.NewIdentifier(domainID, taskListName, taskListType)
+	if err != nil {
+		return nil, err
+	}
+	if taskListID.IsRoot() && request.PartitionConfig != nil {
+		return nil, &types.BadRequestError{Message: "PartitionConfig must be nil for root partition."}
+	}
+	tlMgr, err := e.getTaskListManager(taskListID, &taskListKind)
+	if err != nil {
+		return nil, err
+	}
+	err = tlMgr.RefreshTaskListPartitionConfig(hCtx.Context, request.PartitionConfig)
+	if err != nil {
+		return nil, err
+	}
+	return &types.MatchingRefreshTaskListPartitionConfigResponse{}, nil
+}
+
 func (e *matchingEngineImpl) getHostInfo(partitionKey string) (string, error) {
 	host, err := e.membershipResolver.Lookup(service.Matching, partitionKey)
 	if err != nil {
@@ -1061,6 +1159,7 @@ func (e *matchingEngineImpl) createPollForDecisionTaskResponse(
 	historyResponse *types.RecordDecisionTaskStartedResponse,
 	scope metrics.Scope,
 	partitionConfig *types.TaskListPartitionConfig,
+	loadBalancerHints *types.LoadBalancerHints,
 ) *types.MatchingPollForDecisionTaskResponse {
 
 	var token []byte
@@ -1096,6 +1195,7 @@ func (e *matchingEngineImpl) createPollForDecisionTaskResponse(
 	}
 	response.BacklogCountHint = task.BacklogCountHint
 	response.PartitionConfig = partitionConfig
+	response.LoadBalancerHints = loadBalancerHints
 	return response
 }
 
@@ -1105,6 +1205,7 @@ func (e *matchingEngineImpl) createPollForActivityTaskResponse(
 	historyResponse *types.RecordActivityTaskStartedResponse,
 	scope metrics.Scope,
 	partitionConfig *types.TaskListPartitionConfig,
+	loadBalancerHints *types.LoadBalancerHints,
 ) *types.MatchingPollForActivityTaskResponse {
 
 	scheduledEvent := historyResponse.ScheduledEvent
@@ -1149,6 +1250,7 @@ func (e *matchingEngineImpl) createPollForActivityTaskResponse(
 	response.WorkflowType = historyResponse.WorkflowType
 	response.WorkflowDomain = historyResponse.WorkflowDomain
 	response.PartitionConfig = partitionConfig
+	response.LoadBalancerHints = loadBalancerHints
 	return response
 }
 

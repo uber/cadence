@@ -445,6 +445,7 @@ type MatchingPollForDecisionTaskResponse struct {
 	Queries                   map[string]*WorkflowQuery `json:"queries,omitempty"`
 	TotalHistoryBytes         int64                     `json:"currentHistorySize,omitempty"`
 	PartitionConfig           *TaskListPartitionConfig
+	LoadBalancerHints         *LoadBalancerHints
 }
 
 // GetWorkflowExecution is an internal getter (TBD...)
@@ -514,6 +515,7 @@ type MatchingPollForActivityTaskResponse struct {
 	Header                          *Header            `json:"header,omitempty"`
 	BacklogCountHint                int64              `json:"backlogCountHint,omitempty"`
 	PartitionConfig                 *TaskListPartitionConfig
+	LoadBalancerHints               *LoadBalancerHints
 }
 
 // MatchingQueryWorkflowRequest is an internal type (TBD...)
@@ -646,3 +648,40 @@ const (
 	// TaskSourceDbBacklog is an option for TaskSource
 	TaskSourceDbBacklog
 )
+
+type MatchingUpdateTaskListPartitionConfigRequest struct {
+	DomainUUID      string
+	TaskList        *TaskList
+	TaskListType    *TaskListType
+	PartitionConfig *TaskListPartitionConfig
+}
+
+func (v *MatchingUpdateTaskListPartitionConfigRequest) GetTaskListType() (o TaskListType) {
+	if v != nil && v.TaskListType != nil {
+		return *v.TaskListType
+	}
+	return
+}
+
+type MatchingUpdateTaskListPartitionConfigResponse struct{}
+
+type MatchingRefreshTaskListPartitionConfigRequest struct {
+	DomainUUID      string
+	TaskList        *TaskList
+	TaskListType    *TaskListType
+	PartitionConfig *TaskListPartitionConfig
+}
+
+func (v *MatchingRefreshTaskListPartitionConfigRequest) GetTaskListType() (o TaskListType) {
+	if v != nil && v.TaskListType != nil {
+		return *v.TaskListType
+	}
+	return
+}
+
+type MatchingRefreshTaskListPartitionConfigResponse struct{}
+
+type LoadBalancerHints struct {
+	BacklogCount  int64
+	RatePerSecond float64
+}

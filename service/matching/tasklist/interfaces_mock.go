@@ -186,6 +186,34 @@ func (mr *MockManagerMockRecorder) HasPollerAfter(accessTime interface{}) *gomoc
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasPollerAfter", reflect.TypeOf((*MockManager)(nil).HasPollerAfter), accessTime)
 }
 
+// LoadBalancerHints mocks base method.
+func (m *MockManager) LoadBalancerHints() *types.LoadBalancerHints {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "LoadBalancerHints")
+	ret0, _ := ret[0].(*types.LoadBalancerHints)
+	return ret0
+}
+
+// LoadBalancerHints indicates an expected call of LoadBalancerHints.
+func (mr *MockManagerMockRecorder) LoadBalancerHints() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LoadBalancerHints", reflect.TypeOf((*MockManager)(nil).LoadBalancerHints))
+}
+
+// RefreshTaskListPartitionConfig mocks base method.
+func (m *MockManager) RefreshTaskListPartitionConfig(arg0 context.Context, arg1 *types.TaskListPartitionConfig) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RefreshTaskListPartitionConfig", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// RefreshTaskListPartitionConfig indicates an expected call of RefreshTaskListPartitionConfig.
+func (mr *MockManagerMockRecorder) RefreshTaskListPartitionConfig(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RefreshTaskListPartitionConfig", reflect.TypeOf((*MockManager)(nil).RefreshTaskListPartitionConfig), arg0, arg1)
+}
+
 // Start mocks base method.
 func (m *MockManager) Start() error {
 	m.ctrl.T.Helper()
@@ -252,6 +280,20 @@ func (m *MockManager) TaskListPartitionConfig() *types.TaskListPartitionConfig {
 func (mr *MockManagerMockRecorder) TaskListPartitionConfig() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TaskListPartitionConfig", reflect.TypeOf((*MockManager)(nil).TaskListPartitionConfig))
+}
+
+// UpdateTaskListPartitionConfig mocks base method.
+func (m *MockManager) UpdateTaskListPartitionConfig(arg0 context.Context, arg1 *types.TaskListPartitionConfig) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateTaskListPartitionConfig", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateTaskListPartitionConfig indicates an expected call of UpdateTaskListPartitionConfig.
+func (mr *MockManagerMockRecorder) UpdateTaskListPartitionConfig(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateTaskListPartitionConfig", reflect.TypeOf((*MockManager)(nil).UpdateTaskListPartitionConfig), arg0, arg1)
 }
 
 // MockTaskMatcher is a mock of TaskMatcher interface.
@@ -497,4 +539,41 @@ func (m *MockForwarder) PollReqTokenC(isolationGroup string) <-chan *ForwarderRe
 func (mr *MockForwarderMockRecorder) PollReqTokenC(isolationGroup interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PollReqTokenC", reflect.TypeOf((*MockForwarder)(nil).PollReqTokenC), isolationGroup)
+}
+
+// MockTaskCompleter is a mock of TaskCompleter interface.
+type MockTaskCompleter struct {
+	ctrl     *gomock.Controller
+	recorder *MockTaskCompleterMockRecorder
+}
+
+// MockTaskCompleterMockRecorder is the mock recorder for MockTaskCompleter.
+type MockTaskCompleterMockRecorder struct {
+	mock *MockTaskCompleter
+}
+
+// NewMockTaskCompleter creates a new mock instance.
+func NewMockTaskCompleter(ctrl *gomock.Controller) *MockTaskCompleter {
+	mock := &MockTaskCompleter{ctrl: ctrl}
+	mock.recorder = &MockTaskCompleterMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockTaskCompleter) EXPECT() *MockTaskCompleterMockRecorder {
+	return m.recorder
+}
+
+// CompleteTaskIfStarted mocks base method.
+func (m *MockTaskCompleter) CompleteTaskIfStarted(ctx context.Context, task *InternalTask) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CompleteTaskIfStarted", ctx, task)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CompleteTaskIfStarted indicates an expected call of CompleteTaskIfStarted.
+func (mr *MockTaskCompleterMockRecorder) CompleteTaskIfStarted(ctx, task interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CompleteTaskIfStarted", reflect.TypeOf((*MockTaskCompleter)(nil).CompleteTaskIfStarted), ctx, task)
 }

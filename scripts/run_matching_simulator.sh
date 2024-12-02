@@ -187,6 +187,58 @@ cat "$eventLogsFile" \
   | jq '.TaskListName' \
   | jq -c '.' | sort -n | uniq -c | sed -e 's/^/     /' | tee -a $testSummaryFile
 
+echo "AddDecisionTask request per isolation group (excluding forwarded):" | tee -a $testSummaryFile
+cat "$eventLogsFile" \
+  | jq -c 'select(.EventName == "Received AddDecisionTask" and .Payload.RequestForwardedFrom == "")' \
+  | jq '.PartitionConfig."isolation-group"' \
+  | jq -c '.' | sort -n | uniq -c | sed -e 's/^/     /' | tee -a $testSummaryFile
+
+echo "AddDecisionTask request per isolation group (forwarded):" | tee -a $testSummaryFile
+cat "$eventLogsFile" \
+  | jq -c 'select(.EventName == "Received AddDecisionTask" and .Payload.RequestForwardedFrom != "")' \
+  | jq '.PartitionConfig."isolation-group"' \
+  | jq -c '.' | sort -n | uniq -c | sed -e 's/^/     /' | tee -a $testSummaryFile
+
+echo "PollForDecisionTask request per isolation group  (excluding forwarded):" | tee -a $testSummaryFile
+cat "$eventLogsFile" \
+  | jq -c 'select(.EventName == "Received PollForDecisionTask" and .Payload.RequestForwardedFrom == "")' \
+  | jq '.Payload.IsolationGroup' \
+  | jq -c '.' | sort -n | uniq -c | sed -e 's/^/     /' | tee -a $testSummaryFile
+
+echo "PollForDecisionTask request per isolation group  (forwarded):" | tee -a $testSummaryFile
+cat "$eventLogsFile" \
+  | jq -c 'select(.EventName == "Received PollForDecisionTask" and .Payload.RequestForwardedFrom != "")' \
+  | jq '.Payload.IsolationGroup' \
+  | jq -c '.' | sort -n | uniq -c | sed -e 's/^/     /' | tee -a $testSummaryFile
+
+echo "Latency per isolation group:" | tee -a $testSummaryFile
+cat "$eventLogsFile" \
+  | jq -c 'select(.EventName == "PollForDecisionTask returning task")' \
+  | jq -s 'group_by(.Payload.IsolationGroup)[] | {"IsolationGroup": .[0].Payload.IsolationGroup,
+   "Avg": (map(.Payload.Latency | tonumber) | add / length), "Median": (map(.Payload.Latency | tonumber) | sort | .[length/2]), "Max":(map(.Payload.Latency | tonumber) | max) }'\
+  | jq -s 'sort_by(.IsolationGroup)[]'\
+  | jq -r '[.IsolationGroup, .Median, .Avg, .Max] | @tsv' \
+  | sort -n | column -t  | sed -e 's/^/     /' | tee -a $testSummaryFile
+
+
+echo "Latency per isolation group and task list:" | tee -a $testSummaryFile
+cat "$eventLogsFile" \
+  | jq -c 'select(.EventName == "PollForDecisionTask returning task")' \
+  | jq -s 'group_by(.Payload.IsolationGroup, .TaskListName)[] | {"IsolationGroup": .[0].Payload.IsolationGroup, "TaskListName": .[0].TaskListName,
+   "Avg": (map(.Payload.Latency | tonumber) | add / length), "Median": (map(.Payload.Latency | tonumber) | sort | .[length/2]), "Max":(map(.Payload.Latency | tonumber) | max) }'\
+  | jq -s 'sort_by(.TaskListName, .IsolationGroup)[]'\
+  | jq -r '[.TaskListName, .IsolationGroup, .Median, .Avg, .Max] | @tsv' \
+  | sort -n | column -t  | sed -e 's/^/     /' | tee -a $testSummaryFile
+
+echo "Task Containment per isolation group and task list:" | tee -a $testSummaryFile
+cat "$eventLogsFile"\
+  | jq -c 'select(.EventName == "PollForDecisionTask returning task")' \
+  | jq -s 'group_by(.PartitionConfig."isolation-group", .TaskListName)[] | {"IsolationGroup": .[0].PartitionConfig."isolation-group", "TaskListName": .[0].TaskListName,
+   "Containment": (map(if .Payload.IsolationGroup == .PartitionConfig."isolation-group" then 1 else 0 end) | add / length) }'\
+  | jq -s 'sort_by(.TaskListName, .IsolationGroup)[]'\
+  | jq -r '[.TaskListName, .IsolationGroup, .Containment] | @tsv' \
+  | sort -n | column -t  | sed -e 's/^/     /' | tee -a $testSummaryFile
+
 
 echo "End of summary" | tee -a $testSummaryFile
 

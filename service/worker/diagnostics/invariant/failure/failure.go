@@ -60,7 +60,7 @@ func (f *failure) Check(context.Context) ([]invariant.InvariantCheckResult, erro
 			identity := fetchIdentity(attr, events)
 			result = append(result, invariant.InvariantCheckResult{
 				InvariantType: WorkflowFailed.String(),
-				Reason:        errorTypeFromReason(*reason).String(),
+				Reason:        ErrorTypeFromReason(*reason).String(),
 				Metadata:      invariant.MarshalData(FailureMetadata{Identity: identity}),
 			})
 		}
@@ -71,7 +71,7 @@ func (f *failure) Check(context.Context) ([]invariant.InvariantCheckResult, erro
 			started := fetchStartedEvent(attr, events)
 			result = append(result, invariant.InvariantCheckResult{
 				InvariantType: ActivityFailed.String(),
-				Reason:        errorTypeFromReason(*reason).String(),
+				Reason:        ErrorTypeFromReason(*reason).String(),
 				Metadata: invariant.MarshalData(FailureMetadata{
 					Identity:          attr.Identity,
 					ActivityScheduled: scheduled,
@@ -83,7 +83,7 @@ func (f *failure) Check(context.Context) ([]invariant.InvariantCheckResult, erro
 	return result, nil
 }
 
-func errorTypeFromReason(reason string) ErrorType {
+func ErrorTypeFromReason(reason string) ErrorType {
 	if strings.Contains(reason, "Generic") {
 		return GenericError
 	}
@@ -126,9 +126,20 @@ func fetchStartedEvent(attr *types.ActivityTaskFailedEventAttributes, events []*
 func (f *failure) RootCause(ctx context.Context, issues []invariant.InvariantCheckResult) ([]invariant.InvariantRootCauseResult, error) {
 	result := make([]invariant.InvariantRootCauseResult, 0)
 	for _, issue := range issues {
-		if issue.Reason == CustomError.String() || issue.Reason == PanicError.String() {
+		switch issue.Reason {
+		case GenericError.String():
 			result = append(result, invariant.InvariantRootCauseResult{
 				RootCause: invariant.RootCauseTypeServiceSideIssue,
+				Metadata:  issue.Metadata,
+			})
+		case PanicError.String():
+			result = append(result, invariant.InvariantRootCauseResult{
+				RootCause: invariant.RootCauseTypeServiceSidePanic,
+				Metadata:  issue.Metadata,
+			})
+		case CustomError.String():
+			result = append(result, invariant.InvariantRootCauseResult{
+				RootCause: invariant.RootCauseTypeServiceSideCustomError,
 				Metadata:  issue.Metadata,
 			})
 		}

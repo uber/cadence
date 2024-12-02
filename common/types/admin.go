@@ -429,3 +429,12 @@ type UpdateDomainAsyncWorkflowConfiguratonRequest struct {
 
 type UpdateDomainAsyncWorkflowConfiguratonResponse struct {
 }
+
+type UpdateTaskListPartitionConfigRequest struct {
+	Domain          string
+	TaskList        *TaskList
+	TaskListType    *TaskListType
+	PartitionConfig *TaskListPartitionConfig
+}
+
+type UpdateTaskListPartitionConfigResponse struct{}

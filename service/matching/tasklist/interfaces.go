@@ -23,6 +23,7 @@
 //go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination interfaces_mock.go github.com/uber/cadence/service/matching/tasklist Manager
 //go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination interfaces_mock.go github.com/uber/cadence/service/matching/tasklist TaskMatcher
 //go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination interfaces_mock.go github.com/uber/cadence/service/matching/tasklist Forwarder
+//go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination interfaces_mock.go github.com/uber/cadence/service/matching/tasklist TaskCompleter
 
 package tasklist
 
@@ -60,6 +61,9 @@ type (
 		GetTaskListKind() types.TaskListKind
 		TaskListID() *Identifier
 		TaskListPartitionConfig() *types.TaskListPartitionConfig
+		UpdateTaskListPartitionConfig(context.Context, *types.TaskListPartitionConfig) error
+		RefreshTaskListPartitionConfig(context.Context, *types.TaskListPartitionConfig) error
+		LoadBalancerHints() *types.LoadBalancerHints
 	}
 
 	TaskMatcher interface {
@@ -80,5 +84,9 @@ type (
 		ForwardPoll(ctx context.Context) (*InternalTask, error)
 		AddReqTokenC() <-chan *ForwarderReqToken
 		PollReqTokenC(isolationGroup string) <-chan *ForwarderReqToken
+	}
+
+	TaskCompleter interface {
+		CompleteTaskIfStarted(ctx context.Context, task *InternalTask) error
 	}
 )

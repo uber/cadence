@@ -41,11 +41,11 @@ import (
 func TerminateBatchJob(c *cli.Context) error {
 	jobID, err := getRequiredOption(c, FlagJobID)
 	if err != nil {
-		return err
+		return commoncli.Problem("Required flag not found: ", err)
 	}
 	reason, err := getRequiredOption(c, FlagReason)
 	if err != nil {
-		return err
+		return commoncli.Problem("Required flag not found: ", err)
 	}
 	svcClient, err := getDeps(c).ServerFrontendClient(c)
 	if err != nil {
@@ -82,7 +82,9 @@ func TerminateBatchJob(c *cli.Context) error {
 // DescribeBatchJob describe the status of the batch job
 func DescribeBatchJob(c *cli.Context) error {
 	jobID, err := getRequiredOption(c, FlagJobID)
-
+	if err != nil {
+		return commoncli.Problem("Required flag not found: ", err)
+	}
 	svcClient, err := getDeps(c).ServerFrontendClient(c)
 	if err != nil {
 		return err

@@ -30,6 +30,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/urfave/cli/v2"
 
+	"github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/tools/cli/clitest"
@@ -252,6 +253,144 @@ func TestAdminListTaskList(t *testing.T) {
 			}
 
 			err := AdminListTaskList(cliCtx)
+			if tt.expectedError == "" {
+				assert.NoError(t, err)
+			} else {
+				assert.ErrorContains(t, err, tt.expectedError)
+			}
+		})
+	}
+}
+
+func TestAdminUpdateTaskListPartitionConfig(t *testing.T) {
+	// Define table of test cases
+	tests := []struct {
+		name               string
+		setupMocks         func(*admin.MockClient)
+		expectedError      string
+		domainFlag         string
+		taskListFlag       string
+		taskListType       string
+		numReadPartitions  int
+		numWritePartitions int
+	}{
+		{
+			name: "Success",
+			setupMocks: func(client *admin.MockClient) {
+				client.EXPECT().
+					UpdateTaskListPartitionConfig(gomock.Any(), &types.UpdateTaskListPartitionConfigRequest{
+						Domain:       "test-domain",
+						TaskList:     &types.TaskList{Name: "test-tasklist", Kind: types.TaskListKindNormal.Ptr()},
+						TaskListType: types.TaskListTypeDecision.Ptr(),
+						PartitionConfig: &types.TaskListPartitionConfig{
+							NumReadPartitions:  2,
+							NumWritePartitions: 2,
+						},
+					}).
+					Return(&types.UpdateTaskListPartitionConfigResponse{}, nil).
+					Times(1)
+			},
+			expectedError:      "",
+			domainFlag:         "test-domain",
+			taskListFlag:       "test-tasklist",
+			taskListType:       "decision",
+			numReadPartitions:  2,
+			numWritePartitions: 2,
+		},
+		{
+			name: "UpdateTaskListPartitionConfigFails",
+			setupMocks: func(client *admin.MockClient) {
+				client.EXPECT().
+					UpdateTaskListPartitionConfig(gomock.Any(), gomock.Any()).
+					Return(nil, fmt.Errorf("API failed")).
+					Times(1)
+			},
+			expectedError:      "Operation UpdateTaskListPartitionConfig failed.: API failed",
+			domainFlag:         "test-domain",
+			taskListFlag:       "test-tasklist",
+			taskListType:       "decision",
+			numReadPartitions:  2,
+			numWritePartitions: 2,
+		},
+		{
+			name:               "NoDomainFlag",
+			setupMocks:         func(client *admin.MockClient) {},
+			expectedError:      "Required flag not found",
+			domainFlag:         "", // Omit Domain flag
+			taskListFlag:       "test-tasklist",
+			taskListType:       "decision",
+			numReadPartitions:  2,
+			numWritePartitions: 2,
+		},
+		{
+			name:               "NoTaskListFlag",
+			setupMocks:         func(client *admin.MockClient) {},
+			expectedError:      "Required flag not found",
+			domainFlag:         "test-domain",
+			taskListType:       "decision",
+			numReadPartitions:  2,
+			numWritePartitions: 2,
+		},
+		{
+			name:               "Invalid task list type",
+			setupMocks:         func(client *admin.MockClient) {},
+			expectedError:      "Invalid task list type: valid types are [activity, decision]",
+			domainFlag:         "test-domain",
+			taskListFlag:       "test-tasklist",
+			numReadPartitions:  2,
+			numWritePartitions: 2,
+		},
+		{
+			name:               "NoReadPartitionFlag",
+			setupMocks:         func(client *admin.MockClient) {},
+			expectedError:      "Required flag not found",
+			domainFlag:         "test-domain",
+			taskListFlag:       "test-tasklist",
+			taskListType:       "decision",
+			numWritePartitions: 2,
+		},
+		{
+			name:              "NoWritePartitionFlag",
+			setupMocks:        func(client *admin.MockClient) {},
+			expectedError:     "Required flag not found",
+			domainFlag:        "test-domain",
+			taskListFlag:      "test-tasklist",
+			taskListType:      "decision",
+			numReadPartitions: 2,
+		},
+	}
+
+	// Loop through test cases
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			td := newCLITestData(t)
+
+			// Set up mocks for the current test case
+			tt.setupMocks(td.mockAdminClient)
+
+			var cliArgs []clitest.CliArgument
+			if tt.domainFlag != "" {
+				cliArgs = append(cliArgs, clitest.StringArgument(FlagDomain, tt.domainFlag))
+			}
+			if tt.taskListFlag != "" {
+				cliArgs = append(cliArgs, clitest.StringArgument(FlagTaskList, tt.taskListFlag))
+			}
+			if tt.taskListType != "" {
+				cliArgs = append(cliArgs, clitest.StringArgument(FlagTaskListType, tt.taskListType))
+			}
+			if tt.numReadPartitions != 0 {
+				cliArgs = append(cliArgs, clitest.IntArgument(FlagNumReadPartitions, tt.numReadPartitions))
+			}
+			if tt.numWritePartitions != 0 {
+				cliArgs = append(cliArgs, clitest.IntArgument(FlagNumWritePartitions, tt.numWritePartitions))
+			}
+			cliCtx := clitest.NewCLIContext(
+				t,
+				td.app,
+				cliArgs...,
+			)
+
+			err := AdminUpdateTaskListPartitionConfig(cliCtx)
 			if tt.expectedError == "" {
 				assert.NoError(t, err)
 			} else {

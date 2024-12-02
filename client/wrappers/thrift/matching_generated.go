@@ -86,7 +86,15 @@ func (g matchingClient) QueryWorkflow(ctx context.Context, mp1 *types.MatchingQu
 	return thrift.ToMatchingQueryWorkflowResponse(response), thrift.ToError(err)
 }
 
+func (g matchingClient) RefreshTaskListPartitionConfig(ctx context.Context, mp1 *types.MatchingRefreshTaskListPartitionConfigRequest, p1 ...yarpc.CallOption) (mp2 *types.MatchingRefreshTaskListPartitionConfigResponse, err error) {
+	return nil, thrift.ToError(&types.BadRequestError{Message: "Feature not supported on TChannel"})
+}
+
 func (g matchingClient) RespondQueryTaskCompleted(ctx context.Context, mp1 *types.MatchingRespondQueryTaskCompletedRequest, p1 ...yarpc.CallOption) (err error) {
 	err = g.c.RespondQueryTaskCompleted(ctx, thrift.FromMatchingRespondQueryTaskCompletedRequest(mp1), p1...)
 	return thrift.ToError(err)
+}
+
+func (g matchingClient) UpdateTaskListPartitionConfig(ctx context.Context, mp1 *types.MatchingUpdateTaskListPartitionConfigRequest, p1 ...yarpc.CallOption) (mp2 *types.MatchingUpdateTaskListPartitionConfigResponse, err error) {
+	return nil, thrift.ToError(&types.BadRequestError{Message: "Feature not supported on TChannel"})
 }

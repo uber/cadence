@@ -34,6 +34,7 @@ import (
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/testlogger"
+	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -65,6 +66,7 @@ func setUpMocksForPartitionConfigProvider(t *testing.T, enableReadFromCache bool
 	return &partitionConfigProviderImpl{
 		configCache:         mockCache,
 		logger:              logger,
+		metricsClient:       metrics.NewNoopMetricsClient(),
 		domainIDToName:      domainIDToName,
 		enableReadFromCache: dynamicconfig.GetBoolPropertyFilteredByTaskListInfo(enableReadFromCache),
 		nReadPartitions:     dynamicconfig.GetIntPropertyFilteredByTaskListInfo(3),
@@ -78,7 +80,7 @@ func TestNewPartitionConfigProvider(t *testing.T) {
 	domainIDToName := func(domainID string) (string, error) {
 		return "test-domain", nil
 	}
-	p := NewPartitionConfigProvider(logger, domainIDToName, dc)
+	p := NewPartitionConfigProvider(logger, metrics.NewNoopMetricsClient(), domainIDToName, dc)
 	assert.NotNil(t, p)
 	pImpl, ok := p.(*partitionConfigProviderImpl)
 	assert.True(t, ok)

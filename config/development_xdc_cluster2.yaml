@@ -68,7 +68,7 @@ services:
     pprof:
       port: 9941
 
-  shard-manager:
+  shard-distributor:
     rpc:
       port: 7953
       bindOnLocalHost: true

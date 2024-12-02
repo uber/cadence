@@ -157,13 +157,13 @@ func (mr *MockPeerChooserMockRecorder) Stop() *gomock.Call {
 }
 
 // UpdatePeers mocks base method.
-func (m *MockPeerChooser) UpdatePeers(arg0 []membership.HostInfo) {
+func (m *MockPeerChooser) UpdatePeers(serviceName string, members []membership.HostInfo) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "UpdatePeers", arg0)
+	m.ctrl.Call(m, "UpdatePeers", serviceName, members)
 }
 
 // UpdatePeers indicates an expected call of UpdatePeers.
-func (mr *MockPeerChooserMockRecorder) UpdatePeers(arg0 interface{}) *gomock.Call {
+func (mr *MockPeerChooserMockRecorder) UpdatePeers(serviceName, members interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdatePeers", reflect.TypeOf((*MockPeerChooser)(nil).UpdatePeers), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdatePeers", reflect.TypeOf((*MockPeerChooser)(nil).UpdatePeers), serviceName, members)
 }

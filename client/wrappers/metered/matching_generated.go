@@ -178,6 +178,20 @@ func (c *matchingClient) QueryWorkflow(ctx context.Context, mp1 *types.MatchingQ
 	return qp1, err
 }
 
+func (c *matchingClient) RefreshTaskListPartitionConfig(ctx context.Context, mp1 *types.MatchingRefreshTaskListPartitionConfigRequest, p1 ...yarpc.CallOption) (mp2 *types.MatchingRefreshTaskListPartitionConfigResponse, err error) {
+	c.metricsClient.IncCounter(metrics.MatchingClientRefreshTaskListPartitionConfigScope, metrics.CadenceClientRequests)
+	c.emitForwardedFromStats(metrics.MatchingClientRefreshTaskListPartitionConfigScope, mp1)
+
+	sw := c.metricsClient.StartTimer(metrics.MatchingClientRefreshTaskListPartitionConfigScope, metrics.CadenceClientLatency)
+	mp2, err = c.client.RefreshTaskListPartitionConfig(ctx, mp1, p1...)
+	sw.Stop()
+
+	if err != nil {
+		c.metricsClient.IncCounter(metrics.MatchingClientRefreshTaskListPartitionConfigScope, metrics.CadenceClientFailures)
+	}
+	return mp2, err
+}
+
 func (c *matchingClient) RespondQueryTaskCompleted(ctx context.Context, mp1 *types.MatchingRespondQueryTaskCompletedRequest, p1 ...yarpc.CallOption) (err error) {
 	c.metricsClient.IncCounter(metrics.MatchingClientRespondQueryTaskCompletedScope, metrics.CadenceClientRequests)
 	c.emitForwardedFromStats(metrics.MatchingClientRespondQueryTaskCompletedScope, mp1)
@@ -190,6 +204,20 @@ func (c *matchingClient) RespondQueryTaskCompleted(ctx context.Context, mp1 *typ
 		c.metricsClient.IncCounter(metrics.MatchingClientRespondQueryTaskCompletedScope, metrics.CadenceClientFailures)
 	}
 	return err
+}
+
+func (c *matchingClient) UpdateTaskListPartitionConfig(ctx context.Context, mp1 *types.MatchingUpdateTaskListPartitionConfigRequest, p1 ...yarpc.CallOption) (mp2 *types.MatchingUpdateTaskListPartitionConfigResponse, err error) {
+	c.metricsClient.IncCounter(metrics.MatchingClientUpdateTaskListPartitionConfigScope, metrics.CadenceClientRequests)
+	c.emitForwardedFromStats(metrics.MatchingClientUpdateTaskListPartitionConfigScope, mp1)
+
+	sw := c.metricsClient.StartTimer(metrics.MatchingClientUpdateTaskListPartitionConfigScope, metrics.CadenceClientLatency)
+	mp2, err = c.client.UpdateTaskListPartitionConfig(ctx, mp1, p1...)
+	sw.Stop()
+
+	if err != nil {
+		c.metricsClient.IncCounter(metrics.MatchingClientUpdateTaskListPartitionConfigScope, metrics.CadenceClientFailures)
+	}
+	return mp2, err
 }
 
 type forwardedRequest interface {

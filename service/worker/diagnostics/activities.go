@@ -36,6 +36,7 @@ import (
 
 const (
 	linkToTimeoutsRunbook = "https://cadenceworkflow.io/docs/workflow-troubleshooting/timeouts/"
+	linkToFailuresRunbook = "https://cadenceworkflow.io/docs/workflow-troubleshooting/activity-failures/"
 	WfDiagnosticsAppName  = "workflow-diagnostics"
 )
 

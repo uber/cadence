@@ -110,8 +110,20 @@ func (c *matchingClient) QueryWorkflow(ctx context.Context, mp1 *types.MatchingQ
 	return c.client.QueryWorkflow(ctx, mp1, p1...)
 }
 
+func (c *matchingClient) RefreshTaskListPartitionConfig(ctx context.Context, mp1 *types.MatchingRefreshTaskListPartitionConfigRequest, p1 ...yarpc.CallOption) (mp2 *types.MatchingRefreshTaskListPartitionConfigResponse, err error) {
+	ctx, cancel := createContext(ctx, c.timeout)
+	defer cancel()
+	return c.client.RefreshTaskListPartitionConfig(ctx, mp1, p1...)
+}
+
 func (c *matchingClient) RespondQueryTaskCompleted(ctx context.Context, mp1 *types.MatchingRespondQueryTaskCompletedRequest, p1 ...yarpc.CallOption) (err error) {
 	ctx, cancel := createContext(ctx, c.timeout)
 	defer cancel()
 	return c.client.RespondQueryTaskCompleted(ctx, mp1, p1...)
+}
+
+func (c *matchingClient) UpdateTaskListPartitionConfig(ctx context.Context, mp1 *types.MatchingUpdateTaskListPartitionConfigRequest, p1 ...yarpc.CallOption) (mp2 *types.MatchingUpdateTaskListPartitionConfigResponse, err error) {
+	ctx, cancel := createContext(ctx, c.timeout)
+	defer cancel()
+	return c.client.UpdateTaskListPartitionConfig(ctx, mp1, p1...)
 }

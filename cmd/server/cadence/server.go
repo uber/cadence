@@ -54,7 +54,7 @@ import (
 	"github.com/uber/cadence/service/frontend"
 	"github.com/uber/cadence/service/history"
 	"github.com/uber/cadence/service/matching"
-	"github.com/uber/cadence/service/shardmanager"
+	"github.com/uber/cadence/service/sharddistributor"
 	"github.com/uber/cadence/service/worker"
 )
 
@@ -155,8 +155,9 @@ func (s *server) startService() common.Daemon {
 	)
 
 	params.MetricScope = svcCfg.Metrics.NewScope(params.Logger, params.Name)
+	params.MetricsClient = metrics.NewClient(params.MetricScope, service.GetMetricsServiceIdx(params.Name, params.Logger))
 
-	rpcParams, err := rpc.NewParams(params.Name, s.cfg, dc, params.Logger)
+	rpcParams, err := rpc.NewParams(params.Name, s.cfg, dc, params.Logger, params.MetricsClient)
 	if err != nil {
 		log.Fatalf("error creating rpc factory params: %v", err)
 	}
@@ -181,8 +182,6 @@ func (s *server) startService() common.Daemon {
 	if err != nil {
 		log.Fatalf("ringpop provider failed: %v", err)
 	}
-
-	params.MetricsClient = metrics.NewClient(params.MetricScope, service.GetMetricsServiceIdx(params.Name, params.Logger))
 
 	params.MembershipResolver, err = membership.NewResolver(
 		peerProvider,
@@ -273,8 +272,8 @@ func (s *server) startService() common.Daemon {
 		daemon, err = matching.NewService(&params)
 	case service.Worker:
 		daemon, err = worker.NewService(&params)
-	case service.ShardManager:
-		daemon, err = shardmanager.NewService(&params, resource.NewResourceFactory())
+	case service.ShardDistributor:
+		daemon, err = sharddistributor.NewService(&params, resource.NewResourceFactory())
 	}
 	if err != nil {
 		params.Logger.Fatal("Fail to start "+s.name+" service ", tag.Error(err))

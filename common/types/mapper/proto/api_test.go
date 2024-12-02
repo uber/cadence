@@ -1083,3 +1083,9 @@ func TestDescribeTaskListResponseMap(t *testing.T) {
 		assert.Equal(t, item, ToDescribeTaskListResponseMap(FromDescribeTaskListResponseMap(item)))
 	}
 }
+
+func TestAPITaskListPartitionConfig(t *testing.T) {
+	for _, item := range []*types.TaskListPartitionConfig{nil, {}, &testdata.TaskListPartitionConfig} {
+		assert.Equal(t, item, ToAPITaskListPartitionConfig(FromAPITaskListPartitionConfig(item)))
+	}
+}

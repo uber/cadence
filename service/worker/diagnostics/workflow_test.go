@@ -267,7 +267,7 @@ func (s *diagnosticsWorkflowTestSuite) Test__retrieveTimeoutRootCause() {
 			Metadata:  pollersMetadataInBytes,
 		},
 		{
-			RootCause: invariant.RootCauseTypeHeartBeatingNotEnabled,
+			RootCause: invariant.RootCauseTypeNoHeartBeatTimeoutNoRetryPolicy,
 			Metadata:  heartBeatingMetadataInBytes,
 		},
 	}
@@ -277,7 +277,7 @@ func (s *diagnosticsWorkflowTestSuite) Test__retrieveTimeoutRootCause() {
 			PollersMetadata: &timeout.PollersMetadata{TaskListBacklog: taskListBacklog},
 		},
 		{
-			RootCauseType:        invariant.RootCauseTypeHeartBeatingNotEnabled.String(),
+			RootCauseType:        invariant.RootCauseTypeNoHeartBeatTimeoutNoRetryPolicy.String(),
 			HeartBeatingMetadata: &timeout.HeartbeatingMetadata{TimeElapsed: 5 * time.Second},
 		},
 	}

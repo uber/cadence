@@ -415,6 +415,55 @@ func (h *handlerImpl) GetTaskListsByDomain(
 	return response, hCtx.handleErr(err)
 }
 
+func (h *handlerImpl) UpdateTaskListPartitionConfig(
+	ctx context.Context,
+	request *types.MatchingUpdateTaskListPartitionConfigRequest,
+) (resp *types.MatchingUpdateTaskListPartitionConfigResponse, retError error) {
+	defer func() { log.CapturePanic(recover(), h.logger, &retError) }()
+
+	domainName := h.domainName(request.DomainUUID)
+	hCtx := h.newHandlerContext(
+		ctx,
+		domainName,
+		request.TaskList,
+		metrics.MatchingUpdateTaskListPartitionConfigScope,
+	)
+
+	sw := hCtx.startProfiling(&h.startWG)
+	defer sw.Stop()
+
+	if ok := h.userRateLimiter.Allow(quotas.Info{Domain: domainName}); !ok {
+		return nil, hCtx.handleErr(errMatchingHostThrottle)
+	}
+
+	response, err := h.engine.UpdateTaskListPartitionConfig(hCtx, request)
+	return response, hCtx.handleErr(err)
+}
+
+func (h *handlerImpl) RefreshTaskListPartitionConfig(
+	ctx context.Context,
+	request *types.MatchingRefreshTaskListPartitionConfigRequest,
+) (resp *types.MatchingRefreshTaskListPartitionConfigResponse, retError error) {
+	defer func() { log.CapturePanic(recover(), h.logger, &retError) }()
+
+	domainName := h.domainName(request.DomainUUID)
+	hCtx := h.newHandlerContext(
+		ctx,
+		domainName,
+		request.TaskList,
+		metrics.MatchingRefreshTaskListPartitionConfigScope,
+	)
+
+	sw := hCtx.startProfiling(&h.startWG)
+	defer sw.Stop()
+
+	// Count the request in the RPS, but we still accept it even if RPS is exceeded
+	h.userRateLimiter.Allow(quotas.Info{Domain: domainName})
+
+	response, err := h.engine.RefreshTaskListPartitionConfig(hCtx, request)
+	return response, hCtx.handleErr(err)
+}
+
 func (h *handlerImpl) domainName(id string) string {
 	domainName, err := h.domainCache.GetDomainName(id)
 	if err != nil {

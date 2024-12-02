@@ -242,6 +242,26 @@ func (c *matchingClient) QueryWorkflow(ctx context.Context, mp1 *types.MatchingQ
 	return
 }
 
+func (c *matchingClient) RefreshTaskListPartitionConfig(ctx context.Context, mp1 *types.MatchingRefreshTaskListPartitionConfigRequest, p1 ...yarpc.CallOption) (mp2 *types.MatchingRefreshTaskListPartitionConfigResponse, err error) {
+	fakeErr := c.fakeErrFn(c.errorRate)
+	var forwardCall bool
+	if forwardCall = c.forwardCallFn(fakeErr); forwardCall {
+		mp2, err = c.client.RefreshTaskListPartitionConfig(ctx, mp1, p1...)
+	}
+
+	if fakeErr != nil {
+		c.logger.Error(msgMatchingInjectedFakeErr,
+			tag.MatchingClientOperationRefreshTaskListPartitionConfig,
+			tag.Error(fakeErr),
+			tag.Bool(forwardCall),
+			tag.ClientError(err),
+		)
+		err = fakeErr
+		return
+	}
+	return
+}
+
 func (c *matchingClient) RespondQueryTaskCompleted(ctx context.Context, mp1 *types.MatchingRespondQueryTaskCompletedRequest, p1 ...yarpc.CallOption) (err error) {
 	fakeErr := c.fakeErrFn(c.errorRate)
 	var forwardCall bool
@@ -252,6 +272,26 @@ func (c *matchingClient) RespondQueryTaskCompleted(ctx context.Context, mp1 *typ
 	if fakeErr != nil {
 		c.logger.Error(msgMatchingInjectedFakeErr,
 			tag.MatchingClientOperationRespondQueryTaskCompleted,
+			tag.Error(fakeErr),
+			tag.Bool(forwardCall),
+			tag.ClientError(err),
+		)
+		err = fakeErr
+		return
+	}
+	return
+}
+
+func (c *matchingClient) UpdateTaskListPartitionConfig(ctx context.Context, mp1 *types.MatchingUpdateTaskListPartitionConfigRequest, p1 ...yarpc.CallOption) (mp2 *types.MatchingUpdateTaskListPartitionConfigResponse, err error) {
+	fakeErr := c.fakeErrFn(c.errorRate)
+	var forwardCall bool
+	if forwardCall = c.forwardCallFn(fakeErr); forwardCall {
+		mp2, err = c.client.UpdateTaskListPartitionConfig(ctx, mp1, p1...)
+	}
+
+	if fakeErr != nil {
+		c.logger.Error(msgMatchingInjectedFakeErr,
+			tag.MatchingClientOperationUpdateTaskListPartitionConfig,
 			tag.Error(fakeErr),
 			tag.Bool(forwardCall),
 			tag.ClientError(err),

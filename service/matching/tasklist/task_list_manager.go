@@ -27,12 +27,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"math"
+	"reflect"
 	"sort"
 	"sync"
 	"sync/atomic"
 	"time"
 
+	"golang.org/x/sync/errgroup"
+
+	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/client/matching"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
@@ -57,6 +60,7 @@ const (
 	// Time budget for empty task to propagate through the function stack and be returned to
 	// pollForActivityTask or pollForDecisionTask handler.
 	returnEmptyTaskTimeBudget = time.Second
+	noIsolationTimeout        = -1
 )
 
 var (
@@ -105,6 +109,7 @@ type (
 		logger          log.Logger
 		scope           metrics.Scope
 		timeSource      clock.TimeSource
+		matchingClient  matching.Client
 		domainName      string
 		// pollerHistory stores poller which poll from this tasklist in last few minutes
 		pollerHistory poller.History
@@ -117,13 +122,18 @@ type (
 		outstandingPollsLock sync.Mutex
 		outstandingPollsMap  map[string]outstandingPollerInfo
 		startWG              sync.WaitGroup // ensures that background processes do not start until setup is ready
+		stopWG               sync.WaitGroup
 		stopped              int32
 		closeCallback        func(Manager)
+		throttleRetry        *backoff.ThrottleRetry
 
-		qpsTracker stats.QPSTracker
+		qpsTracker     stats.QPSTracker
+		adaptiveScaler AdaptiveScaler
 
 		partitionConfigLock sync.RWMutex
 		partitionConfig     *types.TaskListPartitionConfig
+		historyService      history.Client
+		taskCompleter       TaskCompleter
 	}
 )
 
@@ -145,16 +155,17 @@ func NewManager(
 	closeCallback func(Manager),
 	taskList *Identifier,
 	taskListKind *types.TaskListKind,
-	config *config.Config,
+	cfg *config.Config,
 	timeSource clock.TimeSource,
 	createTime time.Time,
+	historyService history.Client,
 ) (Manager, error) {
 	domainName, err := domainCache.GetDomainName(taskList.GetDomainID())
 	if err != nil {
 		return nil, err
 	}
 
-	taskListConfig := newTaskListConfig(taskList, config, domainName)
+	taskListConfig := newTaskListConfig(taskList, cfg, domainName)
 
 	if taskListKind == nil {
 		normalTaskListKind := types.TaskListKindNormal
@@ -178,11 +189,17 @@ func NewManager(
 		taskAckManager:      messaging.NewAckManager(logger),
 		taskGC:              newTaskGC(db, taskListConfig),
 		config:              taskListConfig,
+		matchingClient:      matchingClient,
 		outstandingPollsMap: make(map[string]outstandingPollerInfo),
 		domainName:          domainName,
 		scope:               scope,
 		timeSource:          timeSource,
 		closeCallback:       closeCallback,
+		throttleRetry: backoff.NewThrottleRetry(
+			backoff.WithRetryPolicy(persistenceOperationRetryPolicy),
+			backoff.WithRetryableError(persistence.IsTransientError),
+		),
+		historyService: historyService,
 	}
 
 	tlMgr.pollerHistory = poller.NewPollerHistory(func() {
@@ -191,22 +208,34 @@ func NewManager(
 	}, timeSource)
 
 	livenessInterval := taskListConfig.IdleTasklistCheckInterval()
-	tlMgr.liveness = liveness.NewLiveness(clock.NewRealTimeSource(), livenessInterval, func() {
+	tlMgr.liveness = liveness.NewLiveness(timeSource, livenessInterval, func() {
 		tlMgr.logger.Info("Task list manager stopping because no recent events", tag.Dynamic("interval", livenessInterval))
 		tlMgr.Stop()
 	})
 	tlMgr.qpsTracker = stats.NewEmaFixedWindowQPSTracker(timeSource, 0.5, 10*time.Second)
+	if taskList.IsRoot() && *taskListKind == types.TaskListKindNormal {
+		adaptiveScalerScope := common.NewPerTaskListScope(domainName, taskList.GetName(), *taskListKind, metricsClient, metrics.MatchingAdaptiveScalerScope).
+			Tagged(getTaskListTypeTag(taskList.GetType()))
+		tlMgr.adaptiveScaler = NewAdaptiveScaler(taskList, tlMgr, tlMgr.qpsTracker, taskListConfig, timeSource, tlMgr.logger, adaptiveScalerScope, matchingClient)
+	}
 	var isolationGroups []string
 	if tlMgr.isIsolationMatcherEnabled() {
-		isolationGroups = config.AllIsolationGroups()
+		isolationGroups = cfg.AllIsolationGroups()
 	}
 	var fwdr Forwarder
 	if tlMgr.isFowardingAllowed(taskList, *taskListKind) {
 		fwdr = newForwarder(&taskListConfig.ForwarderConfig, taskList, *taskListKind, matchingClient, isolationGroups, scope)
 	}
-	tlMgr.matcher = newTaskMatcher(taskListConfig, fwdr, tlMgr.scope, isolationGroups, tlMgr.logger, taskList, *taskListKind).(*taskMatcherImpl)
+	numReadPartitionsFn := func(cfg *config.TaskListConfig) int {
+		if cfg.EnableGetNumberOfPartitionsFromCache() {
+			return int(tlMgr.TaskListPartitionConfig().NumReadPartitions)
+		}
+		return cfg.NumReadPartitions()
+	}
+	tlMgr.matcher = newTaskMatcher(taskListConfig, fwdr, tlMgr.scope, isolationGroups, tlMgr.logger, taskList, *taskListKind, numReadPartitionsFn).(*taskMatcherImpl)
 	tlMgr.taskWriter = newTaskWriter(tlMgr)
 	tlMgr.taskReader = newTaskReader(tlMgr, isolationGroups)
+	tlMgr.taskCompleter = newTaskCompleter(tlMgr, historyServiceOperationRetryPolicy)
 	tlMgr.startWG.Add(1)
 	return tlMgr, nil
 }
@@ -216,25 +245,50 @@ func NewManager(
 func (c *taskListManagerImpl) Start() error {
 	defer c.startWG.Done()
 
+	if !c.taskListID.IsRoot() && c.taskListKind == types.TaskListKindNormal {
+		var info *persistence.TaskListInfo
+		err := c.throttleRetry.Do(context.Background(), func() error {
+			var err error
+			info, err = c.db.GetTaskListInfo(c.taskListID.GetRoot())
+			return err
+		})
+		if err != nil {
+			// This is an edge case, and only occur before we fully migrate partition config to database for a tasklist.
+			// Currently, if a task list is configured with multiple partitions in dynamicconfig before the creation of the task list,
+			// a non-root partition can receive a request before the root partition and when it task list manager tries to read partition config from the root partition it will get this error.
+			// For example, if in the dynamicconfig we set all task list to have 2 partitions by default, all the non-root partitions of newly created task lists will get this error.
+			// This will not happen once we fully migrate partition config to database. Because in that case, root partition will always be created before non-root partitions.
+			var e *types.EntityNotExistsError
+			if !errors.As(err, &e) {
+				c.Stop()
+				return err
+			}
+		} else {
+			c.partitionConfig = info.AdaptivePartitionConfig.ToInternalType()
+		}
+	}
 	if err := c.taskWriter.Start(); err != nil {
 		c.Stop()
 		return err
 	}
-	c.loadTaskListPartitionConfig()
-	if c.taskListID.IsRoot() && c.taskListKind != types.TaskListKindSticky {
+	if c.taskListID.IsRoot() && c.taskListKind == types.TaskListKindNormal {
 		c.partitionConfig = c.db.PartitionConfig().ToInternalType()
-		if c.partitionConfig == nil {
-			c.partitionConfig = &types.TaskListPartitionConfig{
-				Version:            0,
-				NumReadPartitions:  1,
-				NumWritePartitions: 1,
-			}
+		c.logger.Info("get task list partition config from db", tag.Dynamic("root-partition", c.taskListID.GetRoot()), tag.Dynamic("task-list-partition-config", c.partitionConfig))
+		if c.partitionConfig != nil {
+			// push update notification to all non-root partitions on start
+			c.stopWG.Add(1)
+			go func() {
+				defer c.stopWG.Done()
+				c.notifyPartitionConfig(context.Background(), *c.partitionConfig, int(c.partitionConfig.NumReadPartitions))
+			}()
 		}
-		c.logger.Info("get task list partition config from db", tag.Dynamic("root-partition", c.taskListID.GetRoot()), tag.Dynamic("config", c.partitionConfig))
 	}
 	c.liveness.Start()
 	c.taskReader.Start()
 	c.qpsTracker.Start()
+	if c.adaptiveScaler != nil {
+		c.adaptiveScaler.Start()
+	}
 
 	return nil
 }
@@ -245,11 +299,15 @@ func (c *taskListManagerImpl) Stop() {
 		return
 	}
 	c.closeCallback(c)
+	if c.adaptiveScaler != nil {
+		c.adaptiveScaler.Stop()
+	}
 	c.qpsTracker.Stop()
 	c.liveness.Stop()
 	c.taskWriter.Stop()
 	c.taskReader.Stop()
 	c.matcher.DisconnectBlockedPollers()
+	c.stopWG.Wait()
 	c.logger.Info("Task list manager state changed", tag.LifeCycleStopped)
 }
 
@@ -268,49 +326,137 @@ func (c *taskListManagerImpl) handleErr(err error) error {
 	return err
 }
 
-func (c *taskListManagerImpl) loadTaskListPartitionConfig() {
-	if c.taskListID.IsRoot() {
-		return
-	}
-	c.partitionConfigLock.RLock()
-	if c.partitionConfig != nil {
-		c.partitionConfigLock.RUnlock()
-		return
-	}
-	c.partitionConfigLock.RUnlock()
-
-	c.partitionConfigLock.Lock()
-	if c.partitionConfig != nil {
-		c.partitionConfigLock.Unlock()
-		return
-	}
-	defer c.partitionConfigLock.Unlock()
-	info, err := c.db.GetTaskListInfo(c.taskListID.GetRoot())
-	if err != nil {
-		// Given current set up, it's possible that the root partition is created after non-root partition
-		// In this case, we don't fail the start for now, but set the config to nil.
-		// We'll check if the field is nil, if it is, we'll reload it from database on demand.
-		c.logger.Error("failed to get tasklist info of root partition", tag.Dynamic("root-partition", c.taskListID.GetRoot()), tag.Error(err))
-		return
-	}
-	c.partitionConfig = info.AdaptivePartitionConfig.ToInternalType()
-	if c.partitionConfig == nil {
-		c.partitionConfig = &types.TaskListPartitionConfig{
-			Version:            0,
-			NumReadPartitions:  1,
-			NumWritePartitions: 1,
-		}
-	}
-	c.logger.Info("get task list partition config from db", tag.Dynamic("root-partition", c.taskListID.GetRoot()), tag.Dynamic("config", c.partitionConfig))
-}
-
 func (c *taskListManagerImpl) TaskListPartitionConfig() *types.TaskListPartitionConfig {
 	c.partitionConfigLock.RLock()
 	defer c.partitionConfigLock.RUnlock()
-	if c.partitionConfig != nil {
-		c.logger.Debug("get task list partition config from db", tag.Dynamic("root-partition", c.taskListID.GetRoot()), tag.Dynamic("config", c.partitionConfig))
+	if c.partitionConfig == nil {
+		return nil
 	}
-	return c.partitionConfig
+	config := *c.partitionConfig
+	c.logger.Debug("get task list partition config from db", tag.Dynamic("root-partition", c.taskListID.GetRoot()), tag.Dynamic("config", config))
+	c.scope.Tagged(metrics.TaskListRootPartitionTag(c.taskListID.GetRoot())).UpdateGauge(metrics.TaskListPartitionConfigNumReadGauge, float64(config.NumReadPartitions))
+	c.scope.Tagged(metrics.TaskListRootPartitionTag(c.taskListID.GetRoot())).UpdateGauge(metrics.TaskListPartitionConfigNumWriteGauge, float64(config.NumWritePartitions))
+	c.scope.Tagged(metrics.TaskListRootPartitionTag(c.taskListID.GetRoot())).UpdateGauge(metrics.TaskListPartitionConfigVersionGauge, float64(config.Version))
+	return &config
+}
+
+func (c *taskListManagerImpl) LoadBalancerHints() *types.LoadBalancerHints {
+	c.startWG.Wait()
+	if c.timeSource.Now().Sub(c.createTime) < time.Second*10 {
+		return nil
+	}
+	return &types.LoadBalancerHints{
+		BacklogCount:  c.taskAckManager.GetBacklogCount(),
+		RatePerSecond: c.qpsTracker.QPS(),
+	}
+}
+
+func isTaskListPartitionConfigEqual(a types.TaskListPartitionConfig, b types.TaskListPartitionConfig) bool {
+	a.Version = b.Version
+	return reflect.DeepEqual(a, b)
+}
+
+func (c *taskListManagerImpl) RefreshTaskListPartitionConfig(ctx context.Context, config *types.TaskListPartitionConfig) error {
+	c.startWG.Wait()
+	if config == nil {
+		// if config is nil, we'll reload it from database
+		var info *persistence.TaskListInfo
+		err := c.throttleRetry.Do(ctx, func() error {
+			var err error
+			info, err = c.db.GetTaskListInfo(c.taskListID.GetRoot())
+			return err
+		})
+		if err != nil {
+			return err
+		}
+		config = info.AdaptivePartitionConfig.ToInternalType()
+		c.partitionConfigLock.Lock()
+		c.partitionConfig = config
+		c.partitionConfigLock.Unlock()
+		return nil
+	}
+	c.partitionConfigLock.Lock()
+	defer c.partitionConfigLock.Unlock()
+	if c.partitionConfig == nil || c.partitionConfig.Version < config.Version {
+		c.partitionConfig = config
+	}
+	return nil
+}
+
+func (c *taskListManagerImpl) UpdateTaskListPartitionConfig(ctx context.Context, config *types.TaskListPartitionConfig) error {
+	c.startWG.Wait()
+	numberOfPartitionsToRefresh, currentConfig, err := c.updatePartitionConfig(ctx, config)
+	if err != nil {
+		return err
+	}
+	// push update notification to all non-root partitions
+	c.notifyPartitionConfig(ctx, currentConfig, numberOfPartitionsToRefresh)
+	return nil
+}
+
+func (c *taskListManagerImpl) updatePartitionConfig(ctx context.Context, config *types.TaskListPartitionConfig) (int, types.TaskListPartitionConfig, error) {
+	var version int64
+	numberOfPartitionsToRefresh := 1
+	c.partitionConfigLock.Lock()
+	defer c.partitionConfigLock.Unlock()
+	if c.partitionConfig != nil {
+		numberOfPartitionsToRefresh = int(c.partitionConfig.NumReadPartitions)
+		if isTaskListPartitionConfigEqual(*c.partitionConfig, *config) {
+			return 0, types.TaskListPartitionConfig{}, nil
+		}
+		version = c.partitionConfig.Version
+	} else {
+		if config.NumReadPartitions == 1 && config.NumWritePartitions == 1 {
+			return 0, types.TaskListPartitionConfig{}, nil
+		}
+	}
+	err := c.throttleRetry.Do(ctx, func() error {
+		return c.db.UpdateTaskListPartitionConfig(&persistence.TaskListPartitionConfig{
+			Version:            version + 1,
+			NumReadPartitions:  int(config.NumReadPartitions),
+			NumWritePartitions: int(config.NumWritePartitions),
+		})
+	})
+	if err != nil {
+		// We're not sure whether the update was persisted or not,
+		// Stop the tasklist manager and let it be reloaded
+		c.scope.IncCounter(metrics.TaskListPartitionUpdateFailedCounter)
+		c.Stop()
+		return 0, types.TaskListPartitionConfig{}, err
+	}
+	c.partitionConfig = c.db.PartitionConfig().ToInternalType()
+	currentConfig := *c.partitionConfig
+	numberOfPartitionsToRefresh = common.MaxInt(numberOfPartitionsToRefresh, int(currentConfig.NumReadPartitions))
+	return numberOfPartitionsToRefresh, currentConfig, nil
+}
+
+func (c *taskListManagerImpl) notifyPartitionConfig(ctx context.Context, config types.TaskListPartitionConfig, count int) {
+	taskListType := types.TaskListTypeDecision.Ptr()
+	if c.taskListID.GetType() == persistence.TaskListTypeActivity {
+		taskListType = types.TaskListTypeActivity.Ptr()
+	}
+	g := &errgroup.Group{}
+	for i := 1; i < count; i++ {
+		taskListName := c.taskListID.GetPartition(i)
+		g.Go(func() (e error) {
+			defer func() { log.CapturePanic(recover(), c.logger, &e) }()
+
+			_, e = c.matchingClient.RefreshTaskListPartitionConfig(ctx, &types.MatchingRefreshTaskListPartitionConfigRequest{
+				DomainUUID:      c.taskListID.GetDomainID(),
+				TaskList:        &types.TaskList{Name: taskListName, Kind: &c.taskListKind},
+				TaskListType:    taskListType,
+				PartitionConfig: &config,
+			})
+			if e != nil {
+				c.logger.Error("failed to notify partition", tag.Error(e), tag.Dynamic("task-list-partition-name", taskListName))
+			}
+			return e
+		})
+	}
+	err := g.Wait()
+	if err != nil {
+		c.logger.Error("failed to notify all partitions", tag.Error(err))
+	}
 }
 
 // AddTask adds a task to the task list. This method will first attempt a synchronous
@@ -323,7 +469,16 @@ func (c *taskListManagerImpl) AddTask(ctx context.Context, params AddTaskParams)
 		c.Stop()
 		return false, errShutdown
 	}
-	c.loadTaskListPartitionConfig()
+	if c.config.EnableGetNumberOfPartitionsFromCache() {
+		partitionConfig := c.TaskListPartitionConfig()
+		w := 1
+		if partitionConfig != nil {
+			w = int(partitionConfig.NumWritePartitions)
+		}
+		if w <= c.taskListID.Partition() {
+			return false, &types.InternalServiceError{Message: "Current partition is drained."}
+		}
+	}
 	if params.ForwardedFrom == "" {
 		// request sent by history service
 		c.liveness.MarkAlive()
@@ -360,7 +515,7 @@ func (c *taskListManagerImpl) AddTask(ctx context.Context, params AddTaskParams)
 			return r, err
 		}
 
-		isolationGroup, err := c.getIsolationGroupForTask(ctx, params.TaskInfo)
+		isolationGroup, _, err := c.getIsolationGroupForTask(ctx, params.TaskInfo)
 		if err != nil {
 			return false, err
 		}
@@ -395,10 +550,33 @@ func (c *taskListManagerImpl) AddTask(ctx context.Context, params AddTaskParams)
 	return syncMatch, err
 }
 
-// DispatchTask dispatches a task to a poller. When there are no pollers to pick
-// up the task or if rate limit is exceeded, this method will return error. Task
-// *will not* be persisted to db
+// DispatchTask dispatches a task to a poller on the active side. When there are no pollers to pick
+// up the task or if the rate limit is exceeded, this method will return error. Task
+// *will not* be persisted to db. On the passive side, dispatches the task to the taskCompleter; it will attempt
+// to complete the task if it has already been started.
 func (c *taskListManagerImpl) DispatchTask(ctx context.Context, task *InternalTask) error {
+	// check if this is the active cluster for the domain
+	domainEntry, err := c.domainCache.GetDomainByID(task.Event.TaskInfo.DomainID)
+	if err != nil {
+		return fmt.Errorf("unable to fetch domain from cache: %w", err)
+	}
+
+	if isActive, _ := domainEntry.IsActiveIn(c.clusterMetadata.GetCurrentClusterName()); isActive {
+		return c.matcher.MustOffer(ctx, task)
+	}
+
+	// optional configuration to enable cleanup of tasks, in the standby cluster, that have already been started
+	if c.config.EnableStandbyTaskCompletion() {
+		if err := c.taskCompleter.CompleteTaskIfStarted(ctx, task); err != nil {
+			if errors.Is(err, errDomainIsActive) {
+				return c.matcher.MustOffer(ctx, task)
+			}
+			return err
+		}
+
+		return nil
+	}
+
 	return c.matcher.MustOffer(ctx, task)
 }
 
@@ -410,7 +588,6 @@ func (c *taskListManagerImpl) DispatchQueryTask(
 	request *types.MatchingQueryWorkflowRequest,
 ) (*types.QueryWorkflowResponse, error) {
 	c.startWG.Wait()
-	c.loadTaskListPartitionConfig()
 	task := newInternalQueryTask(taskID, request)
 	return c.matcher.OfferQuery(ctx, task)
 }
@@ -428,7 +605,6 @@ func (c *taskListManagerImpl) GetTask(
 		return nil, ErrNoTasks
 	}
 	c.liveness.MarkAlive()
-	c.loadTaskListPartitionConfig()
 	// TODO: consider return early if QPS and backlog count are both 0,
 	// since there is no task to be returned
 	task, err := c.getTask(ctx, maxDispatchPerSecond)
@@ -436,18 +612,7 @@ func (c *taskListManagerImpl) GetTask(
 		return nil, fmt.Errorf("couldn't get task: %w", err)
 	}
 	task.domainName = c.domainName
-	// according to Little's Law, the average number of tasks in the queue L = λW
-	// where λ is the average arrival rate and W is the average wait time a task spends in the queue
-	// here λ is the QPS and W is the average match latency which is 10ms
-	// so the backlog hint should be backlog count + L.
-	smoothingNumber := int64(0)
-	if c.taskListKind != types.TaskListKindSticky {
-		qps := c.qpsTracker.QPS()
-		if qps > 0.01 {
-			smoothingNumber = int64(math.Ceil(qps * 0.01))
-		}
-	}
-	task.BacklogCountHint = c.taskAckManager.GetBacklogCount() + smoothingNumber
+	task.BacklogCountHint = c.taskAckManager.GetBacklogCount()
 	return task, nil
 }
 
@@ -530,6 +695,7 @@ func (c *taskListManagerImpl) CancelPoller(pollerID string) {
 // (readLevel, ackLevel, backlogCountHint and taskIDBlock).
 func (c *taskListManagerImpl) DescribeTaskList(includeTaskListStatus bool) *types.DescribeTaskListResponse {
 	response := &types.DescribeTaskListResponse{Pollers: c.GetAllPollerInfo()}
+	response.PartitionConfig = c.TaskListPartitionConfig()
 	if !includeTaskListStatus {
 		return response
 	}
@@ -680,7 +846,7 @@ func (c *taskListManagerImpl) shouldReload() bool {
 	return c.config.EnableTasklistIsolation() != c.enableIsolation
 }
 
-func (c *taskListManagerImpl) getIsolationGroupForTask(ctx context.Context, taskInfo *persistence.TaskInfo) (string, error) {
+func (c *taskListManagerImpl) getIsolationGroupForTask(ctx context.Context, taskInfo *persistence.TaskInfo) (string, time.Duration, error) {
 	if c.enableIsolation && len(taskInfo.PartitionConfig) > 0 && c.taskListKind != types.TaskListKindSticky {
 		partitionConfig := make(map[string]string)
 		for k, v := range taskInfo.PartitionConfig {
@@ -692,7 +858,7 @@ func (c *taskListManagerImpl) getIsolationGroupForTask(ctx context.Context, task
 		// because we don't persist poller information in database, so in the first minute, we always assume
 		// pollers are available in all isolation groups to avoid the risk of leaking a task to another isolation group.
 		// Besides, for sticky and scalable tasklists, not all poller information are available, we also use all isolation group.
-		if c.timeSource.Now().Sub(c.createTime) > time.Minute && c.taskListKind != types.TaskListKindSticky && c.taskListID.IsRoot() {
+		if c.timeSource.Now().Sub(c.createTime) > time.Minute {
 			pollerIsolationGroups = c.getPollerIsolationGroups()
 			if len(pollerIsolationGroups) == 0 {
 				// we don't have any pollers, use all isolation groups and wait for pollers' arriving
@@ -707,31 +873,14 @@ func (c *taskListManagerImpl) getIsolationGroupForTask(ctx context.Context, task
 				AvailableIsolationGroups: pollerIsolationGroups,
 			}, partitionConfig)
 		if err != nil {
-			// For a sticky tasklist, return StickyUnavailableError to let it be added to the non-sticky tasklist.
-			if err == partition.ErrNoIsolationGroupsAvailable && c.taskListKind == types.TaskListKindSticky {
-				return "", _stickyPollerUnavailableError
-			}
 			// if we're unable to get the isolation group, log the error and fallback to no isolation
 			c.logger.Error("Failed to get isolation group from partition library", tag.WorkflowID(taskInfo.WorkflowID), tag.WorkflowRunID(taskInfo.RunID), tag.TaskID(taskInfo.TaskID), tag.Error(err))
-			return defaultTaskBufferIsolationGroup, nil
+			return defaultTaskBufferIsolationGroup, noIsolationTimeout, nil
 		}
 		c.logger.Debug("get isolation group", tag.PollerGroups(pollerIsolationGroups), tag.IsolationGroup(group), tag.PartitionConfig(partitionConfig))
-		// For a sticky tasklist, it is possible that when an isolation group is undrained, the tasks from one workflow is reassigned
-		// to the isolation group undrained. If there is no poller from the isolation group, we should return StickyUnavailableError
-		// to let the task to be re-enqueued to the non-sticky tasklist. If there is poller, just return an empty isolation group, because
-		// there is at most one isolation group for sticky tasklist and we could just use empty isolation group for matching.
-		if c.taskListKind == types.TaskListKindSticky {
-			pollerIsolationGroups = c.getPollerIsolationGroups()
-			for _, pollerGroup := range pollerIsolationGroups {
-				if group == pollerGroup {
-					return "", nil
-				}
-			}
-			return "", _stickyPollerUnavailableError
-		}
-		return group, nil
+		return group, noIsolationTimeout, nil
 	}
-	return defaultTaskBufferIsolationGroup, nil
+	return defaultTaskBufferIsolationGroup, noIsolationTimeout, nil
 }
 
 func (c *taskListManagerImpl) getPollerIsolationGroups() []string {
@@ -839,6 +988,9 @@ func newTaskListConfig(id *Identifier, cfg *config.Config, domainName string) *c
 		NumReadPartitions: func() int {
 			return common.MaxInt(1, cfg.NumTasklistReadPartitions(domainName, taskListName, taskType))
 		},
+		EnableGetNumberOfPartitionsFromCache: func() bool {
+			return cfg.EnableGetNumberOfPartitionsFromCache(domainName, id.GetRoot(), taskType)
+		},
 		AsyncTaskDispatchTimeout: func() time.Duration {
 			return cfg.AsyncTaskDispatchTimeout(domainName, taskListName, taskType)
 		},
@@ -847,6 +999,24 @@ func newTaskListConfig(id *Identifier, cfg *config.Config, domainName string) *c
 		},
 		LocalTaskWaitTime: func() time.Duration {
 			return cfg.LocalTaskWaitTime(domainName, taskListName, taskType)
+		},
+		PartitionUpscaleRPS: func() int {
+			return cfg.PartitionUpscaleRPS(domainName, taskListName, taskType)
+		},
+		PartitionDownscaleFactor: func() float64 {
+			return cfg.PartitionDownscaleFactor(domainName, taskListName, taskType)
+		},
+		PartitionUpscaleSustainedDuration: func() time.Duration {
+			return cfg.PartitionUpscaleSustainedDuration(domainName, taskListName, taskType)
+		},
+		PartitionDownscaleSustainedDuration: func() time.Duration {
+			return cfg.PartitionDownscaleSustainedDuration(domainName, taskListName, taskType)
+		},
+		AdaptiveScalerUpdateInterval: func() time.Duration {
+			return cfg.AdaptiveScalerUpdateInterval(domainName, taskListName, taskType)
+		},
+		EnableAdaptiveScaler: func() bool {
+			return cfg.EnableAdaptiveScaler(domainName, taskListName, taskType)
 		},
 		ForwarderConfig: config.ForwarderConfig{
 			ForwarderMaxOutstandingPolls: func() int {
@@ -866,6 +1036,9 @@ func newTaskListConfig(id *Identifier, cfg *config.Config, domainName string) *c
 		TaskDispatchRPS:           cfg.TaskDispatchRPS,
 		TaskDispatchRPSTTL:        cfg.TaskDispatchRPSTTL,
 		MaxTimeBetweenTaskDeletes: cfg.MaxTimeBetweenTaskDeletes,
+		EnableStandbyTaskCompletion: func() bool {
+			return cfg.EnableStandbyTaskCompletion(domainName, taskListName, taskType)
+		},
 	}
 }
 

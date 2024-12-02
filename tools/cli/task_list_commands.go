@@ -21,6 +21,7 @@
 package cli
 
 import (
+	"io"
 	"os"
 	"time"
 
@@ -81,7 +82,7 @@ func DescribeTaskList(c *cli.Context) error {
 		return commoncli.Problem(colorMagenta("No poller for tasklist: "+taskList), nil)
 	}
 
-	return printTaskListPollers(pollers, taskListType)
+	return printTaskListPollers(getDeps(c).Output(), pollers, taskListType)
 }
 
 // ListTaskListPartitions gets all the tasklist partition and host information.
@@ -121,7 +122,7 @@ func ListTaskListPartitions(c *cli.Context) error {
 	return nil
 }
 
-func printTaskListPollers(pollers []*types.PollerInfo, taskListType types.TaskListType) error {
+func printTaskListPollers(w io.Writer, pollers []*types.PollerInfo, taskListType types.TaskListType) error {
 	table := []TaskListPollerRow{}
 	for _, poller := range pollers {
 		table = append(table, TaskListPollerRow{
@@ -129,7 +130,7 @@ func printTaskListPollers(pollers []*types.PollerInfo, taskListType types.TaskLi
 			DecisionIdentity: poller.GetIdentity(),
 			LastAccessTime:   time.Unix(0, poller.GetLastAccessTime())})
 	}
-	return RenderTable(os.Stdout, table, RenderOptions{Color: true, PrintDateTime: true, OptionalColumns: map[string]bool{
+	return RenderTable(w, table, RenderOptions{Color: true, PrintDateTime: true, OptionalColumns: map[string]bool{
 		"Activity Poller Identity": taskListType == types.TaskListTypeActivity,
 		"Decision Poller Identity": taskListType == types.TaskListTypeDecision,
 	}})

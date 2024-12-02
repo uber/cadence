@@ -362,6 +362,18 @@ func activityHeartBeatTimeoutDataInBytes(t *testing.T) []byte {
 	return actHeartBeatTimeoutDataInBytes
 }
 
+func activityHeartBeatTimeoutDataWithRetryPolicyInBytes(t *testing.T) []byte {
+	actTimeoutData := activityStartToCloseTimeoutData()
+	actTimeoutData.TimeoutType = types.TimeoutTypeHeartbeat.Ptr()
+	actTimeoutData.HeartBeatTimeout = 50 * time.Second
+	actTimeoutData.RetryPolicy = &types.RetryPolicy{
+		MaximumAttempts: 3,
+	}
+	actHeartBeatTimeoutDataInBytes, err := json.Marshal(actTimeoutData)
+	require.NoError(t, err)
+	return actHeartBeatTimeoutDataInBytes
+}
+
 func childWfTimeoutDataInBytes(t *testing.T) []byte {
 	data := ChildWfTimeoutMetadata{
 		ExecutionTime:     110 * time.Second,
@@ -381,6 +393,8 @@ func Test__RootCause(t *testing.T) {
 	pollersMetadataInBytes, err := json.Marshal(PollersMetadata{TaskListBacklog: testTaskListBacklog})
 	require.NoError(t, err)
 	heartBeatingMetadataInBytes, err := json.Marshal(HeartbeatingMetadata{TimeElapsed: actStartToCloseTimeoutData.TimeElapsed})
+	require.NoError(t, err)
+	heartBeatingMetadataWithRetryPolicyInBytes, err := json.Marshal(HeartbeatingMetadata{TimeElapsed: actStartToCloseTimeoutData.TimeElapsed, RetryPolicy: &types.RetryPolicy{MaximumAttempts: 3}})
 	require.NoError(t, err)
 	testCases := []struct {
 		name           string
@@ -470,7 +484,7 @@ func Test__RootCause(t *testing.T) {
 					Metadata:  pollersMetadataInBytes,
 				},
 				{
-					RootCause: invariant.RootCauseTypeHeartBeatingNotEnabled,
+					RootCause: invariant.RootCauseTypeNoHeartBeatTimeoutNoRetryPolicy,
 					Metadata:  heartBeatingMetadataInBytes,
 				},
 			},
@@ -506,7 +520,40 @@ func Test__RootCause(t *testing.T) {
 			err: nil,
 		},
 		{
-			name: "activity timeout and heart beating enabled",
+			name: "activity timeout and heart beating enabled with retry policy",
+			input: []invariant.InvariantCheckResult{
+				{
+					InvariantType: TimeoutTypeActivity.String(),
+					Reason:        "START_TO_CLOSE",
+					Metadata:      activityHeartBeatTimeoutDataWithRetryPolicyInBytes(t),
+				},
+			},
+			clientExpects: func(client *frontend.MockClient) {
+				client.EXPECT().DescribeTaskList(gomock.Any(), gomock.Any()).Return(&types.DescribeTaskListResponse{
+					Pollers: []*types.PollerInfo{
+						{
+							Identity: "dca24-xy",
+						},
+					},
+					TaskListStatus: &types.TaskListStatus{
+						BacklogCountHint: testTaskListBacklog,
+					},
+				}, nil)
+			},
+			expectedResult: []invariant.InvariantRootCauseResult{
+				{
+					RootCause: invariant.RootCauseTypePollersStatus,
+					Metadata:  pollersMetadataInBytes,
+				},
+				{
+					RootCause: invariant.RootCauseTypeHeartBeatingEnabledMissingHeartbeat,
+					Metadata:  heartBeatingMetadataWithRetryPolicyInBytes,
+				},
+			},
+			err: nil,
+		},
+		{
+			name: "activity timeout and heart beating enabled without retry policy",
 			input: []invariant.InvariantCheckResult{
 				{
 					InvariantType: TimeoutTypeActivity.String(),
@@ -532,7 +579,7 @@ func Test__RootCause(t *testing.T) {
 					Metadata:  pollersMetadataInBytes,
 				},
 				{
-					RootCause: invariant.RootCauseTypeHeartBeatingEnabledMissingHeartbeat,
+					RootCause: invariant.RootCauseTypeHeartBeatingEnabledWithoutRetryPolicy,
 					Metadata:  heartBeatingMetadataInBytes,
 				},
 			},

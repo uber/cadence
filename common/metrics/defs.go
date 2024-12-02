@@ -67,7 +67,7 @@ const (
 	History
 	Matching
 	Worker
-	ShardManager
+	ShardDistributor
 	NumServices
 )
 
@@ -427,6 +427,11 @@ const (
 	MatchingClientListTaskListPartitionsScope
 	// MatchingClientGetTaskListsByDomainScope tracks RPC calls to matching service
 	MatchingClientGetTaskListsByDomainScope
+	// MatchingClientUpdateTaskListPartitionConfigScope tracks RPC calls to matching service
+	MatchingClientUpdateTaskListPartitionConfigScope
+	// MatchingClientRefreshTaskListPartitionConfigScope tracks RPC calls to matching service
+	MatchingClientRefreshTaskListPartitionConfigScope
+
 	// FrontendClientDeprecateDomainScope tracks RPC calls to frontend service
 	FrontendClientDeprecateDomainScope
 	// FrontendClientDescribeDomainScope tracks RPC calls to frontend service
@@ -598,6 +603,8 @@ const (
 	AdminClientGetDomainAsyncWorkflowConfiguratonScope
 	// AdminClientGetWorkflowExecutionRawHistoryScope is the metric scope for admin.UpdateDomainAsyncWorkflowConfiguration
 	AdminClientUpdateDomainAsyncWorkflowConfiguratonScope
+	// AdminClientUpdateTaskListPartitionConfigScope is the metrics scope for admin.UpdateTaskListPartitionConfig
+	AdminClientUpdateTaskListPartitionConfigScope
 
 	// DCRedirectionDeprecateDomainScope tracks RPC calls for dc redirection
 	DCRedirectionDeprecateDomainScope
@@ -846,6 +853,12 @@ const (
 	// GlobalRatelimiterAggregator is the metrics scope for aggregator-side common/quotas/global behavior
 	GlobalRatelimiterAggregator
 
+	// P2PRPCPeerChooserScope is the metrics scope for P2P RPC peer chooser
+	P2PRPCPeerChooserScope
+
+	// PartitionConfigProviderScope is the metrics scope for Partition Config Provider
+	PartitionConfigProviderScope
+
 	NumCommonScopes
 )
 
@@ -919,6 +932,8 @@ const (
 	GetDomainAsyncWorkflowConfiguraton
 	// UpdateDomainAsyncWorkflowConfiguraton is the scope for updating domain async workflow configuration
 	UpdateDomainAsyncWorkflowConfiguraton
+	// UpdateTaskListPartitionConfig is the scope for update task list partition config
+	UpdateTaskListPartitionConfig
 
 	NumAdminScopes
 )
@@ -1314,6 +1329,8 @@ const (
 	MatchingAddTaskScope
 	// MatchingTaskListMgrScope is the metrics scope for matching.TaskListManager component
 	MatchingTaskListMgrScope
+	// MatchingAdaptiveScalerScope is hte metrics scope for matching's Adaptive Scaler component
+	MatchingAdaptiveScalerScope
 	// MatchingQueryWorkflowScope tracks AddDecisionTask API calls received by service
 	MatchingQueryWorkflowScope
 	// MatchingRespondQueryTaskCompletedScope tracks AddDecisionTask API calls received by service
@@ -1326,6 +1343,10 @@ const (
 	MatchingListTaskListPartitionsScope
 	// MatchingGetTaskListsByDomainScope tracks GetTaskListsByDomain API calls received by service
 	MatchingGetTaskListsByDomainScope
+	// MatchingUpdateTaskListPartitionConfigScope tracks UpdateTaskListPartitionConfig API calls received by service
+	MatchingUpdateTaskListPartitionConfigScope
+	// MatchingRefreshTaskListPartitionConfigScope tracks RefreshTaskListPartitionConfig API calls received by service
+	MatchingRefreshTaskListPartitionConfigScope
 
 	NumMatchingScopes
 )
@@ -1528,16 +1549,19 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		HistoryClientWfIDCacheScope:                         {operation: "HistoryClientWfIDCache", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
 		HistoryClientRatelimitUpdateScope:                   {operation: "HistoryClientRatelimitUpdate", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
 
-		MatchingClientPollForDecisionTaskScope:                   {operation: "MatchingClientPollForDecisionTask", tags: map[string]string{CadenceRoleTagName: MatchingClientRoleTagValue}},
-		MatchingClientPollForActivityTaskScope:                   {operation: "MatchingClientPollForActivityTask", tags: map[string]string{CadenceRoleTagName: MatchingClientRoleTagValue}},
-		MatchingClientAddActivityTaskScope:                       {operation: "MatchingClientAddActivityTask", tags: map[string]string{CadenceRoleTagName: MatchingClientRoleTagValue}},
-		MatchingClientAddDecisionTaskScope:                       {operation: "MatchingClientAddDecisionTask", tags: map[string]string{CadenceRoleTagName: MatchingClientRoleTagValue}},
-		MatchingClientQueryWorkflowScope:                         {operation: "MatchingClientQueryWorkflow", tags: map[string]string{CadenceRoleTagName: MatchingClientRoleTagValue}},
-		MatchingClientRespondQueryTaskCompletedScope:             {operation: "MatchingClientRespondQueryTaskCompleted", tags: map[string]string{CadenceRoleTagName: MatchingClientRoleTagValue}},
-		MatchingClientCancelOutstandingPollScope:                 {operation: "MatchingClientCancelOutstandingPoll", tags: map[string]string{CadenceRoleTagName: MatchingClientRoleTagValue}},
-		MatchingClientDescribeTaskListScope:                      {operation: "MatchingClientDescribeTaskList", tags: map[string]string{CadenceRoleTagName: MatchingClientRoleTagValue}},
-		MatchingClientListTaskListPartitionsScope:                {operation: "MatchingClientListTaskListPartitions", tags: map[string]string{CadenceRoleTagName: MatchingClientRoleTagValue}},
-		MatchingClientGetTaskListsByDomainScope:                  {operation: "MatchingClientGetTaskListsByDomain", tags: map[string]string{CadenceRoleTagName: MatchingClientRoleTagValue}},
+		MatchingClientPollForDecisionTaskScope:            {operation: "MatchingClientPollForDecisionTask", tags: map[string]string{CadenceRoleTagName: MatchingClientRoleTagValue}},
+		MatchingClientPollForActivityTaskScope:            {operation: "MatchingClientPollForActivityTask", tags: map[string]string{CadenceRoleTagName: MatchingClientRoleTagValue}},
+		MatchingClientAddActivityTaskScope:                {operation: "MatchingClientAddActivityTask", tags: map[string]string{CadenceRoleTagName: MatchingClientRoleTagValue}},
+		MatchingClientAddDecisionTaskScope:                {operation: "MatchingClientAddDecisionTask", tags: map[string]string{CadenceRoleTagName: MatchingClientRoleTagValue}},
+		MatchingClientQueryWorkflowScope:                  {operation: "MatchingClientQueryWorkflow", tags: map[string]string{CadenceRoleTagName: MatchingClientRoleTagValue}},
+		MatchingClientRespondQueryTaskCompletedScope:      {operation: "MatchingClientRespondQueryTaskCompleted", tags: map[string]string{CadenceRoleTagName: MatchingClientRoleTagValue}},
+		MatchingClientCancelOutstandingPollScope:          {operation: "MatchingClientCancelOutstandingPoll", tags: map[string]string{CadenceRoleTagName: MatchingClientRoleTagValue}},
+		MatchingClientDescribeTaskListScope:               {operation: "MatchingClientDescribeTaskList", tags: map[string]string{CadenceRoleTagName: MatchingClientRoleTagValue}},
+		MatchingClientListTaskListPartitionsScope:         {operation: "MatchingClientListTaskListPartitions", tags: map[string]string{CadenceRoleTagName: MatchingClientRoleTagValue}},
+		MatchingClientGetTaskListsByDomainScope:           {operation: "MatchingClientGetTaskListsByDomain", tags: map[string]string{CadenceRoleTagName: MatchingClientRoleTagValue}},
+		MatchingClientUpdateTaskListPartitionConfigScope:  {operation: "MatchingClientUpdateTaskListPartitionConfig", tags: map[string]string{CadenceRoleTagName: MatchingClientRoleTagValue}},
+		MatchingClientRefreshTaskListPartitionConfigScope: {operation: "MatchingClientRefreshTaskListPartitionConfig", tags: map[string]string{CadenceRoleTagName: MatchingClientRoleTagValue}},
+
 		FrontendClientDeprecateDomainScope:                       {operation: "FrontendClientDeprecateDomain", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
 		FrontendClientDescribeDomainScope:                        {operation: "FrontendClientDescribeDomain", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
 		FrontendClientDescribeTaskListScope:                      {operation: "FrontendClientDescribeTaskList", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
@@ -1624,6 +1648,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		AdminClientGetReplicationMessagesScope:                {operation: "AdminClientGetReplicationMessages", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
 		AdminClientGetDomainAsyncWorkflowConfiguratonScope:    {operation: "AdminClientGetDomainAsyncWorkflowConfiguraton", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
 		AdminClientUpdateDomainAsyncWorkflowConfiguratonScope: {operation: "AdminClientUpdateDomainAsyncWorkflowConfiguraton", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientUpdateTaskListPartitionConfigScope:         {operation: "AdminClientUpdateTaskListPartitionConfig", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
 
 		DCRedirectionDeprecateDomainScope:                       {operation: "DCRedirectionDeprecateDomain", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
 		DCRedirectionDescribeDomainScope:                        {operation: "DCRedirectionDescribeDomain", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
@@ -1741,6 +1766,9 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		// currently used by both frontend and history, but may grow to other limiting-host-services.
 		GlobalRatelimiter:           {operation: "GlobalRatelimiter"},
 		GlobalRatelimiterAggregator: {operation: "GlobalRatelimiterAggregator"},
+
+		P2PRPCPeerChooserScope:       {operation: "P2PRPCPeerChooser"},
+		PartitionConfigProviderScope: {operation: "PartitionConfigProvider"},
 	},
 	// Frontend Scope Names
 	Frontend: {
@@ -1779,6 +1807,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		UpdateDomainIsolationGroups:                 {operation: "UpdateDomainIsolationGroups"},
 		GetDomainAsyncWorkflowConfiguraton:          {operation: "GetDomainAsyncWorkflowConfiguraton"},
 		UpdateDomainAsyncWorkflowConfiguraton:       {operation: "UpdateDomainAsyncWorkflowConfiguraton"},
+		UpdateTaskListPartitionConfig:               {operation: "UpdateTaskListPartitionConfig"},
 
 		FrontendRestartWorkflowExecutionScope:              {operation: "RestartWorkflowExecution"},
 		FrontendStartWorkflowExecutionScope:                {operation: "StartWorkflowExecution"},
@@ -1968,18 +1997,21 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 	},
 	// Matching Scope Names
 	Matching: {
-		MatchingPollForDecisionTaskScope:       {operation: "PollForDecisionTask"},
-		MatchingPollForActivityTaskScope:       {operation: "PollForActivityTask"},
-		MatchingAddActivityTaskScope:           {operation: "AddActivityTask"},
-		MatchingAddDecisionTaskScope:           {operation: "AddDecisionTask"},
-		MatchingAddTaskScope:                   {operation: "AddTask"},
-		MatchingTaskListMgrScope:               {operation: "TaskListMgr"},
-		MatchingQueryWorkflowScope:             {operation: "QueryWorkflow"},
-		MatchingRespondQueryTaskCompletedScope: {operation: "RespondQueryTaskCompleted"},
-		MatchingCancelOutstandingPollScope:     {operation: "CancelOutstandingPoll"},
-		MatchingDescribeTaskListScope:          {operation: "DescribeTaskList"},
-		MatchingListTaskListPartitionsScope:    {operation: "ListTaskListPartitions"},
-		MatchingGetTaskListsByDomainScope:      {operation: "GetTaskListsByDomain"},
+		MatchingPollForDecisionTaskScope:            {operation: "PollForDecisionTask"},
+		MatchingPollForActivityTaskScope:            {operation: "PollForActivityTask"},
+		MatchingAddActivityTaskScope:                {operation: "AddActivityTask"},
+		MatchingAddDecisionTaskScope:                {operation: "AddDecisionTask"},
+		MatchingAddTaskScope:                        {operation: "AddTask"},
+		MatchingTaskListMgrScope:                    {operation: "TaskListMgr"},
+		MatchingAdaptiveScalerScope:                 {operation: "adaptivescaler"},
+		MatchingQueryWorkflowScope:                  {operation: "QueryWorkflow"},
+		MatchingRespondQueryTaskCompletedScope:      {operation: "RespondQueryTaskCompleted"},
+		MatchingCancelOutstandingPollScope:          {operation: "CancelOutstandingPoll"},
+		MatchingDescribeTaskListScope:               {operation: "DescribeTaskList"},
+		MatchingListTaskListPartitionsScope:         {operation: "ListTaskListPartitions"},
+		MatchingGetTaskListsByDomainScope:           {operation: "GetTaskListsByDomain"},
+		MatchingUpdateTaskListPartitionConfigScope:  {operation: "UpdateTaskListPartitionConfig"},
+		MatchingRefreshTaskListPartitionConfigScope: {operation: "RefreshTaskListPartitionConfig"},
 	},
 	// Worker Scope Names
 	Worker: {
@@ -2242,6 +2274,15 @@ const (
 	GlobalRatelimiterHostLimitsQueried
 	GlobalRatelimiterRemovedLimits
 	GlobalRatelimiterRemovedHostLimits
+
+	// p2p rpc metrics
+	P2PPeersCount
+	P2PPeerAdded
+	P2PPeerRemoved
+	// task list partition config metrics
+	TaskListPartitionConfigVersionGauge
+	TaskListPartitionConfigNumReadGauge
+	TaskListPartitionConfigNumWriteGauge
 
 	NumCommonMetrics // Needs to be last on this list for iota numbering
 )
@@ -2567,6 +2608,7 @@ const (
 	IsolationTaskMatchPerTaskListCounter
 	PollerPerTaskListCounter
 	PollerInvalidIsolationGroupCounter
+	TaskListPartitionUpdateFailedCounter
 	TaskListManagersGauge
 	TaskLagPerTaskListGauge
 	TaskBacklogPerTaskListGauge
@@ -2590,6 +2632,11 @@ const (
 	TaskListReadWritePartitionMismatchGauge
 	TaskListPollerPartitionMismatchGauge
 	EstimatedAddTaskQPSGauge
+	TaskListPartitionUpscaleThresholdGauge
+	TaskListPartitionDownscaleThresholdGauge
+	StandbyClusterTasksCompletedCounterPerTaskList
+	StandbyClusterTasksNotStartedCounterPerTaskList
+	StandbyClusterTasksCompletionFailurePerTaskList
 
 	NumMatchingMetrics
 )
@@ -2936,6 +2983,13 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		GlobalRatelimiterHostLimitsQueried: {metricName: "global_ratelimiter_host_limits_queried", metricType: Histogram, buckets: GlobalRatelimiterUsageHistogram},
 		GlobalRatelimiterRemovedLimits:     {metricName: "global_ratelimiter_removed_limits", metricType: Histogram, buckets: GlobalRatelimiterUsageHistogram},
 		GlobalRatelimiterRemovedHostLimits: {metricName: "global_ratelimiter_removed_host_limits", metricType: Histogram, buckets: GlobalRatelimiterUsageHistogram},
+
+		P2PPeersCount:                        {metricName: "peers_count", metricType: Gauge},
+		P2PPeerAdded:                         {metricName: "peer_added", metricType: Counter},
+		P2PPeerRemoved:                       {metricName: "peer_removed", metricType: Counter},
+		TaskListPartitionConfigVersionGauge:  {metricName: "task_list_partition_config_version", metricType: Gauge},
+		TaskListPartitionConfigNumReadGauge:  {metricName: "task_list_partition_config_num_read", metricType: Gauge},
+		TaskListPartitionConfigNumWriteGauge: {metricName: "task_list_partition_config_num_write", metricType: Gauge},
 	},
 	History: {
 		TaskRequests:             {metricName: "task_requests", metricType: Counter},
@@ -3249,6 +3303,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		IsolationTaskMatchPerTaskListCounter:                    {metricName: "isolation_task_matches_per_tl", metricType: Counter},
 		PollerPerTaskListCounter:                                {metricName: "poller_count_per_tl", metricRollupName: "poller_count"},
 		PollerInvalidIsolationGroupCounter:                      {metricName: "poller_invalid_isolation_group_per_tl", metricType: Counter},
+		TaskListPartitionUpdateFailedCounter:                    {metricName: "tasklist_partition_update_failed_per_tl", metricType: Counter},
 		TaskListManagersGauge:                                   {metricName: "tasklist_managers", metricType: Gauge},
 		TaskLagPerTaskListGauge:                                 {metricName: "task_lag_per_tl", metricType: Gauge},
 		TaskBacklogPerTaskListGauge:                             {metricName: "task_backlog_per_tl", metricType: Gauge},
@@ -3272,6 +3327,11 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		TaskListReadWritePartitionMismatchGauge:                 {metricName: "tasklist_read_write_partition_mismatch", metricType: Gauge},
 		TaskListPollerPartitionMismatchGauge:                    {metricName: "tasklist_poller_partition_mismatch", metricType: Gauge},
 		EstimatedAddTaskQPSGauge:                                {metricName: "estimated_add_task_qps_per_tl", metricType: Gauge},
+		TaskListPartitionUpscaleThresholdGauge:                  {metricName: "tasklist_partition_upscale_threshold", metricType: Gauge},
+		TaskListPartitionDownscaleThresholdGauge:                {metricName: "tasklist_partition_downscale_threshold", metricType: Gauge},
+		StandbyClusterTasksCompletedCounterPerTaskList:          {metricName: "standby_cluster_tasks_completed_per_tl", metricType: Counter},
+		StandbyClusterTasksNotStartedCounterPerTaskList:         {metricName: "standby_cluster_tasks_not_started_per_tl", metricType: Counter},
+		StandbyClusterTasksCompletionFailurePerTaskList:         {metricName: "standby_cluster_tasks_completion_failure_per_tl", metricType: Counter},
 	},
 	Worker: {
 		ReplicatorMessages:                            {metricName: "replicator_messages"},
