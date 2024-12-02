@@ -261,6 +261,7 @@ type (
 		// If being used in any database, update this comment here to make it clear
 		ConnectAttributes map[string]string `yaml:"connectAttributes"`
 		// HostSelectionPolicy sets gocql policy for selecting host for a query
+		// Available selections are: "tokenaware,roundrobin", "hostpool-epsilon-greedy", "roundrobin"
 		HostSelectionPolicy string `yaml:"hostSelectionPolicy"`
 	}
 
