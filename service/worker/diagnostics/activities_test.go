@@ -25,6 +25,7 @@ package diagnostics
 import (
 	"context"
 	"encoding/json"
+	"github.com/uber/cadence/service/worker/diagnostics/invariant/retry"
 	"testing"
 	"time"
 
@@ -85,6 +86,10 @@ func Test__identifyIssues(t *testing.T) {
 		ActivityScheduled: &types.ActivityTaskScheduledEventAttributes{
 			ActivityID:   "101",
 			ActivityType: &types.ActivityType{Name: "test-activity"},
+			RetryPolicy: &types.RetryPolicy{
+				InitialIntervalInSeconds: 1,
+				MaximumAttempts:          1,
+			},
 		},
 		ActivityStarted: &types.ActivityTaskStartedEventAttributes{
 			Identity: "localhost",
@@ -92,6 +97,14 @@ func Test__identifyIssues(t *testing.T) {
 		},
 	}
 	actMetadataInBytes, err := json.Marshal(actMetadata)
+	require.NoError(t, err)
+	retryMetadata := retry.RetryMetadata{
+		RetryPolicy: &types.RetryPolicy{
+			InitialIntervalInSeconds: 1,
+			MaximumAttempts:          1,
+		},
+	}
+	retryMetadataInBytes, err := json.Marshal(retryMetadata)
 	require.NoError(t, err)
 	expectedResult := []invariant.InvariantCheckResult{
 		{
@@ -103,6 +116,11 @@ func Test__identifyIssues(t *testing.T) {
 			InvariantType: failure.ActivityFailed.String(),
 			Reason:        failure.GenericError.String(),
 			Metadata:      actMetadataInBytes,
+		},
+		{
+			InvariantType: retry.ActivityRetryIssue.String(),
+			Reason:        retry.RetryPolicyValidationMaxAttempts.String(),
+			Metadata:      retryMetadataInBytes,
 		},
 	}
 	result, err := dwtest.identifyIssues(context.Background(), identifyIssuesParams{History: testWorkflowExecutionHistoryResponse()})
@@ -219,6 +237,10 @@ func testWorkflowExecutionHistoryResponse() *types.GetWorkflowExecutionHistoryRe
 					ActivityTaskScheduledEventAttributes: &types.ActivityTaskScheduledEventAttributes{
 						ActivityID:   "101",
 						ActivityType: &types.ActivityType{Name: "test-activity"},
+						RetryPolicy: &types.RetryPolicy{
+							InitialIntervalInSeconds: 1,
+							MaximumAttempts:          1,
+						},
 					},
 				},
 				{

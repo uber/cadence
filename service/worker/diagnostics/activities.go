@@ -24,6 +24,7 @@ package diagnostics
 
 import (
 	"context"
+	"github.com/uber/cadence/service/worker/diagnostics/invariant/retry"
 
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/messaging/kafka"
@@ -81,6 +82,15 @@ func (w *dw) identifyIssues(ctx context.Context, info identifyIssuesParams) ([]i
 		return nil, err
 	}
 	result = append(result, failureIssues...)
+
+	retryInvariant := retry.NewInvariant(retry.Params{
+		WorkflowExecutionHistory: info.History,
+	})
+	retryIssues, err := retryInvariant.Check(ctx)
+	if err != nil {
+		return nil, err
+	}
+	result = append(result, retryIssues...)
 
 	return result, nil
 }
