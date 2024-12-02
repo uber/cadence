@@ -25,7 +25,6 @@ package diagnostics
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/uber/cadence/service/worker/diagnostics/invariant/retry"
 	"time"
 
 	"go.uber.org/cadence/workflow"
@@ -34,6 +33,7 @@ import (
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/worker/diagnostics/invariant"
 	"github.com/uber/cadence/service/worker/diagnostics/invariant/failure"
+	"github.com/uber/cadence/service/worker/diagnostics/invariant/retry"
 	"github.com/uber/cadence/service/worker/diagnostics/invariant/timeout"
 )
 

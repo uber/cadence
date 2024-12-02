@@ -25,7 +25,6 @@ package diagnostics
 import (
 	"context"
 	"encoding/json"
-	"github.com/uber/cadence/service/worker/diagnostics/invariant/retry"
 	"testing"
 	"time"
 
@@ -40,6 +39,7 @@ import (
 	"github.com/uber/cadence/service/worker/diagnostics/analytics"
 	"github.com/uber/cadence/service/worker/diagnostics/invariant"
 	"github.com/uber/cadence/service/worker/diagnostics/invariant/failure"
+	"github.com/uber/cadence/service/worker/diagnostics/invariant/retry"
 	"github.com/uber/cadence/service/worker/diagnostics/invariant/timeout"
 )
 
