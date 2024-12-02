@@ -30,6 +30,7 @@ import (
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/clock"
+	"github.com/uber/cadence/service/matching/event"
 )
 
 type (
@@ -43,13 +44,13 @@ type (
 		done                  chan struct{}
 		status                *atomic.Int32
 		firstBucket           bool
-
-		qps     *atomic.Float64
-		counter *atomic.Int64
+		baseEvent             event.E
+		qps                   *atomic.Float64
+		counter               *atomic.Int64
 	}
 )
 
-func NewEmaFixedWindowQPSTracker(timeSource clock.TimeSource, exp float64, bucketInterval time.Duration) QPSTracker {
+func NewEmaFixedWindowQPSTracker(timeSource clock.TimeSource, exp float64, bucketInterval time.Duration, baseEvent event.E) QPSTracker {
 	return &emaFixedWindowQPSTracker{
 		timeSource:            timeSource,
 		exp:                   exp,
@@ -60,6 +61,7 @@ func NewEmaFixedWindowQPSTracker(timeSource clock.TimeSource, exp float64, bucke
 		firstBucket:           true,
 		counter:               atomic.NewInt64(0),
 		qps:                   atomic.NewFloat64(0),
+		baseEvent:             baseEvent,
 	}
 }
 
@@ -89,13 +91,23 @@ func (r *emaFixedWindowQPSTracker) reportLoop() {
 func (r *emaFixedWindowQPSTracker) report() {
 	if r.firstBucket {
 		counter := r.counter.Swap(0)
-		r.qps.Store(float64(counter) / r.bucketIntervalSeconds)
+		r.store(float64(counter) / r.bucketIntervalSeconds)
 		r.firstBucket = false
 		return
 	}
 	counter := r.counter.Swap(0)
 	qps := r.qps.Load()
-	r.qps.Store(qps*(1-r.exp) + float64(counter)*r.exp/r.bucketIntervalSeconds)
+	r.store(qps*(1-r.exp) + float64(counter)*r.exp/r.bucketIntervalSeconds)
+}
+
+func (r *emaFixedWindowQPSTracker) store(qps float64) {
+	r.qps.Store(qps)
+	e := r.baseEvent
+	e.EventName = "QPSTrackerUpdate"
+	e.Payload = map[string]any{
+		"QPS": qps,
+	}
+	event.Log(e)
 }
 
 func (r *emaFixedWindowQPSTracker) Stop() {
