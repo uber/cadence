@@ -21,9 +21,9 @@
 package persistence
 
 import (
-	"github.com/stretchr/testify/assert"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 
 	"github.com/uber/cadence/common"
