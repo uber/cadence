@@ -49,11 +49,9 @@ func NewVersionHistoryItem(
 func NewVersionHistoryItemFromInternalType(
 	input *types.VersionHistoryItem,
 ) *VersionHistoryItem {
-
 	if input == nil {
-		panic("version history item is null")
+		return nil
 	}
-
 	return NewVersionHistoryItem(input.EventID, input.Version)
 }
 
@@ -107,7 +105,7 @@ func NewVersionHistoryFromInternalType(
 ) *VersionHistory {
 
 	if input == nil {
-		panic("version history is null")
+		return nil
 	}
 
 	items := make([]*VersionHistoryItem, 0, len(input.Items))
@@ -125,6 +123,9 @@ func (v *VersionHistory) Duplicate() *VersionHistory {
 
 // ToInternalType return internal format of version history
 func (v *VersionHistory) ToInternalType() *types.VersionHistory {
+	if v == nil {
+		return nil
+	}
 
 	token := make([]byte, len(v.BranchToken))
 	copy(token, v.BranchToken)
@@ -363,11 +364,9 @@ func (v *VersionHistory) Equals(
 func NewVersionHistories(
 	versionHistory *VersionHistory,
 ) *VersionHistories {
-
 	if versionHistory == nil {
-		panic("version history cannot be null")
+		return nil
 	}
-
 	return &VersionHistories{
 		CurrentVersionHistoryIndex: 0,
 		Histories:                  []*VersionHistory{versionHistory},
@@ -378,9 +377,8 @@ func NewVersionHistories(
 func NewVersionHistoriesFromInternalType(
 	input *types.VersionHistories,
 ) *VersionHistories {
-
 	if input == nil {
-		panic("version histories is null")
+		return nil
 	}
 	if len(input.Histories) == 0 {
 		panic("version histories cannot have empty")
