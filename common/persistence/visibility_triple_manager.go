@@ -373,13 +373,16 @@ func (v *visibilityTripleManager) getShadowMgrForDoubleRead(domain string) Visib
 	}
 
 	// Valid cases:
-	// case3: when it is double read, and both advanced visibility are available, and read mode is from destination
-	if v.readModeIsFromDestination(domain) {
-		return v.sourceVisibilityManager
-	}
-	// case4: when it is double read, and both advanced visibility are available, and read mode is from source
+	// case3: when it is double read, and both advanced visibility are available, and read mode is from source
+	// we first check readModeIsFromSource since we use this flag to control which is the primary visibility manager
 	if v.readModeIsFromSource(domain) {
 		return v.destinationVisibilityManager
+	}
+
+	// case4: when it is double read, and both advanced visibility are available, and read mode is from destination
+	// normally readModeIsFromDestination will always be true when it is in the migration mode
+	if v.readModeIsFromDestination(domain) {
+		return v.sourceVisibilityManager
 	}
 	// exclude all other cases
 	return nil
