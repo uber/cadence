@@ -8155,3 +8155,25 @@ func FromAny(t *types.Any) *shared.Any {
 		Value:     t.Value,
 	}
 }
+
+// FromWorkflowQuery converts internal WorkflowQuery type to thrift
+func FromAutoConfigHint(t *types.AutoConfigHint) *shared.AutoConfigHint {
+	if t == nil {
+		return nil
+	}
+	return &shared.AutoConfigHint{
+		PollerWaitTimeInMs: &t.PollerWaitTimeInMs,
+		EnableAutoConfig:   &t.EnableAutoConfig,
+	}
+}
+
+// ToWorkflowQuery converts thrift WorkflowQuery type to internal
+func ToAutoConfigHint(t *shared.AutoConfigHint) *types.AutoConfigHint {
+	if t == nil {
+		return nil
+	}
+	return &types.AutoConfigHint{
+		PollerWaitTimeInMs: *t.PollerWaitTimeInMs,
+		EnableAutoConfig:   *t.EnableAutoConfig,
+	}
+}

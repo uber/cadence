@@ -385,6 +385,7 @@ func (wh *WorkflowHandler) PollForActivityTask(
 		WorkflowType:                    matchingResp.WorkflowType,
 		WorkflowDomain:                  matchingResp.WorkflowDomain,
 		Header:                          matchingResp.Header,
+		AutoConfigHint:                  matchingResp.AutoConfigHint,
 	}, nil
 }
 
@@ -513,6 +514,14 @@ func (wh *WorkflowHandler) PollForDecisionTask(
 	resp, err = wh.createPollForDecisionTaskResponse(ctx, scope, domainID, matchingResp, matchingResp.GetBranchToken())
 	if err != nil {
 		return nil, err
+	}
+	if matchingResp.AutoConfigHint != nil {
+		resp.AutoConfigHint = &types.AutoConfigHint{
+			PollerWaitTimeInMs: matchingResp.AutoConfigHint.PollerWaitTimeInMs,
+		}
+	}
+	if resp != nil {
+		wh.GetLogger().Info(fmt.Sprintf("===================== %+v", *resp.AutoConfigHint))
 	}
 	return resp, nil
 }
@@ -2986,6 +2995,7 @@ func (wh *WorkflowHandler) createPollForDecisionTaskResponse(
 		Queries:                   matchingResp.Queries,
 		NextEventID:               matchingResp.NextEventID,
 		TotalHistoryBytes:         matchingResp.TotalHistoryBytes,
+		AutoConfigHint:            matchingResp.AutoConfigHint,
 	}
 
 	return resp, nil

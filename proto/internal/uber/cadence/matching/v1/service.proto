@@ -137,6 +137,7 @@ message PollForDecisionTaskResponse {
   int64 total_history_bytes = 18;
   TaskListPartitionConfig partition_config = 19;
   LoadBalancerHints load_balancer_hints = 20;
+  api.v1.AutoConfigHint auto_config_hint = 21;
 }
 
 message PollForActivityTaskRequest {
@@ -166,6 +167,7 @@ message PollForActivityTaskResponse {
   api.v1.Header header = 16;
   LoadBalancerHints load_balancer_hints = 17;
   TaskListPartitionConfig partition_config = 19;
+  AutoConfigHint auto_config_hint = 20;
 }
 
 message AddDecisionTaskRequest {
@@ -290,4 +292,9 @@ message RefreshTaskListPartitionConfigRequest {
 
 message RefreshTaskListPartitionConfigResponse {
 
+}
+
+message AutoConfigHint {
+  bool enable_auto_config = 1;
+  int64 poller_wait_time_in_ms = 2;
 }

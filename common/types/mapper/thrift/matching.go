@@ -293,6 +293,7 @@ func FromMatchingPollForDecisionTaskResponse(t *types.MatchingPollForDecisionTas
 		StartedTimestamp:          t.StartedTimestamp,
 		Queries:                   FromWorkflowQueryMap(t.Queries),
 		TotalHistoryBytes:         &t.TotalHistoryBytes,
+		AutoConfigHint:            FromAutoConfigHint(t.AutoConfigHint),
 	}
 }
 
@@ -320,6 +321,7 @@ func ToMatchingPollForDecisionTaskResponse(t *matching.PollForDecisionTaskRespon
 		StartedTimestamp:          t.StartedTimestamp,
 		Queries:                   ToWorkflowQueryMap(t.Queries),
 		TotalHistoryBytes:         t.GetTotalHistoryBytes(),
+		AutoConfigHint:            ToAutoConfigHint(t.AutoConfigHint),
 	}
 }
 
