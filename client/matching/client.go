@@ -152,6 +152,8 @@ func (c *clientImpl) PollForActivityTask(
 		partition,
 		resp.LoadBalancerHints,
 	)
+	// caller needs to know the actual partition for cancelling long poll, so modify the request to pass this information
+	request.PollRequest.TaskList.Name = partition
 	return resp, nil
 }
 
@@ -191,6 +193,8 @@ func (c *clientImpl) PollForDecisionTask(
 		partition,
 		resp.LoadBalancerHints,
 	)
+	// caller needs to know the actual partition for cancelling long poll, so modify the request to pass this information
+	request.PollRequest.TaskList.Name = partition
 	return resp, nil
 }
 

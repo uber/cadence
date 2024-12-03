@@ -365,6 +365,8 @@ func (wh *WorkflowHandler) PollForActivityTask(
 				tag.Error(err))
 			return nil, err
 		}
+		// Must be cancellation error.  Doesn't matter what we return here.  Client already went away.
+		return nil, nil
 	}
 	return &types.PollForActivityTaskResponse{
 		TaskToken:                       matchingResp.TaskToken,
@@ -501,7 +503,7 @@ func (wh *WorkflowHandler) PollForDecisionTask(
 			return nil, err
 		}
 
-		// Must be cancellation error.  Does'nt matter what we return here.  Client already went away.
+		// Must be cancellation error.  Doesn't matter what we return here.  Client already went away.
 		return nil, nil
 	}
 
