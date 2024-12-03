@@ -33,6 +33,7 @@ import (
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/worker/diagnostics/invariant"
 	"github.com/uber/cadence/service/worker/diagnostics/invariant/failure"
+	"github.com/uber/cadence/service/worker/diagnostics/invariant/retry"
 	"github.com/uber/cadence/service/worker/diagnostics/invariant/timeout"
 )
 
@@ -54,6 +55,7 @@ type DiagnosticsWorkflowInput struct {
 type DiagnosticsWorkflowResult struct {
 	Timeouts *timeoutDiagnostics
 	Failures *failureDiagnostics
+	Retries  *retryDiagnostics
 }
 
 type timeoutDiagnostics struct {
@@ -89,6 +91,17 @@ type failuresIssuesResult struct {
 	Metadata      failure.FailureMetadata
 }
 
+type retryDiagnostics struct {
+	Issues   []*retryIssuesResult
+	Runbooks []string
+}
+
+type retryIssuesResult struct {
+	InvariantType string
+	Reason        string
+	Metadata      retry.RetryMetadata
+}
+
 func (w *dw) DiagnosticsWorkflow(ctx workflow.Context, params DiagnosticsWorkflowInput) (*DiagnosticsWorkflowResult, error) {
 	scope := w.metricsClient.Scope(metrics.DiagnosticsWorkflowScope, metrics.DomainTag(params.Domain))
 	scope.IncCounter(metrics.DiagnosticsWorkflowStartedCount)
@@ -97,6 +110,7 @@ func (w *dw) DiagnosticsWorkflow(ctx workflow.Context, params DiagnosticsWorkflo
 
 	var timeoutsResult timeoutDiagnostics
 	var failureResult failureDiagnostics
+	var retryResult retryDiagnostics
 	var checkResult []invariant.InvariantCheckResult
 	var rootCauseResult []invariant.InvariantRootCauseResult
 
@@ -158,10 +172,17 @@ func (w *dw) DiagnosticsWorkflow(ctx workflow.Context, params DiagnosticsWorkflo
 	failureResult.RootCause = retrieveFailureRootCause(rootCauseResult)
 	failureResult.Runbooks = []string{linkToFailuresRunbook}
 
+	retryIssues, err := retrieveRetryIssues(checkResult)
+	if err != nil {
+		return nil, fmt.Errorf("RetrieveRetryIssues: %w", err)
+	}
+	retryResult.Issues = retryIssues
+
 	scope.IncCounter(metrics.DiagnosticsWorkflowSuccess)
 	return &DiagnosticsWorkflowResult{
 		Timeouts: &timeoutsResult,
 		Failures: &failureResult,
+		Retries:  &retryResult,
 	}, nil
 }
 
@@ -274,6 +295,25 @@ func retrieveFailureRootCause(rootCause []invariant.InvariantRootCauseResult) []
 		}
 	}
 	return result
+}
+
+func retrieveRetryIssues(issues []invariant.InvariantCheckResult) ([]*retryIssuesResult, error) {
+	result := make([]*retryIssuesResult, 0)
+	for _, issue := range issues {
+		if issue.InvariantType == retry.WorkflowRetryIssue.String() || issue.InvariantType == retry.WorkflowRetryInfo.String() || issue.InvariantType == retry.ActivityRetryIssue.String() {
+			var data retry.RetryMetadata
+			err := json.Unmarshal(issue.Metadata, &data)
+			if err != nil {
+				return nil, err
+			}
+			result = append(result, &retryIssuesResult{
+				InvariantType: issue.InvariantType,
+				Reason:        issue.Reason,
+				Metadata:      data,
+			})
+		}
+	}
+	return result, nil
 }
 
 func rootCauseHeartBeatRelated(rootCause invariant.RootCause) bool {

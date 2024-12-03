@@ -42,6 +42,7 @@ import (
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/worker/diagnostics/invariant"
 	"github.com/uber/cadence/service/worker/diagnostics/invariant/failure"
+	"github.com/uber/cadence/service/worker/diagnostics/invariant/retry"
 	"github.com/uber/cadence/service/worker/diagnostics/invariant/timeout"
 )
 
@@ -317,4 +318,42 @@ func (s *diagnosticsWorkflowTestSuite) Test__retrieveFailureIssues() {
 	result, err := retrieveFailureIssues(issues)
 	s.NoError(err)
 	s.Equal(failureIssues, result)
+}
+
+func (s *diagnosticsWorkflowTestSuite) Test__retrieveRetryIssues() {
+	retryMetadata := retry.RetryMetadata{
+		RetryPolicy: &types.RetryPolicy{
+			InitialIntervalInSeconds: 1,
+			MaximumAttempts:          1,
+		},
+	}
+	retryMetadataInBytes, err := json.Marshal(retryMetadata)
+	s.NoError(err)
+	issues := []invariant.InvariantCheckResult{
+		{
+			InvariantType: retry.ActivityRetryIssue.String(),
+			Reason:        retry.RetryPolicyValidationMaxAttempts.String(),
+			Metadata:      retryMetadataInBytes,
+		},
+		{
+			InvariantType: retry.WorkflowRetryIssue.String(),
+			Reason:        retry.RetryPolicyValidationMaxAttempts.String(),
+			Metadata:      retryMetadataInBytes,
+		},
+	}
+	retryIssues := []*retryIssuesResult{
+		{
+			InvariantType: retry.ActivityRetryIssue.String(),
+			Reason:        retry.RetryPolicyValidationMaxAttempts.String(),
+			Metadata:      retryMetadata,
+		},
+		{
+			InvariantType: retry.WorkflowRetryIssue.String(),
+			Reason:        retry.RetryPolicyValidationMaxAttempts.String(),
+			Metadata:      retryMetadata,
+		},
+	}
+	result, err := retrieveRetryIssues(issues)
+	s.NoError(err)
+	s.Equal(retryIssues, result)
 }
