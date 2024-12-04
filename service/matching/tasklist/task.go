@@ -21,6 +21,8 @@
 package tasklist
 
 import (
+	"time"
+
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 )
@@ -57,7 +59,7 @@ type (
 		ResponseC                chan error // non-nil only where there is a caller waiting for response (sync-match)
 		BacklogCountHint         int64
 		ActivityTaskDispatchInfo *types.ActivityTaskDispatchInfo
-		PollLocalMatchLatencyMs  int64 // Poll local match latency per tasklist in ms
+		PollMatchLatency         time.Duration // Poll match latency per tasklist
 	}
 )
 

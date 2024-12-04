@@ -412,9 +412,7 @@ func (tm *taskMatcherImpl) Poll(ctx context.Context, isolationGroup string) (*In
 
 	// try local match first without blocking until context timeout
 	if task, err := tm.pollNonBlocking(ctxWithCancelPropagation, isolatedTaskC, tm.taskC, tm.queryTaskC); err == nil {
-		pollLocalLatency := time.Since(startT)
-		tm.scope.RecordTimer(metrics.PollLocalMatchLatencyPerTaskList, pollLocalLatency)
-		task.PollLocalMatchLatencyMs = pollLocalLatency.Milliseconds()
+		tm.scope.RecordTimer(metrics.PollLocalMatchLatencyPerTaskList, time.Since(startT))
 		return task, nil
 	}
 	// there is no local poller available to pickup this task. Now block waiting
@@ -431,7 +429,11 @@ func (tm *taskMatcherImpl) Poll(ctx context.Context, isolationGroup string) (*In
 		TaskListKind: tm.tasklistKind.Ptr(),
 		EventName:    "Matcher Falling Back to Non-Local Polling",
 	})
-	return tm.pollOrForward(ctxWithCancelPropagation, startT, isolationGroup, isolatedTaskC, tm.taskC, tm.queryTaskC)
+	task, err := tm.pollOrForward(ctxWithCancelPropagation, startT, isolationGroup, isolatedTaskC, tm.taskC, tm.queryTaskC)
+	if task != nil {
+		task.PollMatchLatency = time.Since(startT)
+	}
+	return task, err
 }
 
 // PollForQuery blocks until a *query* task is found or context deadline is exceeded
@@ -482,9 +484,7 @@ func (tm *taskMatcherImpl) pollOrForward(
 		if task.ResponseC != nil {
 			tm.scope.IncCounter(metrics.PollSuccessWithSyncPerTaskListCounter)
 		}
-		pollLocalLatency := time.Since(startT)
-		tm.scope.RecordTimer(metrics.PollLocalMatchLatencyPerTaskList, pollLocalLatency)
-		task.PollLocalMatchLatencyMs = pollLocalLatency.Milliseconds()
+		tm.scope.RecordTimer(metrics.PollLocalMatchLatencyPerTaskList, time.Since(startT))
 		tm.scope.IncCounter(metrics.PollSuccessPerTaskListCounter)
 		event.Log(event.E{
 			TaskListName: tm.tasklist.GetName(),
@@ -504,9 +504,7 @@ func (tm *taskMatcherImpl) pollOrForward(
 		if task.ResponseC != nil {
 			tm.scope.IncCounter(metrics.PollSuccessWithSyncPerTaskListCounter)
 		}
-		pollLocalLatency := time.Since(startT)
-		tm.scope.RecordTimer(metrics.PollLocalMatchLatencyPerTaskList, pollLocalLatency)
-		task.PollLocalMatchLatencyMs = pollLocalLatency.Milliseconds()
+		tm.scope.RecordTimer(metrics.PollLocalMatchLatencyPerTaskList, time.Since(startT))
 		tm.scope.IncCounter(metrics.PollSuccessPerTaskListCounter)
 		event.Log(event.E{
 			TaskListName: tm.tasklist.GetName(),

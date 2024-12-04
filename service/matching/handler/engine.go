@@ -582,7 +582,7 @@ pollLoop:
 			resp.PartitionConfig = tlMgr.TaskListPartitionConfig()
 			resp.LoadBalancerHints = tlMgr.LoadBalancerHints()
 			resp.AutoConfigHint = &types.AutoConfigHint{
-				PollerWaitTimeInMs: task.PollLocalMatchLatencyMs,
+				PollerWaitTimeInMs: task.PollMatchLatency.Milliseconds(),
 			}
 			return resp, nil
 			// TODO: Maybe add history expose here?
@@ -747,7 +747,7 @@ pollLoop:
 			resp.PartitionConfig = tlMgr.TaskListPartitionConfig()
 			resp.LoadBalancerHints = tlMgr.LoadBalancerHints()
 			resp.AutoConfigHint = &types.AutoConfigHint{
-				PollerWaitTimeInMs: task.PollLocalMatchLatencyMs,
+				PollerWaitTimeInMs: task.PollMatchLatency.Milliseconds(),
 			}
 			return resp, nil
 		}
@@ -1203,7 +1203,7 @@ func (e *matchingEngineImpl) createPollForDecisionTaskResponse(
 	response.PartitionConfig = partitionConfig
 	response.LoadBalancerHints = loadBalancerHints
 	response.AutoConfigHint = &types.AutoConfigHint{
-		PollerWaitTimeInMs: task.PollLocalMatchLatencyMs,
+		PollerWaitTimeInMs: task.PollMatchLatency.Milliseconds(),
 	}
 	return response
 }
@@ -1261,7 +1261,7 @@ func (e *matchingEngineImpl) createPollForActivityTaskResponse(
 	response.PartitionConfig = partitionConfig
 	response.LoadBalancerHints = loadBalancerHints
 	response.AutoConfigHint = &types.AutoConfigHint{
-		PollerWaitTimeInMs: task.PollLocalMatchLatencyMs,
+		PollerWaitTimeInMs: task.PollMatchLatency.Milliseconds(),
 	}
 	return response
 }
