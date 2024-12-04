@@ -330,6 +330,10 @@ func (s *matchingEngineSuite) PollForDecisionTasksResultTest() {
 			Name: tl,
 			Kind: &tlKind,
 		},
+		AutoConfigHint: &types.AutoConfigHint{
+			EnableAutoConfig:   false,
+			PollerWaitTimeInMs: 0,
+		},
 	}
 
 	s.Nil(err)
@@ -1597,6 +1601,7 @@ type pollTaskResponse struct {
 	EventStoreVersion               int32
 	BranchToken                     []byte
 	Queries                         map[string]*types.WorkflowQuery
+	AutoConfigHint                  *types.AutoConfigHint
 }
 
 func pollTask(engine *matchingEngineImpl, hCtx *handlerContext, request *pollTaskRequest) (*pollTaskResponse, error) {
@@ -1680,6 +1685,7 @@ func pollTask(engine *matchingEngineImpl, hCtx *handlerContext, request *pollTas
 		ScheduledTimestamp:        resp.ScheduledTimestamp,
 		StartedTimestamp:          resp.StartedTimestamp,
 		Queries:                   resp.Queries,
+		AutoConfigHint:            resp.AutoConfigHint,
 	}, nil
 }
 

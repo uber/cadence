@@ -441,4 +441,8 @@ var (
 		OriginalScheduledTimestamp: &Timestamp3,
 		ScheduleID:                 ScheduleID,
 	}
+	AutoConfigHint = types.AutoConfigHint{
+		EnableAutoConfig:   false,
+		PollerWaitTimeInMs: 10,
+	}
 )

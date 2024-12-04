@@ -143,6 +143,7 @@ var (
 		Queries:                   WorkflowQueryMap,
 		PartitionConfig:           &TaskListPartitionConfig,
 		LoadBalancerHints:         &LoadBalancerHints,
+		AutoConfigHint:            &AutoConfigHint,
 	}
 	MatchingQueryWorkflowRequest = types.MatchingQueryWorkflowRequest{
 		DomainUUID:    DomainID,
