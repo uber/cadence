@@ -57,7 +57,7 @@ type (
 		ResponseC                chan error // non-nil only where there is a caller waiting for response (sync-match)
 		BacklogCountHint         int64
 		ActivityTaskDispatchInfo *types.ActivityTaskDispatchInfo
-		AutoConfigHint           *types.AutoConfigHint // worker auto-scaler hint
+		AutoConfigHint           *types.AutoConfigHint // worker auto-scaler hint, which includes enable auto config flag and poller wait time on the matching engine
 	}
 )
 
