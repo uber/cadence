@@ -137,7 +137,7 @@ message PollForDecisionTaskResponse {
   int64 total_history_bytes = 18;
   TaskListPartitionConfig partition_config = 19;
   LoadBalancerHints load_balancer_hints = 20;
-  api.v1.AutoConfigHint auto_config_hint = 21;
+  AutoConfigHint auto_config_hint = 21;
 }
 
 message PollForActivityTaskRequest {

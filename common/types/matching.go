@@ -446,7 +446,7 @@ type MatchingPollForDecisionTaskResponse struct {
 	TotalHistoryBytes         int64                     `json:"currentHistorySize,omitempty"`
 	PartitionConfig           *TaskListPartitionConfig
 	LoadBalancerHints         *LoadBalancerHints
-	AutoConfigHint            *AutoConfigHint `json:"autoConfigHint,omitempty"`
+	AutoConfigHint            *AutoConfigHint
 }
 
 // GetWorkflowExecution is an internal getter (TBD...)
@@ -517,7 +517,7 @@ type MatchingPollForActivityTaskResponse struct {
 	BacklogCountHint                int64              `json:"backlogCountHint,omitempty"`
 	PartitionConfig                 *TaskListPartitionConfig
 	LoadBalancerHints               *LoadBalancerHints
-	AutoConfigHint                  *AutoConfigHint `json:"autoConfigHint,omitempty"`
+	AutoConfigHint                  *AutoConfigHint
 }
 
 // MatchingQueryWorkflowRequest is an internal type (TBD...)

@@ -407,6 +407,7 @@ func FromMatchingPollForActivityTaskResponse(t *types.MatchingPollForActivityTas
 		Header:                     FromHeader(t.Header),
 		PartitionConfig:            FromTaskListPartitionConfig(t.PartitionConfig),
 		LoadBalancerHints:          FromLoadBalancerHints(t.LoadBalancerHints),
+		AutoConfigHint:             FromAutoConfigHint(t.AutoConfigHint),
 	}
 }
 
@@ -433,6 +434,7 @@ func ToMatchingPollForActivityTaskResponse(t *matchingv1.PollForActivityTaskResp
 		Header:                          ToHeader(t.Header),
 		PartitionConfig:                 ToTaskListPartitionConfig(t.PartitionConfig),
 		LoadBalancerHints:               ToLoadBalancerHints(t.LoadBalancerHints),
+		AutoConfigHint:                  ToAutoConfigHint(t.AutoConfigHint),
 	}
 }
 
@@ -681,5 +683,25 @@ func ToLoadBalancerHints(t *matchingv1.LoadBalancerHints) *types.LoadBalancerHin
 	return &types.LoadBalancerHints{
 		BacklogCount:  t.BacklogCount,
 		RatePerSecond: t.RatePerSecond,
+	}
+}
+
+func FromAutoConfigHint(t *types.AutoConfigHint) *matchingv1.AutoConfigHint {
+	if t == nil {
+		return nil
+	}
+	return &matchingv1.AutoConfigHint{
+		PollerWaitTimeInMs: t.PollerWaitTimeInMs,
+		EnableAutoConfig:   t.EnableAutoConfig,
+	}
+}
+
+func ToAutoConfigHint(t *matchingv1.AutoConfigHint) *types.AutoConfigHint {
+	if t == nil {
+		return nil
+	}
+	return &types.AutoConfigHint{
+		PollerWaitTimeInMs: t.PollerWaitTimeInMs,
+		EnableAutoConfig:   t.EnableAutoConfig,
 	}
 }

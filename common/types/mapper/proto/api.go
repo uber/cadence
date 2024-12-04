@@ -2250,7 +2250,6 @@ func FromPollForDecisionTaskResponse(t *types.PollForDecisionTaskResponse) *apiv
 		Queries:                   FromWorkflowQueryMap(t.Queries),
 		NextEventId:               t.NextEventID,
 		TotalHistoryBytes:         t.TotalHistoryBytes,
-		AutoConfigHint:            FromAutoConfigHint(t.AutoConfigHint),
 	}
 }
 
@@ -2275,7 +2274,6 @@ func ToPollForDecisionTaskResponse(t *apiv1.PollForDecisionTaskResponse) *types.
 		Queries:                   ToWorkflowQueryMap(t.Queries),
 		NextEventID:               t.NextEventId,
 		TotalHistoryBytes:         t.TotalHistoryBytes,
-		AutoConfigHint:            ToAutoConfigHint(t.AutoConfigHint),
 	}
 }
 
@@ -6095,25 +6093,5 @@ func ToAPITaskListPartitionConfig(t *apiv1.TaskListPartitionConfig) *types.TaskL
 		Version:            t.Version,
 		NumReadPartitions:  t.NumReadPartitions,
 		NumWritePartitions: t.NumWritePartitions,
-	}
-}
-
-func FromAutoConfigHint(t *types.AutoConfigHint) *apiv1.AutoConfigHint {
-	if t == nil {
-		return nil
-	}
-	return &apiv1.AutoConfigHint{
-		PollerWaitTimeInMs: t.PollerWaitTimeInMs,
-		EnableAutoConfig:   t.EnableAutoConfig,
-	}
-}
-
-func ToAutoConfigHint(t *apiv1.AutoConfigHint) *types.AutoConfigHint {
-	if t == nil {
-		return nil
-	}
-	return &types.AutoConfigHint{
-		PollerWaitTimeInMs: t.PollerWaitTimeInMs,
-		EnableAutoConfig:   t.EnableAutoConfig,
 	}
 }

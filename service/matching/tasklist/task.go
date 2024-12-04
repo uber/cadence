@@ -57,6 +57,7 @@ type (
 		ResponseC                chan error // non-nil only where there is a caller waiting for response (sync-match)
 		BacklogCountHint         int64
 		ActivityTaskDispatchInfo *types.ActivityTaskDispatchInfo
+		PollLocalMatchLatencyMs  int64 // Poll local match latency per tasklist in ms
 	}
 )
 

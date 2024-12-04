@@ -368,6 +368,7 @@ func (wh *WorkflowHandler) PollForActivityTask(
 		// Must be cancellation error.  Doesn't matter what we return here.  Client already went away.
 		return nil, nil
 	}
+
 	return &types.PollForActivityTaskResponse{
 		TaskToken:                       matchingResp.TaskToken,
 		WorkflowExecution:               matchingResp.WorkflowExecution,
@@ -515,14 +516,7 @@ func (wh *WorkflowHandler) PollForDecisionTask(
 	if err != nil {
 		return nil, err
 	}
-	if matchingResp.AutoConfigHint != nil {
-		resp.AutoConfigHint = &types.AutoConfigHint{
-			PollerWaitTimeInMs: matchingResp.AutoConfigHint.PollerWaitTimeInMs,
-		}
-	}
-	if resp != nil {
-		wh.GetLogger().Info(fmt.Sprintf("===================== %+v", *resp.AutoConfigHint))
-	}
+
 	return resp, nil
 }
 
