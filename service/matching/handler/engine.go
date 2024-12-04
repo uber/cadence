@@ -581,9 +581,7 @@ pollLoop:
 			resp := task.PollForDecisionResponse()
 			resp.PartitionConfig = tlMgr.TaskListPartitionConfig()
 			resp.LoadBalancerHints = tlMgr.LoadBalancerHints()
-			resp.AutoConfigHint = &types.AutoConfigHint{
-				PollerWaitTimeInMs: task.PollMatchLatency.Milliseconds(),
-			}
+			resp.AutoConfigHint = task.AutoConfigHint
 			return resp, nil
 			// TODO: Maybe add history expose here?
 		}
@@ -746,9 +744,7 @@ pollLoop:
 			resp := task.PollForActivityResponse()
 			resp.PartitionConfig = tlMgr.TaskListPartitionConfig()
 			resp.LoadBalancerHints = tlMgr.LoadBalancerHints()
-			resp.AutoConfigHint = &types.AutoConfigHint{
-				PollerWaitTimeInMs: task.PollMatchLatency.Milliseconds(),
-			}
+			resp.AutoConfigHint = task.AutoConfigHint
 			return resp, nil
 		}
 		e.emitForwardedFromStats(hCtx.scope, task.IsForwarded(), req.GetForwardedFrom())
@@ -1202,9 +1198,7 @@ func (e *matchingEngineImpl) createPollForDecisionTaskResponse(
 	response.BacklogCountHint = task.BacklogCountHint
 	response.PartitionConfig = partitionConfig
 	response.LoadBalancerHints = loadBalancerHints
-	response.AutoConfigHint = &types.AutoConfigHint{
-		PollerWaitTimeInMs: task.PollMatchLatency.Milliseconds(),
-	}
+	response.AutoConfigHint = task.AutoConfigHint
 	return response
 }
 
@@ -1260,9 +1254,7 @@ func (e *matchingEngineImpl) createPollForActivityTaskResponse(
 	response.WorkflowDomain = historyResponse.WorkflowDomain
 	response.PartitionConfig = partitionConfig
 	response.LoadBalancerHints = loadBalancerHints
-	response.AutoConfigHint = &types.AutoConfigHint{
-		PollerWaitTimeInMs: task.PollMatchLatency.Milliseconds(),
-	}
+	response.AutoConfigHint = task.AutoConfigHint
 	return response
 }
 

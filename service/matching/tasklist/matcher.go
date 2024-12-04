@@ -431,7 +431,10 @@ func (tm *taskMatcherImpl) Poll(ctx context.Context, isolationGroup string) (*In
 	})
 	task, err := tm.pollOrForward(ctxWithCancelPropagation, startT, isolationGroup, isolatedTaskC, tm.taskC, tm.queryTaskC)
 	if task != nil {
-		task.PollMatchLatency = time.Since(startT)
+		task.AutoConfigHint = &types.AutoConfigHint{
+			EnableAutoConfig:   tm.config.EnableAutoConfig(),
+			PollerWaitTimeInMs: time.Since(startT).Milliseconds(),
+		}
 	}
 	return task, err
 }

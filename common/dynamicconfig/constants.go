@@ -2077,6 +2077,13 @@ const (
 	// Allowed filters: DomainName
 	EnableStrongIdempotencySanityCheck
 
+	// MatchingEnableAutoConfig enables auto config for domain and tasklist on worker side
+	// KeyName: matching.enableAutoConfig
+	// Value type: Bool
+	// Default value: false
+	// Allowed filters: DomainName,TasklistName,TasklistType
+	MatchingEnableAutoConfig
+
 	// LastBoolKey must be the last one in this const group
 	LastBoolKey
 )
@@ -4411,6 +4418,12 @@ var BoolKeys = map[BoolKey]DynamicBool{
 		KeyName:      "history.enableStrongIdempotencySanityCheck",
 		Filters:      []Filter{DomainName},
 		Description:  "EnableStrongIdempotencySanityCheck enables sanity check for strong idempotency",
+		DefaultValue: false,
+	},
+	MatchingEnableAutoConfig: {
+		KeyName:      "matching.enableAutoConfig",
+		Filters:      []Filter{DomainName, TaskListName, TaskType},
+		Description:  "MatchingEnableAutoConfig is to enable auto config on worker side",
 		DefaultValue: false,
 	},
 }
