@@ -31,6 +31,8 @@ import (
 	"go.uber.org/cadence/.gen/go/shared"
 
 	"github.com/uber/cadence/client"
+	"github.com/uber/cadence/common/cluster"
+	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/log/testlogger"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/resource"
@@ -60,5 +62,19 @@ func setuptest(t *testing.T) (*Batcher, *resource.Test) {
 		ServiceClient: sdkClient,
 		ClientBean:    mockClientBean,
 		TallyScope:    tally.TestScope(nil),
+		Config: Config{
+			ClusterMetadata: cluster.NewMetadata(
+				12,
+				"test-primary-cluster",
+				"test-primary-cluster",
+				map[string]config.ClusterInformation{
+					"test-primary-cluster":   {},
+					"test-secondary-cluster": {},
+				},
+				nil,
+				metrics.NewClient(tally.NoopScope, metrics.Worker),
+				testlogger.New(t),
+			),
+		},
 	}), mockResource
 }

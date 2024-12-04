@@ -193,6 +193,7 @@ const (
 	FlagFailoverDrill                  = "failover_drill"
 	FlagRetryInterval                  = "retry_interval"
 	FlagRetryAttempts                  = "retry_attempts"
+	FlagMaxActivityRetries             = "max_activity_retries"
 	FlagRetryExpiration                = "retry_expiration"
 	FlagRetryBackoff                   = "retry_backoff"
 	FlagRetryMaxInterval               = "retry_max_interval"
