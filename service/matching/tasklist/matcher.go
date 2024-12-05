@@ -410,15 +410,20 @@ func (tm *taskMatcherImpl) Poll(ctx context.Context, isolationGroup string) (*In
 	ctxWithCancelPropagation, stopFn := ctxutils.WithPropagatedContextCancel(ctx, tm.cancelCtx)
 	defer stopFn()
 
-	// try local match first without blocking until context timeout
-	if task, err := tm.pollNonBlocking(ctxWithCancelPropagation, isolatedTaskC, tm.taskC, tm.queryTaskC); err == nil {
-		tm.scope.RecordTimer(metrics.PollLocalMatchLatencyPerTaskList, time.Since(startT))
+	var task *InternalTask
+	var err error
+	defer func() {
 		if task != nil {
 			task.AutoConfigHint = &types.AutoConfigHint{
 				EnableAutoConfig:   tm.config.EnableClientAutoConfig(),
 				PollerWaitTimeInMs: time.Since(startT).Milliseconds(),
 			}
 		}
+	}()
+
+	// try local match first without blocking until context timeout
+	if task, err = tm.pollNonBlocking(ctxWithCancelPropagation, isolatedTaskC, tm.taskC, tm.queryTaskC); err == nil {
+		tm.scope.RecordTimer(metrics.PollLocalMatchLatencyPerTaskList, time.Since(startT))
 		return task, nil
 	}
 	// there is no local poller available to pickup this task. Now block waiting
@@ -435,13 +440,7 @@ func (tm *taskMatcherImpl) Poll(ctx context.Context, isolationGroup string) (*In
 		TaskListKind: tm.tasklistKind.Ptr(),
 		EventName:    "Matcher Falling Back to Non-Local Polling",
 	})
-	task, err := tm.pollOrForward(ctxWithCancelPropagation, startT, isolationGroup, isolatedTaskC, tm.taskC, tm.queryTaskC)
-	if task != nil {
-		task.AutoConfigHint = &types.AutoConfigHint{
-			EnableAutoConfig:   tm.config.EnableClientAutoConfig(),
-			PollerWaitTimeInMs: time.Since(startT).Milliseconds(),
-		}
-	}
+	task, err = tm.pollOrForward(ctxWithCancelPropagation, startT, isolationGroup, isolatedTaskC, tm.taskC, tm.queryTaskC)
 	return task, err
 }
 
