@@ -330,10 +330,6 @@ func (s *matchingEngineSuite) PollForDecisionTasksResultTest() {
 			Name: tl,
 			Kind: &tlKind,
 		},
-		AutoConfigHint: &types.AutoConfigHint{
-			EnableAutoConfig:   false,
-			PollerWaitTimeInMs: 0,
-		},
 	}
 
 	s.Nil(err)
