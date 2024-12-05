@@ -61,7 +61,7 @@ type (
 		AdaptiveScalerUpdateInterval         dynamicconfig.DurationPropertyFnWithTaskListInfoFilters
 		EnableAdaptiveScaler                 dynamicconfig.BoolPropertyFnWithTaskListInfoFilters
 		EnableStandbyTaskCompletion          dynamicconfig.BoolPropertyFnWithTaskListInfoFilters
-		EnableAutoConfig                     dynamicconfig.BoolPropertyFnWithTaskListInfoFilters
+		EnableClientAutoConfig               dynamicconfig.BoolPropertyFnWithTaskListInfoFilters
 
 		// Time to hold a poll request before returning an empty response if there are no tasks
 		LongPollExpirationInterval dynamicconfig.DurationPropertyFnWithTaskListInfoFilters
@@ -142,7 +142,7 @@ type (
 		MaxTimeBetweenTaskDeletes time.Duration
 		// standby task completion configuration
 		EnableStandbyTaskCompletion func() bool
-		EnableAutoConfig            func() bool
+		EnableClientAutoConfig      func() bool
 	}
 )
 
@@ -195,6 +195,6 @@ func NewConfig(dc *dynamicconfig.Collection, hostName string, getIsolationGroups
 		MaxTimeBetweenTaskDeletes:            time.Second,
 		AllIsolationGroups:                   getIsolationGroups,
 		EnableStandbyTaskCompletion:          dc.GetBoolPropertyFilteredByTaskListInfo(dynamicconfig.MatchingEnableStandbyTaskCompletion),
-		EnableAutoConfig:                     dc.GetBoolPropertyFilteredByTaskListInfo(dynamicconfig.MatchingEnableAutoConfig),
+		EnableClientAutoConfig:               dc.GetBoolPropertyFilteredByTaskListInfo(dynamicconfig.MatchingEnableClientAutoConfig),
 	}
 }

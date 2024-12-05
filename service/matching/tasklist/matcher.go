@@ -415,7 +415,7 @@ func (tm *taskMatcherImpl) Poll(ctx context.Context, isolationGroup string) (*In
 		tm.scope.RecordTimer(metrics.PollLocalMatchLatencyPerTaskList, time.Since(startT))
 		if task != nil {
 			task.AutoConfigHint = &types.AutoConfigHint{
-				EnableAutoConfig:   tm.config.EnableAutoConfig(),
+				EnableAutoConfig:   tm.config.EnableClientAutoConfig(),
 				PollerWaitTimeInMs: time.Since(startT).Milliseconds(),
 			}
 		}
@@ -438,7 +438,7 @@ func (tm *taskMatcherImpl) Poll(ctx context.Context, isolationGroup string) (*In
 	task, err := tm.pollOrForward(ctxWithCancelPropagation, startT, isolationGroup, isolatedTaskC, tm.taskC, tm.queryTaskC)
 	if task != nil {
 		task.AutoConfigHint = &types.AutoConfigHint{
-			EnableAutoConfig:   tm.config.EnableAutoConfig(),
+			EnableAutoConfig:   tm.config.EnableClientAutoConfig(),
 			PollerWaitTimeInMs: time.Since(startT).Milliseconds(),
 		}
 	}
