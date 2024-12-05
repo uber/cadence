@@ -413,6 +413,12 @@ func (tm *taskMatcherImpl) Poll(ctx context.Context, isolationGroup string) (*In
 	// try local match first without blocking until context timeout
 	if task, err := tm.pollNonBlocking(ctxWithCancelPropagation, isolatedTaskC, tm.taskC, tm.queryTaskC); err == nil {
 		tm.scope.RecordTimer(metrics.PollLocalMatchLatencyPerTaskList, time.Since(startT))
+		if task != nil {
+			task.AutoConfigHint = &types.AutoConfigHint{
+				EnableAutoConfig:   tm.config.EnableAutoConfig(),
+				PollerWaitTimeInMs: time.Since(startT).Milliseconds(),
+			}
+		}
 		return task, nil
 	}
 	// there is no local poller available to pickup this task. Now block waiting
