@@ -228,7 +228,12 @@ func NewManager(
 	}
 	numReadPartitionsFn := func(cfg *config.TaskListConfig) int {
 		if cfg.EnableGetNumberOfPartitionsFromCache() {
-			return int(tlMgr.TaskListPartitionConfig().NumReadPartitions)
+			partitionConfig := tlMgr.TaskListPartitionConfig()
+			r := 1
+			if partitionConfig != nil {
+				r = int(partitionConfig.NumReadPartitions)
+			}
+			return r
 		}
 		return cfg.NumReadPartitions()
 	}
