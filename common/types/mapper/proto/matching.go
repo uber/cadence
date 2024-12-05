@@ -685,23 +685,3 @@ func ToLoadBalancerHints(t *matchingv1.LoadBalancerHints) *types.LoadBalancerHin
 		RatePerSecond: t.RatePerSecond,
 	}
 }
-
-func FromAutoConfigHint(t *types.AutoConfigHint) *matchingv1.AutoConfigHint {
-	if t == nil {
-		return nil
-	}
-	return &matchingv1.AutoConfigHint{
-		PollerWaitTimeInMs: t.PollerWaitTimeInMs,
-		EnableAutoConfig:   t.EnableAutoConfig,
-	}
-}
-
-func ToAutoConfigHint(t *matchingv1.AutoConfigHint) *types.AutoConfigHint {
-	if t == nil {
-		return nil
-	}
-	return &types.AutoConfigHint{
-		PollerWaitTimeInMs: t.PollerWaitTimeInMs,
-		EnableAutoConfig:   t.EnableAutoConfig,
-	}
-}
