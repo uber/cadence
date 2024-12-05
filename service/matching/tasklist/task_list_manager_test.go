@@ -1518,3 +1518,11 @@ func TestDispatchTask(t *testing.T) {
 		})
 	}
 }
+
+func TestGetNumPartitions(t *testing.T) {
+	tlID, err := NewIdentifier("domain-id", "tl", persistence.TaskListTypeDecision)
+	require.NoError(t, err)
+	tlm, deps := setupMocksForTaskListManager(t, tlID, types.TaskListKindNormal)
+	require.NoError(t, deps.dynamicClient.UpdateValue(dynamicconfig.MatchingEnableGetNumberOfPartitionsFromCache, true))
+	assert.NotPanics(t, func() { tlm.matcher.UpdateRatelimit(common.Ptr(float64(100))) })
+}
