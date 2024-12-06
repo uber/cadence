@@ -119,6 +119,7 @@ func TestMatchingSimulationSuite(t *testing.T) {
 		dynamicconfig.AllIsolationGroups:                           isolationGroups,
 		dynamicconfig.TasklistLoadBalancerStrategy:                 getTasklistLoadBalancerStrategy(clusterConfig.MatchingConfig.SimulationConfig.TasklistLoadBalancerStrategy),
 		dynamicconfig.MatchingEnableGetNumberOfPartitionsFromCache: clusterConfig.MatchingConfig.SimulationConfig.GetPartitionConfigFromDB,
+		dynamicconfig.TaskIsolationDuration:                        clusterConfig.MatchingConfig.SimulationConfig.TaskIsolationDuration,
 	}
 
 	ctrl := gomock.NewController(t)

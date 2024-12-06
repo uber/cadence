@@ -34,8 +34,9 @@ import (
 )
 
 const (
-	IsolationGroupKey = "isolation-group"
-	WorkflowIDKey     = "wf-id"
+	IsolationGroupKey         = "isolation-group"
+	OriginalIsolationGroupKey = "original-isolation-group"
+	WorkflowIDKey             = "wf-id"
 )
 
 // ErrNoIsolationGroupsAvailable is returned when there are no available isolation-groups
