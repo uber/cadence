@@ -368,6 +368,7 @@ func (wh *WorkflowHandler) PollForActivityTask(
 		// Must be cancellation error.  Doesn't matter what we return here.  Client already went away.
 		return nil, nil
 	}
+
 	return &types.PollForActivityTaskResponse{
 		TaskToken:                       matchingResp.TaskToken,
 		WorkflowExecution:               matchingResp.WorkflowExecution,
@@ -385,6 +386,7 @@ func (wh *WorkflowHandler) PollForActivityTask(
 		WorkflowType:                    matchingResp.WorkflowType,
 		WorkflowDomain:                  matchingResp.WorkflowDomain,
 		Header:                          matchingResp.Header,
+		AutoConfigHint:                  matchingResp.AutoConfigHint,
 	}, nil
 }
 
@@ -514,6 +516,7 @@ func (wh *WorkflowHandler) PollForDecisionTask(
 	if err != nil {
 		return nil, err
 	}
+
 	return resp, nil
 }
 
@@ -2986,6 +2989,7 @@ func (wh *WorkflowHandler) createPollForDecisionTaskResponse(
 		Queries:                   matchingResp.Queries,
 		NextEventID:               matchingResp.NextEventID,
 		TotalHistoryBytes:         matchingResp.TotalHistoryBytes,
+		AutoConfigHint:            matchingResp.AutoConfigHint,
 	}
 
 	return resp, nil

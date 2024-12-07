@@ -407,6 +407,7 @@ func FromMatchingPollForActivityTaskResponse(t *types.MatchingPollForActivityTas
 		Header:                     FromHeader(t.Header),
 		PartitionConfig:            FromTaskListPartitionConfig(t.PartitionConfig),
 		LoadBalancerHints:          FromLoadBalancerHints(t.LoadBalancerHints),
+		AutoConfigHint:             FromAutoConfigHint(t.AutoConfigHint),
 	}
 }
 
@@ -433,6 +434,7 @@ func ToMatchingPollForActivityTaskResponse(t *matchingv1.PollForActivityTaskResp
 		Header:                          ToHeader(t.Header),
 		PartitionConfig:                 ToTaskListPartitionConfig(t.PartitionConfig),
 		LoadBalancerHints:               ToLoadBalancerHints(t.LoadBalancerHints),
+		AutoConfigHint:                  ToAutoConfigHint(t.AutoConfigHint),
 	}
 }
 
@@ -487,6 +489,7 @@ func FromMatchingPollForDecisionTaskResponse(t *types.MatchingPollForDecisionTas
 		TotalHistoryBytes:         t.TotalHistoryBytes,
 		PartitionConfig:           FromTaskListPartitionConfig(t.PartitionConfig),
 		LoadBalancerHints:         FromLoadBalancerHints(t.LoadBalancerHints),
+		AutoConfigHint:            FromAutoConfigHint(t.AutoConfigHint),
 	}
 }
 
@@ -515,6 +518,7 @@ func ToMatchingPollForDecisionTaskResponse(t *matchingv1.PollForDecisionTaskResp
 		TotalHistoryBytes:         t.TotalHistoryBytes,
 		PartitionConfig:           ToTaskListPartitionConfig(t.PartitionConfig),
 		LoadBalancerHints:         ToLoadBalancerHints(t.LoadBalancerHints),
+		AutoConfigHint:            ToAutoConfigHint(t.AutoConfigHint),
 	}
 }
 

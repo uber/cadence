@@ -3906,6 +3906,7 @@ type PollForActivityTaskResponse struct {
 	WorkflowType                    *WorkflowType      `json:"workflowType,omitempty"`
 	WorkflowDomain                  string             `json:"workflowDomain,omitempty"`
 	Header                          *Header            `json:"header,omitempty"`
+	AutoConfigHint                  *AutoConfigHint    `json:"autoConfigHint,omitempty"`
 }
 
 // GetActivityID is an internal getter (TBD...)
@@ -3974,6 +3975,7 @@ type PollForDecisionTaskResponse struct {
 	Queries                   map[string]*WorkflowQuery `json:"queries,omitempty"`
 	NextEventID               int64                     `json:"nextEventId,omitempty"`
 	TotalHistoryBytes         int64                     `json:"historySize,omitempty"`
+	AutoConfigHint            *AutoConfigHint           `json:"autoConfigHint,omitempty"`
 }
 
 // GetTaskToken is an internal getter (TBD...)
@@ -8100,4 +8102,10 @@ type Any struct {
 	//
 	// To interpret, you MUST check ValueType.
 	Value []byte `json:"value"`
+}
+
+// AutoConfigHint is an internal type (TBD...)
+type AutoConfigHint struct {
+	EnableAutoConfig   bool  `json:"enableAutoConfig"`
+	PollerWaitTimeInMs int64 `json:"pollerWaitTimeInMs"`
 }

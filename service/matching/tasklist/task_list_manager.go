@@ -1044,6 +1044,9 @@ func newTaskListConfig(id *Identifier, cfg *config.Config, domainName string) *c
 		EnableStandbyTaskCompletion: func() bool {
 			return cfg.EnableStandbyTaskCompletion(domainName, taskListName, taskType)
 		},
+		EnableClientAutoConfig: func() bool {
+			return cfg.EnableClientAutoConfig(domainName, taskListName, taskType)
+		},
 	}
 }
 

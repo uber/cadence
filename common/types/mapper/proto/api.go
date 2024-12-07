@@ -6095,3 +6095,23 @@ func ToAPITaskListPartitionConfig(t *apiv1.TaskListPartitionConfig) *types.TaskL
 		NumWritePartitions: t.NumWritePartitions,
 	}
 }
+
+func FromAutoConfigHint(t *types.AutoConfigHint) *apiv1.AutoConfigHint {
+	if t == nil {
+		return nil
+	}
+	return &apiv1.AutoConfigHint{
+		PollerWaitTimeInMs: t.PollerWaitTimeInMs,
+		EnableAutoConfig:   t.EnableAutoConfig,
+	}
+}
+
+func ToAutoConfigHint(t *apiv1.AutoConfigHint) *types.AutoConfigHint {
+	if t == nil {
+		return nil
+	}
+	return &types.AutoConfigHint{
+		PollerWaitTimeInMs: t.PollerWaitTimeInMs,
+		EnableAutoConfig:   t.EnableAutoConfig,
+	}
+}

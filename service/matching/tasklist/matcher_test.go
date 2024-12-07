@@ -1638,3 +1638,23 @@ func ensureAsyncReady(ctxTimeout time.Duration, cb func(ctx context.Context)) (w
 		<-closed
 	}
 }
+
+func (t *MatcherTestSuite) Test_LocalSyncMatch_AutoConfigHint() {
+	t.disableRemoteForwarding("")
+
+	wait := ensureAsyncReady(time.Second, func(ctx context.Context) {
+		task, err := t.matcher.Poll(ctx, "")
+		t.NotNil(task.AutoConfigHint)
+		t.Equal(false, task.AutoConfigHint.EnableAutoConfig) // disabled by default
+		if err == nil {
+			task.Finish(nil)
+		}
+	})
+
+	task := newInternalTask(t.newTaskInfo(), nil, types.TaskSourceHistory, "", true, nil, "")
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	_, err := t.matcher.Offer(ctx, task)
+	cancel()
+	wait()
+	t.NoError(err)
+}

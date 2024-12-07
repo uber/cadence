@@ -410,8 +410,19 @@ func (tm *taskMatcherImpl) Poll(ctx context.Context, isolationGroup string) (*In
 	ctxWithCancelPropagation, stopFn := ctxutils.WithPropagatedContextCancel(ctx, tm.cancelCtx)
 	defer stopFn()
 
+	var task *InternalTask
+	var err error
+	defer func() {
+		if task != nil {
+			task.AutoConfigHint = &types.AutoConfigHint{
+				EnableAutoConfig:   tm.config.EnableClientAutoConfig(),
+				PollerWaitTimeInMs: time.Since(startT).Milliseconds(),
+			}
+		}
+	}()
+
 	// try local match first without blocking until context timeout
-	if task, err := tm.pollNonBlocking(ctxWithCancelPropagation, isolatedTaskC, tm.taskC, tm.queryTaskC); err == nil {
+	if task, err = tm.pollNonBlocking(ctxWithCancelPropagation, isolatedTaskC, tm.taskC, tm.queryTaskC); err == nil {
 		tm.scope.RecordTimer(metrics.PollLocalMatchLatencyPerTaskList, time.Since(startT))
 		return task, nil
 	}
@@ -429,7 +440,8 @@ func (tm *taskMatcherImpl) Poll(ctx context.Context, isolationGroup string) (*In
 		TaskListKind: tm.tasklistKind.Ptr(),
 		EventName:    "Matcher Falling Back to Non-Local Polling",
 	})
-	return tm.pollOrForward(ctxWithCancelPropagation, startT, isolationGroup, isolatedTaskC, tm.taskC, tm.queryTaskC)
+	task, err = tm.pollOrForward(ctxWithCancelPropagation, startT, isolationGroup, isolatedTaskC, tm.taskC, tm.queryTaskC)
+	return task, err
 }
 
 // PollForQuery blocks until a *query* task is found or context deadline is exceeded
