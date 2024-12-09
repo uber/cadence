@@ -25,7 +25,6 @@ package main
 import (
 	"bytes"
 	"encoding/csv"
-	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
@@ -36,8 +35,6 @@ import (
 	"sort"
 	"strings"
 	"time"
-
-	"github.com/uber/cadence/service/matching/event"
 )
 
 var (
@@ -110,8 +107,6 @@ func mustGenerateReports(root string, scenarios []string, ts string) {
 
 		summaryFile := scenarioSummaryFile(root, scenario, ts)
 		csvData[scenario] = mustParseSummaryFile(summaryFile, scenario)
-
-		mustGenerateGraphs(root, scenario, ts)
 	}
 
 	if len(missingScenarios) == len(scenarios) {
@@ -143,25 +138,6 @@ func mustGenerateReports(root string, scenarios []string, ts string) {
 	}
 
 	fmt.Printf("Comparison CSV generated at: %s\n", outputFile)
-}
-
-func mustGenerateGraphs(root, scenario, ts string) {
-	eventFile := scenarioRawEventsFile(root, scenario, ts)
-	reader, err := os.Open(eventFile)
-	if err != nil {
-		log.Fatalf("Could not open event file %s, err: %v", eventFile, err)
-	}
-	defer reader.Close()
-
-	d := json.NewDecoder(reader)
-	for d.More() {
-		var e event.E
-		if err := d.Decode(&e); err != nil {
-			log.Fatalf("Could not decode event from file %s, err: %v", eventFile, err)
-		}
-
-		// TODO: use echarts to grab stuff from events and generate html
-	}
 }
 
 func csvFilePath(root string) string {
