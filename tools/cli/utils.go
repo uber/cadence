@@ -553,11 +553,11 @@ func timestampPtrToStringPtr(unixNanoPtr *int64, onlyTime bool) *string {
 	if unixNanoPtr == nil {
 		return nil
 	}
-	return common.StringPtr(convertTime(*unixNanoPtr, onlyTime))
+	return common.StringPtr(timestampToString(*unixNanoPtr, onlyTime))
 }
 
-func convertTime(unixNano int64, onlyTime bool) string {
-	t := time.Unix(0, unixNano)
+func timestampToString(unixNano int64, onlyTime bool) string {
+	t := time.Unix(0, unixNano).UTC()
 	var result string
 	if onlyTime {
 		result = t.Format(defaultTimeFormat)
