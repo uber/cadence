@@ -165,14 +165,14 @@ func ListBatchJobs(c *cli.Context) error {
 	for _, wf := range resp.Executions {
 		job := map[string]string{
 			"jobID":     wf.Execution.GetWorkflowID(),
-			"startTime": convertTime(wf.GetStartTime(), false),
+			"startTime": timestampToString(wf.GetStartTime(), false),
 			"reason":    string(wf.Memo.Fields["Reason"]),
 			"operator":  string(wf.SearchAttributes.IndexedFields["Operator"]),
 		}
 
 		if wf.CloseStatus != nil {
 			job["status"] = wf.CloseStatus.String()
-			job["closeTime"] = convertTime(wf.GetCloseTime(), false)
+			job["closeTime"] = timestampToString(wf.GetCloseTime(), false)
 		} else {
 			job["status"] = "RUNNING"
 		}

@@ -226,7 +226,7 @@ func showHistoryHelper(c *cli.Context, wid, rid string) error {
 			if printRawTime {
 				columns = append(columns, strconv.FormatInt(e.GetTimestamp(), 10))
 			} else if printDateTime {
-				columns = append(columns, convertTime(e.GetTimestamp(), false))
+				columns = append(columns, timestampToString(e.GetTimestamp(), false))
 			}
 			if printVersion {
 				columns = append(columns, fmt.Sprintf("(Version: %v)", e.Version))
@@ -604,9 +604,9 @@ func printWorkflowProgress(c *cli.Context, domain, wid, rid string) error {
 				isTimeElapseExist = false
 			}
 			if showDetails {
-				fmt.Printf("  %d, %s, %s, %s\n", event.ID, convertTime(event.GetTimestamp(), false), ColorEvent(event), HistoryEventToString(event, true, maxFieldLength))
+				fmt.Printf("  %d, %s, %s, %s\n", event.ID, timestampToString(event.GetTimestamp(), false), ColorEvent(event), HistoryEventToString(event, true, maxFieldLength))
 			} else {
-				fmt.Printf("  %d, %s, %s\n", event.ID, convertTime(event.GetTimestamp(), false), ColorEvent(event))
+				fmt.Printf("  %d, %s, %s\n", event.ID, timestampToString(event.GetTimestamp(), false), ColorEvent(event))
 			}
 			lastEvent = event
 		}
@@ -1177,8 +1177,8 @@ func convertDescribeWorkflowExecutionResponse(resp *types.DescribeWorkflowExecut
 	executionInfo := workflowExecutionInfo{
 		Execution:        info.Execution,
 		Type:             info.Type,
-		StartTime:        common.StringPtr(convertTime(info.GetStartTime(), false)),
-		CloseTime:        common.StringPtr(convertTime(info.GetCloseTime(), false)),
+		StartTime:        common.StringPtr(timestampToString(info.GetStartTime(), false)),
+		CloseTime:        common.StringPtr(timestampToString(info.GetCloseTime(), false)),
 		CloseStatus:      info.CloseStatus,
 		HistoryLength:    info.HistoryLength,
 		ParentDomainID:   info.ParentDomainID,
