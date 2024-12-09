@@ -29,11 +29,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/flynn/go-shlex"
 	"github.com/golang/mock/gomock"
 	"github.com/olekukonko/tablewriter"
 	"github.com/olivere/elastic"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"github.com/urfave/cli/v2"
 
@@ -142,19 +144,29 @@ func (s *cliAppSuite) TearDownTest() {
 	s.mockCtrl.Finish() // assert mock’s expectations
 }
 
-func (s *cliAppSuite) testcaseHelper(testcases []testcase) {
-	for _, tt := range testcases {
-		s.T().Run(tt.name, func(t *testing.T) {
-			if tt.mock != nil {
-				tt.mock()
-			}
-			err := s.app.Run(strings.Split(tt.command, " "))
-			if tt.err != "" {
-				assert.ErrorContains(t, err, tt.err)
-			} else {
-				assert.NoError(t, err)
-			}
-		})
+func (s *cliAppSuite) SetupSubTest() {
+	// this is required to re-establish mocks on subtest-level
+	// otherwise you will confusingly see expectations from previous test-cases on errors
+	s.SetupTest()
+}
+
+func (s *cliAppSuite) TearDownSubTest() {
+	s.TearDownTest()
+}
+
+func (s *cliAppSuite) runTestCase(tt testcase) {
+	if tt.mock != nil {
+		tt.mock()
+	}
+
+	args, err := shlex.Split(tt.command)
+	require.NoError(s.T(), err)
+	err = s.app.Run(args)
+
+	if tt.err != "" {
+		assert.ErrorContains(s.T(), err, tt.err)
+	} else {
+		assert.NoError(s.T(), err)
 	}
 }
 
