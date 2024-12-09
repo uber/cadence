@@ -28,8 +28,8 @@ matchingconfig:
     enableadaptivescaler: true
     partitiondownscalefactor: 0.75
     partitionupscalerps: 200
-    partitionupscalesustainedduration: 1m
-    partitiondownscalesustainedduration: 1m
-    adaptivescalerupdateinterval: 2s
+    partitionupscalesustainedduration: 5s
+    partitiondownscalesustainedduration: 5s
+    adaptivescalerupdateinterval: 1s
 workerconfig:
   enableasyncwfconsumer: false
