@@ -24,6 +24,7 @@ package failure
 
 import (
 	"context"
+	"github.com/uber/cadence/common"
 	"strings"
 
 	"github.com/uber/cadence/common/types"
@@ -58,26 +59,58 @@ func (f *failure) Check(context.Context) ([]invariant.InvariantCheckResult, erro
 			attr := event.WorkflowExecutionFailedEventAttributes
 			reason := attr.Reason
 			identity := fetchIdentity(attr, events)
-			result = append(result, invariant.InvariantCheckResult{
-				InvariantType: WorkflowFailed.String(),
-				Reason:        ErrorTypeFromReason(*reason).String(),
-				Metadata:      invariant.MarshalData(FailureMetadata{Identity: identity}),
-			})
+			if *reason == common.FailureReasonDecisionBlobSizeExceedsLimit {
+				result = append(result, invariant.InvariantCheckResult{
+					InvariantType: DecisionCausedFailure.String(),
+					Reason:        string(attr.Details),
+					Metadata:      invariant.MarshalData(FailureMetadata{Identity: identity}),
+				})
+			} else {
+				result = append(result, invariant.InvariantCheckResult{
+					InvariantType: WorkflowFailed.String(),
+					Reason:        ErrorTypeFromReason(*reason).String(),
+					Metadata:      invariant.MarshalData(FailureMetadata{Identity: identity}),
+				})
+			}
+
 		}
 		if event.GetActivityTaskFailedEventAttributes() != nil && event.ActivityTaskFailedEventAttributes.Reason != nil {
 			attr := event.ActivityTaskFailedEventAttributes
 			reason := attr.Reason
 			scheduled := fetchScheduledEvent(attr, events)
 			started := fetchStartedEvent(attr, events)
-			result = append(result, invariant.InvariantCheckResult{
-				InvariantType: ActivityFailed.String(),
-				Reason:        ErrorTypeFromReason(*reason).String(),
-				Metadata: invariant.MarshalData(FailureMetadata{
-					Identity:          attr.Identity,
-					ActivityScheduled: scheduled,
-					ActivityStarted:   started,
-				}),
-			})
+			if *reason == common.FailureReasonHeartbeatExceedsLimit {
+				result = append(result, invariant.InvariantCheckResult{
+					InvariantType: ActivityFailed.String(),
+					Reason:        HeartBeatBlobSizeLimit.String(),
+					Metadata: invariant.MarshalData(FailureMetadata{
+						Identity:          attr.Identity,
+						ActivityScheduled: scheduled,
+						ActivityStarted:   started,
+					}),
+				})
+			} else if *reason == common.FailureReasonCompleteResultExceedsLimit {
+				result = append(result, invariant.InvariantCheckResult{
+					InvariantType: ActivityFailed.String(),
+					Reason:        ActivityOutputBlobSizeLimit.String(),
+					Metadata: invariant.MarshalData(FailureMetadata{
+						Identity:          attr.Identity,
+						ActivityScheduled: scheduled,
+						ActivityStarted:   started,
+					}),
+				})
+			} else {
+				result = append(result, invariant.InvariantCheckResult{
+					InvariantType: ActivityFailed.String(),
+					Reason:        ErrorTypeFromReason(*reason).String(),
+					Metadata: invariant.MarshalData(FailureMetadata{
+						Identity:          attr.Identity,
+						ActivityScheduled: scheduled,
+						ActivityStarted:   started,
+					}),
+				})
+			}
+
 		}
 	}
 	return result, nil

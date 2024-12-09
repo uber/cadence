@@ -90,6 +90,23 @@ func Test__Check(t *testing.T) {
 			},
 			err: nil,
 		},
+		{
+			name:     "blob size limit exceeded",
+			testData: blobSizeLimitExceededHistory(),
+			expectedResult: []invariant.InvariantCheckResult{
+				{
+					InvariantType: ActivityFailed.String(),
+					Reason:        ActivityOutputBlobSizeLimit.String(),
+					Metadata:      actMetadataInBytes,
+				},
+				{
+					InvariantType: DecisionCausedFailure.String(),
+					Reason:        "test-wf-failure",
+					Metadata:      metadataInBytes,
+				},
+			},
+			err: nil,
+		},
 	}
 	for _, tc := range testCases {
 		inv := NewInvariant(Params{
@@ -158,6 +175,51 @@ func failedWfHistory() *types.GetWorkflowExecutionHistoryResponse {
 					WorkflowExecutionFailedEventAttributes: &types.WorkflowExecutionFailedEventAttributes{
 						Reason:                       common.StringPtr("cadenceInternal:Timeout START_TO_CLOSE"),
 						Details:                      []byte("test-activity-failure"),
+						DecisionTaskCompletedEventID: 10,
+					},
+				},
+			},
+		},
+	}
+}
+
+func blobSizeLimitExceededHistory() *types.GetWorkflowExecutionHistoryResponse {
+	return &types.GetWorkflowExecutionHistoryResponse{
+		History: &types.History{
+			Events: []*types.HistoryEvent{
+				{
+					ID: 1,
+					ActivityTaskScheduledEventAttributes: &types.ActivityTaskScheduledEventAttributes{
+						ActivityID:   "101",
+						ActivityType: &types.ActivityType{Name: "test-activity"},
+					},
+				},
+				{
+					ID: 2,
+					ActivityTaskStartedEventAttributes: &types.ActivityTaskStartedEventAttributes{
+						Identity: "localhost",
+						Attempt:  0,
+					},
+				},
+				{
+					ActivityTaskFailedEventAttributes: &types.ActivityTaskFailedEventAttributes{
+						Reason:           common.StringPtr("COMPLETE_RESULT_EXCEEDS_LIMIT"),
+						Details:          []byte("test-activity-failure"),
+						Identity:         "localhost",
+						ScheduledEventID: 1,
+						StartedEventID:   2,
+					},
+				},
+				{
+					ID: 10,
+					DecisionTaskCompletedEventAttributes: &types.DecisionTaskCompletedEventAttributes{
+						Identity: "localhost",
+					},
+				},
+				{
+					WorkflowExecutionFailedEventAttributes: &types.WorkflowExecutionFailedEventAttributes{
+						Reason:                       common.StringPtr("DECISION_BLOB_SIZE_EXCEEDS_LIMIT"),
+						Details:                      []byte("test-wf-failure"),
 						DecisionTaskCompletedEventID: 10,
 					},
 				},
