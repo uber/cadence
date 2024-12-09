@@ -39,11 +39,14 @@ import (
 
 var (
 	scenarioFilter = flag.String("scenarios", ".*", "Regex to filter the tests to execute by name")
-	outputFile     = flag.String("out", "simulation_comparison.csv", "Output file")
 	mode           = flag.String("mode", "RunAndCompare", "Mode to run the tool in. Options: RunAndCompare, Compare. "+
 		"RunAndCompare runs the simulation and compares the results. "+
 		"Compare only compares the results of previously run results. Compare requires --ts flag to be set.")
 	timestamp = flag.String("ts", "", "Timestamp of the simulation run to compare in following format '2006-01-02-15-04-05'. Required when mode is Compare")
+)
+
+const (
+	outputFolder = "matching-simulator-output"
 )
 
 var (
@@ -86,32 +89,35 @@ func main() {
 		}
 	}
 
-	mustGenerateComparisonCSV(root, scenarios, ts, *outputFile)
+	mustGenerateReports(root, scenarios, ts)
 }
 
-func mustGenerateComparisonCSV(root string, scenarios []string, ts, outputFile string) {
+func mustGenerateReports(root string, scenarios []string, ts string) {
 	// outer key is scenario name, inner key is stat name, value is stat value
 	csvData := make(map[string]map[string]string)
 
 	var missingScenarios []string
+	var missingScenariosReasons []string
 	for _, scenario := range scenarios {
-		summaryFile := scenarioSummaryFile(root, scenario, ts)
-		if !scenarioHasRun(summaryFile) {
+		if reason, ok := scenarioHasRun(root, scenario, ts); !ok {
 			missingScenarios = append(missingScenarios, scenario)
+			missingScenariosReasons = append(missingScenariosReasons, reason)
 			continue
 		}
 
+		summaryFile := scenarioSummaryFile(root, scenario, ts)
 		csvData[scenario] = mustParseSummaryFile(summaryFile, scenario)
 	}
 
 	if len(missingScenarios) == len(scenarios) {
-		log.Fatalf("No simulation results found for any of the scenarios for timestamp: %s", ts)
+		log.Fatalf("No simulation results found for any of the scenarios for timestamp: %s, reasons:\n%s", ts, strings.Join(missingScenariosReasons, "\n"))
 	}
 
 	allStatKeys := mustGetAllStatKeys(csvData)
 	headers := append([]string{"scenario"}, allStatKeys...)
 	var data [][]string
-	writer := mustNewCSVWriter(outputFile)
+	outputFile := csvFilePath(root)
+	writer := mustNewCSVWriter(csvFilePath(root))
 	for scenario, stats := range csvData {
 		row := []string{scenario}
 		for _, key := range allStatKeys {
@@ -132,6 +138,10 @@ func mustGenerateComparisonCSV(root string, scenarios []string, ts, outputFile s
 	}
 
 	fmt.Printf("Comparison CSV generated at: %s\n", outputFile)
+}
+
+func csvFilePath(root string) string {
+	return path.Join(root, outputFolder, "comparison.csv")
 }
 
 func mustGetAllStatKeys(csvData map[string]map[string]string) []string {
@@ -210,8 +220,13 @@ func scenarioSummaryFile(root, scenario, ts string) string {
 	return path.Join(root, fmt.Sprintf("matching-simulator-output/test-%s-%s-summary.txt", scenario, ts))
 }
 
+func scenarioRawEventsFile(root, scenario, ts string) string {
+	// e.g. matching-simulator-output/test-default-2024-09-12-18-16-44-events.json
+	return path.Join(root, fmt.Sprintf("matching-simulator-output/test-%s-%s-events.json", scenario, ts))
+}
+
 func mustRunScenario(root, scenario, ts string) {
-	if scenarioHasRun(scenarioSummaryFile(root, scenario, ts)) {
+	if _, ok := scenarioHasRun(root, scenario, ts); ok {
 		fmt.Printf("Scenario %s already ran for timestamp %s, skipping\n", scenario, ts)
 		return
 	}
@@ -225,7 +240,7 @@ func mustRunScenario(root, scenario, ts string) {
 	err := cmd.Run()
 
 	if err != nil {
-		log.Fatalf("Could not run scenario %s, err: %v,\n-----stdout:-----\n%s\n----stderr:----\n%s", scenario, err, stdout.String(), stderr.String())
+		log.Fatalf("Could not run scenario %s, err: %v,\n-----stdout:-----\n%s\n----stderr:----\n%s\nMore details can be found in test.log file.\n", scenario, err, stdout.String(), stderr.String())
 	}
 
 	fmt.Printf("Finished running scenario: %s in %v seconds\n", scenario, time.Since(start).Seconds())
@@ -269,11 +284,6 @@ func mustGetSimulationScenarios(root string) []string {
 func validateAndParseFlags() {
 	flag.Parse()
 
-	if *outputFile == "" {
-		fmt.Println("--output is required")
-		os.Exit(1)
-	}
-
 	if *mode != "RunAndCompare" && *mode != "Compare" {
 		fmt.Println("--mode must be RunAndCompare or Compare")
 		os.Exit(1)
@@ -285,18 +295,31 @@ func validateAndParseFlags() {
 	}
 }
 
-func scenarioHasRun(path string) bool {
-	_, err := os.Stat(path)
+func scenarioHasRun(root, scenario, ts string) (string, bool) {
+	// check if summary file exists and complete
+	summaryFilePath := scenarioSummaryFile(root, scenario, ts)
+	_, err := os.Stat(summaryFilePath)
 	if os.IsNotExist(err) {
-		return false
+		return fmt.Sprintf("summary file %s doesn't exist", summaryFilePath), false
 	}
 
-	content, err := os.ReadFile(path)
+	content, err := os.ReadFile(summaryFilePath)
 	if err != nil {
-		log.Fatalf("Could not read file %s, err: %v", path, err)
+		log.Fatalf("Could not read summary file %s, err: %v", summaryFilePath, err)
 	}
 
-	return strings.Contains(string(content), "End of summary")
+	if !strings.Contains(string(content), "End of summary") {
+		return fmt.Sprintf("summary file %s doesn't contain 'End of summary'", summaryFilePath), false
+	}
+
+	// check if raw events file exists
+	eventFilePath := scenarioRawEventsFile(root, scenario, ts)
+	_, err = os.Stat(eventFilePath)
+	if os.IsNotExist(err) {
+		return fmt.Sprintf("event file %s doesn't exist", eventFilePath), false
+	}
+
+	return "", true
 }
 
 func mustGetRootDir() string {

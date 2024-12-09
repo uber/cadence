@@ -32,7 +32,7 @@ To run locally:
 Full test logs can be found at test.log file. Event json logs can be found at matching-simulator-output folder.
 See the run_matching_simulator.sh script for more details about how to parse events.
 
-If you want to run all the scenarios and compare them refer to tools/matchingsimulationcomparison/README.md
+If you want to run multiple scenarios and compare them refer to tools/matchingsimulationcomparison/README.md
 */
 package host
 
@@ -119,6 +119,12 @@ func TestMatchingSimulationSuite(t *testing.T) {
 		dynamicconfig.AllIsolationGroups:                           isolationGroups,
 		dynamicconfig.TasklistLoadBalancerStrategy:                 getTasklistLoadBalancerStrategy(clusterConfig.MatchingConfig.SimulationConfig.TasklistLoadBalancerStrategy),
 		dynamicconfig.MatchingEnableGetNumberOfPartitionsFromCache: clusterConfig.MatchingConfig.SimulationConfig.GetPartitionConfigFromDB,
+		dynamicconfig.MatchingEnableAdaptiveScaler:                 clusterConfig.MatchingConfig.SimulationConfig.EnableAdaptiveScaler,
+		dynamicconfig.MatchingPartitionDownscaleFactor:             clusterConfig.MatchingConfig.SimulationConfig.PartitionDownscaleFactor,
+		dynamicconfig.MatchingPartitionUpscaleRPS:                  clusterConfig.MatchingConfig.SimulationConfig.PartitionUpscaleRPS,
+		dynamicconfig.MatchingPartitionUpscaleSustainedDuration:    clusterConfig.MatchingConfig.SimulationConfig.PartitionUpscaleSustainedDuration,
+		dynamicconfig.MatchingPartitionDownscaleSustainedDuration:  clusterConfig.MatchingConfig.SimulationConfig.PartitionDownscaleSustainedDuration,
+		dynamicconfig.MatchingAdaptiveScalerUpdateInterval:         clusterConfig.MatchingConfig.SimulationConfig.AdaptiveScalerUpdateInterval,
 	}
 
 	ctrl := gomock.NewController(t)
@@ -190,7 +196,8 @@ func (s *MatchingSimulationSuite) TestMatchingSimulation() {
 	domainID := s.domainID(ctx)
 	tasklist := "my-tasklist"
 
-	if s.testClusterConfig.MatchingConfig.SimulationConfig.GetPartitionConfigFromDB {
+	if s.testClusterConfig.MatchingConfig.SimulationConfig.GetPartitionConfigFromDB &&
+		!s.testClusterConfig.MatchingConfig.SimulationConfig.EnableAdaptiveScaler {
 		_, err := s.testCluster.GetMatchingClient().UpdateTaskListPartitionConfig(ctx, &types.MatchingUpdateTaskListPartitionConfigRequest{
 			DomainUUID:   domainID,
 			TaskList:     &types.TaskList{Name: tasklist, Kind: types.TaskListKindNormal.Ptr()},

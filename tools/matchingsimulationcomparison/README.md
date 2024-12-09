@@ -6,12 +6,18 @@ Note: The parsing logic might break in the future if the `run_matching_simulator
 
 Run all the scenarios and compare:
 ```
-go run tools/matchingsimulationcomparison/*.go --out simulation_comparison.csv
+go run tools/matchingsimulationcomparison/*.go
 ```
 
-If you have already run some scenarios before and made changes in the output/comparison then run in Compare mode
+Run subset of scenarios and compare:
 ```
-go run tools/matchingsimulationcomparison/*.go --out simulation_comparison.csv \
-    --ts 2024-09-12-18-16-44 \
+go run tools/matchingsimulationcomparison/*.go \
+    --scenarios "burst"
+```
+
+If you have already run some scenarios before and made changes in the csv output then run in Compare mode
+```
+go run tools/matchingsimulationcomparison/*.go \
+    --ts 2024-11-27-21-29-55 \
     --mode Compare
 ```

@@ -12,7 +12,7 @@ timestamp="${2:-$now}"
 testName="test-$testCase-$timestamp"
 resultFolder="matching-simulator-output"
 mkdir -p "$resultFolder"
-eventLogsFile="$resultFolder/events.json"
+eventLogsFile="$resultFolder/$testName-events.json"
 testSummaryFile="$resultFolder/$testName-summary.txt"
 
 echo "Building test image"

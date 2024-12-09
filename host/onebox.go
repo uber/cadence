@@ -192,7 +192,17 @@ type (
 
 		Backlogs []SimulationBacklogConfiguration
 
+		// GetPartitionConfigFromDB indicates whether to get the partition config from DB or not.
+		// This is a prerequisite for adaptive scaler.
 		GetPartitionConfigFromDB bool
+
+		// Adaptive scaler configurations
+		EnableAdaptiveScaler                bool
+		PartitionDownscaleFactor            float64
+		PartitionUpscaleRPS                 float64
+		PartitionUpscaleSustainedDuration   time.Duration
+		PartitionDownscaleSustainedDuration time.Duration
+		AdaptiveScalerUpdateInterval        time.Duration
 	}
 
 	SimulationPollerConfiguration struct {

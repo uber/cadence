@@ -39,6 +39,7 @@ import (
 	"github.com/uber/cadence/common/stats"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/matching/config"
+	"github.com/uber/cadence/service/matching/event"
 )
 
 type (
@@ -65,6 +66,7 @@ type (
 		overLoadStartTime  time.Time
 		underLoad          bool
 		underLoadStartTime time.Time
+		baseEvent          event.E
 	}
 )
 
@@ -77,6 +79,7 @@ func NewAdaptiveScaler(
 	logger log.Logger,
 	scope metrics.Scope,
 	matchingClient matching.Client,
+	baseEvent event.E,
 ) AdaptiveScaler {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &adaptiveScalerImpl{
@@ -93,6 +96,7 @@ func NewAdaptiveScaler(
 		cancel:         cancel,
 		overLoad:       false,
 		underLoad:      false,
+		baseEvent:      baseEvent,
 	}
 }
 
@@ -140,10 +144,19 @@ func (a *adaptiveScalerImpl) run() {
 	// adjust the number of read partitions
 	numReadPartitions := a.adjustReadPartitions(partitionConfig.NumReadPartitions, numWritePartitions)
 
+	e := a.baseEvent
+	e.EventName = "AdaptiveScalerCalculationResult"
+	e.Payload = map[string]any{
+		"NumReadPartitions":  numReadPartitions,
+		"NumWritePartitions": numWritePartitions,
+		"QPS":                qps,
+	}
+	event.Log(e)
+
 	if numReadPartitions == partitionConfig.NumReadPartitions && numWritePartitions == partitionConfig.NumWritePartitions {
 		return
 	}
-	a.logger.Info("update the number of partitions", tag.CurrentQPS(qps), tag.NumReadPartitions(numReadPartitions), tag.NumWritePartitions(numWritePartitions), tag.Dynamic("task-list-partition-config", partitionConfig))
+	a.logger.Info("adaptive scaler is updating number of partitions", tag.CurrentQPS(qps), tag.NumReadPartitions(numReadPartitions), tag.NumWritePartitions(numWritePartitions), tag.Dynamic("task-list-partition-config", partitionConfig))
 	a.scope.IncCounter(metrics.CadenceRequests)
 	err := a.tlMgr.UpdateTaskListPartitionConfig(a.ctx, &types.TaskListPartitionConfig{
 		NumReadPartitions:  numReadPartitions,

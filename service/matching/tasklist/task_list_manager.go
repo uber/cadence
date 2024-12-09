@@ -212,11 +212,17 @@ func NewManager(
 		tlMgr.logger.Info("Task list manager stopping because no recent events", tag.Dynamic("interval", livenessInterval))
 		tlMgr.Stop()
 	})
-	tlMgr.qpsTracker = stats.NewEmaFixedWindowQPSTracker(timeSource, 0.5, 10*time.Second)
+
+	baseEvent := event.E{
+		TaskListName: taskList.GetName(),
+		TaskListKind: taskListKind,
+		TaskListType: taskList.GetType(),
+	}
+	tlMgr.qpsTracker = stats.NewEmaFixedWindowQPSTracker(timeSource, 0.5, 10*time.Second, baseEvent)
 	if taskList.IsRoot() && *taskListKind == types.TaskListKindNormal {
 		adaptiveScalerScope := common.NewPerTaskListScope(domainName, taskList.GetName(), *taskListKind, metricsClient, metrics.MatchingAdaptiveScalerScope).
 			Tagged(getTaskListTypeTag(taskList.GetType()))
-		tlMgr.adaptiveScaler = NewAdaptiveScaler(taskList, tlMgr, tlMgr.qpsTracker, taskListConfig, timeSource, tlMgr.logger, adaptiveScalerScope, matchingClient)
+		tlMgr.adaptiveScaler = NewAdaptiveScaler(taskList, tlMgr, tlMgr.qpsTracker, taskListConfig, timeSource, tlMgr.logger, adaptiveScalerScope, matchingClient, baseEvent)
 	}
 	var isolationGroups []string
 	if tlMgr.isIsolationMatcherEnabled() {
@@ -388,6 +394,8 @@ func (c *taskListManagerImpl) RefreshTaskListPartitionConfig(ctx context.Context
 	return nil
 }
 
+// UpdateTaskListPartitionConfig updates the task list partition config. It is called by adaptive scaler component on the root partition.
+// Root tasklist manager will update the partition config in the database and notify all non-root partitions.
 func (c *taskListManagerImpl) UpdateTaskListPartitionConfig(ctx context.Context, config *types.TaskListPartitionConfig) error {
 	c.startWG.Wait()
 	numberOfPartitionsToRefresh, currentConfig, err := c.updatePartitionConfig(ctx, config)
