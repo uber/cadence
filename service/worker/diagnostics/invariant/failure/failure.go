@@ -62,7 +62,7 @@ func (f *failure) Check(context.Context) ([]invariant.InvariantCheckResult, erro
 			if *reason == common.FailureReasonDecisionBlobSizeExceedsLimit {
 				result = append(result, invariant.InvariantCheckResult{
 					InvariantType: DecisionCausedFailure.String(),
-					Reason:        string(attr.Details),
+					Reason:        DecisionBlobSizeLimit.String(),
 					Metadata:      invariant.MarshalData(FailureMetadata{Identity: identity}),
 				})
 			} else {

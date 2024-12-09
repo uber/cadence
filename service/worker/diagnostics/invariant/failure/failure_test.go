@@ -101,7 +101,7 @@ func Test__Check(t *testing.T) {
 				},
 				{
 					InvariantType: DecisionCausedFailure.String(),
-					Reason:        "test-wf-failure",
+					Reason:        DecisionBlobSizeLimit.String(),
 					Metadata:      metadataInBytes,
 				},
 			},
