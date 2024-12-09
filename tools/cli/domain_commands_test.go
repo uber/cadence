@@ -32,7 +32,7 @@ import (
 )
 
 func (s *cliAppSuite) TestDomainRegister() {
-	s.testcaseHelper([]testcase{
+	testCases := []testcase{
 		{
 			"local",
 			"cadence --do test-domain domain register --global_domain false",
@@ -131,7 +131,13 @@ func (s *cliAppSuite) TestDomainRegister() {
 			"failed to parse",
 			nil,
 		},
-	})
+	}
+
+	for _, tt := range testCases {
+		s.Run(tt.name, func() {
+			s.runTestCase(tt)
+		})
+	}
 }
 
 func (s *cliAppSuite) TestDomainUpdate() {
@@ -160,7 +166,7 @@ func (s *cliAppSuite) TestDomainUpdate() {
 		},
 	}
 
-	s.testcaseHelper([]testcase{
+	testCases := []testcase{
 		{
 			"update nothing",
 			"cadence --do test-domain domain update",
@@ -271,11 +277,17 @@ func (s *cliAppSuite) TestDomainUpdate() {
 				}).Return(nil, fmt.Errorf("update error"))
 			},
 		},
-	})
+	}
+
+	for _, tt := range testCases {
+		s.Run(tt.name, func() {
+			s.runTestCase(tt)
+		})
+	}
 }
 
 func (s *cliAppSuite) TestListDomains() {
-	s.testcaseHelper([]testcase{
+	testCases := []testcase{
 		{
 			"list domains by default",
 			"cadence admin domain list",
@@ -296,5 +308,11 @@ func (s *cliAppSuite) TestListDomains() {
 				}, nil)
 			},
 		},
-	})
+	}
+
+	for _, tt := range testCases {
+		s.Run(tt.name, func() {
+			s.runTestCase(tt)
+		})
+	}
 }
