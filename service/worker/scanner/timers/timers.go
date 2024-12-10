@@ -195,14 +195,14 @@ func ScannerConfig(dc *dynamicconfig.Collection) *shardscanner.ScannerConfig {
 			TaskList:                     scannerTaskListName,
 			ExecutionStartToCloseTimeout: 20 * 365 * 24 * time.Hour,
 			WorkflowIDReusePolicy:        client.WorkflowIDReusePolicyAllowDuplicate,
-			CronSchedule:                 "* * * * *",
+			CronSchedule:                 "*/5 * * * *",
 		},
 		StartFixerOptions: client.StartWorkflowOptions{
 			ID:                           fixerwfid,
 			TaskList:                     fixerTaskListName,
 			ExecutionStartToCloseTimeout: 20 * 365 * 24 * time.Hour,
 			WorkflowIDReusePolicy:        client.WorkflowIDReusePolicyAllowDuplicate,
-			CronSchedule:                 "* * * * *",
+			CronSchedule:                 "*/5 * * * *",
 		},
 	}
 }
