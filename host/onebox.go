@@ -29,6 +29,7 @@ import (
 
 	"github.com/pborman/uuid"
 	"github.com/uber-go/tally"
+	"github.com/uber-go/tally/prometheus"
 	apiv1 "github.com/uber/cadence-idl/go/proto/api/v1"
 	cwsc "go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	"go.uber.org/cadence/compatibility"
@@ -516,6 +517,31 @@ func (c *cadenceImpl) MatchingPProfPorts() []int {
 	return ports
 }
 
+func (c *cadenceImpl) MatchingPrometheusPorts() []int {
+	var ports []int
+	var startPort int
+	switch c.clusterNo {
+	case 0:
+		startPort = 7306
+	case 1:
+		startPort = 8306
+	case 2:
+		startPort = 9306
+	case 3:
+		startPort = 10306
+	default:
+		startPort = 7306
+	}
+
+	for i := 0; i < c.matchingConfig.NumMatchingHosts; i++ {
+		port := startPort + i
+		ports = append(ports, port)
+	}
+
+	c.logger.Info("Matching prometheus ports", tag.Value(ports))
+	return ports
+}
+
 func (c *cadenceImpl) WorkerServiceHost() membership.HostInfo {
 	var tchan uint16
 	switch c.clusterNo {
@@ -730,6 +756,7 @@ func (c *cadenceImpl) startHistory(hosts map[string][]membership.HostInfo, start
 
 func (c *cadenceImpl) startMatching(hosts map[string][]membership.HostInfo, startWG *sync.WaitGroup) {
 	pprofPorts := c.MatchingPProfPorts()
+	promPorts := c.MatchingPrometheusPorts()
 	for i, hostport := range c.MatchingHosts() {
 		hostport.Identity()
 		matchingHost := fmt.Sprintf("matching-host-%d:%s", i, hostport.Identity())
@@ -739,7 +766,13 @@ func (c *cadenceImpl) startMatching(hosts map[string][]membership.HostInfo, star
 		params.ThrottledLogger = c.logger
 		params.TimeSource = c.timeSource
 		params.PProfInitializer = newPProfInitializerImpl(c.logger, pprofPorts[i])
-		params.MetricScope = tally.NewTestScope(service.Matching, map[string]string{"matching-host": matchingHost})
+		metricsCfg := config.Metrics{
+			Prometheus: &prometheus.Configuration{
+				TimerType:     "histogram",
+				ListenAddress: fmt.Sprintf(":%d", promPorts[i]),
+			},
+		}
+		params.MetricScope = metricsCfg.NewScope(c.logger, service.Matching)
 		params.MetricsClient = metrics.NewClient(params.MetricScope, service.GetMetricsServiceIdx(params.Name, c.logger))
 		params.RPCFactory = c.newRPCFactory(service.Matching, hostport, params.MetricsClient)
 		params.MembershipResolver = newMembershipResolver(params.Name, hosts, hostport)

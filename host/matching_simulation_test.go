@@ -179,6 +179,8 @@ func (s *MatchingSimulationSuite) SetupTest() {
 }
 
 func (s *MatchingSimulationSuite) TearDownSuite() {
+	// Sleep for a while to ensure all metrics are emitted/scraped by prometheus
+	time.Sleep(5 * time.Second)
 	s.tearDownSuite()
 }
 

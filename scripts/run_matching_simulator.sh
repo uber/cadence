@@ -22,7 +22,8 @@ docker-compose -f docker/buildkite/docker-compose-local-matching-simulation.yml 
 echo "Running the test $testCase"
 docker-compose \
   -f docker/buildkite/docker-compose-local-matching-simulation.yml \
-  run -e MATCHING_SIMULATION_CONFIG=$testCfg --rm --remove-orphans matching-simulator \
+  run -e MATCHING_SIMULATION_CONFIG=$testCfg --rm --remove-orphans --service-ports --use-aliases \
+  matching-simulator \
   | grep -a --line-buffered "Matching New Event" \
   | sed "s/Matching New Event: //" \
   | jq . > "$eventLogsFile"
@@ -243,4 +244,5 @@ cat "$eventLogsFile"\
 echo "End of summary" | tee -a $testSummaryFile
 
 printf "\nResults are saved in $testSummaryFile\n"
-printf "For further analysis, please check $eventLogsFile via jq queries\n"
+printf "For further ad-hoc analysis, please check $eventLogsFile via jq queries\n"
+printf "Visit http://localhost:3000/ to view Cadence Matching grafana dashboard\n"
