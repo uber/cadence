@@ -680,7 +680,7 @@ func Test_ResetWorkflow_Missing_RunID(t *testing.T) {
 }
 
 func (s *cliAppSuite) TestCompleteActivity() {
-	s.testcaseHelper([]testcase{
+	testCases := []testcase{
 		{
 			name:    "happy",
 			command: `cadence --do test-domain wf activity complete -w wid -r rid -aid 3 -result result --identity tester`,
@@ -689,11 +689,17 @@ func (s *cliAppSuite) TestCompleteActivity() {
 				s.serverFrontendClient.EXPECT().RespondActivityTaskCompletedByID(gomock.Any(), gomock.Any()).Return(nil)
 			},
 		},
-	})
+	}
+
+	for _, tt := range testCases {
+		s.Run(tt.name, func() {
+			s.runTestCase(tt)
+		})
+	}
 }
 
 func (s *cliAppSuite) TestDescribeWorkflow() {
-	s.testcaseHelper([]testcase{
+	testCases := []testcase{
 		{
 			"happy",
 			"cadence --do test-domain wf describe -w wid",
@@ -718,11 +724,17 @@ func (s *cliAppSuite) TestDescribeWorkflow() {
 				s.serverFrontendClient.EXPECT().DescribeWorkflowExecution(gomock.Any(), gomock.Any()).Return(resp, nil)
 			},
 		},
-	})
+	}
+
+	for _, tt := range testCases {
+		s.Run(tt.name, func() {
+			s.runTestCase(tt)
+		})
+	}
 }
 
 func (s *cliAppSuite) TestFailActivity() {
-	s.testcaseHelper([]testcase{
+	testCases := []testcase{
 		{
 			name:    "happy",
 			command: `cadence --do test-domain wf activity fail -w wid -r rid -aid 3 --reason somereason --detail somedetail --identity tester`,
@@ -731,11 +743,17 @@ func (s *cliAppSuite) TestFailActivity() {
 				s.serverFrontendClient.EXPECT().RespondActivityTaskFailedByID(gomock.Any(), gomock.Any()).Return(nil)
 			},
 		},
-	})
+	}
+
+	for _, tt := range testCases {
+		s.Run(tt.name, func() {
+			s.runTestCase(tt)
+		})
+	}
 }
 
 func (s *cliAppSuite) TestListAllWorkflow() {
-	s.testcaseHelper([]testcase{
+	testCases := []testcase{
 		{
 			name:    "happy",
 			command: `cadence --do test-domain wf listall`,
@@ -745,11 +763,17 @@ func (s *cliAppSuite) TestListAllWorkflow() {
 				s.serverFrontendClient.EXPECT().ListClosedWorkflowExecutions(gomock.Any(), gomock.Any()).Return(listClosedWorkflowExecutionsResponse, nil)
 			},
 		},
-	})
+	}
+
+	for _, tt := range testCases {
+		s.Run(tt.name, func() {
+			s.runTestCase(tt)
+		})
+	}
 }
 
 func (s *cliAppSuite) TestQueryWorkflow() {
-	s.testcaseHelper([]testcase{
+	testCases := []testcase{
 		{
 			name:    "happy",
 			command: `cadence --do test-domain wf query -w wid -qt query-type-test`,
@@ -872,11 +896,17 @@ func (s *cliAppSuite) TestQueryWorkflow() {
 			command: "cadence wf query",
 			err:     "Required flag not found",
 		},
-	})
+	}
+
+	for _, tt := range testCases {
+		s.Run(tt.name, func() {
+			s.runTestCase(tt)
+		})
+	}
 }
 
 func (s *cliAppSuite) TestResetWorkflow() {
-	s.testcaseHelper([]testcase{
+	testCases := []testcase{
 		{
 			name:    "happy",
 			command: `cadence --do test-domain wf reset -w wid -r rid -reason test-reason --event_id 1`,
@@ -886,11 +916,17 @@ func (s *cliAppSuite) TestResetWorkflow() {
 				s.serverFrontendClient.EXPECT().ResetWorkflowExecution(gomock.Any(), gomock.Any()).Return(resp, nil)
 			},
 		},
-	})
+	}
+
+	for _, tt := range testCases {
+		s.Run(tt.name, func() {
+			s.runTestCase(tt)
+		})
+	}
 }
 
 func (s *cliAppSuite) TestScanAllWorkflow() {
-	s.testcaseHelper([]testcase{
+	testCases := []testcase{
 		{
 			name:    "happy",
 			command: `cadence --do test-domain wf scanall`,
@@ -898,11 +934,17 @@ func (s *cliAppSuite) TestScanAllWorkflow() {
 				s.serverFrontendClient.EXPECT().ScanWorkflowExecutions(gomock.Any(), gomock.Any()).Return(&types.ListWorkflowExecutionsResponse{}, nil)
 			},
 		},
-	})
+	}
+
+	for _, tt := range testCases {
+		s.Run(tt.name, func() {
+			s.runTestCase(tt)
+		})
+	}
 }
 
 func (s *cliAppSuite) TestSignalWithStartWorkflowExecution() {
-	s.testcaseHelper([]testcase{
+	testCases := []testcase{
 		{
 			name:    "happy",
 			command: `cadence --do test-domain wf signalwithstart --et 100 --workflow_type sometype --tasklist tasklist -w wid -n signal-name --signal_input []`,
@@ -924,7 +966,13 @@ func (s *cliAppSuite) TestSignalWithStartWorkflowExecution() {
 			command: "cadence wf signalwithstart",
 			err:     "Required flag not found",
 		},
-	})
+	}
+
+	for _, tt := range testCases {
+		s.Run(tt.name, func() {
+			s.runTestCase(tt)
+		})
+	}
 }
 
 func Test_DoReset(t *testing.T) {
