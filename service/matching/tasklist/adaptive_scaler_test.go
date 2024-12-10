@@ -40,6 +40,7 @@ import (
 	"github.com/uber/cadence/common/stats"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/matching/config"
+	"github.com/uber/cadence/service/matching/event"
 )
 
 type mockAdaptiveScalerDeps struct {
@@ -73,7 +74,7 @@ func setupMocksForAdaptiveScaler(t *testing.T, taskListID *Identifier) (*adaptiv
 	}
 
 	cfg := newTaskListConfig(taskListID, config.NewConfig(dynamicconfig.NewCollection(dynamicClient, logger), "test-host", func() []string { return nil }), "test-domain")
-	scaler := NewAdaptiveScaler(taskListID, mockManager, mockQPSTracker, cfg, mockTimeSource, logger, scope, mockMatchingClient).(*adaptiveScalerImpl)
+	scaler := NewAdaptiveScaler(taskListID, mockManager, mockQPSTracker, cfg, mockTimeSource, logger, scope, mockMatchingClient, event.E{}).(*adaptiveScalerImpl)
 	return scaler, deps
 }
 

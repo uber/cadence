@@ -28,6 +28,7 @@ import (
 	"time"
 
 	"github.com/uber/cadence/common/clock"
+	"github.com/uber/cadence/service/matching/event"
 )
 
 const floatResolution = 1e-6
@@ -37,7 +38,7 @@ func TestEmaFixedWindowQPSTracker(t *testing.T) {
 	exp := 0.4
 	bucketInterval := time.Second
 
-	r := NewEmaFixedWindowQPSTracker(timeSource, exp, bucketInterval)
+	r := NewEmaFixedWindowQPSTracker(timeSource, exp, bucketInterval, event.E{})
 	r.Start()
 	defer r.Stop()
 
