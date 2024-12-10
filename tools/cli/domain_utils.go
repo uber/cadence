@@ -72,11 +72,10 @@ var (
 			Aliases: []string{"ac"},
 			Usage:   "Active cluster name",
 		},
-		&cli.StringFlag{
-			// TODO use StringSliceFlag instead
+		&cli.StringSliceFlag{
 			Name:    FlagClusters,
 			Aliases: []string{"cl"},
-			Usage:   "Clusters",
+			Usage:   FlagClustersUsage,
 		},
 		&cli.StringFlag{
 			Name:    FlagIsGlobalDomain,
@@ -138,11 +137,10 @@ var (
 			Aliases: []string{"ac"},
 			Usage:   "Active cluster name",
 		},
-		&cli.StringFlag{
-			// TODO use StringSliceFlag instead
+		&cli.StringSliceFlag{
 			Name:    FlagClusters,
 			Aliases: []string{"cl"},
-			Usage:   "Clusters",
+			Usage:   FlagClustersUsage,
 		},
 		&cli.GenericFlag{
 			Name:  FlagDomainData,

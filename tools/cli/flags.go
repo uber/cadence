@@ -222,6 +222,8 @@ const (
 	FlagSearchAttribute                = "search_attr"
 	FlagNumReadPartitions              = "num_read_partitions"
 	FlagNumWritePartitions             = "num_write_partitions"
+
+	FlagClustersUsage = "Clusters (example: --clusters clusterA,clusterB or --cl clusterA --cl clusterB)"
 )
 
 var flagsForExecution = []cli.Flag{
