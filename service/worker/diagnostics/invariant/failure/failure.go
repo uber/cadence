@@ -24,9 +24,9 @@ package failure
 
 import (
 	"context"
-	"github.com/uber/cadence/common"
 	"strings"
 
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/worker/diagnostics/invariant"
 )
