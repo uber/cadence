@@ -121,11 +121,7 @@ func (d *domainCLIImpl) RegisterDomain(c *cli.Context) error {
 
 	var clusters []*types.ClusterReplicationConfiguration
 	if c.IsSet(FlagClusters) {
-		clusterStr := c.String(FlagClusters)
-		clusters = append(clusters, &types.ClusterReplicationConfiguration{
-			ClusterName: clusterStr,
-		})
-		for _, clusterStr := range c.Args().Slice() {
+		for _, clusterStr := range c.StringSlice(FlagClusters) {
 			clusters = append(clusters, &types.ClusterReplicationConfiguration{
 				ClusterName: clusterStr,
 			})
@@ -231,11 +227,7 @@ func (d *domainCLIImpl) UpdateDomain(c *cli.Context) error {
 			retentionDays = int32(c.Int(FlagRetentionDays))
 		}
 		if c.IsSet(FlagClusters) {
-			clusterStr := c.String(FlagClusters)
-			clusters = append(clusters, &types.ClusterReplicationConfiguration{
-				ClusterName: clusterStr,
-			})
-			for _, clusterStr := range c.Args().Slice() {
+			for _, clusterStr := range c.StringSlice(FlagClusters) {
 				clusters = append(clusters, &types.ClusterReplicationConfiguration{
 					ClusterName: clusterStr,
 				})

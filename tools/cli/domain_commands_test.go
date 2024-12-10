@@ -59,7 +59,7 @@ func (s *cliAppSuite) TestDomainRegister() {
 		},
 		{
 			"domain with other options",
-			"cadence --do test-domain domain register --global_domain true --retention 5 --desc description --domain_data key1=value1,key2=value2 --active_cluster c1 --clusters c1 c2",
+			"cadence --do test-domain domain register --global_domain true --retention 5 --desc description --active_cluster c1 --clusters c1,c2 --domain_data key1=value1,key2=value2",
 			"",
 			func() {
 				s.serverFrontendClient.EXPECT().RegisterDomain(gomock.Any(), &types.RegisterDomainRequest{
@@ -73,12 +73,28 @@ func (s *cliAppSuite) TestDomainRegister() {
 					},
 					ActiveClusterName: "c1",
 					Clusters: []*types.ClusterReplicationConfiguration{
-						{
-							ClusterName: "c1",
-						},
-						{
-							ClusterName: "c2",
-						},
+						{ClusterName: "c1"}, {ClusterName: "c2"},
+					},
+				}).Return(nil)
+			},
+		},
+		{
+			"domain with other options and clusters mentioned as multiple options",
+			"cadence --do test-domain domain register --global_domain true --retention 5 --desc description --active_cluster c1 --cl c1 --cl c2 --domain_data key1=value1,key2=value2 --cl c3",
+			"",
+			func() {
+				s.serverFrontendClient.EXPECT().RegisterDomain(gomock.Any(), &types.RegisterDomainRequest{
+					Name:                                   "test-domain",
+					WorkflowExecutionRetentionPeriodInDays: 5,
+					IsGlobalDomain:                         true,
+					Description:                            "description",
+					Data: map[string]string{
+						"key1": "value1",
+						"key2": "value2",
+					},
+					ActiveClusterName: "c1",
+					Clusters: []*types.ClusterReplicationConfiguration{
+						{ClusterName: "c1"}, {ClusterName: "c2"}, {ClusterName: "c3"},
 					},
 				}).Return(nil)
 			},
