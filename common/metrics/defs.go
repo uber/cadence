@@ -1299,6 +1299,8 @@ const (
 	ReplicationTaskCleanupScope
 	// ReplicationDLQStatsScope is scope used by all metrics emitted related to replication DLQ
 	ReplicationDLQStatsScope
+	// ReplicationMessageTooLargeScope is scope used by all metrics emitted related to replication message size
+	ReplicationMessageTooLargeScope
 	// FailoverMarkerScope is scope used by all metrics emitted related to failover marker
 	FailoverMarkerScope
 	// HistoryReplicationV2TaskScope is the scope used by history task replication processing
@@ -2523,6 +2525,7 @@ const (
 	ReplicationDLQProbeFailed
 	ReplicationDLQSize
 	ReplicationDLQValidationFailed
+	ReplicationMessageTooLargePerShard
 	GetReplicationMessagesForShardLatency
 	GetDLQReplicationMessagesLatency
 	EventReapplySkippedCount
@@ -3217,6 +3220,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		ReplicationDLQProbeFailed:                                    {metricName: "replication_dlq_probe_failed", metricType: Counter},
 		ReplicationDLQSize:                                           {metricName: "replication_dlq_size", metricType: Gauge},
 		ReplicationDLQValidationFailed:                               {metricName: "replication_dlq_validation_failed", metricType: Counter},
+		ReplicationMessageTooLargePerShard:                           {metricName: "replication_message_too_large_per_shard", metricType: Counter},
 		GetReplicationMessagesForShardLatency:                        {metricName: "get_replication_messages_for_shard", metricType: Timer},
 		GetDLQReplicationMessagesLatency:                             {metricName: "get_dlq_replication_messages", metricType: Timer},
 		EventReapplySkippedCount:                                     {metricName: "event_reapply_skipped_count", metricType: Counter},
