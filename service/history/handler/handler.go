@@ -1555,7 +1555,7 @@ func (h *handlerImpl) GetReplicationMessages(
 
 	h.GetLogger().Debug("Received GetReplicationMessages call.")
 
-	_, sw := h.startRequestProfile(ctx, metrics.HistoryGetReplicationMessagesScope)
+	metricsScope, sw := h.startRequestProfile(ctx, metrics.HistoryGetReplicationMessagesScope)
 	defer sw.Stop()
 
 	if h.isShuttingDown() {
@@ -1601,7 +1601,7 @@ func (h *handlerImpl) GetReplicationMessages(
 
 		size := proto.FromReplicationMessages(tasks).Size()
 		if (responseSize + size) >= maxResponseSize {
-			metricsScope := h.GetMetricsClient().Scope(metrics.ReplicationMessageTooLargeScope, metrics.ShardIDTag(int(shardID)))
+			metricsScope.Tagged(metrics.ShardIDTag(int(shardID)))
 			metricsScope.IncCounter(metrics.ReplicationMessageTooLargePerShard)
 
 			// Log shards that did not fit for debugging purposes

@@ -1299,8 +1299,6 @@ const (
 	ReplicationTaskCleanupScope
 	// ReplicationDLQStatsScope is scope used by all metrics emitted related to replication DLQ
 	ReplicationDLQStatsScope
-	// ReplicationMessageTooLargeScope is scope used by all metrics emitted related to replication message size
-	ReplicationMessageTooLargeScope
 	// FailoverMarkerScope is scope used by all metrics emitted related to failover marker
 	FailoverMarkerScope
 	// HistoryReplicationV2TaskScope is the scope used by history task replication processing
