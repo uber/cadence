@@ -110,6 +110,11 @@ func (tc *taskCompleterImpl) CompleteTaskIfStarted(ctx context.Context, task *In
 
 		if errors.As(err, new(*types.EntityNotExistsError)) {
 			tc.logger.Warn("Workflow execution not found while attempting to complete task on standby cluster", tag.WorkflowID(task.Event.WorkflowID), tag.WorkflowRunID(task.Event.RunID))
+
+			task.Finish(nil)
+
+			tc.scope.IncCounter(metrics.StandbyClusterTasksCompletedCounterPerTaskList)
+
 			return nil
 		} else if err != nil {
 			return fmt.Errorf("unable to fetch workflow execution from the history service: %w", err)
