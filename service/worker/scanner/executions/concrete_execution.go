@@ -222,14 +222,14 @@ func ConcreteExecutionConfig(dc *dynamicconfig.Collection) *shardscanner.Scanner
 			TaskList:                     concreteExecutionsScannerTaskListName,
 			ExecutionStartToCloseTimeout: 20 * 365 * 24 * time.Hour,
 			WorkflowIDReusePolicy:        cclient.WorkflowIDReusePolicyAllowDuplicate,
-			CronSchedule:                 "* * * * *",
+			CronSchedule:                 "*/5 * * * *",
 		},
 		StartFixerOptions: cclient.StartWorkflowOptions{
 			ID:                           concreteExecutionsFixerWFID,
 			TaskList:                     concreteExecutionsFixerTaskListName,
 			ExecutionStartToCloseTimeout: 20 * 365 * 24 * time.Hour,
 			WorkflowIDReusePolicy:        cclient.WorkflowIDReusePolicyAllowDuplicate,
-			CronSchedule:                 "* * * * *",
+			CronSchedule:                 "*/5 * * * *",
 		},
 	}
 }

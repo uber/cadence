@@ -179,14 +179,14 @@ func CurrentExecutionConfig(dc *dynamicconfig.Collection) *shardscanner.ScannerC
 			TaskList:                     CurrentExecutionsScannerTaskListName,
 			ExecutionStartToCloseTimeout: 20 * 365 * 24 * time.Hour,
 			WorkflowIDReusePolicy:        cclient.WorkflowIDReusePolicyAllowDuplicate,
-			CronSchedule:                 "* * * * *",
+			CronSchedule:                 "*/5 * * * *",
 		},
 		StartFixerOptions: cclient.StartWorkflowOptions{
 			ID:                           currentExecutionsFixerWFID,
 			TaskList:                     CurrentExecutionsFixerTaskListName,
 			ExecutionStartToCloseTimeout: 20 * 365 * 24 * time.Hour,
 			WorkflowIDReusePolicy:        cclient.WorkflowIDReusePolicyAllowDuplicate,
-			CronSchedule:                 "* * * * *",
+			CronSchedule:                 "*/5 * * * *",
 		},
 	}
 }
