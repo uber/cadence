@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/uber/cadence/client"
+	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/domain"
 	"github.com/uber/cadence/common/log"
@@ -92,6 +93,7 @@ func (r *Replicator) Start() error {
 			r.membershipResolver,
 			r.domainReplicationQueue,
 			r.replicationMaxRetry,
+			clock.NewRealTimeSource(),
 		)
 		r.domainProcessors = append(r.domainProcessors, processor)
 	}
