@@ -72,6 +72,7 @@ services:
   shard-distributor:
     rpc:
       port: 7951
+      grpcPort: 7941
       bindOnLocalHost: true
     metrics:
       statsd:
