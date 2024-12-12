@@ -66,6 +66,7 @@ const (
 	isolationEnabled          = "isolation_enabled"
 	isolationGroup            = "isolation_group"
 	originalIsolationGroup    = "original_isolation_group"
+	leakCause                 = "leak_cause"
 	topic                     = "topic"
 	mode                      = "mode"
 
@@ -319,7 +320,10 @@ func OriginalIsolationGroupTag(group string) Tag {
 
 func IsolationGroupTag(group string) Tag {
 	return simpleMetric{key: isolationGroup, value: sanitizer.Value(group)}
+}
 
+func IsolationLeakCause(cause string) Tag {
+	return simpleMetric{key: leakCause, value: sanitizer.Value(cause)}
 }
 
 // IsolationEnabledTag returns whether isolation is enabled

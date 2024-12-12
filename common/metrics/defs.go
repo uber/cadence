@@ -2247,9 +2247,6 @@ const (
 	ParentClosePolicyProcessorSuccess
 	ParentClosePolicyProcessorFailures
 
-	IsolationGroupStatePollerUnavailable
-	IsolationGroupStateDrained
-	IsolationGroupStateHealthy
 	ValidatedWorkflowCount
 
 	HashringViewIdentifier
@@ -2638,8 +2635,7 @@ const (
 	StandbyClusterTasksCompletedCounterPerTaskList
 	StandbyClusterTasksNotStartedCounterPerTaskList
 	StandbyClusterTasksCompletionFailurePerTaskList
-	TaskIsolationExpiredPerTaskList
-	TaskIsolationErrorPerTaskList
+	TaskIsolationLeakPerTaskList
 	NumMatchingMetrics
 )
 
@@ -2959,13 +2955,10 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		ParentClosePolicyProcessorSuccess:    {metricName: "parent_close_policy_processor_requests", metricType: Counter},
 		ParentClosePolicyProcessorFailures:   {metricName: "parent_close_policy_processor_errors", metricType: Counter},
 
-		IsolationGroupStatePollerUnavailable: {metricName: "isolation_group_poller_unavailable", metricType: Counter},
-		IsolationGroupStateDrained:           {metricName: "isolation_group_drained", metricType: Counter},
-		IsolationGroupStateHealthy:           {metricName: "isolation_group_healthy", metricType: Counter},
-		ValidatedWorkflowCount:               {metricName: "task_validator_count", metricType: Counter},
-		HashringViewIdentifier:               {metricName: "hashring_view_identifier", metricType: Counter},
-		DescribeWorkflowStatusError:          {metricName: "describe_wf_error", metricType: Counter},
-		DescribeWorkflowStatusCount:          {metricName: "describe_wf_status", metricType: Counter},
+		ValidatedWorkflowCount:      {metricName: "task_validator_count", metricType: Counter},
+		HashringViewIdentifier:      {metricName: "hashring_view_identifier", metricType: Counter},
+		DescribeWorkflowStatusError: {metricName: "describe_wf_error", metricType: Counter},
+		DescribeWorkflowStatusCount: {metricName: "describe_wf_status", metricType: Counter},
 
 		AsyncRequestPayloadSize: {metricName: "async_request_payload_size_per_domain", metricRollupName: "async_request_payload_size", metricType: Timer},
 
@@ -3335,8 +3328,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		StandbyClusterTasksCompletedCounterPerTaskList:          {metricName: "standby_cluster_tasks_completed_per_tl", metricType: Counter},
 		StandbyClusterTasksNotStartedCounterPerTaskList:         {metricName: "standby_cluster_tasks_not_started_per_tl", metricType: Counter},
 		StandbyClusterTasksCompletionFailurePerTaskList:         {metricName: "standby_cluster_tasks_completion_failure_per_tl", metricType: Counter},
-		TaskIsolationExpiredPerTaskList:                         {metricName: "task_isolation_expired_per_tl", metricRollupName: "task_isolation_expired"},
-		TaskIsolationErrorPerTaskList:                           {metricName: "task_isolation_error_per_tl", metricRollupName: "task_isolation_error"},
+		TaskIsolationLeakPerTaskList:                            {metricName: "task_isolation_leak_per_tl", metricRollupName: "task_isolation_leak"},
 	},
 	Worker: {
 		ReplicatorMessages:                            {metricName: "replicator_messages"},

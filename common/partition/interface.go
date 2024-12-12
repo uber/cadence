@@ -24,7 +24,11 @@ package partition
 
 //go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination partitioning_mock.go -self_package github.com/uber/cadence/common/partition
 
-import "context"
+import (
+	"context"
+
+	"github.com/uber/cadence/common/metrics"
+)
 
 // PollerInfo captures relevant information from the poller side
 type PollerInfo struct {
@@ -39,5 +43,5 @@ type Partitioner interface {
 	// GetIsolationGroupByDomainID gets where the task workflow should be executing. Largely used by Matching
 	// when determining which isolationGroup to place the tasks in.
 	// Implementations ought to return (nil, nil) for when the feature is not enabled.
-	GetIsolationGroupByDomainID(ctx context.Context, pollerinfo PollerInfo, partitionKey PartitionConfig) (string, error)
+	GetIsolationGroupByDomainID(ctx context.Context, scope metrics.Scope, pollerinfo PollerInfo, partitionKey PartitionConfig) (string, error)
 }
