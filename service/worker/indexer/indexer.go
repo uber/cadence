@@ -74,6 +74,11 @@ type (
 		shutdownCh chan struct{}
 	}
 
+	DualIndexer struct {
+		SourceIndexer *Indexer
+		DestIndexer   *Indexer
+	}
+
 	// Config contains all configs for indexer
 	Config struct {
 		IndexerConcurrency             dynamicconfig.IntPropertyFn
