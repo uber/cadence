@@ -1555,7 +1555,7 @@ func (h *handlerImpl) GetReplicationMessages(
 
 	h.GetLogger().Debug("Received GetReplicationMessages call.")
 
-	_, sw := h.startRequestProfile(ctx, metrics.HistoryGetReplicationMessagesScope)
+	metricsScope, sw := h.startRequestProfile(ctx, metrics.HistoryGetReplicationMessagesScope)
 	defer sw.Stop()
 
 	if h.isShuttingDown() {
@@ -1601,6 +1601,8 @@ func (h *handlerImpl) GetReplicationMessages(
 
 		size := proto.FromReplicationMessages(tasks).Size()
 		if (responseSize + size) >= maxResponseSize {
+			metricsScope.Tagged(metrics.ShardIDTag(int(shardID))).IncCounter(metrics.ReplicationMessageTooLargePerShard)
+
 			// Log shards that did not fit for debugging purposes
 			h.GetLogger().Warn("Replication messages did not fit in the response (history host)",
 				tag.ShardID(int(shardID)),
