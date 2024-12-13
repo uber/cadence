@@ -5145,7 +5145,7 @@ func FromHistoryEventArray(t []*types.HistoryEvent) []*apiv1.HistoryEvent {
 
 func ToHistoryEventArray(t []*apiv1.HistoryEvent) []*types.HistoryEvent {
 	if t == nil {
-		return nil
+		return []*types.HistoryEvent{}
 	}
 	v := make([]*types.HistoryEvent, len(t))
 	for i := range t {
