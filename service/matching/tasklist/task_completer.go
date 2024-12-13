@@ -26,8 +26,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
-
 	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
@@ -39,6 +37,7 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
+	"time"
 )
 
 type (
@@ -117,7 +116,7 @@ func (tc *taskCompleterImpl) CompleteTaskIfStarted(ctx context.Context, task *In
 			tc.logger.Warn("Workflow execution not found while attempting to complete task on standby cluster", tag.WorkflowID(task.Event.WorkflowID), tag.WorkflowRunID(task.Event.RunID))
 
 			// this is a guard to prevent some race condition or quorum issue where the workflow is not found in the database
-			if tc.timeSource.Now().Add(-24 * time.Hour).After(task.Event.CreatedTime) {
+			if tc.timeSource.Since(task.Event.CreatedTime) > 24*time.Hour {
 				task.Finish(nil)
 
 				tc.scope.IncCounter(metrics.StandbyClusterTasksCompletedCounterPerTaskList)
