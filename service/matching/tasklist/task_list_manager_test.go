@@ -33,6 +33,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/uber-go/tally"
+	"go.uber.org/goleak"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/uber/cadence/client/history"
@@ -300,6 +301,7 @@ func TestDescribeTaskList(t *testing.T) {
 }
 
 func TestCheckIdleTaskList(t *testing.T) {
+	defer goleak.VerifyNone(t)
 	cfg := config.NewConfig(dynamicconfig.NewNopCollection(), "some random hostname", getIsolationgroupsHelper)
 	cfg.IdleTasklistCheckInterval = dynamicconfig.GetDurationPropertyFnFilteredByTaskListInfo(10 * time.Millisecond)
 
