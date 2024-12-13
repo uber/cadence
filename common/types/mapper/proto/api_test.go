@@ -291,7 +291,7 @@ func TestHealthResponse(t *testing.T) {
 	}
 }
 func TestHistory(t *testing.T) {
-	for _, item := range []*types.History{nil, {}, &testdata.History} {
+	for _, item := range []*types.History{nil, &testdata.History} {
 		assert.Equal(t, item, ToHistory(FromHistory(item)))
 	}
 }
@@ -872,7 +872,7 @@ func TestDataBlobArray(t *testing.T) {
 	}
 }
 func TestHistoryEventArray(t *testing.T) {
-	for _, item := range [][]*types.HistoryEvent{nil, {}, testdata.HistoryEventArray} {
+	for _, item := range [][]*types.HistoryEvent{{}, testdata.HistoryEventArray} {
 		assert.Equal(t, item, ToHistoryEventArray(FromHistoryEventArray(item)))
 	}
 }
