@@ -60,7 +60,8 @@ const (
 	// Time budget for empty task to propagate through the function stack and be returned to
 	// pollForActivityTask or pollForDecisionTask handler.
 	returnEmptyTaskTimeBudget = time.Second
-	noIsolationTimeout        = -1
+	noIsolationTimeout        = time.Duration(0)
+	minimumIsolationDuration  = time.Millisecond * 50
 )
 
 var (
@@ -865,19 +866,9 @@ func (c *taskListManagerImpl) getIsolationGroupForTask(ctx context.Context, task
 		for k, v := range taskInfo.PartitionConfig {
 			partitionConfig[k] = v
 		}
+		startedIsolationGroup := partitionConfig[partition.IsolationGroupKey]
 		partitionConfig[partition.WorkflowIDKey] = taskInfo.WorkflowID
-		pollerIsolationGroups := c.config.AllIsolationGroups()
-		// Not all poller information are available at the time of task list manager creation,
-		// because we don't persist poller information in database, so in the first minute, we always assume
-		// pollers are available in all isolation groups to avoid the risk of leaking a task to another isolation group.
-		// Besides, for sticky and scalable tasklists, not all poller information are available, we also use all isolation group.
-		if c.timeSource.Now().Sub(c.createTime) > time.Minute {
-			pollerIsolationGroups = c.getPollerIsolationGroups()
-			if len(pollerIsolationGroups) == 0 {
-				// we don't have any pollers, use all isolation groups and wait for pollers' arriving
-				pollerIsolationGroups = c.config.AllIsolationGroups()
-			}
-		}
+		pollerIsolationGroups := c.getPollerIsolationGroups()
 
 		group, err := c.partitioner.GetIsolationGroupByDomainID(ctx,
 			partition.PollerInfo{
@@ -887,17 +878,31 @@ func (c *taskListManagerImpl) getIsolationGroupForTask(ctx context.Context, task
 			}, partitionConfig)
 		if err != nil {
 			// if we're unable to get the isolation group, log the error and fallback to no isolation
-			c.logger.Error("Failed to get isolation group from partition library", tag.WorkflowID(taskInfo.WorkflowID), tag.WorkflowRunID(taskInfo.RunID), tag.TaskID(taskInfo.TaskID), tag.Error(err))
+			c.logger.Error("Failed to get isolation group from partition library", tag.IsolationGroup(startedIsolationGroup), tag.WorkflowID(taskInfo.WorkflowID), tag.WorkflowRunID(taskInfo.RunID), tag.TaskID(taskInfo.TaskID), tag.Error(err))
+			c.scope.Tagged(metrics.IsolationGroupTag(startedIsolationGroup)).IncCounter(metrics.TaskIsolationErrorPerTaskList)
 			return defaultTaskBufferIsolationGroup, noIsolationTimeout, nil
 		}
+
+		totalTaskIsolationDuration := c.config.TaskIsolationDuration()
+		taskIsolationDuration := noIsolationTimeout
+		if totalTaskIsolationDuration != noIsolationTimeout && group != defaultTaskBufferIsolationGroup {
+			taskLatency := c.timeSource.Now().Sub(taskInfo.CreatedTime)
+			if taskLatency < (totalTaskIsolationDuration - minimumIsolationDuration) {
+				taskIsolationDuration = totalTaskIsolationDuration - taskLatency
+			} else {
+				c.logger.Info("Leaking task due to taskIsolationDuration expired", tag.IsolationGroup(group), tag.IsolationDuration(taskIsolationDuration), tag.TaskLatency(taskLatency))
+				c.scope.Tagged(metrics.IsolationGroupTag(group)).IncCounter(metrics.TaskIsolationExpiredPerTaskList)
+				group = defaultTaskBufferIsolationGroup
+			}
+		}
 		c.logger.Debug("get isolation group", tag.PollerGroups(pollerIsolationGroups), tag.IsolationGroup(group), tag.PartitionConfig(partitionConfig))
-		return group, noIsolationTimeout, nil
+		return group, taskIsolationDuration, nil
 	}
 	return defaultTaskBufferIsolationGroup, noIsolationTimeout, nil
 }
 
 func (c *taskListManagerImpl) getPollerIsolationGroups() []string {
-	groupSet := c.pollerHistory.GetPollerIsolationGroups(c.timeSource.Now().Add(-10 * time.Second))
+	groupSet := c.pollerHistory.GetPollerIsolationGroups(c.timeSource.Now().Add(-1 * c.config.TaskIsolationPollerWindow()))
 	c.outstandingPollsLock.Lock()
 	for _, poller := range c.outstandingPollsMap {
 		groupSet[poller.isolationGroup]++
@@ -1030,6 +1035,12 @@ func newTaskListConfig(id *Identifier, cfg *config.Config, domainName string) *c
 		},
 		EnableAdaptiveScaler: func() bool {
 			return cfg.EnableAdaptiveScaler(domainName, taskListName, taskType)
+		},
+		TaskIsolationDuration: func() time.Duration {
+			return cfg.TaskIsolationDuration(domainName, taskListName, taskType)
+		},
+		TaskIsolationPollerWindow: func() time.Duration {
+			return cfg.TaskIsolationPollerWindow(domainName, taskListName, taskType)
 		},
 		ForwarderConfig: config.ForwarderConfig{
 			ForwarderMaxOutstandingPolls: func() int {

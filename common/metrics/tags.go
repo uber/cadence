@@ -21,7 +21,6 @@
 package metrics
 
 import (
-	"fmt"
 	"regexp"
 	"strconv"
 )
@@ -65,6 +64,8 @@ const (
 	workflowTerminationReason = "workflow_termination_reason"
 	workflowCloseStatus       = "workflow_close_status"
 	isolationEnabled          = "isolation_enabled"
+	isolationGroup            = "isolation_group"
+	originalIsolationGroup    = "original_isolation_group"
 	topic                     = "topic"
 	mode                      = "mode"
 
@@ -312,19 +313,13 @@ func WorkflowCloseStatusTag(value string) Tag {
 	return simpleMetric{key: workflowCloseStatus, value: value}
 }
 
-// PartitionConfigTags returns a list of partition config tags
-func PartitionConfigTags(partitionConfig map[string]string) []Tag {
-	tags := make([]Tag, 0, len(partitionConfig))
-	for k, v := range partitionConfig {
-		if len(k) == 0 {
-			continue
-		}
-		if len(v) == 0 {
-			v = unknownValue
-		}
-		tags = append(tags, simpleMetric{key: sanitizer.Value(fmt.Sprintf("pk_%s", k)), value: sanitizer.Value(v)})
-	}
-	return tags
+func OriginalIsolationGroupTag(group string) Tag {
+	return simpleMetric{key: originalIsolationGroup, value: sanitizer.Value(group)}
+}
+
+func IsolationGroupTag(group string) Tag {
+	return simpleMetric{key: isolationGroup, value: sanitizer.Value(group)}
+
 }
 
 // IsolationEnabledTag returns whether isolation is enabled
