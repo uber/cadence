@@ -26,11 +26,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/cache"
+	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
@@ -48,6 +50,7 @@ type (
 		scope           metrics.Scope
 		logger          log.Logger
 		throttleRetry   *backoff.ThrottleRetry
+		timeSource      clock.TimeSource
 	}
 )
 
@@ -62,11 +65,12 @@ func (e *DomainIsActiveInThisClusterError) Error() string {
 }
 
 var (
-	errWorkflowExecutionInfoIsNil      = errors.New("workflow execution info is nil")
-	errTaskTypeNotSupported            = errors.New("task type not supported")
-	errTaskNotStarted                  = errors.New("task not started")
-	errDomainIsActive                  = &DomainIsActiveInThisClusterError{Message: "domain is active"}
-	historyServiceOperationRetryPolicy = common.CreateTaskCompleterRetryPolicy()
+	errWorkflowExecutionInfoIsNil           = errors.New("workflow execution info is nil")
+	errTaskTypeNotSupported                 = errors.New("task type not supported")
+	errTaskNotStarted                       = errors.New("task not started")
+	errWaitTimeNotReachedForEntityNotExists = errors.New("wait time not reached for workflow EntityNotExistsError")
+	errDomainIsActive                       = &DomainIsActiveInThisClusterError{Message: "domain is active"}
+	historyServiceOperationRetryPolicy      = common.CreateTaskCompleterRetryPolicy()
 )
 
 func newTaskCompleter(tlMgr *taskListManagerImpl, retryPolicy backoff.RetryPolicy) TaskCompleter {
@@ -81,6 +85,7 @@ func newTaskCompleter(tlMgr *taskListManagerImpl, retryPolicy backoff.RetryPolic
 			backoff.WithRetryPolicy(retryPolicy),
 			backoff.WithRetryableError(isRetryableError),
 		),
+		timeSource: tlMgr.timeSource,
 	}
 }
 
@@ -110,7 +115,17 @@ func (tc *taskCompleterImpl) CompleteTaskIfStarted(ctx context.Context, task *In
 
 		if errors.As(err, new(*types.EntityNotExistsError)) {
 			tc.logger.Warn("Workflow execution not found while attempting to complete task on standby cluster", tag.WorkflowID(task.Event.WorkflowID), tag.WorkflowRunID(task.Event.RunID))
-			return nil
+
+			// this is a guard to prevent some race condition or quorum issue where the workflow is not found in the database
+			if tc.timeSource.Since(task.Event.CreatedTime) > 24*time.Hour {
+				task.Finish(nil)
+
+				tc.scope.IncCounter(metrics.StandbyClusterTasksCompletedCounterPerTaskList)
+
+				return nil
+			}
+
+			return errWaitTimeNotReachedForEntityNotExists
 		} else if err != nil {
 			return fmt.Errorf("unable to fetch workflow execution from the history service: %w", err)
 		}

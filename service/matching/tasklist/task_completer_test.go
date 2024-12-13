@@ -34,6 +34,7 @@ import (
 	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/cache"
+	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/metrics"
@@ -66,111 +67,142 @@ func createTestTaskCompleter(controller *gomock.Controller, taskType int) *taskC
 
 func TestCompleteTaskIfStarted(t *testing.T) {
 	ctx := context.Background()
+	createdAt := time.Date(2020, 8, 1, 0, 0, 0, 0, time.UTC)
 
 	testCases := []struct {
-		name      string
-		setupMock func(*types.HistoryDescribeWorkflowExecutionRequest, *cache.MockDomainCache, *history.MockClient)
-		task      *InternalTask
-		taskType  int
-		err       error
+		name           string
+		setupMock      func(*types.HistoryDescribeWorkflowExecutionRequest, *cache.MockDomainCache, *history.MockClient, clock.MockedTimeSource)
+		task           func(chan bool) *InternalTask
+		taskType       int
+		isTaskComplete bool
+		err            error
 	}{
 		{
 			name: "error - could not get domain by ID from cache",
-			task: &InternalTask{
-				Event: &genericTaskInfo{
-					TaskInfo: &persistence.TaskInfo{
-						DomainID: constants.TestDomainID,
+			task: func(isComplete chan bool) *InternalTask {
+				return &InternalTask{
+					Event: &genericTaskInfo{
+						TaskInfo: &persistence.TaskInfo{
+							DomainID:    constants.TestDomainID,
+							CreatedTime: createdAt,
+						},
+						completionFunc: func(_ *persistence.TaskInfo, _ error) { isComplete <- true },
 					},
-				},
+				}
 			},
-			setupMock: func(req *types.HistoryDescribeWorkflowExecutionRequest, mockDomainCache *cache.MockDomainCache, mockHistoryService *history.MockClient) {
+			setupMock: func(req *types.HistoryDescribeWorkflowExecutionRequest, mockDomainCache *cache.MockDomainCache, mockHistoryService *history.MockClient, timeSource clock.MockedTimeSource) {
 				mockDomainCache.EXPECT().GetDomainByID(constants.TestDomainID).Return(nil, errors.New("error-getting-domain-by-id")).Times(retryPolicyMaxAttempts + 1)
 			},
-			err: errors.New("error-getting-domain-by-id"),
+			isTaskComplete: false,
+			err:            errors.New("error-getting-domain-by-id"),
 		},
 		{
 			name: "error - domain is active",
-			task: &InternalTask{
-				Event: &genericTaskInfo{
-					TaskInfo: &persistence.TaskInfo{
-						DomainID: constants.TestDomainID,
+			task: func(isComplete chan bool) *InternalTask {
+				return &InternalTask{
+					Event: &genericTaskInfo{
+						TaskInfo: &persistence.TaskInfo{
+							DomainID:    constants.TestDomainID,
+							CreatedTime: createdAt,
+						},
+						completionFunc: func(_ *persistence.TaskInfo, _ error) { isComplete <- true },
 					},
-				},
+				}
 			},
-			setupMock: func(req *types.HistoryDescribeWorkflowExecutionRequest, mockDomainCache *cache.MockDomainCache, mockHistoryService *history.MockClient) {
+			setupMock: func(req *types.HistoryDescribeWorkflowExecutionRequest, mockDomainCache *cache.MockDomainCache, mockHistoryService *history.MockClient, timeSource clock.MockedTimeSource) {
 				mockDomainCache.EXPECT().GetDomainByID(constants.TestDomainID).Return(constants.TestGlobalDomainEntry, nil).Times(1)
 			},
-			err: errDomainIsActive,
+			isTaskComplete: false,
+			err:            errDomainIsActive,
 		},
 		{
 			name: "error - could not fetch workflow execution from history service",
-			task: &InternalTask{
-				Event: &genericTaskInfo{
-					TaskInfo: &persistence.TaskInfo{
-						DomainID:   constants.TestDomainID,
-						WorkflowID: constants.TestWorkflowID,
-						RunID:      constants.TestRunID,
+			task: func(isComplete chan bool) *InternalTask {
+				return &InternalTask{
+					Event: &genericTaskInfo{
+						TaskInfo: &persistence.TaskInfo{
+							DomainID:    constants.TestDomainID,
+							WorkflowID:  constants.TestWorkflowID,
+							RunID:       constants.TestRunID,
+							CreatedTime: createdAt,
+						},
+						completionFunc: func(_ *persistence.TaskInfo, _ error) { isComplete <- true },
 					},
-				},
+				}
 			},
-			setupMock: func(req *types.HistoryDescribeWorkflowExecutionRequest, mockDomainCache *cache.MockDomainCache, mockHistoryService *history.MockClient) {
+			setupMock: func(req *types.HistoryDescribeWorkflowExecutionRequest, mockDomainCache *cache.MockDomainCache, mockHistoryService *history.MockClient, timeSource clock.MockedTimeSource) {
 				mockDomainCache.EXPECT().GetDomainByID(constants.TestDomainID).Return(constants.TestGlobalStandbyDomainEntry, nil).Times(retryPolicyMaxAttempts + 1)
 				mockHistoryService.EXPECT().DescribeWorkflowExecution(ctx, req).Return(nil, errors.New("error-describing-workflow-execution")).Times(retryPolicyMaxAttempts + 1)
 			},
-			err: errors.New("error-describing-workflow-execution"),
+			isTaskComplete: false,
+			err:            errors.New("error-describing-workflow-execution"),
 		},
 		{
 			name: "error - no WorkflowExecutionInfo in workflow execution response",
-			task: &InternalTask{
-				Event: &genericTaskInfo{
-					TaskInfo: &persistence.TaskInfo{
-						DomainID:   constants.TestDomainID,
-						WorkflowID: constants.TestWorkflowID,
-						RunID:      constants.TestRunID,
+			task: func(isComplete chan bool) *InternalTask {
+				return &InternalTask{
+					Event: &genericTaskInfo{
+						TaskInfo: &persistence.TaskInfo{
+							DomainID:    constants.TestDomainID,
+							WorkflowID:  constants.TestWorkflowID,
+							RunID:       constants.TestRunID,
+							CreatedTime: createdAt,
+						},
+						completionFunc: func(_ *persistence.TaskInfo, _ error) { isComplete <- true },
 					},
-				},
+				}
 			},
-			setupMock: func(req *types.HistoryDescribeWorkflowExecutionRequest, mockDomainCache *cache.MockDomainCache, mockHistoryService *history.MockClient) {
+			setupMock: func(req *types.HistoryDescribeWorkflowExecutionRequest, mockDomainCache *cache.MockDomainCache, mockHistoryService *history.MockClient, timeSource clock.MockedTimeSource) {
 				mockDomainCache.EXPECT().GetDomainByID(constants.TestDomainID).Return(constants.TestGlobalStandbyDomainEntry, nil).Times(retryPolicyMaxAttempts + 1)
 				resp := &types.DescribeWorkflowExecutionResponse{}
 				mockHistoryService.EXPECT().DescribeWorkflowExecution(ctx, req).Return(resp, nil).Times(retryPolicyMaxAttempts + 1)
 			},
-			err: errWorkflowExecutionInfoIsNil,
+			isTaskComplete: false,
+			err:            errWorkflowExecutionInfoIsNil,
 		},
 		{
 			name: "error - task type not supported",
-			task: &InternalTask{
-				Event: &genericTaskInfo{
-					TaskInfo: &persistence.TaskInfo{
-						DomainID:   constants.TestDomainID,
-						WorkflowID: constants.TestWorkflowID,
-						RunID:      constants.TestRunID,
+			task: func(isComplete chan bool) *InternalTask {
+				return &InternalTask{
+					Event: &genericTaskInfo{
+						TaskInfo: &persistence.TaskInfo{
+							DomainID:    constants.TestDomainID,
+							WorkflowID:  constants.TestWorkflowID,
+							RunID:       constants.TestRunID,
+							CreatedTime: createdAt,
+						},
+						completionFunc: func(_ *persistence.TaskInfo, _ error) { isComplete <- true },
 					},
-				},
+				}
 			},
-			setupMock: func(req *types.HistoryDescribeWorkflowExecutionRequest, mockDomainCache *cache.MockDomainCache, mockHistoryService *history.MockClient) {
+			setupMock: func(req *types.HistoryDescribeWorkflowExecutionRequest, mockDomainCache *cache.MockDomainCache, mockHistoryService *history.MockClient, timeSource clock.MockedTimeSource) {
 				mockDomainCache.EXPECT().GetDomainByID(constants.TestDomainID).Return(constants.TestGlobalStandbyDomainEntry, nil).Times(retryPolicyMaxAttempts + 1)
 				resp := &types.DescribeWorkflowExecutionResponse{
 					WorkflowExecutionInfo: &types.WorkflowExecutionInfo{},
 				}
 				mockHistoryService.EXPECT().DescribeWorkflowExecution(ctx, req).Return(resp, nil).Times(retryPolicyMaxAttempts + 1)
 			},
-			taskType: 999,
-			err:      errTaskTypeNotSupported,
+			taskType:       999,
+			isTaskComplete: false,
+			err:            errTaskTypeNotSupported,
 		},
 		{
 			name: "error - decision task not started - scheduleID greater than PendingDecision scheduleID",
-			task: &InternalTask{
-				Event: &genericTaskInfo{
-					TaskInfo: &persistence.TaskInfo{
-						DomainID:   constants.TestDomainID,
-						WorkflowID: constants.TestWorkflowID,
-						RunID:      constants.TestRunID,
-						ScheduleID: 3,
+			task: func(isComplete chan bool) *InternalTask {
+				return &InternalTask{
+					Event: &genericTaskInfo{
+						TaskInfo: &persistence.TaskInfo{
+							DomainID:    constants.TestDomainID,
+							WorkflowID:  constants.TestWorkflowID,
+							RunID:       constants.TestRunID,
+							ScheduleID:  3,
+							CreatedTime: createdAt,
+						},
+						completionFunc: func(_ *persistence.TaskInfo, _ error) { isComplete <- true },
 					},
-				},
+				}
 			},
-			setupMock: func(req *types.HistoryDescribeWorkflowExecutionRequest, mockDomainCache *cache.MockDomainCache, mockHistoryService *history.MockClient) {
+			setupMock: func(req *types.HistoryDescribeWorkflowExecutionRequest, mockDomainCache *cache.MockDomainCache, mockHistoryService *history.MockClient, timeSource clock.MockedTimeSource) {
 				mockDomainCache.EXPECT().GetDomainByID(constants.TestDomainID).Return(constants.TestGlobalStandbyDomainEntry, nil).Times(retryPolicyMaxAttempts + 1)
 				resp := &types.DescribeWorkflowExecutionResponse{
 					WorkflowExecutionInfo: &types.WorkflowExecutionInfo{},
@@ -180,22 +212,27 @@ func TestCompleteTaskIfStarted(t *testing.T) {
 				}
 				mockHistoryService.EXPECT().DescribeWorkflowExecution(ctx, req).Return(resp, nil).Times(retryPolicyMaxAttempts + 1)
 			},
-			taskType: persistence.TaskListTypeDecision,
-			err:      errTaskNotStarted,
+			taskType:       persistence.TaskListTypeDecision,
+			isTaskComplete: false,
+			err:            errTaskNotStarted,
 		},
 		{
 			name: "error - decision task not started - scheduleID equal to PendingDecision scheduleID but PendingDecision state is not PendingDecisionStateStarted",
-			task: &InternalTask{
-				Event: &genericTaskInfo{
-					TaskInfo: &persistence.TaskInfo{
-						DomainID:   constants.TestDomainID,
-						WorkflowID: constants.TestWorkflowID,
-						RunID:      constants.TestRunID,
-						ScheduleID: 3,
+			task: func(isComplete chan bool) *InternalTask {
+				return &InternalTask{
+					Event: &genericTaskInfo{
+						TaskInfo: &persistence.TaskInfo{
+							DomainID:    constants.TestDomainID,
+							WorkflowID:  constants.TestWorkflowID,
+							RunID:       constants.TestRunID,
+							ScheduleID:  3,
+							CreatedTime: createdAt,
+						},
+						completionFunc: func(_ *persistence.TaskInfo, _ error) { isComplete <- true },
 					},
-				},
+				}
 			},
-			setupMock: func(req *types.HistoryDescribeWorkflowExecutionRequest, mockDomainCache *cache.MockDomainCache, mockHistoryService *history.MockClient) {
+			setupMock: func(req *types.HistoryDescribeWorkflowExecutionRequest, mockDomainCache *cache.MockDomainCache, mockHistoryService *history.MockClient, timeSource clock.MockedTimeSource) {
 				mockDomainCache.EXPECT().GetDomainByID(constants.TestDomainID).Return(constants.TestGlobalStandbyDomainEntry, nil).Times(retryPolicyMaxAttempts + 1)
 				resp := &types.DescribeWorkflowExecutionResponse{
 					WorkflowExecutionInfo: &types.WorkflowExecutionInfo{},
@@ -206,22 +243,27 @@ func TestCompleteTaskIfStarted(t *testing.T) {
 				}
 				mockHistoryService.EXPECT().DescribeWorkflowExecution(ctx, req).Return(resp, nil).Times(retryPolicyMaxAttempts + 1)
 			},
-			taskType: persistence.TaskListTypeDecision,
-			err:      errTaskNotStarted,
+			taskType:       persistence.TaskListTypeDecision,
+			isTaskComplete: false,
+			err:            errTaskNotStarted,
 		},
 		{
 			name: "error - activity task not started - activity matching scheduleID is in PendingActivities but its state is not PendingActivityStateStarted",
-			task: &InternalTask{
-				Event: &genericTaskInfo{
-					TaskInfo: &persistence.TaskInfo{
-						DomainID:   constants.TestDomainID,
-						WorkflowID: constants.TestWorkflowID,
-						RunID:      constants.TestRunID,
-						ScheduleID: 3,
+			task: func(isComplete chan bool) *InternalTask {
+				return &InternalTask{
+					Event: &genericTaskInfo{
+						TaskInfo: &persistence.TaskInfo{
+							DomainID:    constants.TestDomainID,
+							WorkflowID:  constants.TestWorkflowID,
+							RunID:       constants.TestRunID,
+							ScheduleID:  3,
+							CreatedTime: createdAt,
+						},
+						completionFunc: func(_ *persistence.TaskInfo, _ error) { isComplete <- true },
 					},
-				},
+				}
 			},
-			setupMock: func(req *types.HistoryDescribeWorkflowExecutionRequest, mockDomainCache *cache.MockDomainCache, mockHistoryService *history.MockClient) {
+			setupMock: func(req *types.HistoryDescribeWorkflowExecutionRequest, mockDomainCache *cache.MockDomainCache, mockHistoryService *history.MockClient, timeSource clock.MockedTimeSource) {
 				mockDomainCache.EXPECT().GetDomainByID(constants.TestDomainID).Return(constants.TestGlobalStandbyDomainEntry, nil).Times(retryPolicyMaxAttempts + 1)
 				resp := &types.DescribeWorkflowExecutionResponse{
 					WorkflowExecutionInfo: &types.WorkflowExecutionInfo{},
@@ -234,39 +276,72 @@ func TestCompleteTaskIfStarted(t *testing.T) {
 				}
 				mockHistoryService.EXPECT().DescribeWorkflowExecution(ctx, req).Return(resp, nil).Times(retryPolicyMaxAttempts + 1)
 			},
-			taskType: persistence.TaskListTypeActivity,
-			err:      errTaskNotStarted,
+			taskType:       persistence.TaskListTypeActivity,
+			isTaskComplete: false,
+			err:            errTaskNotStarted,
 		},
 		{
-			name: "complete task - workflow not found",
-			task: &InternalTask{
-				Event: &genericTaskInfo{
-					TaskInfo: &persistence.TaskInfo{
-						DomainID:   constants.TestDomainID,
-						WorkflowID: constants.TestWorkflowID,
-						RunID:      constants.TestRunID,
+			name: "error - workflow not found and task created less than 24 hours before completion attempt",
+			task: func(isComplete chan bool) *InternalTask {
+				return &InternalTask{
+					Event: &genericTaskInfo{
+						TaskInfo: &persistence.TaskInfo{
+							DomainID:    constants.TestDomainID,
+							WorkflowID:  constants.TestWorkflowID,
+							RunID:       constants.TestRunID,
+							CreatedTime: createdAt,
+						},
+						completionFunc: func(_ *persistence.TaskInfo, _ error) { isComplete <- true },
 					},
-				},
+				}
 			},
-			setupMock: func(req *types.HistoryDescribeWorkflowExecutionRequest, mockDomainCache *cache.MockDomainCache, mockHistoryService *history.MockClient) {
+			setupMock: func(req *types.HistoryDescribeWorkflowExecutionRequest, mockDomainCache *cache.MockDomainCache, mockHistoryService *history.MockClient, timeSource clock.MockedTimeSource) {
+				mockDomainCache.EXPECT().GetDomainByID(constants.TestDomainID).Return(constants.TestGlobalStandbyDomainEntry, nil).Times(retryPolicyMaxAttempts + 1)
+				mockHistoryService.EXPECT().DescribeWorkflowExecution(ctx, req).Return(nil, &types.EntityNotExistsError{}).Times(retryPolicyMaxAttempts + 1)
+			},
+			isTaskComplete: false,
+			err:            errWaitTimeNotReachedForEntityNotExists,
+		},
+		{
+			name: "complete task - workflow not found and task created more than 24 hours before completion attempt",
+			task: func(isComplete chan bool) *InternalTask {
+				return &InternalTask{
+					Event: &genericTaskInfo{
+						TaskInfo: &persistence.TaskInfo{
+							DomainID:    constants.TestDomainID,
+							WorkflowID:  constants.TestWorkflowID,
+							RunID:       constants.TestRunID,
+							CreatedTime: createdAt,
+						},
+						completionFunc: func(_ *persistence.TaskInfo, _ error) { isComplete <- true },
+					},
+				}
+			},
+			setupMock: func(req *types.HistoryDescribeWorkflowExecutionRequest, mockDomainCache *cache.MockDomainCache, mockHistoryService *history.MockClient, timeSource clock.MockedTimeSource) {
 				mockDomainCache.EXPECT().GetDomainByID(constants.TestDomainID).Return(constants.TestGlobalStandbyDomainEntry, nil).Times(1)
 				mockHistoryService.EXPECT().DescribeWorkflowExecution(ctx, req).Return(nil, &types.EntityNotExistsError{}).Times(1)
+				timeSource.Advance(time.Hour*24 + time.Second)
 			},
-			err: nil,
+			isTaskComplete: true,
+			err:            nil,
 		},
 		{
 			name: "complete task - workflow closed",
-			task: &InternalTask{
-				Event: &genericTaskInfo{
-					TaskInfo: &persistence.TaskInfo{
-						DomainID:   constants.TestDomainID,
-						WorkflowID: constants.TestWorkflowID,
-						RunID:      constants.TestRunID,
-						ScheduleID: 3,
+			task: func(isComplete chan bool) *InternalTask {
+				return &InternalTask{
+					Event: &genericTaskInfo{
+						TaskInfo: &persistence.TaskInfo{
+							DomainID:    constants.TestDomainID,
+							WorkflowID:  constants.TestWorkflowID,
+							RunID:       constants.TestRunID,
+							ScheduleID:  3,
+							CreatedTime: createdAt,
+						},
+						completionFunc: func(_ *persistence.TaskInfo, _ error) { isComplete <- true },
 					},
-				},
+				}
 			},
-			setupMock: func(req *types.HistoryDescribeWorkflowExecutionRequest, mockDomainCache *cache.MockDomainCache, mockHistoryService *history.MockClient) {
+			setupMock: func(req *types.HistoryDescribeWorkflowExecutionRequest, mockDomainCache *cache.MockDomainCache, mockHistoryService *history.MockClient, timeSource clock.MockedTimeSource) {
 				mockDomainCache.EXPECT().GetDomainByID(constants.TestDomainID).Return(constants.TestGlobalStandbyDomainEntry, nil).Times(1)
 				resp := &types.DescribeWorkflowExecutionResponse{
 					WorkflowExecutionInfo: &types.WorkflowExecutionInfo{
@@ -275,44 +350,54 @@ func TestCompleteTaskIfStarted(t *testing.T) {
 				}
 				mockHistoryService.EXPECT().DescribeWorkflowExecution(ctx, req).Return(resp, nil).Times(1)
 			},
-			taskType: persistence.TaskListTypeDecision,
-			err:      nil,
+			taskType:       persistence.TaskListTypeDecision,
+			isTaskComplete: true,
+			err:            nil,
 		},
 		{
 			name: "complete decision task - no pending decision",
-			task: &InternalTask{
-				Event: &genericTaskInfo{
-					TaskInfo: &persistence.TaskInfo{
-						DomainID:   constants.TestDomainID,
-						WorkflowID: constants.TestWorkflowID,
-						RunID:      constants.TestRunID,
-						ScheduleID: 3,
+			task: func(isComplete chan bool) *InternalTask {
+				return &InternalTask{
+					Event: &genericTaskInfo{
+						TaskInfo: &persistence.TaskInfo{
+							DomainID:    constants.TestDomainID,
+							WorkflowID:  constants.TestWorkflowID,
+							RunID:       constants.TestRunID,
+							ScheduleID:  3,
+							CreatedTime: createdAt,
+						},
+						completionFunc: func(_ *persistence.TaskInfo, _ error) { isComplete <- true },
 					},
-				},
+				}
 			},
-			setupMock: func(req *types.HistoryDescribeWorkflowExecutionRequest, mockDomainCache *cache.MockDomainCache, mockHistoryService *history.MockClient) {
+			setupMock: func(req *types.HistoryDescribeWorkflowExecutionRequest, mockDomainCache *cache.MockDomainCache, mockHistoryService *history.MockClient, timeSource clock.MockedTimeSource) {
 				mockDomainCache.EXPECT().GetDomainByID(constants.TestDomainID).Return(constants.TestGlobalStandbyDomainEntry, nil).Times(1)
 				resp := &types.DescribeWorkflowExecutionResponse{
 					WorkflowExecutionInfo: &types.WorkflowExecutionInfo{},
 				}
 				mockHistoryService.EXPECT().DescribeWorkflowExecution(ctx, req).Return(resp, nil).Times(1)
 			},
-			taskType: persistence.TaskListTypeDecision,
-			err:      nil,
+			taskType:       persistence.TaskListTypeDecision,
+			isTaskComplete: true,
+			err:            nil,
 		},
 		{
 			name: "complete decision task - scheduleID is less than PendingDecision scheduleID",
-			task: &InternalTask{
-				Event: &genericTaskInfo{
-					TaskInfo: &persistence.TaskInfo{
-						DomainID:   constants.TestDomainID,
-						WorkflowID: constants.TestWorkflowID,
-						RunID:      constants.TestRunID,
-						ScheduleID: 2,
+			task: func(isComplete chan bool) *InternalTask {
+				return &InternalTask{
+					Event: &genericTaskInfo{
+						TaskInfo: &persistence.TaskInfo{
+							DomainID:    constants.TestDomainID,
+							WorkflowID:  constants.TestWorkflowID,
+							RunID:       constants.TestRunID,
+							ScheduleID:  2,
+							CreatedTime: createdAt,
+						},
+						completionFunc: func(_ *persistence.TaskInfo, _ error) { isComplete <- true },
 					},
-				},
+				}
 			},
-			setupMock: func(req *types.HistoryDescribeWorkflowExecutionRequest, mockDomainCache *cache.MockDomainCache, mockHistoryService *history.MockClient) {
+			setupMock: func(req *types.HistoryDescribeWorkflowExecutionRequest, mockDomainCache *cache.MockDomainCache, mockHistoryService *history.MockClient, timeSource clock.MockedTimeSource) {
 				mockDomainCache.EXPECT().GetDomainByID(constants.TestDomainID).Return(constants.TestGlobalStandbyDomainEntry, nil).Times(1)
 				resp := &types.DescribeWorkflowExecutionResponse{
 					WorkflowExecutionInfo: &types.WorkflowExecutionInfo{},
@@ -322,22 +407,27 @@ func TestCompleteTaskIfStarted(t *testing.T) {
 				}
 				mockHistoryService.EXPECT().DescribeWorkflowExecution(ctx, req).Return(resp, nil).Times(1)
 			},
-			taskType: persistence.TaskListTypeDecision,
-			err:      nil,
+			taskType:       persistence.TaskListTypeDecision,
+			isTaskComplete: true,
+			err:            nil,
 		},
 		{
 			name: "complete decision task - scheduleID is equal to PendingDecision scheduleID and PendingDecision state is PendingDecisionStateStarted",
-			task: &InternalTask{
-				Event: &genericTaskInfo{
-					TaskInfo: &persistence.TaskInfo{
-						DomainID:   constants.TestDomainID,
-						WorkflowID: constants.TestWorkflowID,
-						RunID:      constants.TestRunID,
-						ScheduleID: 3,
+			task: func(isComplete chan bool) *InternalTask {
+				return &InternalTask{
+					Event: &genericTaskInfo{
+						TaskInfo: &persistence.TaskInfo{
+							DomainID:    constants.TestDomainID,
+							WorkflowID:  constants.TestWorkflowID,
+							RunID:       constants.TestRunID,
+							ScheduleID:  3,
+							CreatedTime: createdAt,
+						},
+						completionFunc: func(_ *persistence.TaskInfo, _ error) { isComplete <- true },
 					},
-				},
+				}
 			},
-			setupMock: func(req *types.HistoryDescribeWorkflowExecutionRequest, mockDomainCache *cache.MockDomainCache, mockHistoryService *history.MockClient) {
+			setupMock: func(req *types.HistoryDescribeWorkflowExecutionRequest, mockDomainCache *cache.MockDomainCache, mockHistoryService *history.MockClient, timeSource clock.MockedTimeSource) {
 				mockDomainCache.EXPECT().GetDomainByID(constants.TestDomainID).Return(constants.TestGlobalStandbyDomainEntry, nil).Times(1)
 				resp := &types.DescribeWorkflowExecutionResponse{
 					WorkflowExecutionInfo: &types.WorkflowExecutionInfo{},
@@ -348,22 +438,27 @@ func TestCompleteTaskIfStarted(t *testing.T) {
 				}
 				mockHistoryService.EXPECT().DescribeWorkflowExecution(ctx, req).Return(resp, nil).Times(1)
 			},
-			taskType: persistence.TaskListTypeDecision,
-			err:      nil,
+			taskType:       persistence.TaskListTypeDecision,
+			isTaskComplete: true,
+			err:            nil,
 		},
 		{
 			name: "complete activity task - no activity matching scheduleID in PendingActivities",
-			task: &InternalTask{
-				Event: &genericTaskInfo{
-					TaskInfo: &persistence.TaskInfo{
-						DomainID:   constants.TestDomainID,
-						WorkflowID: constants.TestWorkflowID,
-						RunID:      constants.TestRunID,
-						ScheduleID: 3,
+			task: func(isComplete chan bool) *InternalTask {
+				return &InternalTask{
+					Event: &genericTaskInfo{
+						TaskInfo: &persistence.TaskInfo{
+							DomainID:    constants.TestDomainID,
+							WorkflowID:  constants.TestWorkflowID,
+							RunID:       constants.TestRunID,
+							ScheduleID:  3,
+							CreatedTime: createdAt,
+						},
+						completionFunc: func(_ *persistence.TaskInfo, _ error) { isComplete <- true },
 					},
-				},
+				}
 			},
-			setupMock: func(req *types.HistoryDescribeWorkflowExecutionRequest, mockDomainCache *cache.MockDomainCache, mockHistoryService *history.MockClient) {
+			setupMock: func(req *types.HistoryDescribeWorkflowExecutionRequest, mockDomainCache *cache.MockDomainCache, mockHistoryService *history.MockClient, timeSource clock.MockedTimeSource) {
 				mockDomainCache.EXPECT().GetDomainByID(constants.TestDomainID).Return(constants.TestGlobalStandbyDomainEntry, nil).Times(1)
 				resp := &types.DescribeWorkflowExecutionResponse{
 					WorkflowExecutionInfo: &types.WorkflowExecutionInfo{},
@@ -380,22 +475,27 @@ func TestCompleteTaskIfStarted(t *testing.T) {
 				}
 				mockHistoryService.EXPECT().DescribeWorkflowExecution(ctx, req).Return(resp, nil).Times(1)
 			},
-			taskType: persistence.TaskListTypeActivity,
-			err:      nil,
+			taskType:       persistence.TaskListTypeActivity,
+			isTaskComplete: true,
+			err:            nil,
 		},
 		{
 			name: "complete activity task - activity matching scheduleID is in PendingActivities and its state is PendingActivityStateStarted",
-			task: &InternalTask{
-				Event: &genericTaskInfo{
-					TaskInfo: &persistence.TaskInfo{
-						DomainID:   constants.TestDomainID,
-						WorkflowID: constants.TestWorkflowID,
-						RunID:      constants.TestRunID,
-						ScheduleID: 3,
+			task: func(isComplete chan bool) *InternalTask {
+				return &InternalTask{
+					Event: &genericTaskInfo{
+						TaskInfo: &persistence.TaskInfo{
+							DomainID:    constants.TestDomainID,
+							WorkflowID:  constants.TestWorkflowID,
+							RunID:       constants.TestRunID,
+							ScheduleID:  3,
+							CreatedTime: createdAt,
+						},
+						completionFunc: func(_ *persistence.TaskInfo, _ error) { isComplete <- true },
 					},
-				},
+				}
 			},
-			setupMock: func(req *types.HistoryDescribeWorkflowExecutionRequest, mockDomainCache *cache.MockDomainCache, mockHistoryService *history.MockClient) {
+			setupMock: func(req *types.HistoryDescribeWorkflowExecutionRequest, mockDomainCache *cache.MockDomainCache, mockHistoryService *history.MockClient, timeSource clock.MockedTimeSource) {
 				mockDomainCache.EXPECT().GetDomainByID(constants.TestDomainID).Return(constants.TestGlobalStandbyDomainEntry, nil).Times(1)
 				resp := &types.DescribeWorkflowExecutionResponse{
 					WorkflowExecutionInfo: &types.WorkflowExecutionInfo{},
@@ -408,8 +508,9 @@ func TestCompleteTaskIfStarted(t *testing.T) {
 				}
 				mockHistoryService.EXPECT().DescribeWorkflowExecution(ctx, req).Return(resp, nil).Times(1)
 			},
-			taskType: persistence.TaskListTypeActivity,
-			err:      nil,
+			taskType:       persistence.TaskListTypeActivity,
+			isTaskComplete: true,
+			err:            nil,
 		},
 	}
 
@@ -420,20 +521,27 @@ func TestCompleteTaskIfStarted(t *testing.T) {
 
 			defer ctrl.Finish()
 
+			isTaskComplete := make(chan bool, 1)
+
+			task := tc.task(isTaskComplete)
+
 			req := &types.HistoryDescribeWorkflowExecutionRequest{
-				DomainUUID: tc.task.Event.TaskInfo.DomainID,
+				DomainUUID: task.Event.TaskInfo.DomainID,
 				Request: &types.DescribeWorkflowExecutionRequest{
-					Domain: tc.task.domainName,
+					Domain: task.domainName,
 					Execution: &types.WorkflowExecution{
-						WorkflowID: tc.task.Event.WorkflowID,
-						RunID:      tc.task.Event.RunID,
+						WorkflowID: task.Event.WorkflowID,
+						RunID:      task.Event.RunID,
 					},
 				},
 			}
 
-			tc.setupMock(req, tCmp.domainCache.(*cache.MockDomainCache), tCmp.historyService.(*history.MockClient))
+			mockedTimeSource := clock.NewMockedTimeSourceAt(createdAt)
+			tCmp.timeSource = mockedTimeSource
 
-			err := tCmp.CompleteTaskIfStarted(ctx, tc.task)
+			tc.setupMock(req, tCmp.domainCache.(*cache.MockDomainCache), tCmp.historyService.(*history.MockClient), mockedTimeSource)
+
+			err := tCmp.CompleteTaskIfStarted(ctx, task)
 
 			if tc.err != nil {
 				assert.Error(t, err)
@@ -445,6 +553,14 @@ func TestCompleteTaskIfStarted(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 			}
+
+			var val bool
+			select {
+			case val = <-isTaskComplete:
+			default:
+			}
+
+			assert.Equal(t, tc.isTaskComplete, val)
 		})
 	}
 }
