@@ -508,6 +508,12 @@ func (tr *taskReader) dispatchSingleTaskFromBuffer(taskInfo *persistence.TaskInf
 		return false, false
 	}
 
+	if errors.Is(err, errWaitTimeNotReachedForEntityNotExists) {
+		e.EventName = "Dispatch failed on completing task on the passive side because workflow could not be found and not enough time has passed to complete the task. Will retry dispatch"
+		event.Log(e)
+		return false, false
+	}
+
 	e.EventName = "Dispatch failed because of unknown error. Will retry dispatch"
 	e.Payload = map[string]any{
 		"error": err,
