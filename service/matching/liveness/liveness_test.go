@@ -58,7 +58,7 @@ func (s *livenessSuite) SetupTest() {
 	s.liveness = NewLiveness(s.timeSource, s.ttl, func() {
 		atomic.CompareAndSwapInt32(&s.shutdownFlag, 0, 1)
 		s.liveness.Stop()
-	 })
+	})
 }
 
 func (s *livenessSuite) TestIsAlive_No() {
