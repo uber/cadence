@@ -118,6 +118,9 @@ var (
 		MyIdentity:      HostName2,
 		TasklistName:    TaskListName,
 	}
+	NamespaceNotFoundError = types.NamespaceNotFoundError{
+		Namespace: Namespace,
+	}
 )
 
 var Errors = []error{
@@ -143,4 +146,5 @@ var Errors = []error{
 	&WorkflowExecutionAlreadyStartedError,
 	&StickyWorkerUnavailableError,
 	&TaskListNotOwnedByHostError,
+	&NamespaceNotFoundError,
 }

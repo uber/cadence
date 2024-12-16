@@ -97,7 +97,7 @@ func (h *handlerImpl) GetShardOwner(ctx context.Context, request *types.GetShard
 			return nil, fmt.Errorf("lookup matching owner %w", err)
 		}
 	default:
-		return nil, &types.NamespaceNotFoundErr{Namespace: request.GetNamespace()}
+		return nil, &types.NamespaceNotFoundError{Namespace: request.GetNamespace()}
 	}
 
 	resp = &types.GetShardOwnerResponse{

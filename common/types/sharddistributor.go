@@ -62,13 +62,13 @@ func (v *GetShardOwnerResponse) GetNamespace() (o string) {
 	return
 }
 
-type NamespaceNotFoundErr struct {
+type NamespaceNotFoundError struct {
 	Namespace string
 }
 
-func (n *NamespaceNotFoundErr) Error() (o string) {
+func (n *NamespaceNotFoundError) Error() (o string) {
 	if n != nil {
-		return fmt.Sprintf("Namespace not found %v", n.Namespace)
+		return fmt.Sprintf("namespace not found %v", n.Namespace)
 	}
 	return
 }

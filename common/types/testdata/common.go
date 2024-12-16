@@ -58,6 +58,7 @@ const (
 	ClientLibraryVersion = "ClientLibraryVersion"
 	SupportedVersions    = "SupportedVersions"
 	FeatureFlag          = "FeatureFlag"
+	Namespace            = "Namespace"
 
 	Attempt            = 2
 	ScheduleID         = 5

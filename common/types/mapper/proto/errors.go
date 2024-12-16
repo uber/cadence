@@ -122,7 +122,7 @@ func ToError(err error) error {
 				Message: status.Message(),
 			}
 		case *sharddistributorv1.NamespaceNotFoundError:
-			return &types.NamespaceNotFoundErr{
+			return &types.NamespaceNotFoundError{
 				Namespace: details.Namespace,
 			}
 		}
@@ -371,7 +371,7 @@ func fromStickyWorkerUnavailableErr(e *types.StickyWorkerUnavailableError) error
 	return protobuf.NewError(yarpcerrors.CodeUnavailable, e.Message, protobuf.WithErrorDetails(&apiv1.StickyWorkerUnavailableError{}))
 }
 
-func fromNamespaceNotFoundErr(e *types.NamespaceNotFoundErr) error {
+func fromNamespaceNotFoundErr(e *types.NamespaceNotFoundError) error {
 	return protobuf.NewError(yarpcerrors.CodeNotFound, e.Error(), protobuf.WithErrorDetails(&sharddistributorv1.NamespaceNotFoundError{
 		Namespace: e.Namespace,
 	}))
