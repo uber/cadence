@@ -40,3 +40,7 @@ message GetShardOwnerResponse {
   string owner = 1;
   string namespace = 2;
 }
+
+message NamespaceNotFoundError {
+  string namespace = 1;
+}

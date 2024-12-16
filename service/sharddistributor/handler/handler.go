@@ -24,6 +24,8 @@ package handler
 
 import (
 	"context"
+	"fmt"
+	"strconv"
 	"sync"
 
 	"github.com/uber/cadence/client/history"
@@ -31,6 +33,7 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/service/sharddistributor/constants"
 )
 
 func NewHandler(
@@ -76,5 +79,31 @@ func (h *handlerImpl) Health(ctx context.Context) (*types.HealthStatus, error) {
 func (h *handlerImpl) GetShardOwner(ctx context.Context, request *types.GetShardOwnerRequest) (resp *types.GetShardOwnerResponse, retError error) {
 	defer func() { log.CapturePanic(recover(), h.logger, &retError) }()
 
-	return nil, nil
+	var owner string
+	switch request.GetNamespace() {
+	case constants.HistoryNamespace:
+		shardID, err := strconv.Atoi(request.GetShardKey())
+		if err != nil {
+			return nil, fmt.Errorf("history shardkey to shardid %w", err)
+		}
+		owner, err = h.historyPeerResolver.FromShardID(shardID)
+		if err != nil {
+			return nil, fmt.Errorf("lookup history owner %w", err)
+		}
+	case constants.MatchingNamespace:
+		var err error
+		owner, err = h.matchingPeerResolver.FromTaskList(request.GetShardKey())
+		if err != nil {
+			return nil, fmt.Errorf("lookup matching owner %w", err)
+		}
+	default:
+		return nil, &types.NamespaceNotFoundErr{Namespace: request.GetNamespace()}
+	}
+
+	resp = &types.GetShardOwnerResponse{
+		Owner:     owner,
+		Namespace: request.Namespace,
+	}
+
+	return resp, nil
 }
