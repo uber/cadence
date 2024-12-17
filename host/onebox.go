@@ -240,9 +240,10 @@ type (
 		// TasksBurst to 1 then you'd get a steady stream of tasks, with one task every 100ms.
 		TasksBurst int
 
-		// TasksProduceSpecOverTime is a list of TasksProduceSpec that will be used to change the qps over time.
+		// OverTime is a list of TasksProduceSpec that will be used to change the qps over time.
+		// Each item has a duration and they will be applied in the given order.
 		// If this is set, TasksPerSecond and TasksBurst will be ignored.
-		TasksProduceSpecOverTime []TasksProduceSpec
+		OverTime []TasksProduceSpec
 	}
 
 	TasksProduceSpec struct {
@@ -252,11 +253,9 @@ type (
 		// The burst value for the rate limiter for task generation.
 		TasksBurst int
 
-		// The time range in seconds that the above settings will be applied.
-		// The time range is [Start, End)
-		// For example, if the time range is [10, 20), the settings will be applied from 10s to 19s.
-		// Simulation start time is considered as second 0.
-		Start, End int
+		// The duration for which the settings will be applied.
+		// If the duration is unset, the settings will be applied indefinitely.
+		Duration *time.Duration
 	}
 
 	SimulationBacklogConfiguration struct {

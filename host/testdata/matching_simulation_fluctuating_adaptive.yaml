@@ -19,19 +19,15 @@ matchingconfig:
     tasks:
       - numtaskgenerators: 3
         maxtasktogenerate: 8000
-        tasksproducespecovertime:
+        overtime:
         - taskspersecond: 10
           tasksburst: 10
-          start: 0
-          end: 15
+          duration: 15s
         - taskspersecond: 250
           tasksburst: 250
-          start: 15
-          end: 45
+          duration: 30s
         - taskspersecond: 10
           tasksburst: 10
-          start: 45
-          end: -1 # -1 means forever
     pollers:
       - taskprocesstime: 1ms
         numpollers: 8

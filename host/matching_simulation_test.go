@@ -717,13 +717,19 @@ func newSimulationRateLimiter(
 	logFn func(msg string, args ...interface{}),
 ) *simulationRateLimiter {
 	var rateLimiters []*rateLimiterForTimeRange
-	if len(taskConfig.TasksProduceSpecOverTime) == 0 {
+	if len(taskConfig.OverTime) == 0 {
 		l := rate.NewLimiter(rate.Limit(taskConfig.getTasksPerSecond()), taskConfig.getTasksBurst())
 		rateLimiters = append(rateLimiters, &rateLimiterForTimeRange{limiter: l, start: 0, end: -1})
 	} else {
-		for _, spec := range taskConfig.TasksProduceSpecOverTime {
+		start := 0
+		for _, spec := range taskConfig.OverTime {
 			l := rate.NewLimiter(rate.Limit(spec.TasksPerSecond), spec.TasksBurst)
-			rateLimiters = append(rateLimiters, &rateLimiterForTimeRange{limiter: l, start: spec.Start, end: spec.End})
+			end := -1
+			if spec.Duration != nil {
+				end = start + int(spec.Duration.Seconds())
+			}
+			rateLimiters = append(rateLimiters, &rateLimiterForTimeRange{limiter: l, start: start, end: end})
+			start = end
 		}
 	}
 
