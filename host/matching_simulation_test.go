@@ -61,6 +61,7 @@ import (
 
 	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/partition"
 	"github.com/uber/cadence/common/persistence"
@@ -270,7 +271,7 @@ func (s *MatchingSimulationSuite) TestMatchingSimulation() {
 	lastTaskScheduleID := int32(0)
 	for _, taskConfig := range s.testClusterConfig.MatchingConfig.SimulationConfig.Tasks {
 		tasksGenerated := int32(0)
-		rateLimiter := newSimulationRateLimiter(taskConfig, startTime, s.log)
+		rateLimiter := newSimulationRateLimiter(taskConfig, startTime, clock.NewRealTimeSource(), s.log)
 		for i := 0; i < taskConfig.getNumTaskGenerators(); i++ {
 			numGenerators++
 			generatorWG.Add(1)
@@ -698,25 +699,31 @@ type rateLimiterForTimeRange struct {
 	start, end int
 }
 
-func (r rateLimiterForTimeRange) String() string {
+func (r *rateLimiterForTimeRange) String() string {
 	return fmt.Sprintf("{start: %d, end: %d}", r.start, r.end)
 }
 
 type simulationRateLimiter struct {
 	startTime    time.Time
-	rateLimiters []rateLimiterForTimeRange
+	timeSrc      clock.TimeSource
+	rateLimiters []*rateLimiterForTimeRange
 	logFn        func(msg string, args ...interface{})
 }
 
-func newSimulationRateLimiter(taskConfig SimulationTaskConfiguration, startTime time.Time, logFn func(msg string, args ...interface{})) *simulationRateLimiter {
-	var rateLimiters []rateLimiterForTimeRange
+func newSimulationRateLimiter(
+	taskConfig SimulationTaskConfiguration,
+	startTime time.Time,
+	timeSrc clock.TimeSource,
+	logFn func(msg string, args ...interface{}),
+) *simulationRateLimiter {
+	var rateLimiters []*rateLimiterForTimeRange
 	if len(taskConfig.TasksProduceSpecOverTime) == 0 {
 		l := rate.NewLimiter(rate.Limit(taskConfig.getTasksPerSecond()), taskConfig.getTasksBurst())
-		rateLimiters = append(rateLimiters, rateLimiterForTimeRange{limiter: l, start: 0, end: -1})
+		rateLimiters = append(rateLimiters, &rateLimiterForTimeRange{limiter: l, start: 0, end: -1})
 	} else {
 		for _, spec := range taskConfig.TasksProduceSpecOverTime {
 			l := rate.NewLimiter(rate.Limit(spec.TasksPerSecond), spec.TasksBurst)
-			rateLimiters = append(rateLimiters, rateLimiterForTimeRange{limiter: l, start: spec.Start, end: spec.End})
+			rateLimiters = append(rateLimiters, &rateLimiterForTimeRange{limiter: l, start: spec.Start, end: spec.End})
 		}
 	}
 
@@ -728,6 +735,7 @@ func newSimulationRateLimiter(taskConfig SimulationTaskConfiguration, startTime 
 
 	return &simulationRateLimiter{
 		startTime:    startTime,
+		timeSrc:      timeSrc,
 		rateLimiters: rateLimiters,
 		logFn:        logFn,
 	}
@@ -735,8 +743,17 @@ func newSimulationRateLimiter(taskConfig SimulationTaskConfiguration, startTime 
 
 // TODO: test this function. lookup is not working
 func (r *simulationRateLimiter) Wait(ctx context.Context) error {
-	elapsed := int(time.Since(r.startTime).Seconds())
-	idx, ok := slices.BinarySearchFunc(r.rateLimiters, elapsed, func(r rateLimiterForTimeRange, t int) int {
+	limiter, err := r.getLimiter()
+	if err != nil {
+		return err
+	}
+
+	return limiter.limiter.Wait(ctx)
+}
+
+func (r *simulationRateLimiter) getLimiter() (*rateLimiterForTimeRange, error) {
+	elapsed := int(r.timeSrc.Since(r.startTime).Seconds())
+	idx, ok := slices.BinarySearchFunc(r.rateLimiters, elapsed, func(r *rateLimiterForTimeRange, t int) int {
 		if t >= r.start && (r.end == -1 || t < r.end) {
 			return 0
 		}
@@ -749,40 +766,45 @@ func (r *simulationRateLimiter) Wait(ctx context.Context) error {
 	})
 
 	if !ok {
-		return fmt.Errorf("rate limiter not found, elapsed: %ds", elapsed)
+		return nil, fmt.Errorf("rate limiter not found, elapsed: %ds", elapsed)
 	}
 
 	r.logFn("Elapsed %vs so using rate limiter at index %d", elapsed, idx)
-	return r.rateLimiters[idx].limiter.Wait(ctx)
+	return r.rateLimiters[idx], nil
 }
 
 func TestMatchingSimulation_RateLimiterBST(t *testing.T) {
+	mockTimeSrc := clock.NewMockedTimeSource()
 	srl := &simulationRateLimiter{
-		startTime: time.Now(),
-		rateLimiters: []rateLimiterForTimeRange{
+		startTime: mockTimeSrc.Now(),
+		timeSrc:   mockTimeSrc,
+		rateLimiters: []*rateLimiterForTimeRange{
 			{limiter: rate.NewLimiter(rate.Limit(10), 1), start: 0, end: 5},
 			{limiter: rate.NewLimiter(rate.Limit(10), 1), start: 5, end: -1},
 		},
 		logFn: t.Logf,
 	}
 
-	if err := srl.Wait(context.Background()); err != nil {
-		t.Error(err)
-	}
-	time.Sleep(1 * time.Second)
-	if err := srl.Wait(context.Background()); err != nil {
-		t.Error(err)
-	}
-	time.Sleep(5 * time.Second)
-	if err := srl.Wait(context.Background()); err != nil {
-		t.Error(err)
-	}
-	time.Sleep(1 * time.Second)
-	if err := srl.Wait(context.Background()); err != nil {
-		t.Error(err)
-	}
-	time.Sleep(5 * time.Second)
-	if err := srl.Wait(context.Background()); err != nil {
-		t.Error(err)
-	}
+	// t = 0
+	l, err := srl.getLimiter()
+	require.NoError(t, err)
+	require.Equal(t, 0, l.start) // limiter at index 0 should be used
+
+	// t = 3
+	mockTimeSrc.Advance(time.Second * 3)
+	l, err = srl.getLimiter()
+	require.NoError(t, err)
+	require.Equal(t, 0, l.start) // limiter at index 0 should be used
+
+	// t = 5
+	mockTimeSrc.Advance(time.Second * 2)
+	l, err = srl.getLimiter()
+	require.NoError(t, err)
+	require.Equal(t, 5, l.start) // limiter at index 1 should be used
+
+	// t = 10
+	mockTimeSrc.Advance(time.Second * 5)
+	l, err = srl.getLimiter()
+	require.NoError(t, err)
+	require.Equal(t, 5, l.start) // limiter at index 1 should be used
 }
