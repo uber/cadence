@@ -747,7 +747,6 @@ func newSimulationRateLimiter(
 	}
 }
 
-// TODO: test this function. lookup is not working
 func (r *simulationRateLimiter) Wait(ctx context.Context) error {
 	limiter, err := r.getLimiter()
 	if err != nil {
