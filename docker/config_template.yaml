@@ -302,7 +302,7 @@ kafka:
             dlq-topic: {{ default .Env.VISIBILITY_NAME "cadence-visibility-dev" }}-dlq
 
 publicClient:
-    hostPort: {{ default .Env.FRONTEND_SERVICE "cadence" }}:{{ default .Env.FRONTEND_PORT "7933" }}
+    hostPort: {{ default .Env.FRONTEND_SERVICE "cadence" }}:{{ default .Env.GRPC_FRONTEND_PORT "7833" }}
 
 dynamicconfig:
   client: filebased
