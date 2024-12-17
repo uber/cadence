@@ -162,6 +162,7 @@ type (
 
 		// Number of task list read partitions defaults to 1
 		TaskListReadPartitions int
+
 		// At most N polls will be forwarded at a time. defaults to 20
 		ForwarderMaxOutstandingPolls int
 
@@ -200,10 +201,11 @@ type (
 		// Adaptive scaler configurations
 		EnableAdaptiveScaler                bool
 		PartitionDownscaleFactor            float64
-		PartitionUpscaleRPS                 float64
+		PartitionUpscaleRPS                 int
 		PartitionUpscaleSustainedDuration   time.Duration
 		PartitionDownscaleSustainedDuration time.Duration
 		AdaptiveScalerUpdateInterval        time.Duration
+		QPSTrackerInterval                  time.Duration
 		TaskIsolationDuration               time.Duration
 	}
 
@@ -225,7 +227,11 @@ type (
 		// Number of task generators defaults to 1
 		NumTaskGenerators int
 
-		// The total QPS to generate tasks. Defaults to 40.
+		// Upper limit of tasks to generate. Task generators will stop if total number of tasks generated reaches MaxTaskToGenerate during simulation
+		// Defaults to 2k
+		MaxTaskToGenerate int
+
+		// Task generation QPS. Defaults to 40.
 		TasksPerSecond int
 
 		// The burst value for the rate limiter for task generation. Controls the maximum number of AddTask requests
@@ -234,9 +240,23 @@ type (
 		// TasksBurst to 1 then you'd get a steady stream of tasks, with one task every 100ms.
 		TasksBurst int
 
-		// Upper limit of tasks to generate. Task generators will stop if total number of tasks generated reaches MaxTaskToGenerate during simulation
-		// Defaults to 2k
-		MaxTaskToGenerate int
+		// TasksProduceSpecOverTime is a list of TasksProduceSpec that will be used to change the qps over time.
+		// If this is set, TasksPerSecond and TasksBurst will be ignored.
+		TasksProduceSpecOverTime []TasksProduceSpec
+	}
+
+	TasksProduceSpec struct {
+		// Task generation qps
+		TasksPerSecond int
+
+		// The burst value for the rate limiter for task generation.
+		TasksBurst int
+
+		// The time range in seconds that the above settings will be applied.
+		// The time range is [Start, End)
+		// For example, if the time range is [10, 20), the settings will be applied from 10s to 19s.
+		// Simulation start time is considered as second 0.
+		Start, End int
 	}
 
 	SimulationBacklogConfiguration struct {

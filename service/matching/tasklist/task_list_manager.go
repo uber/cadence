@@ -219,7 +219,8 @@ func NewManager(
 		TaskListKind: taskListKind,
 		TaskListType: taskList.GetType(),
 	}
-	tlMgr.qpsTracker = stats.NewEmaFixedWindowQPSTracker(timeSource, 0.5, 10*time.Second, baseEvent)
+
+	tlMgr.qpsTracker = stats.NewEmaFixedWindowQPSTracker(timeSource, 0.5, taskListConfig.QPSTrackerInterval(), baseEvent)
 	if taskList.IsRoot() && *taskListKind == types.TaskListKindNormal {
 		adaptiveScalerScope := common.NewPerTaskListScope(domainName, taskList.GetName(), *taskListKind, metricsClient, metrics.MatchingAdaptiveScalerScope).
 			Tagged(getTaskListTypeTag(taskList.GetType()))
@@ -341,14 +342,20 @@ func (c *taskListManagerImpl) handleErr(err error) error {
 func (c *taskListManagerImpl) TaskListPartitionConfig() *types.TaskListPartitionConfig {
 	c.partitionConfigLock.RLock()
 	defer c.partitionConfigLock.RUnlock()
+
+	scope := c.scope.Tagged(metrics.TaskListRootPartitionTag(c.taskListID.GetRoot()))
 	if c.partitionConfig == nil {
+		// if partition config is nil, read/write partition count is considered 1. Emit those metrics for continuity
+		scope.UpdateGauge(metrics.TaskListPartitionConfigNumReadGauge, 1)
+		scope.UpdateGauge(metrics.TaskListPartitionConfigNumWriteGauge, 1)
 		return nil
 	}
+
 	config := *c.partitionConfig
-	c.logger.Debug("get task list partition config from db", tag.Dynamic("root-partition", c.taskListID.GetRoot()), tag.Dynamic("config", config))
-	c.scope.Tagged(metrics.TaskListRootPartitionTag(c.taskListID.GetRoot())).UpdateGauge(metrics.TaskListPartitionConfigNumReadGauge, float64(config.NumReadPartitions))
-	c.scope.Tagged(metrics.TaskListRootPartitionTag(c.taskListID.GetRoot())).UpdateGauge(metrics.TaskListPartitionConfigNumWriteGauge, float64(config.NumWritePartitions))
-	c.scope.Tagged(metrics.TaskListRootPartitionTag(c.taskListID.GetRoot())).UpdateGauge(metrics.TaskListPartitionConfigVersionGauge, float64(config.Version))
+	c.logger.Debug("current partition config", tag.Dynamic("root-partition", c.taskListID.GetRoot()), tag.Dynamic("config", config))
+	scope.UpdateGauge(metrics.TaskListPartitionConfigNumReadGauge, float64(config.NumReadPartitions))
+	scope.UpdateGauge(metrics.TaskListPartitionConfigNumWriteGauge, float64(config.NumWritePartitions))
+	scope.UpdateGauge(metrics.TaskListPartitionConfigVersionGauge, float64(config.Version))
 	return &config
 }
 
@@ -1032,6 +1039,9 @@ func newTaskListConfig(id *Identifier, cfg *config.Config, domainName string) *c
 		},
 		AdaptiveScalerUpdateInterval: func() time.Duration {
 			return cfg.AdaptiveScalerUpdateInterval(domainName, taskListName, taskType)
+		},
+		QPSTrackerInterval: func() time.Duration {
+			return cfg.QPSTrackerInterval(domainName, taskListName, taskType)
 		},
 		EnableAdaptiveScaler: func() bool {
 			return cfg.EnableAdaptiveScaler(domainName, taskListName, taskType)

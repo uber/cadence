@@ -2436,6 +2436,7 @@ const (
 	MatchingPartitionUpscaleSustainedDuration
 	MatchingPartitionDownscaleSustainedDuration
 	MatchingAdaptiveScalerUpdateInterval
+	MatchingQPSTrackerInterval
 
 	// HistoryLongPollExpirationInterval is the long poll expiration interval in the history service
 	// KeyName: history.longPollExpirationInterval
@@ -4777,6 +4778,12 @@ var DurationKeys = map[DurationKey]DynamicDuration{
 		Filters:      []Filter{DomainName, TaskListName, TaskType},
 		Description:  "MatchingAdaptiveScalerUpdateInterval is the internal for adaptive scaler to update",
 		DefaultValue: time.Second * 15,
+	},
+	MatchingQPSTrackerInterval: {
+		KeyName:      "matching.qpsTrackerInterval",
+		Filters:      []Filter{DomainName, TaskListName, TaskType},
+		Description:  "MatchingQPSTrackerInterval is the interval for qps tracker's loop. Changes are not reflected until service restart",
+		DefaultValue: time.Second * 10,
 	},
 	HistoryLongPollExpirationInterval: {
 		KeyName:      "history.longPollExpirationInterval",

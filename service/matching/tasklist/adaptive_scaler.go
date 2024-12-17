@@ -156,7 +156,12 @@ func (a *adaptiveScalerImpl) run() {
 	if numReadPartitions == partitionConfig.NumReadPartitions && numWritePartitions == partitionConfig.NumWritePartitions {
 		return
 	}
-	a.logger.Info("adaptive scaler is updating number of partitions", tag.CurrentQPS(qps), tag.NumReadPartitions(numReadPartitions), tag.NumWritePartitions(numWritePartitions), tag.Dynamic("task-list-partition-config", partitionConfig))
+	a.logger.Info("adaptive scaler is updating number of partitions",
+		tag.CurrentQPS(qps),
+		tag.NumReadPartitions(numReadPartitions),
+		tag.NumWritePartitions(numWritePartitions),
+		tag.Dynamic("task-list-partition-config", partitionConfig),
+	)
 	a.scope.IncCounter(metrics.CadenceRequests)
 	err := a.tlMgr.UpdateTaskListPartitionConfig(a.ctx, &types.TaskListPartitionConfig{
 		NumReadPartitions:  numReadPartitions,

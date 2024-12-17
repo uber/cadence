@@ -44,6 +44,7 @@ import (
 	"math/rand"
 	"os"
 	"reflect"
+	"sort"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -55,6 +56,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/yarpc"
+	"golang.org/x/exp/slices"
 	"golang.org/x/time/rate"
 
 	"github.com/uber/cadence/client/history"
@@ -92,7 +94,7 @@ type operationAggStats struct {
 	lastUpdated   time.Time
 }
 
-func TestMatchingSimulationSuite(t *testing.T) {
+func TestMatchingSimulation(t *testing.T) {
 	flag.Parse()
 
 	confPath := os.Getenv("MATCHING_SIMULATION_CONFIG")
@@ -125,6 +127,7 @@ func TestMatchingSimulationSuite(t *testing.T) {
 		dynamicconfig.MatchingPartitionUpscaleSustainedDuration:    clusterConfig.MatchingConfig.SimulationConfig.PartitionUpscaleSustainedDuration,
 		dynamicconfig.MatchingPartitionDownscaleSustainedDuration:  clusterConfig.MatchingConfig.SimulationConfig.PartitionDownscaleSustainedDuration,
 		dynamicconfig.MatchingAdaptiveScalerUpdateInterval:         clusterConfig.MatchingConfig.SimulationConfig.AdaptiveScalerUpdateInterval,
+		dynamicconfig.MatchingQPSTrackerInterval:                   clusterConfig.MatchingConfig.SimulationConfig.QPSTrackerInterval,
 		dynamicconfig.TaskIsolationDuration:                        clusterConfig.MatchingConfig.SimulationConfig.TaskIsolationDuration,
 	}
 
@@ -267,12 +270,23 @@ func (s *MatchingSimulationSuite) TestMatchingSimulation() {
 	lastTaskScheduleID := int32(0)
 	for _, taskConfig := range s.testClusterConfig.MatchingConfig.SimulationConfig.Tasks {
 		tasksGenerated := int32(0)
-		rateLimiter := rate.NewLimiter(rate.Limit(taskConfig.getTasksPerSecond()), taskConfig.getTasksBurst())
+		rateLimiter := newSimulationRateLimiter(taskConfig, startTime, s.log)
 		for i := 0; i < taskConfig.getNumTaskGenerators(); i++ {
 			numGenerators++
 			generatorWG.Add(1)
 			config := taskConfig
-			go s.generate(ctx, matchingClients[i%len(matchingClients)], domainID, tasklist, rateLimiter, &tasksGenerated, &lastTaskScheduleID, &generatorWG, statsCh, &config)
+			go s.generate(
+				ctx,
+				matchingClients[i%len(matchingClients)],
+				domainID,
+				tasklist,
+				&tasksGenerated,
+				&lastTaskScheduleID,
+				&generatorWG,
+				statsCh,
+				&config,
+				rateLimiter,
+			)
 		}
 	}
 
@@ -281,8 +295,8 @@ func (s *MatchingSimulationSuite) TestMatchingSimulation() {
 	// can change if your test case needs more time
 	s.log("Waiting until all tasks are received")
 	tasksToReceive.Wait()
-	executionTime := time.Now().Sub(startTime)
-	s.log("Completed benchmark in %v", time.Now().Sub(startTime))
+	executionTime := time.Since(startTime)
+	s.log("Completed benchmark in %v", executionTime)
 	s.log("Canceling context to stop pollers and task generators")
 	cancel()
 	pollerWG.Wait()
@@ -333,12 +347,13 @@ func (s *MatchingSimulationSuite) generate(
 	ctx context.Context,
 	matchingClient MatchingClient,
 	domainID, tasklist string,
-	rateLimiter *rate.Limiter,
 	tasksGenerated *int32,
 	lastTaskScheduleID *int32,
 	wg *sync.WaitGroup,
 	statsCh chan *operationStats,
-	taskConfig *SimulationTaskConfiguration) {
+	taskConfig *SimulationTaskConfiguration,
+	rateLimiter *simulationRateLimiter,
+) {
 	defer wg.Done()
 
 	for {
@@ -349,7 +364,7 @@ func (s *MatchingSimulationSuite) generate(
 		default:
 			if err := rateLimiter.Wait(ctx); err != nil {
 				if !errors.Is(err, context.Canceled) {
-					s.T().Fatal("Rate limiter failed: ", err)
+					s.T().Error("Rate limiter failed: ", err)
 				}
 				return
 			}
@@ -676,4 +691,98 @@ func randomlyPickKey(weights map[string]int) string {
 
 	// Return an empty string as a fallback (should not happen if weights are positive)
 	return ""
+}
+
+type rateLimiterForTimeRange struct {
+	limiter    *rate.Limiter
+	start, end int
+}
+
+func (r rateLimiterForTimeRange) String() string {
+	return fmt.Sprintf("{start: %d, end: %d}", r.start, r.end)
+}
+
+type simulationRateLimiter struct {
+	startTime    time.Time
+	rateLimiters []rateLimiterForTimeRange
+	logFn        func(msg string, args ...interface{})
+}
+
+func newSimulationRateLimiter(taskConfig SimulationTaskConfiguration, startTime time.Time, logFn func(msg string, args ...interface{})) *simulationRateLimiter {
+	var rateLimiters []rateLimiterForTimeRange
+	if len(taskConfig.TasksProduceSpecOverTime) == 0 {
+		l := rate.NewLimiter(rate.Limit(taskConfig.getTasksPerSecond()), taskConfig.getTasksBurst())
+		rateLimiters = append(rateLimiters, rateLimiterForTimeRange{limiter: l, start: 0, end: -1})
+	} else {
+		for _, spec := range taskConfig.TasksProduceSpecOverTime {
+			l := rate.NewLimiter(rate.Limit(spec.TasksPerSecond), spec.TasksBurst)
+			rateLimiters = append(rateLimiters, rateLimiterForTimeRange{limiter: l, start: spec.Start, end: spec.End})
+		}
+	}
+
+	sort.Slice(rateLimiters, func(i, j int) bool {
+		return rateLimiters[i].start < rateLimiters[j].start
+	})
+
+	logFn("Rate limiters: %v", rateLimiters)
+
+	return &simulationRateLimiter{
+		startTime:    startTime,
+		rateLimiters: rateLimiters,
+		logFn:        logFn,
+	}
+}
+
+// TODO: test this function. lookup is not working
+func (r *simulationRateLimiter) Wait(ctx context.Context) error {
+	elapsed := int(time.Since(r.startTime).Seconds())
+	idx, ok := slices.BinarySearchFunc(r.rateLimiters, elapsed, func(r rateLimiterForTimeRange, t int) int {
+		if t >= r.start && (r.end == -1 || t < r.end) {
+			return 0
+		}
+
+		if r.start > t {
+			return 1
+		}
+
+		return -1
+	})
+
+	if !ok {
+		return fmt.Errorf("rate limiter not found, elapsed: %ds", elapsed)
+	}
+
+	r.logFn("Elapsed %vs so using rate limiter at index %d", elapsed, idx)
+	return r.rateLimiters[idx].limiter.Wait(ctx)
+}
+
+func TestMatchingSimulation_RateLimiterBST(t *testing.T) {
+	srl := &simulationRateLimiter{
+		startTime: time.Now(),
+		rateLimiters: []rateLimiterForTimeRange{
+			{limiter: rate.NewLimiter(rate.Limit(10), 1), start: 0, end: 5},
+			{limiter: rate.NewLimiter(rate.Limit(10), 1), start: 5, end: -1},
+		},
+		logFn: t.Logf,
+	}
+
+	if err := srl.Wait(context.Background()); err != nil {
+		t.Error(err)
+	}
+	time.Sleep(1 * time.Second)
+	if err := srl.Wait(context.Background()); err != nil {
+		t.Error(err)
+	}
+	time.Sleep(5 * time.Second)
+	if err := srl.Wait(context.Background()); err != nil {
+		t.Error(err)
+	}
+	time.Sleep(1 * time.Second)
+	if err := srl.Wait(context.Background()); err != nil {
+		t.Error(err)
+	}
+	time.Sleep(5 * time.Second)
+	if err := srl.Wait(context.Background()); err != nil {
+		t.Error(err)
+	}
 }
