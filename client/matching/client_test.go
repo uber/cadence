@@ -160,7 +160,7 @@ func TestClient_withResponse(t *testing.T) {
 				return c.AddActivityTask(context.Background(), testAddActivityTaskRequest())
 			},
 			mock: func(p *MockPeerResolver, balancer *MockLoadBalancer, c *MockClient, mp *MockPartitionConfigProvider) {
-				balancer.EXPECT().PickWritePartition(_testDomainUUID, types.TaskList{Name: _testTaskList}, persistence.TaskListTypeActivity, "").Return(_testPartition)
+				balancer.EXPECT().PickWritePartition(persistence.TaskListTypeActivity, testAddActivityTaskRequest()).Return(_testPartition)
 				p.EXPECT().FromTaskList(_testPartition).Return("peer0", nil)
 				c.EXPECT().AddActivityTask(gomock.Any(), gomock.Any(), []yarpc.CallOption{yarpc.WithShardKey("peer0")}).Return(&types.AddActivityTaskResponse{}, nil)
 				mp.EXPECT().UpdatePartitionConfig(_testDomainUUID, types.TaskList{Name: _testTaskList}, persistence.TaskListTypeActivity, nil)
@@ -173,7 +173,7 @@ func TestClient_withResponse(t *testing.T) {
 				return c.AddActivityTask(context.Background(), testAddActivityTaskRequest())
 			},
 			mock: func(p *MockPeerResolver, balancer *MockLoadBalancer, c *MockClient, mp *MockPartitionConfigProvider) {
-				balancer.EXPECT().PickWritePartition(_testDomainUUID, types.TaskList{Name: _testTaskList}, persistence.TaskListTypeActivity, "").Return(_testPartition)
+				balancer.EXPECT().PickWritePartition(persistence.TaskListTypeActivity, testAddActivityTaskRequest()).Return(_testPartition)
 				p.EXPECT().FromTaskList(_testPartition).Return("peer0", assert.AnError)
 			},
 			wantError: true,
@@ -184,7 +184,7 @@ func TestClient_withResponse(t *testing.T) {
 				return c.AddActivityTask(context.Background(), testAddActivityTaskRequest())
 			},
 			mock: func(p *MockPeerResolver, balancer *MockLoadBalancer, c *MockClient, mp *MockPartitionConfigProvider) {
-				balancer.EXPECT().PickWritePartition(_testDomainUUID, types.TaskList{Name: _testTaskList}, persistence.TaskListTypeActivity, "").Return(_testPartition)
+				balancer.EXPECT().PickWritePartition(persistence.TaskListTypeActivity, testAddActivityTaskRequest()).Return(_testPartition)
 				p.EXPECT().FromTaskList(_testPartition).Return("peer0", nil)
 				c.EXPECT().AddActivityTask(gomock.Any(), gomock.Any(), []yarpc.CallOption{yarpc.WithShardKey("peer0")}).Return(nil, assert.AnError)
 			},
@@ -196,7 +196,7 @@ func TestClient_withResponse(t *testing.T) {
 				return c.AddDecisionTask(context.Background(), testAddDecisionTaskRequest())
 			},
 			mock: func(p *MockPeerResolver, balancer *MockLoadBalancer, c *MockClient, mp *MockPartitionConfigProvider) {
-				balancer.EXPECT().PickWritePartition(_testDomainUUID, types.TaskList{Name: _testTaskList}, persistence.TaskListTypeDecision, "").Return(_testPartition)
+				balancer.EXPECT().PickWritePartition(persistence.TaskListTypeDecision, testAddDecisionTaskRequest()).Return(_testPartition)
 				p.EXPECT().FromTaskList(_testPartition).Return("peer0", nil)
 				c.EXPECT().AddDecisionTask(gomock.Any(), gomock.Any(), []yarpc.CallOption{yarpc.WithShardKey("peer0")}).Return(&types.AddDecisionTaskResponse{}, nil)
 				mp.EXPECT().UpdatePartitionConfig(_testDomainUUID, types.TaskList{Name: _testTaskList}, persistence.TaskListTypeDecision, nil)
@@ -209,7 +209,7 @@ func TestClient_withResponse(t *testing.T) {
 				return c.AddDecisionTask(context.Background(), testAddDecisionTaskRequest())
 			},
 			mock: func(p *MockPeerResolver, balancer *MockLoadBalancer, c *MockClient, mp *MockPartitionConfigProvider) {
-				balancer.EXPECT().PickWritePartition(_testDomainUUID, types.TaskList{Name: _testTaskList}, persistence.TaskListTypeDecision, "").Return(_testPartition)
+				balancer.EXPECT().PickWritePartition(persistence.TaskListTypeDecision, testAddDecisionTaskRequest()).Return(_testPartition)
 				p.EXPECT().FromTaskList(_testPartition).Return("peer0", assert.AnError)
 			},
 			wantError: true,
@@ -220,7 +220,7 @@ func TestClient_withResponse(t *testing.T) {
 				return c.AddDecisionTask(context.Background(), testAddDecisionTaskRequest())
 			},
 			mock: func(p *MockPeerResolver, balancer *MockLoadBalancer, c *MockClient, mp *MockPartitionConfigProvider) {
-				balancer.EXPECT().PickWritePartition(_testDomainUUID, types.TaskList{Name: _testTaskList}, persistence.TaskListTypeDecision, "").Return(_testPartition)
+				balancer.EXPECT().PickWritePartition(persistence.TaskListTypeDecision, testAddDecisionTaskRequest()).Return(_testPartition)
 				p.EXPECT().FromTaskList(_testPartition).Return("peer0", nil)
 				c.EXPECT().AddDecisionTask(gomock.Any(), gomock.Any(), []yarpc.CallOption{yarpc.WithShardKey("peer0")}).Return(nil, assert.AnError)
 			},
@@ -232,11 +232,11 @@ func TestClient_withResponse(t *testing.T) {
 				return c.PollForActivityTask(context.Background(), testMatchingPollForActivityTaskRequest())
 			},
 			mock: func(p *MockPeerResolver, balancer *MockLoadBalancer, c *MockClient, mp *MockPartitionConfigProvider) {
-				balancer.EXPECT().PickReadPartition(_testDomainUUID, types.TaskList{Name: _testTaskList}, persistence.TaskListTypeActivity, "").Return(_testPartition)
+				balancer.EXPECT().PickReadPartition(persistence.TaskListTypeActivity, testMatchingPollForActivityTaskRequest(), "").Return(_testPartition)
 				p.EXPECT().FromTaskList(_testPartition).Return("peer0", nil)
 				c.EXPECT().PollForActivityTask(gomock.Any(), gomock.Any(), []yarpc.CallOption{yarpc.WithShardKey("peer0")}).Return(&types.MatchingPollForActivityTaskResponse{}, nil)
 				mp.EXPECT().UpdatePartitionConfig(_testDomainUUID, types.TaskList{Name: _testTaskList}, persistence.TaskListTypeActivity, nil)
-				balancer.EXPECT().UpdateWeight(_testDomainUUID, types.TaskList{Name: _testTaskList}, persistence.TaskListTypeActivity, "", _testPartition, nil)
+				balancer.EXPECT().UpdateWeight(persistence.TaskListTypeActivity, testMatchingPollForActivityTaskRequest(), _testPartition, nil)
 			},
 			want: &types.MatchingPollForActivityTaskResponse{},
 		},
@@ -246,7 +246,7 @@ func TestClient_withResponse(t *testing.T) {
 				return c.PollForActivityTask(context.Background(), testMatchingPollForActivityTaskRequest())
 			},
 			mock: func(p *MockPeerResolver, balancer *MockLoadBalancer, c *MockClient, mp *MockPartitionConfigProvider) {
-				balancer.EXPECT().PickReadPartition(_testDomainUUID, types.TaskList{Name: _testTaskList}, persistence.TaskListTypeActivity, "").Return(_testPartition)
+				balancer.EXPECT().PickReadPartition(persistence.TaskListTypeActivity, testMatchingPollForActivityTaskRequest(), "").Return(_testPartition)
 				p.EXPECT().FromTaskList(_testPartition).Return("peer0", assert.AnError)
 			},
 			want:      nil,
@@ -258,7 +258,7 @@ func TestClient_withResponse(t *testing.T) {
 				return c.PollForActivityTask(context.Background(), testMatchingPollForActivityTaskRequest())
 			},
 			mock: func(p *MockPeerResolver, balancer *MockLoadBalancer, c *MockClient, mp *MockPartitionConfigProvider) {
-				balancer.EXPECT().PickReadPartition(_testDomainUUID, types.TaskList{Name: _testTaskList}, persistence.TaskListTypeActivity, "").Return(_testPartition)
+				balancer.EXPECT().PickReadPartition(persistence.TaskListTypeActivity, testMatchingPollForActivityTaskRequest(), "").Return(_testPartition)
 				p.EXPECT().FromTaskList(_testPartition).Return("peer0", nil)
 				c.EXPECT().PollForActivityTask(gomock.Any(), gomock.Any(), []yarpc.CallOption{yarpc.WithShardKey("peer0")}).Return(nil, assert.AnError)
 			},
@@ -271,11 +271,11 @@ func TestClient_withResponse(t *testing.T) {
 				return c.PollForDecisionTask(context.Background(), testMatchingPollForDecisionTaskRequest())
 			},
 			mock: func(p *MockPeerResolver, balancer *MockLoadBalancer, c *MockClient, mp *MockPartitionConfigProvider) {
-				balancer.EXPECT().PickReadPartition(_testDomainUUID, types.TaskList{Name: _testTaskList}, persistence.TaskListTypeDecision, "").Return(_testPartition)
+				balancer.EXPECT().PickReadPartition(persistence.TaskListTypeDecision, testMatchingPollForDecisionTaskRequest(), "").Return(_testPartition)
 				p.EXPECT().FromTaskList(_testPartition).Return("peer0", nil)
 				c.EXPECT().PollForDecisionTask(gomock.Any(), gomock.Any(), []yarpc.CallOption{yarpc.WithShardKey("peer0")}).Return(&types.MatchingPollForDecisionTaskResponse{}, nil)
 				mp.EXPECT().UpdatePartitionConfig(_testDomainUUID, types.TaskList{Name: _testTaskList}, persistence.TaskListTypeDecision, nil)
-				balancer.EXPECT().UpdateWeight(_testDomainUUID, types.TaskList{Name: _testTaskList}, persistence.TaskListTypeDecision, "", _testPartition, nil)
+				balancer.EXPECT().UpdateWeight(persistence.TaskListTypeDecision, testMatchingPollForDecisionTaskRequest(), _testPartition, nil)
 			},
 			want: &types.MatchingPollForDecisionTaskResponse{},
 		},
@@ -285,7 +285,7 @@ func TestClient_withResponse(t *testing.T) {
 				return c.PollForDecisionTask(context.Background(), testMatchingPollForDecisionTaskRequest())
 			},
 			mock: func(p *MockPeerResolver, balancer *MockLoadBalancer, c *MockClient, mp *MockPartitionConfigProvider) {
-				balancer.EXPECT().PickReadPartition(_testDomainUUID, types.TaskList{Name: _testTaskList}, persistence.TaskListTypeDecision, "").Return(_testPartition)
+				balancer.EXPECT().PickReadPartition(persistence.TaskListTypeDecision, testMatchingPollForDecisionTaskRequest(), "").Return(_testPartition)
 				p.EXPECT().FromTaskList(_testPartition).Return("peer0", assert.AnError)
 			},
 			want:      nil,
@@ -297,7 +297,7 @@ func TestClient_withResponse(t *testing.T) {
 				return c.PollForDecisionTask(context.Background(), testMatchingPollForDecisionTaskRequest())
 			},
 			mock: func(p *MockPeerResolver, balancer *MockLoadBalancer, c *MockClient, mp *MockPartitionConfigProvider) {
-				balancer.EXPECT().PickReadPartition(_testDomainUUID, types.TaskList{Name: _testTaskList}, persistence.TaskListTypeDecision, "").Return(_testPartition)
+				balancer.EXPECT().PickReadPartition(persistence.TaskListTypeDecision, testMatchingPollForDecisionTaskRequest(), "").Return(_testPartition)
 				p.EXPECT().FromTaskList(_testPartition).Return("peer0", nil)
 				c.EXPECT().PollForDecisionTask(gomock.Any(), gomock.Any(), []yarpc.CallOption{yarpc.WithShardKey("peer0")}).Return(nil, assert.AnError)
 			},
@@ -310,7 +310,7 @@ func TestClient_withResponse(t *testing.T) {
 				return c.QueryWorkflow(context.Background(), testMatchingQueryWorkflowRequest())
 			},
 			mock: func(p *MockPeerResolver, balancer *MockLoadBalancer, c *MockClient, mp *MockPartitionConfigProvider) {
-				balancer.EXPECT().PickReadPartition(_testDomainUUID, types.TaskList{Name: _testTaskList}, persistence.TaskListTypeDecision, "").Return(_testPartition)
+				balancer.EXPECT().PickReadPartition(persistence.TaskListTypeDecision, testMatchingQueryWorkflowRequest(), "").Return(_testPartition)
 				p.EXPECT().FromTaskList(_testPartition).Return("peer0", nil)
 				c.EXPECT().QueryWorkflow(gomock.Any(), gomock.Any(), []yarpc.CallOption{yarpc.WithShardKey("peer0")}).Return(&types.QueryWorkflowResponse{}, nil)
 			},
@@ -322,7 +322,7 @@ func TestClient_withResponse(t *testing.T) {
 				return c.QueryWorkflow(context.Background(), testMatchingQueryWorkflowRequest())
 			},
 			mock: func(p *MockPeerResolver, balancer *MockLoadBalancer, c *MockClient, mp *MockPartitionConfigProvider) {
-				balancer.EXPECT().PickReadPartition(_testDomainUUID, types.TaskList{Name: _testTaskList}, persistence.TaskListTypeDecision, "").Return(_testPartition)
+				balancer.EXPECT().PickReadPartition(persistence.TaskListTypeDecision, testMatchingQueryWorkflowRequest(), "").Return(_testPartition)
 				p.EXPECT().FromTaskList(_testPartition).Return("peer0", assert.AnError)
 			},
 			want:      nil,
@@ -334,7 +334,7 @@ func TestClient_withResponse(t *testing.T) {
 				return c.QueryWorkflow(context.Background(), testMatchingQueryWorkflowRequest())
 			},
 			mock: func(p *MockPeerResolver, balancer *MockLoadBalancer, c *MockClient, mp *MockPartitionConfigProvider) {
-				balancer.EXPECT().PickReadPartition(_testDomainUUID, types.TaskList{Name: _testTaskList}, persistence.TaskListTypeDecision, "").Return(_testPartition)
+				balancer.EXPECT().PickReadPartition(persistence.TaskListTypeDecision, testMatchingQueryWorkflowRequest(), "").Return(_testPartition)
 				p.EXPECT().FromTaskList(_testPartition).Return("peer0", nil)
 				c.EXPECT().QueryWorkflow(gomock.Any(), gomock.Any(), []yarpc.CallOption{yarpc.WithShardKey("peer0")}).Return(nil, assert.AnError)
 			},

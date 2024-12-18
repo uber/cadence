@@ -80,6 +80,7 @@ type (
 		clientBean            client.Bean
 		timeSource            clock.TimeSource
 		numberOfHistoryShards int
+		allIsolationGroups    func() []string
 
 		logger          log.Logger
 		throttledLogger log.Logger
@@ -113,6 +114,7 @@ func NewService(params *resource.Params) Service {
 		timeSource:            clock.NewRealTimeSource(),
 		metricsScope:          params.MetricScope,
 		numberOfHistoryShards: params.PersistenceConfig.NumHistoryShards,
+		allIsolationGroups:    params.GetIsolationGroups,
 		clusterMetadata:       params.ClusterMetadata,
 		metricsClient:         params.MetricsClient,
 		messagingClient:       params.MessagingClient,
@@ -164,7 +166,7 @@ func (h *serviceImpl) Start() {
 	h.hostInfo = hostInfo
 
 	h.clientBean, err = client.NewClientBean(
-		client.NewRPCClientFactory(h.rpcFactory, h.membershipResolver, h.metricsClient, h.dynamicCollection, h.numberOfHistoryShards, h.logger),
+		client.NewRPCClientFactory(h.rpcFactory, h.membershipResolver, h.metricsClient, h.dynamicCollection, h.numberOfHistoryShards, h.allIsolationGroups, h.logger),
 		h.rpcFactory.GetDispatcher(),
 		h.clusterMetadata,
 	)
