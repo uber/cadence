@@ -29,36 +29,63 @@ import (
 	"github.com/uber/cadence/common/metrics"
 )
 
-// NewMigrationIndexer create a new Indexer that can index to both ES and OS
-func NewMigrationIndexer(
-	config *Config,
+// NewMigrationDualIndexer create a new Indexer that will be used during visibility migration
+// When migrate from ES to OS, we will have this indexer to index to both ES and OS
+func NewMigrationDualIndexer(config *Config,
 	client messaging.Client,
 	primaryClient es.GenericClient,
 	secondaryClient es.GenericClient,
-	visibilityName string,
+	primaryVisibilityName string,
+	secondaryVisibilityName string,
 	logger log.Logger,
-	metricsClient metrics.Client,
-) *Indexer {
+	metricsClient metrics.Client) *DualIndexer {
+
 	logger = logger.WithTags(tag.ComponentIndexer)
 
-	visibilityProcessor, err := newESDualProcessor(processorName, config, primaryClient, secondaryClient, logger, metricsClient)
+	visibilityProcessor, err := newESProcessor(processorName, config, primaryClient, logger, metricsClient)
 	if err != nil {
 		logger.Fatal("Index ES processor state changed", tag.LifeCycleStartFailed, tag.Error(err))
 	}
 
-	consumer, err := client.NewConsumer(common.VisibilityAppName, getConsumerName(visibilityName))
+	consumer, err := client.NewConsumer(common.VisibilityAppName, getConsumerName(primaryVisibilityName))
 	if err != nil {
 		logger.Fatal("Index consumer state changed", tag.LifeCycleStartFailed, tag.Error(err))
 	}
 
-	return &Indexer{
+	sourceIndexer := &Indexer{
 		config:              config,
-		esIndexName:         visibilityName,
+		esIndexName:         primaryVisibilityName,
 		consumer:            consumer,
 		logger:              logger.WithTags(tag.ComponentIndexerProcessor),
 		scope:               metricsClient.Scope(metrics.IndexProcessorScope),
 		shutdownCh:          make(chan struct{}),
 		visibilityProcessor: visibilityProcessor,
 		msgEncoder:          defaultEncoder,
+	}
+
+	secondaryVisibilityProcessor, err := newESProcessor(processorName, config, secondaryClient, logger, metricsClient)
+	if err != nil {
+		logger.Fatal("Secondary Index ES processor state changed", tag.LifeCycleStartFailed, tag.Error(err))
+	}
+
+	secondaryConsumer, err := client.NewConsumer(common.VisibilityAppName, getConsumerName(secondaryVisibilityName+"-os"))
+	if err != nil {
+		logger.Fatal("Secondary Index consumer state changed", tag.LifeCycleStartFailed, tag.Error(err))
+	}
+
+	destIndexer := &Indexer{
+		config:              config,
+		esIndexName:         secondaryVisibilityName,
+		consumer:            secondaryConsumer,
+		logger:              logger.WithTags(tag.ComponentIndexerProcessor),
+		scope:               metricsClient.Scope(metrics.IndexProcessorScope),
+		shutdownCh:          make(chan struct{}),
+		visibilityProcessor: secondaryVisibilityProcessor,
+		msgEncoder:          defaultEncoder,
+	}
+
+	return &DualIndexer{
+		SourceIndexer: sourceIndexer,
+		DestIndexer:   destIndexer,
 	}
 }
