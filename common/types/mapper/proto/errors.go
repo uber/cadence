@@ -27,6 +27,7 @@ import (
 	"go.uber.org/yarpc/encoding/protobuf"
 	"go.uber.org/yarpc/yarpcerrors"
 
+	sharddistributorv1 "github.com/uber/cadence/.gen/proto/sharddistributor/v1"
 	sharedv1 "github.com/uber/cadence/.gen/proto/shared/v1"
 	cadence_errors "github.com/uber/cadence/common/errors"
 	"github.com/uber/cadence/common/types"
@@ -86,6 +87,8 @@ func FromError(err error) error {
 		return typedErr
 	} else if ok, typedErr = errorutils.ConvertError(err, fromStickyWorkerUnavailableErr); ok {
 		return typedErr
+	} else if ok, typedErr = errorutils.ConvertError(err, fromNamespaceNotFoundErr); ok {
+		return typedErr
 	}
 
 	return protobuf.NewError(yarpcerrors.CodeUnknown, err.Error())
@@ -117,6 +120,10 @@ func ToError(err error) error {
 		case *apiv1.WorkflowExecutionAlreadyCompletedError:
 			return &types.WorkflowExecutionAlreadyCompletedError{
 				Message: status.Message(),
+			}
+		case *sharddistributorv1.NamespaceNotFoundError:
+			return &types.NamespaceNotFoundError{
+				Namespace: details.Namespace,
 			}
 		}
 	case yarpcerrors.CodeInvalidArgument:
@@ -362,4 +369,10 @@ func fromRemoteSyncMatchedErr(e *types.RemoteSyncMatchedError) error {
 
 func fromStickyWorkerUnavailableErr(e *types.StickyWorkerUnavailableError) error {
 	return protobuf.NewError(yarpcerrors.CodeUnavailable, e.Message, protobuf.WithErrorDetails(&apiv1.StickyWorkerUnavailableError{}))
+}
+
+func fromNamespaceNotFoundErr(e *types.NamespaceNotFoundError) error {
+	return protobuf.NewError(yarpcerrors.CodeNotFound, e.Error(), protobuf.WithErrorDetails(&sharddistributorv1.NamespaceNotFoundError{
+		Namespace: e.Namespace,
+	}))
 }

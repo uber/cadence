@@ -20,55 +20,12 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package types
+package constants
 
-import "fmt"
+const (
+	// History-namespace is the namespace for history service
+	HistoryNamespace = "history"
 
-type GetShardOwnerRequest struct {
-	ShardKey  string
-	Namespace string
-}
-
-func (v *GetShardOwnerRequest) GetShardKey() (o string) {
-	if v != nil {
-		return v.ShardKey
-	}
-	return
-}
-
-func (v *GetShardOwnerRequest) GetNamespace() (o string) {
-	if v != nil {
-		return v.Namespace
-	}
-	return
-}
-
-type GetShardOwnerResponse struct {
-	Owner     string
-	Namespace string
-}
-
-func (v *GetShardOwnerResponse) GetOwner() (o string) {
-	if v != nil {
-		return v.Owner
-	}
-	return
-}
-
-func (v *GetShardOwnerResponse) GetNamespace() (o string) {
-	if v != nil {
-		return v.Namespace
-	}
-	return
-}
-
-type NamespaceNotFoundError struct {
-	Namespace string
-}
-
-func (n *NamespaceNotFoundError) Error() (o string) {
-	if n != nil {
-		return fmt.Sprintf("namespace not found %v", n.Namespace)
-	}
-	return
-}
+	// Matching-namespace is the namespace for matching service
+	MatchingNamespace = "matching"
+)
