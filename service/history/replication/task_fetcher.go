@@ -198,15 +198,11 @@ func (f *taskFetcherImpl) Stop() {
 	}
 
 	f.cancelCtx()
-	// TODO: remove this config and disable non graceful shutdown
-	if f.config.ReplicationTaskFetcherEnableGracefulSyncShutdown() {
-		if !common.AwaitWaitGroup(&f.wg, 10*time.Second) {
-			f.logger.Warn("Replication task fetcher timed out on shutdown.")
-		} else {
-			f.logger.Info("Replication task fetcher graceful shutdown completed.")
-		}
+	if !common.AwaitWaitGroup(&f.wg, 10*time.Second) {
+		f.logger.Warn("Replication task fetcher timed out on shutdown.")
+	} else {
+		f.logger.Info("Replication task fetcher graceful shutdown completed.")
 	}
-	f.logger.Info("Replication task fetcher stopped.")
 }
 
 // fetchTasks collects getReplicationTasks request from shards and send out aggregated request to source frontend.
@@ -291,11 +287,7 @@ func (f *taskFetcherImpl) getMessages(requestByShard map[int32]*request) (map[in
 		tokens = append(tokens, request.token)
 	}
 
-	parentCtx := f.ctx
-	if !f.config.ReplicationTaskFetcherEnableGracefulSyncShutdown() {
-		parentCtx = context.Background()
-	}
-	ctx, cancel := context.WithTimeout(parentCtx, fetchTaskRequestTimeout)
+	ctx, cancel := context.WithTimeout(f.ctx, fetchTaskRequestTimeout)
 	defer cancel()
 
 	request := &types.GetReplicationMessagesRequest{

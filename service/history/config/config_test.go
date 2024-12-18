@@ -208,7 +208,6 @@ func TestNewConfig(t *testing.T) {
 		"ReplicationTaskFetcherTimerJitterCoefficient":         {dynamicconfig.ReplicationTaskFetcherTimerJitterCoefficient, 9.0},
 		"ReplicationTaskFetcherErrorRetryWait":                 {dynamicconfig.ReplicationTaskFetcherErrorRetryWait, time.Second},
 		"ReplicationTaskFetcherServiceBusyWait":                {dynamicconfig.ReplicationTaskFetcherServiceBusyWait, time.Second},
-		"ReplicationTaskFetcherEnableGracefulSyncShutdown":     {dynamicconfig.ReplicationTaskFetcherEnableGracefulSyncShutdown, true},
 		"ReplicationTaskProcessorErrorRetryWait":               {dynamicconfig.ReplicationTaskProcessorErrorRetryWait, time.Second},
 		"ReplicationTaskProcessorErrorRetryMaxAttempts":        {dynamicconfig.ReplicationTaskProcessorErrorRetryMaxAttempts, 86},
 		"ReplicationTaskProcessorErrorSecondRetryWait":         {dynamicconfig.ReplicationTaskProcessorErrorSecondRetryWait, time.Second},
