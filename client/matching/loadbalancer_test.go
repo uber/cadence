@@ -28,7 +28,6 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -66,14 +65,6 @@ func Test_defaultLoadBalancer_PickWritePartition(t *testing.T) {
 			taskListKind:       types.TaskListKindNormal,
 			expectedPartitions: []string{"test-task-list", "/__cadence_sys/test-task-list/1", "/__cadence_sys/test-task-list/2"},
 		},
-		{
-			name:               "sticky task list",
-			forwardedFrom:      "",
-			taskListType:       0,
-			nPartitions:        3,
-			taskListKind:       types.TaskListKindSticky,
-			expectedPartitions: []string{"test-task-list"},
-		},
 	}
 
 	for _, tc := range testCases {
@@ -87,9 +78,12 @@ func Test_defaultLoadBalancer_PickWritePartition(t *testing.T) {
 				Times(1)
 
 			// Pick write partition
-			kind := tc.taskListKind
-			taskList := types.TaskList{Name: "test-task-list", Kind: &kind}
-			partition := loadBalancer.PickWritePartition("test-domain-id", taskList, tc.taskListType, tc.forwardedFrom)
+			req := &types.AddDecisionTaskRequest{
+				DomainUUID:    "test-domain-id",
+				TaskList:      &types.TaskList{Name: "test-task-list", Kind: &tc.taskListKind},
+				ForwardedFrom: tc.forwardedFrom,
+			}
+			partition := loadBalancer.PickWritePartition(tc.taskListType, req)
 
 			// Validate result
 			assert.Contains(t, tc.expectedPartitions, partition)
@@ -122,14 +116,6 @@ func Test_defaultLoadBalancer_PickReadPartition(t *testing.T) {
 			taskListKind:       types.TaskListKindNormal,
 			expectedPartitions: []string{"test-task-list", "/__cadence_sys/test-task-list/1", "/__cadence_sys/test-task-list/2"},
 		},
-		{
-			name:               "sticky task list",
-			forwardedFrom:      "",
-			taskListType:       0,
-			nPartitions:        3,
-			taskListKind:       types.TaskListKindSticky,
-			expectedPartitions: []string{"test-task-list"},
-		},
 	}
 
 	for _, tc := range testCases {
@@ -143,9 +129,12 @@ func Test_defaultLoadBalancer_PickReadPartition(t *testing.T) {
 				Times(1)
 
 			// Pick read partition
-			kind := tc.taskListKind
-			taskList := types.TaskList{Name: "test-task-list", Kind: &kind}
-			partition := loadBalancer.PickReadPartition("test-domain-id", taskList, tc.taskListType, tc.forwardedFrom)
+			req := &types.AddDecisionTaskRequest{
+				DomainUUID:    "test-domain-id",
+				TaskList:      &types.TaskList{Name: "test-task-list", Kind: &tc.taskListKind},
+				ForwardedFrom: tc.forwardedFrom,
+			}
+			partition := loadBalancer.PickReadPartition(tc.taskListType, req, "")
 
 			// Validate result
 			assert.Contains(t, tc.expectedPartitions, partition)
@@ -161,7 +150,11 @@ func Test_defaultLoadBalancer_UpdateWeight(t *testing.T) {
 		taskList := types.TaskList{Name: "test-task-list", Kind: types.TaskListKindNormal.Ptr()}
 
 		// Call UpdateWeight, should do nothing
-		loadBalancer.UpdateWeight("test-domain-id", taskList, 0, "", "partition", nil)
+		req := &types.AddDecisionTaskRequest{
+			DomainUUID: "test-domain-id",
+			TaskList:   &taskList,
+		}
+		loadBalancer.UpdateWeight(0, req, "partition", nil)
 
 		// No expectations, just ensure no-op
 	})
@@ -178,42 +171,6 @@ func Test_defaultLoadBalancer_pickPartition(t *testing.T) {
 		args args
 		want string
 	}{
-		{
-			name: "Test: ForwardedFrom not empty",
-			args: args{
-				taskList: types.TaskList{
-					Name: "taskList1",
-					Kind: types.TaskListKindSticky.Ptr(),
-				},
-				forwardedFrom: "forwardedFromVal",
-				nPartitions:   10,
-			},
-			want: "taskList1",
-		},
-		{
-			name: "Test: TaskList kind is Sticky",
-			args: args{
-				taskList: types.TaskList{
-					Name: "taskList2",
-					Kind: types.TaskListKindSticky.Ptr(),
-				},
-				forwardedFrom: "",
-				nPartitions:   10,
-			},
-			want: "taskList2",
-		},
-		{
-			name: "Test: TaskList name starts with ReservedTaskListPrefix",
-			args: args{
-				taskList: types.TaskList{
-					Name: common.ReservedTaskListPrefix + "taskList3",
-					Kind: types.TaskListKindNormal.Ptr(),
-				},
-				forwardedFrom: "",
-				nPartitions:   10,
-			},
-			want: common.ReservedTaskListPrefix + "taskList3",
-		},
 		{
 			name: "Test: nPartitions <= 0",
 			args: args{
