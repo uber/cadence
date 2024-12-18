@@ -342,6 +342,7 @@ CREATE TYPE checksum (
 );
 
 CREATE TABLE executions (
+  created_time                   timestamp,
   shard_id                       int,
   type                           int, -- enum RowType { Shard, Execution, TransferTask, TimerTask, ReplicationTask, CrossClusterTask}
   domain_id                      uuid,
@@ -378,6 +379,7 @@ CREATE TABLE executions (
   };
 
 CREATE TABLE history_node (
+  created_time      timestamp,
   tree_id           uuid,
   branch_id         uuid,
   node_id           bigint, -- node_id: first eventID in a batch of events
@@ -391,6 +393,7 @@ CREATE TABLE history_node (
     };
 
 CREATE TABLE history_tree (
+  created_time      timestamp,
   tree_id           uuid,
   branch_id         uuid,
   ancestors         list<frozen<branch_range>>,
@@ -418,6 +421,7 @@ CREATE TABLE tasks (
 
 -- this table is only used for storage of mapping of domain uuid to domain name
 CREATE TABLE domains (
+  created_time       timestamp,
   id     uuid,
   domain frozen<domain>,
   config frozen<domain_config>,
@@ -427,6 +431,7 @@ CREATE TABLE domains (
   };
 
 CREATE TABLE domains_by_name_v2 (
+  created_time                  timestamp,
   domains_partition             int,
   name                          text,
   domain                        frozen<domain>,
@@ -486,6 +491,7 @@ INSERT INTO domains (
 ) IF NOT EXISTS;
 
 CREATE TABLE queue (
+  created_time    timestamp,
   queue_type      int,
   message_id      bigint,
   message_payload blob,
@@ -495,6 +501,8 @@ CREATE TABLE queue (
   };
 
 CREATE TABLE queue_metadata (
+  created_time      timestamp,
+  last_updated_time timestamp,
   queue_type        int,
   cluster_ack_level map<text, bigint>,
   version           bigint,
