@@ -52,7 +52,6 @@ import (
 	"github.com/uber/cadence/common/membership"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/mocks"
-	"github.com/uber/cadence/common/partition"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/common/service"
@@ -915,21 +914,6 @@ func Test_UpdateGlobalIsolationGroups(t *testing.T) {
 			assert.Equal(t, td.expectedErr, err)
 		})
 	}
-}
-
-func Test_IsolationGroupsNotEnabled(t *testing.T) {
-	handler := adminHandlerImpl{
-		Resource: &resource.Test{
-			Logger:        testlogger.New(t),
-			MetricsClient: metrics.NewNoopMetricsClient(),
-		},
-		isolationGroups: nil, // valid state, the isolation-groups feature is not available for all persistence types
-	}
-
-	_, err := handler.GetGlobalIsolationGroups(context.Background(), &types.GetGlobalIsolationGroupsRequest{})
-	assert.ErrorAs(t, err, &partition.ErrNoIsolationGroupsAvailable)
-	_, err = handler.UpdateGlobalIsolationGroups(context.Background(), &types.UpdateGlobalIsolationGroupsRequest{})
-	assert.ErrorAs(t, err, &partition.ErrNoIsolationGroupsAvailable)
 }
 
 func Test_GetDomainIsolationGroups(t *testing.T) {

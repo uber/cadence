@@ -878,6 +878,7 @@ func (c *taskListManagerImpl) getIsolationGroupForTask(ctx context.Context, task
 		pollerIsolationGroups := c.getPollerIsolationGroups()
 
 		group, err := c.partitioner.GetIsolationGroupByDomainID(ctx,
+			c.scope,
 			partition.PollerInfo{
 				DomainID:                 taskInfo.DomainID,
 				TasklistName:             c.taskListID.name,
@@ -886,7 +887,7 @@ func (c *taskListManagerImpl) getIsolationGroupForTask(ctx context.Context, task
 		if err != nil {
 			// if we're unable to get the isolation group, log the error and fallback to no isolation
 			c.logger.Error("Failed to get isolation group from partition library", tag.IsolationGroup(startedIsolationGroup), tag.WorkflowID(taskInfo.WorkflowID), tag.WorkflowRunID(taskInfo.RunID), tag.TaskID(taskInfo.TaskID), tag.Error(err))
-			c.scope.Tagged(metrics.IsolationGroupTag(startedIsolationGroup)).IncCounter(metrics.TaskIsolationErrorPerTaskList)
+			c.scope.Tagged(metrics.IsolationGroupTag(startedIsolationGroup), partition.IsolationLeakCauseError).IncCounter(metrics.TaskIsolationLeakPerTaskList)
 			return defaultTaskBufferIsolationGroup, noIsolationTimeout, nil
 		}
 
@@ -898,7 +899,7 @@ func (c *taskListManagerImpl) getIsolationGroupForTask(ctx context.Context, task
 				taskIsolationDuration = totalTaskIsolationDuration - taskLatency
 			} else {
 				c.logger.Info("Leaking task due to taskIsolationDuration expired", tag.IsolationGroup(group), tag.IsolationDuration(taskIsolationDuration), tag.TaskLatency(taskLatency))
-				c.scope.Tagged(metrics.IsolationGroupTag(group)).IncCounter(metrics.TaskIsolationExpiredPerTaskList)
+				c.scope.Tagged(metrics.IsolationGroupTag(startedIsolationGroup), partition.IsolationLeakCauseExpired).IncCounter(metrics.TaskIsolationLeakPerTaskList)
 				group = defaultTaskBufferIsolationGroup
 			}
 		}

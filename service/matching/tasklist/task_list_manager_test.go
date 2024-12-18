@@ -222,7 +222,7 @@ func createTestTaskListManager(t *testing.T, logger log.Logger, controller *gomo
 func createTestTaskListManagerWithConfig(t *testing.T, logger log.Logger, controller *gomock.Controller, cfg *config.Config, timeSource clock.TimeSource) *taskListManagerImpl {
 	tm := NewTestTaskManager(t, logger, timeSource)
 	mockPartitioner := partition.NewMockPartitioner(controller)
-	mockPartitioner.EXPECT().GetIsolationGroupByDomainID(gomock.Any(), gomock.Any(), gomock.Any()).Return("", nil).AnyTimes()
+	mockPartitioner.EXPECT().GetIsolationGroupByDomainID(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("", nil).AnyTimes()
 	mockDomainCache := cache.NewMockDomainCache(controller)
 	mockDomainCache.EXPECT().GetDomainByID(gomock.Any()).Return(cache.CreateDomainCacheEntry("domainName"), nil).AnyTimes()
 	mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return("domainName", nil).AnyTimes()
@@ -655,10 +655,10 @@ func TestGetIsolationGroupForTask(t *testing.T) {
 			mockIsolationGroupState := isolationgroup.NewMockState(controller)
 			mockIsolationGroupState.EXPECT().IsDrained(gomock.Any(), gomock.Any(), gomock.Any()).Return(false, nil).AnyTimes()
 			mockIsolationGroupState.EXPECT().IsDrainedByDomainID(gomock.Any(), gomock.Any(), gomock.Any()).Return(false, nil).AnyTimes()
-			mockIsolationGroupState.EXPECT().AvailableIsolationGroupsByDomainID(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, domainId string, taskListName string, available []string) (types.IsolationGroupConfiguration, error) {
+			mockIsolationGroupState.EXPECT().IsolationGroupsByDomainID(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, domainId string) (types.IsolationGroupConfiguration, error) {
 				// Report all available isolation groups as healthy
-				isolationGroupStates := make(types.IsolationGroupConfiguration, len(available))
-				for _, availableGroup := range available {
+				isolationGroupStates := make(types.IsolationGroupConfiguration, len(tc.availableIsolationGroups))
+				for _, availableGroup := range tc.availableIsolationGroups {
 					isolationGroupStates[availableGroup] = types.IsolationGroupPartition{
 						Name:  availableGroup,
 						State: types.IsolationGroupStateHealthy,
@@ -732,7 +732,7 @@ func TestTaskListManagerGetTaskBatch(t *testing.T) {
 	const rangeSize = 10
 	controller := gomock.NewController(t)
 	mockPartitioner := partition.NewMockPartitioner(controller)
-	mockPartitioner.EXPECT().GetIsolationGroupByDomainID(gomock.Any(), gomock.Any(), gomock.Any()).Return("", nil).AnyTimes()
+	mockPartitioner.EXPECT().GetIsolationGroupByDomainID(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("", nil).AnyTimes()
 	mockDomainCache := cache.NewMockDomainCache(controller)
 	mockDomainCache.EXPECT().GetDomainByID(gomock.Any()).Return(cache.CreateDomainCacheEntry("domainName"), nil).AnyTimes()
 	mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return("domainName", nil).AnyTimes()
@@ -858,7 +858,7 @@ func TestTaskListReaderPumpAdvancesAckLevelAfterEmptyReads(t *testing.T) {
 
 	controller := gomock.NewController(t)
 	mockPartitioner := partition.NewMockPartitioner(controller)
-	mockPartitioner.EXPECT().GetIsolationGroupByDomainID(gomock.Any(), gomock.Any(), gomock.Any()).Return("", nil).AnyTimes()
+	mockPartitioner.EXPECT().GetIsolationGroupByDomainID(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("", nil).AnyTimes()
 	mockDomainCache := cache.NewMockDomainCache(controller)
 	mockDomainCache.EXPECT().GetDomainByID(gomock.Any()).Return(cache.CreateDomainCacheEntry("domainName"), nil).AnyTimes()
 	mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return("domainName", nil).AnyTimes()
@@ -992,7 +992,7 @@ func TestTaskExpiryAndCompletion(t *testing.T) {
 		t.Run("", func(t *testing.T) {
 			controller := gomock.NewController(t)
 			mockPartitioner := partition.NewMockPartitioner(controller)
-			mockPartitioner.EXPECT().GetIsolationGroupByDomainID(gomock.Any(), gomock.Any(), gomock.Any()).Return("", nil).AnyTimes()
+			mockPartitioner.EXPECT().GetIsolationGroupByDomainID(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("", nil).AnyTimes()
 			mockDomainCache := cache.NewMockDomainCache(controller)
 			mockDomainCache.EXPECT().GetDomainByID(gomock.Any()).Return(cache.CreateDomainCacheEntry("domainName"), nil).AnyTimes()
 			mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return("domainName", nil).AnyTimes()

@@ -32,73 +32,9 @@ import (
 
 	"github.com/uber/cadence/common/isolationgroup"
 	"github.com/uber/cadence/common/log/testlogger"
+	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/types"
 )
-
-func TestPickingAZone(t *testing.T) {
-
-	igA := string("isolationGroupA")
-	igB := string("isolationGroupB")
-	igC := string("isolationGroupC")
-
-	isolationGroupsAllHealthy := types.IsolationGroupConfiguration{
-		igA: {
-			Name:  igA,
-			State: types.IsolationGroupStateHealthy,
-		},
-		igB: {
-			Name:  igB,
-			State: types.IsolationGroupStateHealthy,
-		},
-		igC: {
-			Name:  igC,
-			State: types.IsolationGroupStateHealthy,
-		},
-	}
-
-	tests := map[string]struct {
-		availablePartitionGroups types.IsolationGroupConfiguration
-		wfPartitionCfg           defaultWorkflowPartitionConfig
-		expected                 string
-		expectedErr              error
-	}{
-		"default behaviour - wf starting in a zone/isolationGroup should stay there if everything's healthy": {
-			availablePartitionGroups: isolationGroupsAllHealthy,
-			wfPartitionCfg: defaultWorkflowPartitionConfig{
-				WorkflowStartIsolationGroup: igA,
-				WFID:                        "BDF3D8D9-5235-4CE8-BBDF-6A37589C9DC7",
-			},
-			expected: igA,
-		},
-		"default behaviour - wf starting in a zone/isolationGroup must run in an available zone only. If not in available list, return no zone": {
-			availablePartitionGroups: isolationGroupsAllHealthy,
-			wfPartitionCfg: defaultWorkflowPartitionConfig{
-				WorkflowStartIsolationGroup: string("something-else"),
-				WFID:                        "BDF3D8D9-5235-4CE8-BBDF-6A37589C9DC7",
-			},
-			expected: "",
-		},
-		"... and it should be deterministic": {
-			availablePartitionGroups: isolationGroupsAllHealthy,
-			wfPartitionCfg: defaultWorkflowPartitionConfig{
-				WorkflowStartIsolationGroup: string("something-else"),
-				WFID:                        "BDF3D8D9-5235-4CE8-BBDF-6A37589C9DC7",
-			},
-			expected: "",
-		},
-	}
-
-	for name, td := range tests {
-		t.Run(name, func(t *testing.T) {
-			partitioner := defaultPartitioner{
-				log:                 testlogger.New(t),
-				isolationGroupState: nil,
-			}
-			res := partitioner.pickIsolationGroup(td.wfPartitionCfg, td.availablePartitionGroups, PollerInfo{})
-			assert.Equal(t, td.expected, res)
-		})
-	}
-}
 
 func TestDefaultPartitioner_GetIsolationGroupByDomainID(t *testing.T) {
 
@@ -111,10 +47,14 @@ func TestDefaultPartitioner_GetIsolationGroupByDomainID(t *testing.T) {
 		},
 		"zone-3": {
 			Name:  "zone-3",
+			State: types.IsolationGroupStateDrained,
+		},
+		"zone-4": {
+			Name:  "zone-4",
 			State: types.IsolationGroupStateHealthy,
 		},
 	}
-	isolationGroups := []string{"zone-1", "zone-2", "zone-3"}
+	availablePollers := []string{"zone-1", "zone-2", "zone-3"}
 
 	tests := map[string]struct {
 		stateAffordance      func(state *isolationgroup.MockState)
@@ -123,40 +63,49 @@ func TestDefaultPartitioner_GetIsolationGroupByDomainID(t *testing.T) {
 		expectedValue        string
 		expectedError        error
 	}{
-		"happy path - zone is available - zone pinning": {
+		"zone is available - zone pinning": {
 			partitionKeyPassedIn: PartitionConfig{
 				IsolationGroupKey: "zone-2",
 				WorkflowIDKey:     "wf-id",
 			},
 			incomingContext: context.Background(),
 			stateAffordance: func(state *isolationgroup.MockState) {
-				state.EXPECT().AvailableIsolationGroupsByDomainID(gomock.Any(), domainID, sampleTasklist, isolationGroups).Return(validIsolationGroup, nil)
+				state.EXPECT().IsolationGroupsByDomainID(gomock.Any(), domainID).Return(validIsolationGroup, nil)
 			},
 			expectedValue: "zone-2",
 		},
-		"happy path - zone is not - zone fallback": {
+		"unknown zone - fallback to any": {
 			partitionKeyPassedIn: PartitionConfig{
 				IsolationGroupKey: "zone-1",
 				WorkflowIDKey:     "wf-id",
 			},
 			incomingContext: context.Background(),
 			stateAffordance: func(state *isolationgroup.MockState) {
-				state.EXPECT().AvailableIsolationGroupsByDomainID(gomock.Any(), domainID, sampleTasklist, isolationGroups).Return(validIsolationGroup, nil)
+				state.EXPECT().IsolationGroupsByDomainID(gomock.Any(), domainID).Return(validIsolationGroup, nil)
 			},
 			expectedValue: "",
 		},
-		"Error condition - No zones listed though the feature is enabled": {
+		"zone is drained - fallback to any": {
 			partitionKeyPassedIn: PartitionConfig{
-				IsolationGroupKey: "zone-1",
+				IsolationGroupKey: "zone-3",
 				WorkflowIDKey:     "wf-id",
 			},
 			incomingContext: context.Background(),
 			stateAffordance: func(state *isolationgroup.MockState) {
-				state.EXPECT().AvailableIsolationGroupsByDomainID(gomock.Any(), domainID, sampleTasklist, isolationGroups).Return(
-					types.IsolationGroupConfiguration{}, nil)
+				state.EXPECT().IsolationGroupsByDomainID(gomock.Any(), domainID).Return(validIsolationGroup, nil)
 			},
 			expectedValue: "",
-			expectedError: errors.New("no isolation-groups are available"),
+		},
+		"no pollers - fallback to any": {
+			partitionKeyPassedIn: PartitionConfig{
+				IsolationGroupKey: "zone-4",
+				WorkflowIDKey:     "wf-id",
+			},
+			incomingContext: context.Background(),
+			stateAffordance: func(state *isolationgroup.MockState) {
+				state.EXPECT().IsolationGroupsByDomainID(gomock.Any(), domainID).Return(validIsolationGroup, nil)
+			},
+			expectedValue: "",
 		},
 		"Error condition - No isolation-group information passed in": {
 			partitionKeyPassedIn: PartitionConfig{},
@@ -180,10 +129,10 @@ func TestDefaultPartitioner_GetIsolationGroupByDomainID(t *testing.T) {
 			ig := isolationgroup.NewMockState(ctrl)
 			td.stateAffordance(ig)
 			partitioner := NewDefaultPartitioner(testlogger.New(t), ig)
-			res, err := partitioner.GetIsolationGroupByDomainID(td.incomingContext, PollerInfo{
+			res, err := partitioner.GetIsolationGroupByDomainID(td.incomingContext, metrics.NoopScope(metrics.Matching), PollerInfo{
 				DomainID:                 domainID,
 				TasklistName:             sampleTasklist,
-				AvailableIsolationGroups: isolationGroups,
+				AvailableIsolationGroups: availablePollers,
 			}, td.partitionKeyPassedIn)
 
 			assert.Equal(t, td.expectedValue, res)

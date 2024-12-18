@@ -31,6 +31,8 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
+
+	metrics "github.com/uber/cadence/common/metrics"
 )
 
 // MockPartitioner is a mock of Partitioner interface.
@@ -57,16 +59,16 @@ func (m *MockPartitioner) EXPECT() *MockPartitionerMockRecorder {
 }
 
 // GetIsolationGroupByDomainID mocks base method.
-func (m *MockPartitioner) GetIsolationGroupByDomainID(ctx context.Context, pollerinfo PollerInfo, partitionKey PartitionConfig) (string, error) {
+func (m *MockPartitioner) GetIsolationGroupByDomainID(ctx context.Context, scope metrics.Scope, pollerinfo PollerInfo, partitionKey PartitionConfig) (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetIsolationGroupByDomainID", ctx, pollerinfo, partitionKey)
+	ret := m.ctrl.Call(m, "GetIsolationGroupByDomainID", ctx, scope, pollerinfo, partitionKey)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetIsolationGroupByDomainID indicates an expected call of GetIsolationGroupByDomainID.
-func (mr *MockPartitionerMockRecorder) GetIsolationGroupByDomainID(ctx, pollerinfo, partitionKey interface{}) *gomock.Call {
+func (mr *MockPartitionerMockRecorder) GetIsolationGroupByDomainID(ctx, scope, pollerinfo, partitionKey interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetIsolationGroupByDomainID", reflect.TypeOf((*MockPartitioner)(nil).GetIsolationGroupByDomainID), ctx, pollerinfo, partitionKey)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetIsolationGroupByDomainID", reflect.TypeOf((*MockPartitioner)(nil).GetIsolationGroupByDomainID), ctx, scope, pollerinfo, partitionKey)
 }
