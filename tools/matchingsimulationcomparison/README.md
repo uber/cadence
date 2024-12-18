@@ -12,7 +12,7 @@ go run tools/matchingsimulationcomparison/*.go
 Run subset of scenarios and compare:
 ```
 go run tools/matchingsimulationcomparison/*.go \
-    --scenarios "burst"
+    --scenarios "fluctuating"
 ```
 
 If you have already run some scenarios before and made changes in the csv output then run in Compare mode

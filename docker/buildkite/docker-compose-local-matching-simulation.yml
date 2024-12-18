@@ -53,7 +53,7 @@ services:
       - -c
       - >
         go test -timeout 180s
-        -run ^TestMatchingSimulationSuite$
+        -run ^TestMatchingSimulation.*$
         -count 1
         -v
         -tags matchingsim

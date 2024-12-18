@@ -64,6 +64,7 @@ type (
 		EnableAdaptiveScaler                 dynamicconfig.BoolPropertyFnWithTaskListInfoFilters
 		EnableStandbyTaskCompletion          dynamicconfig.BoolPropertyFnWithTaskListInfoFilters
 		EnableClientAutoConfig               dynamicconfig.BoolPropertyFnWithTaskListInfoFilters
+		QPSTrackerInterval                   dynamicconfig.DurationPropertyFnWithTaskListInfoFilters
 
 		// Time to hold a poll request before returning an empty response if there are no tasks
 		LongPollExpirationInterval dynamicconfig.DurationPropertyFnWithTaskListInfoFilters
@@ -124,6 +125,7 @@ type (
 		PartitionUpscaleSustainedDuration   func() time.Duration
 		PartitionDownscaleSustainedDuration func() time.Duration
 		AdaptiveScalerUpdateInterval        func() time.Duration
+		QPSTrackerInterval                  func() time.Duration
 		// taskWriter configuration
 		OutstandingTaskAppendsThreshold      func() int
 		MaxTaskBatchSize                     func() int
@@ -193,6 +195,7 @@ func NewConfig(dc *dynamicconfig.Collection, hostName string, getIsolationGroups
 		PartitionDownscaleSustainedDuration:  dc.GetDurationPropertyFilteredByTaskListInfo(dynamicconfig.MatchingPartitionDownscaleSustainedDuration),
 		AdaptiveScalerUpdateInterval:         dc.GetDurationPropertyFilteredByTaskListInfo(dynamicconfig.MatchingAdaptiveScalerUpdateInterval),
 		EnableAdaptiveScaler:                 dc.GetBoolPropertyFilteredByTaskListInfo(dynamicconfig.MatchingEnableAdaptiveScaler),
+		QPSTrackerInterval:                   dc.GetDurationPropertyFilteredByTaskListInfo(dynamicconfig.MatchingQPSTrackerInterval),
 		TaskIsolationDuration:                dc.GetDurationPropertyFilteredByTaskListInfo(dynamicconfig.TaskIsolationDuration),
 		TaskIsolationPollerWindow:            dc.GetDurationPropertyFilteredByTaskListInfo(dynamicconfig.TaskIsolationPollerWindow),
 		HostName:                             hostName,

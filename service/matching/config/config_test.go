@@ -87,6 +87,7 @@ func TestNewConfig(t *testing.T) {
 		"PartitionDownscaleSustainedDuration":  {dynamicconfig.MatchingPartitionDownscaleSustainedDuration, time.Duration(33)},
 		"AdaptiveScalerUpdateInterval":         {dynamicconfig.MatchingAdaptiveScalerUpdateInterval, time.Duration(34)},
 		"EnableAdaptiveScaler":                 {dynamicconfig.MatchingEnableAdaptiveScaler, true},
+		"QPSTrackerInterval":                   {dynamicconfig.MatchingQPSTrackerInterval, 5 * time.Second},
 		"EnableStandbyTaskCompletion":          {dynamicconfig.MatchingEnableStandbyTaskCompletion, false},
 		"EnableClientAutoConfig":               {dynamicconfig.MatchingEnableClientAutoConfig, false},
 		"TaskIsolationDuration":                {dynamicconfig.TaskIsolationDuration, time.Duration(35)},
