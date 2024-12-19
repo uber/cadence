@@ -51,8 +51,6 @@ type wfCache struct {
 	lru                            cache.Cache
 	externalLimiterFactory         quotas.LimiterFactory
 	internalLimiterFactory         quotas.LimiterFactory
-	workflowIDCacheExternalEnabled dynamicconfig.BoolPropertyFnWithDomainFilter
-	workflowIDCacheInternalEnabled dynamicconfig.BoolPropertyFnWithDomainFilter
 	domainCache                    cache.DomainCache
 	metricsClient                  metrics.Client
 	logger                         log.Logger
@@ -82,8 +80,6 @@ type Params struct {
 	MaxCount                       int
 	ExternalLimiterFactory         quotas.LimiterFactory
 	InternalLimiterFactory         quotas.LimiterFactory
-	WorkflowIDCacheExternalEnabled dynamicconfig.BoolPropertyFnWithDomainFilter
-	WorkflowIDCacheInternalEnabled dynamicconfig.BoolPropertyFnWithDomainFilter
 	DomainCache                    cache.DomainCache
 	MetricsClient                  metrics.Client
 	Logger                         log.Logger
@@ -102,8 +98,6 @@ func New(params Params) WFCache {
 		}),
 		externalLimiterFactory:         params.ExternalLimiterFactory,
 		internalLimiterFactory:         params.InternalLimiterFactory,
-		workflowIDCacheExternalEnabled: params.WorkflowIDCacheExternalEnabled,
-		workflowIDCacheInternalEnabled: params.WorkflowIDCacheInternalEnabled,
 		domainCache:                    params.DomainCache,
 		metricsClient:                  params.MetricsClient,
 		timeSource:                     clock.NewRealTimeSource(),
@@ -129,11 +123,6 @@ func (c *wfCache) allow(domainID string, workflowID string, rateLimitType rateLi
 	if err != nil {
 		c.logError(domainID, workflowID, errDomainName)
 		// The cache is not enabled if the domain does not exist or there is an error getting it (fail open)
-		return true
-	}
-
-	if !c.isWfCacheEnabled(rateLimitType, domainName) {
-		// The cache is not enabled, so we allow the call through
 		return true
 	}
 
@@ -183,11 +172,6 @@ func (c *wfCache) allow(domainID string, workflowID string, rateLimitType rateLi
 		c.logError(domainID, workflowID, errors.New("unknown rate limit type"))
 		return true
 	}
-}
-
-func (c *wfCache) isWfCacheEnabled(rateLimitType rateLimitType, domainName string) bool {
-	return rateLimitType == external && c.workflowIDCacheExternalEnabled(domainName) ||
-		rateLimitType == internal && c.workflowIDCacheInternalEnabled(domainName)
 }
 
 func (c *wfCache) emitRateLimitMetrics(
