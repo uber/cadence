@@ -2,6 +2,8 @@ frontend.enableClientVersionCheck:
   - value: true
 system.advancedVisibilityWritingMode:
   - value: "on"
+system.advancedVisibilityMigrationWritingMode:
+  - value: "source"
 system.enableReadVisibilityFromES:
   - value: true
 frontend.validSearchAttributes:
@@ -43,4 +45,3 @@ system.minRetentionDays:
 history.EnableConsistentQueryByDomain:
 - value: true
   constraints: {}
-
