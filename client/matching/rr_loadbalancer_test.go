@@ -29,7 +29,6 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/types"
 )
@@ -56,36 +55,6 @@ func TestPickPartition(t *testing.T) {
 		setupCache     func(mockCache *cache.MockCache)
 		expectedResult string
 	}{
-		{
-			name:           "ForwardedFrom is not empty",
-			domainID:       "testDomain",
-			taskList:       types.TaskList{Name: "testTaskList", Kind: types.TaskListKindNormal.Ptr()},
-			taskListType:   1,
-			forwardedFrom:  "otherDomain",
-			nPartitions:    3,
-			setupCache:     nil,
-			expectedResult: "testTaskList",
-		},
-		{
-			name:           "Sticky task list",
-			domainID:       "testDomain",
-			taskList:       types.TaskList{Name: "testTaskList", Kind: types.TaskListKindSticky.Ptr()},
-			taskListType:   1,
-			forwardedFrom:  "",
-			nPartitions:    3,
-			setupCache:     nil,
-			expectedResult: "testTaskList",
-		},
-		{
-			name:           "Reserved task list prefix",
-			domainID:       "testDomain",
-			taskList:       types.TaskList{Name: fmt.Sprintf("%vTest", common.ReservedTaskListPrefix), Kind: types.TaskListKindNormal.Ptr()},
-			taskListType:   1,
-			forwardedFrom:  "",
-			nPartitions:    3,
-			setupCache:     nil,
-			expectedResult: fmt.Sprintf("%vTest", common.ReservedTaskListPrefix),
-		},
 		{
 			name:           "nPartitions <= 1",
 			domainID:       "testDomain",
@@ -176,7 +145,6 @@ func TestPickPartition(t *testing.T) {
 				tt.domainID,
 				tt.taskList,
 				tt.taskListType,
-				tt.forwardedFrom,
 				tt.nPartitions,
 				mockCache,
 			)
@@ -187,7 +155,7 @@ func TestPickPartition(t *testing.T) {
 	}
 }
 
-func setUpMocksForRoundRobinLoadBalancer(t *testing.T, pickPartitionFn func(domainID string, taskList types.TaskList, taskListType int, forwardedFrom string, nPartitions int, partitionCache cache.Cache) string) (*roundRobinLoadBalancer, *MockPartitionConfigProvider, *cache.MockCache) {
+func setUpMocksForRoundRobinLoadBalancer(t *testing.T, pickPartitionFn func(domainID string, taskList types.TaskList, taskListType int, nPartitions int, partitionCache cache.Cache) string) (*roundRobinLoadBalancer, *MockPartitionConfigProvider, *cache.MockCache) {
 	ctrl := gomock.NewController(t)
 	mockProvider := NewMockPartitionConfigProvider(ctrl)
 	mockCache := cache.NewMockCache(ctrl)
@@ -210,14 +178,6 @@ func TestRoundRobinPickWritePartition(t *testing.T) {
 		expectedPartition string
 	}{
 		{
-			name:              "single write partition, forwarded",
-			forwardedFrom:     "parent-task-list",
-			taskListType:      0,
-			nPartitions:       1,
-			taskListKind:      types.TaskListKindNormal,
-			expectedPartition: "test-task-list",
-		},
-		{
 			name:              "multiple write partitions, no forward",
 			forwardedFrom:     "",
 			taskListType:      0,
@@ -230,14 +190,13 @@ func TestRoundRobinPickWritePartition(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			// Fake pickPartitionFn behavior
-			fakePickPartitionFn := func(domainID string, taskList types.TaskList, taskListType int, forwardedFrom string, nPartitions int, partitionCache cache.Cache) string {
+			fakePickPartitionFn := func(domainID string, taskList types.TaskList, taskListType int, nPartitions int, partitionCache cache.Cache) string {
 				assert.Equal(t, "test-domain-id", domainID)
 				assert.Equal(t, "test-task-list", taskList.Name)
 				assert.Equal(t, tc.taskListKind, taskList.GetKind())
 				assert.Equal(t, tc.taskListType, taskListType)
-				assert.Equal(t, tc.forwardedFrom, forwardedFrom)
 				assert.Equal(t, tc.nPartitions, nPartitions)
-				if forwardedFrom != "" || taskList.GetKind() == types.TaskListKindSticky {
+				if taskList.GetKind() == types.TaskListKindSticky {
 					return taskList.GetName()
 				}
 				return "custom-partition"
@@ -253,7 +212,12 @@ func TestRoundRobinPickWritePartition(t *testing.T) {
 
 			kind := tc.taskListKind
 			taskList := types.TaskList{Name: "test-task-list", Kind: &kind}
-			partition := loadBalancer.PickWritePartition("test-domain-id", taskList, tc.taskListType, tc.forwardedFrom)
+			req := &types.AddDecisionTaskRequest{
+				DomainUUID:    "test-domain-id",
+				TaskList:      &taskList,
+				ForwardedFrom: tc.forwardedFrom,
+			}
+			partition := loadBalancer.PickWritePartition(tc.taskListType, req)
 
 			// Validate result
 			assert.Equal(t, tc.expectedPartition, partition)
@@ -271,14 +235,6 @@ func TestRoundRobinPickReadPartition(t *testing.T) {
 		expectedPartition string
 	}{
 		{
-			name:              "single read partition, forwarded",
-			forwardedFrom:     "parent-task-list",
-			taskListType:      0,
-			nPartitions:       1,
-			taskListKind:      types.TaskListKindNormal,
-			expectedPartition: "test-task-list",
-		},
-		{
 			name:              "multiple read partitions, no forward",
 			forwardedFrom:     "",
 			taskListType:      0,
@@ -291,14 +247,13 @@ func TestRoundRobinPickReadPartition(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			// Fake pickPartitionFn behavior
-			fakePickPartitionFn := func(domainID string, taskList types.TaskList, taskListType int, forwardedFrom string, nPartitions int, partitionCache cache.Cache) string {
+			fakePickPartitionFn := func(domainID string, taskList types.TaskList, taskListType int, nPartitions int, partitionCache cache.Cache) string {
 				assert.Equal(t, "test-domain-id", domainID)
 				assert.Equal(t, "test-task-list", taskList.Name)
 				assert.Equal(t, tc.taskListKind, taskList.GetKind())
 				assert.Equal(t, tc.taskListType, taskListType)
-				assert.Equal(t, tc.forwardedFrom, forwardedFrom)
 				assert.Equal(t, tc.nPartitions, nPartitions)
-				if forwardedFrom != "" || taskList.GetKind() == types.TaskListKindSticky {
+				if taskList.GetKind() == types.TaskListKindSticky {
 					return taskList.GetName()
 				}
 				return "custom-partition"
@@ -314,7 +269,12 @@ func TestRoundRobinPickReadPartition(t *testing.T) {
 
 			kind := tc.taskListKind
 			taskList := types.TaskList{Name: "test-task-list", Kind: &kind}
-			partition := loadBalancer.PickReadPartition("test-domain-id", taskList, tc.taskListType, tc.forwardedFrom)
+			req := &types.AddDecisionTaskRequest{
+				DomainUUID:    "test-domain-id",
+				TaskList:      &taskList,
+				ForwardedFrom: tc.forwardedFrom,
+			}
+			partition := loadBalancer.PickReadPartition(tc.taskListType, req, "")
 
 			// Validate result
 			assert.Equal(t, tc.expectedPartition, partition)

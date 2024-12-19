@@ -23,10 +23,8 @@
 package matching
 
 import (
-	"strings"
 	"sync/atomic"
 
-	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/types"
 )
@@ -43,7 +41,7 @@ type (
 		readCache  cache.Cache
 		writeCache cache.Cache
 
-		pickPartitionFn func(domainName string, taskList types.TaskList, taskListType int, forwardedFrom string, nPartitions int, partitionCache cache.Cache) string
+		pickPartitionFn func(domainName string, taskList types.TaskList, taskListType int, nPartitions int, partitionCache cache.Cache) string
 	}
 )
 
@@ -71,41 +69,30 @@ func NewRoundRobinLoadBalancer(
 }
 
 func (lb *roundRobinLoadBalancer) PickWritePartition(
-	domainID string,
-	taskList types.TaskList,
 	taskListType int,
-	forwardedFrom string,
+	req WriteRequest,
 ) string {
-	nPartitions := lb.provider.GetNumberOfWritePartitions(domainID, taskList, taskListType)
-	return lb.pickPartitionFn(domainID, taskList, taskListType, forwardedFrom, nPartitions, lb.writeCache)
+	nPartitions := lb.provider.GetNumberOfWritePartitions(req.GetDomainUUID(), *req.GetTaskList(), taskListType)
+	return lb.pickPartitionFn(req.GetDomainUUID(), *req.GetTaskList(), taskListType, nPartitions, lb.writeCache)
 }
 
 func (lb *roundRobinLoadBalancer) PickReadPartition(
-	domainID string,
-	taskList types.TaskList,
 	taskListType int,
-	forwardedFrom string,
+	req ReadRequest,
+	_ string,
 ) string {
-	n := lb.provider.GetNumberOfReadPartitions(domainID, taskList, taskListType)
-	return lb.pickPartitionFn(domainID, taskList, taskListType, forwardedFrom, n, lb.readCache)
+	n := lb.provider.GetNumberOfReadPartitions(req.GetDomainUUID(), *req.GetTaskList(), taskListType)
+	return lb.pickPartitionFn(req.GetDomainUUID(), *req.GetTaskList(), taskListType, n, lb.readCache)
 }
 
 func pickPartition(
 	domainID string,
 	taskList types.TaskList,
 	taskListType int,
-	forwardedFrom string,
 	nPartitions int,
 	partitionCache cache.Cache,
 ) string {
 	taskListName := taskList.GetName()
-	if forwardedFrom != "" || taskList.GetKind() == types.TaskListKindSticky {
-		return taskListName
-	}
-	if strings.HasPrefix(taskListName, common.ReservedTaskListPrefix) {
-		// this should never happen when forwardedFrom is empty
-		return taskListName
-	}
 	if nPartitions <= 1 {
 		return taskListName
 	}
@@ -135,10 +122,8 @@ func pickPartition(
 }
 
 func (lb *roundRobinLoadBalancer) UpdateWeight(
-	domainID string,
-	taskList types.TaskList,
 	taskListType int,
-	forwardedFrom string,
+	req ReadRequest,
 	partition string,
 	info *types.LoadBalancerHints,
 ) {

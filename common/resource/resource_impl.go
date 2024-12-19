@@ -177,6 +177,7 @@ func New(
 			params.MetricsClient,
 			dynamicCollection,
 			numShards,
+			params.GetIsolationGroups,
 			logger,
 		),
 		params.RPCFactory.GetDispatcher(),
