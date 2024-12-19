@@ -60,10 +60,8 @@ func (c *clientImpl) AddActivityTask(
 	opts ...yarpc.CallOption,
 ) (*types.AddActivityTaskResponse, error) {
 	partition := c.loadBalancer.PickWritePartition(
-		request.GetDomainUUID(),
-		*request.GetTaskList(),
 		persistence.TaskListTypeActivity,
-		request.GetForwardedFrom(),
+		request,
 	)
 	originalTaskListName := request.TaskList.GetName()
 	request.TaskList.Name = partition
@@ -91,10 +89,8 @@ func (c *clientImpl) AddDecisionTask(
 	opts ...yarpc.CallOption,
 ) (*types.AddDecisionTaskResponse, error) {
 	partition := c.loadBalancer.PickWritePartition(
-		request.GetDomainUUID(),
-		*request.GetTaskList(),
 		persistence.TaskListTypeDecision,
-		request.GetForwardedFrom(),
+		request,
 	)
 	originalTaskListName := request.TaskList.GetName()
 	request.TaskList.Name = partition
@@ -122,10 +118,9 @@ func (c *clientImpl) PollForActivityTask(
 	opts ...yarpc.CallOption,
 ) (*types.MatchingPollForActivityTaskResponse, error) {
 	partition := c.loadBalancer.PickReadPartition(
-		request.GetDomainUUID(),
-		*request.PollRequest.GetTaskList(),
 		persistence.TaskListTypeActivity,
-		request.GetForwardedFrom(),
+		request,
+		request.GetIsolationGroup(),
 	)
 	originalTaskListName := request.PollRequest.GetTaskList().GetName()
 	request.PollRequest.TaskList.Name = partition
@@ -145,10 +140,8 @@ func (c *clientImpl) PollForActivityTask(
 		resp.PartitionConfig,
 	)
 	c.loadBalancer.UpdateWeight(
-		request.GetDomainUUID(),
-		*request.PollRequest.GetTaskList(),
 		persistence.TaskListTypeActivity,
-		request.GetForwardedFrom(),
+		request,
 		partition,
 		resp.LoadBalancerHints,
 	)
@@ -163,10 +156,9 @@ func (c *clientImpl) PollForDecisionTask(
 	opts ...yarpc.CallOption,
 ) (*types.MatchingPollForDecisionTaskResponse, error) {
 	partition := c.loadBalancer.PickReadPartition(
-		request.GetDomainUUID(),
-		*request.PollRequest.GetTaskList(),
 		persistence.TaskListTypeDecision,
-		request.GetForwardedFrom(),
+		request,
+		request.GetIsolationGroup(),
 	)
 	originalTaskListName := request.PollRequest.GetTaskList().GetName()
 	request.PollRequest.TaskList.Name = partition
@@ -186,10 +178,8 @@ func (c *clientImpl) PollForDecisionTask(
 		resp.PartitionConfig,
 	)
 	c.loadBalancer.UpdateWeight(
-		request.GetDomainUUID(),
-		*request.PollRequest.GetTaskList(),
 		persistence.TaskListTypeDecision,
-		request.GetForwardedFrom(),
+		request,
 		partition,
 		resp.LoadBalancerHints,
 	)
@@ -204,10 +194,9 @@ func (c *clientImpl) QueryWorkflow(
 	opts ...yarpc.CallOption,
 ) (*types.QueryWorkflowResponse, error) {
 	partition := c.loadBalancer.PickReadPartition(
-		request.GetDomainUUID(),
-		*request.GetTaskList(),
 		persistence.TaskListTypeDecision,
-		request.GetForwardedFrom(),
+		request,
+		"",
 	)
 	request.TaskList.Name = partition
 	peer, err := c.peerResolver.FromTaskList(request.TaskList.GetName())

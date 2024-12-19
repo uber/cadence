@@ -134,8 +134,13 @@ func TestWeightedLoadBalancer_PickWritePartition(t *testing.T) {
 			domainID: "domainA",
 			taskList: types.TaskList{Name: "taskListA"},
 			setupMock: func(m *MockLoadBalancer) {
+				req := &types.AddDecisionTaskRequest{
+					DomainUUID:    "domainA",
+					TaskList:      &types.TaskList{Name: "taskListA"},
+					ForwardedFrom: "",
+				}
 				m.EXPECT().
-					PickWritePartition("domainA", types.TaskList{Name: "taskListA"}, 0, "").
+					PickWritePartition(0, req).
 					Return("partitionA")
 			},
 			expectedResult: "partitionA",
@@ -154,7 +159,13 @@ func TestWeightedLoadBalancer_PickWritePartition(t *testing.T) {
 				fallbackLoadBalancer: mockFallbackLB,
 			}
 
-			result := lb.PickWritePartition(tc.domainID, tc.taskList, tc.taskListType, tc.forwardedFrom)
+			req := &types.AddDecisionTaskRequest{
+				DomainUUID:    tc.domainID,
+				TaskList:      &tc.taskList,
+				ForwardedFrom: tc.forwardedFrom,
+			}
+
+			result := lb.PickWritePartition(tc.taskListType, req)
 			assert.Equal(t, tc.expectedResult, result)
 		})
 	}
@@ -216,6 +227,11 @@ func TestWeightedLoadBalancer_PickReadPartition(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			req := &types.AddDecisionTaskRequest{
+				DomainUUID:    tc.domainID,
+				TaskList:      &tc.taskList,
+				ForwardedFrom: tc.forwardedFrom,
+			}
 			ctrl := gomock.NewController(t)
 			// Create mocks.
 			mockWeightCache := cache.NewMockCache(ctrl)
@@ -233,7 +249,7 @@ func TestWeightedLoadBalancer_PickReadPartition(t *testing.T) {
 
 			if tc.expectFallbackCall {
 				mockFallbackLoadBalancer.EXPECT().
-					PickReadPartition(tc.domainID, tc.taskList, tc.taskListType, tc.forwardedFrom).
+					PickReadPartition(tc.taskListType, req, "").
 					Return(tc.fallbackReturn)
 			}
 
@@ -247,7 +263,7 @@ func TestWeightedLoadBalancer_PickReadPartition(t *testing.T) {
 			}
 
 			// Call the method under test.
-			result := lb.PickReadPartition(tc.domainID, tc.taskList, tc.taskListType, tc.forwardedFrom)
+			result := lb.PickReadPartition(tc.taskListType, req, "")
 
 			// Assert the result.
 			assert.Equal(t, tc.expectedResult, result)
@@ -347,6 +363,11 @@ func TestWeightedLoadBalancer_UpdateWeight(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			req := &types.AddDecisionTaskRequest{
+				DomainUUID:    tc.domainID,
+				TaskList:      &tc.taskList,
+				ForwardedFrom: tc.forwardedFrom,
+			}
 			ctrl := gomock.NewController(t)
 			mockWeightCache := cache.NewMockCache(ctrl)
 			mockPartitionConfigProvider := NewMockPartitionConfigProvider(ctrl)
@@ -359,7 +380,7 @@ func TestWeightedLoadBalancer_UpdateWeight(t *testing.T) {
 				tc.setupMock(mockWeightCache, mockPartitionConfigProvider)
 			}
 
-			lb.UpdateWeight(tc.domainID, tc.taskList, tc.taskListType, tc.forwardedFrom, tc.partition, tc.loadBalancerHints)
+			lb.UpdateWeight(tc.taskListType, req, tc.partition, tc.loadBalancerHints)
 		})
 	}
 }

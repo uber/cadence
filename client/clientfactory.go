@@ -72,6 +72,7 @@ type (
 		metricsClient         metrics.Client
 		dynConfig             *dynamicconfig.Collection
 		numberOfHistoryShards int
+		allIsolationGroups    func() []string
 		logger                log.Logger
 	}
 )
@@ -83,6 +84,7 @@ func NewRPCClientFactory(
 	metricsClient metrics.Client,
 	dc *dynamicconfig.Collection,
 	numberOfHistoryShards int,
+	allIsolationGroups func() []string,
 	logger log.Logger,
 ) Factory {
 	return &rpcClientFactory{
@@ -91,6 +93,7 @@ func NewRPCClientFactory(
 		metricsClient:         metricsClient,
 		dynConfig:             dc,
 		numberOfHistoryShards: numberOfHistoryShards,
+		allIsolationGroups:    allIsolationGroups,
 		logger:                logger,
 	}
 }
@@ -155,10 +158,12 @@ func (cf *rpcClientFactory) NewMatchingClientWithTimeout(
 	defaultLoadBalancer := matching.NewLoadBalancer(partitionConfigProvider)
 	roundRobinLoadBalancer := matching.NewRoundRobinLoadBalancer(partitionConfigProvider)
 	weightedLoadBalancer := matching.NewWeightedLoadBalancer(roundRobinLoadBalancer, partitionConfigProvider, cf.logger)
+	igLoadBalancer := matching.NewIsolationLoadBalancer(weightedLoadBalancer, partitionConfigProvider, cf.allIsolationGroups)
 	loadBalancers := map[string]matching.LoadBalancer{
 		"random":      defaultLoadBalancer,
 		"round-robin": roundRobinLoadBalancer,
 		"weighted":    weightedLoadBalancer,
+		"isolation":   igLoadBalancer,
 	}
 	client := matching.NewClient(
 		rawClient,

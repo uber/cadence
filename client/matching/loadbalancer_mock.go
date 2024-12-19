@@ -34,6 +34,150 @@ import (
 	types "github.com/uber/cadence/common/types"
 )
 
+// MockWriteRequest is a mock of WriteRequest interface.
+type MockWriteRequest struct {
+	ctrl     *gomock.Controller
+	recorder *MockWriteRequestMockRecorder
+}
+
+// MockWriteRequestMockRecorder is the mock recorder for MockWriteRequest.
+type MockWriteRequestMockRecorder struct {
+	mock *MockWriteRequest
+}
+
+// NewMockWriteRequest creates a new mock instance.
+func NewMockWriteRequest(ctrl *gomock.Controller) *MockWriteRequest {
+	mock := &MockWriteRequest{ctrl: ctrl}
+	mock.recorder = &MockWriteRequestMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockWriteRequest) EXPECT() *MockWriteRequestMockRecorder {
+	return m.recorder
+}
+
+// GetDomainUUID mocks base method.
+func (m *MockWriteRequest) GetDomainUUID() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetDomainUUID")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// GetDomainUUID indicates an expected call of GetDomainUUID.
+func (mr *MockWriteRequestMockRecorder) GetDomainUUID() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDomainUUID", reflect.TypeOf((*MockWriteRequest)(nil).GetDomainUUID))
+}
+
+// GetForwardedFrom mocks base method.
+func (m *MockWriteRequest) GetForwardedFrom() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetForwardedFrom")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// GetForwardedFrom indicates an expected call of GetForwardedFrom.
+func (mr *MockWriteRequestMockRecorder) GetForwardedFrom() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetForwardedFrom", reflect.TypeOf((*MockWriteRequest)(nil).GetForwardedFrom))
+}
+
+// GetPartitionConfig mocks base method.
+func (m *MockWriteRequest) GetPartitionConfig() map[string]string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetPartitionConfig")
+	ret0, _ := ret[0].(map[string]string)
+	return ret0
+}
+
+// GetPartitionConfig indicates an expected call of GetPartitionConfig.
+func (mr *MockWriteRequestMockRecorder) GetPartitionConfig() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPartitionConfig", reflect.TypeOf((*MockWriteRequest)(nil).GetPartitionConfig))
+}
+
+// GetTaskList mocks base method.
+func (m *MockWriteRequest) GetTaskList() *types.TaskList {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetTaskList")
+	ret0, _ := ret[0].(*types.TaskList)
+	return ret0
+}
+
+// GetTaskList indicates an expected call of GetTaskList.
+func (mr *MockWriteRequestMockRecorder) GetTaskList() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTaskList", reflect.TypeOf((*MockWriteRequest)(nil).GetTaskList))
+}
+
+// MockReadRequest is a mock of ReadRequest interface.
+type MockReadRequest struct {
+	ctrl     *gomock.Controller
+	recorder *MockReadRequestMockRecorder
+}
+
+// MockReadRequestMockRecorder is the mock recorder for MockReadRequest.
+type MockReadRequestMockRecorder struct {
+	mock *MockReadRequest
+}
+
+// NewMockReadRequest creates a new mock instance.
+func NewMockReadRequest(ctrl *gomock.Controller) *MockReadRequest {
+	mock := &MockReadRequest{ctrl: ctrl}
+	mock.recorder = &MockReadRequestMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockReadRequest) EXPECT() *MockReadRequestMockRecorder {
+	return m.recorder
+}
+
+// GetDomainUUID mocks base method.
+func (m *MockReadRequest) GetDomainUUID() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetDomainUUID")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// GetDomainUUID indicates an expected call of GetDomainUUID.
+func (mr *MockReadRequestMockRecorder) GetDomainUUID() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDomainUUID", reflect.TypeOf((*MockReadRequest)(nil).GetDomainUUID))
+}
+
+// GetForwardedFrom mocks base method.
+func (m *MockReadRequest) GetForwardedFrom() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetForwardedFrom")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// GetForwardedFrom indicates an expected call of GetForwardedFrom.
+func (mr *MockReadRequestMockRecorder) GetForwardedFrom() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetForwardedFrom", reflect.TypeOf((*MockReadRequest)(nil).GetForwardedFrom))
+}
+
+// GetTaskList mocks base method.
+func (m *MockReadRequest) GetTaskList() *types.TaskList {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetTaskList")
+	ret0, _ := ret[0].(*types.TaskList)
+	return ret0
+}
+
+// GetTaskList indicates an expected call of GetTaskList.
+func (mr *MockReadRequestMockRecorder) GetTaskList() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTaskList", reflect.TypeOf((*MockReadRequest)(nil).GetTaskList))
+}
+
 // MockLoadBalancer is a mock of LoadBalancer interface.
 type MockLoadBalancer struct {
 	ctrl     *gomock.Controller
@@ -58,41 +202,41 @@ func (m *MockLoadBalancer) EXPECT() *MockLoadBalancerMockRecorder {
 }
 
 // PickReadPartition mocks base method.
-func (m *MockLoadBalancer) PickReadPartition(domainID string, taskList types.TaskList, taskListType int, forwardedFrom string) string {
+func (m *MockLoadBalancer) PickReadPartition(taskListType int, request ReadRequest, isolationGroup string) string {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PickReadPartition", domainID, taskList, taskListType, forwardedFrom)
+	ret := m.ctrl.Call(m, "PickReadPartition", taskListType, request, isolationGroup)
 	ret0, _ := ret[0].(string)
 	return ret0
 }
 
 // PickReadPartition indicates an expected call of PickReadPartition.
-func (mr *MockLoadBalancerMockRecorder) PickReadPartition(domainID, taskList, taskListType, forwardedFrom interface{}) *gomock.Call {
+func (mr *MockLoadBalancerMockRecorder) PickReadPartition(taskListType, request, isolationGroup interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PickReadPartition", reflect.TypeOf((*MockLoadBalancer)(nil).PickReadPartition), domainID, taskList, taskListType, forwardedFrom)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PickReadPartition", reflect.TypeOf((*MockLoadBalancer)(nil).PickReadPartition), taskListType, request, isolationGroup)
 }
 
 // PickWritePartition mocks base method.
-func (m *MockLoadBalancer) PickWritePartition(domainID string, taskList types.TaskList, taskListType int, forwardedFrom string) string {
+func (m *MockLoadBalancer) PickWritePartition(taskListType int, request WriteRequest) string {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PickWritePartition", domainID, taskList, taskListType, forwardedFrom)
+	ret := m.ctrl.Call(m, "PickWritePartition", taskListType, request)
 	ret0, _ := ret[0].(string)
 	return ret0
 }
 
 // PickWritePartition indicates an expected call of PickWritePartition.
-func (mr *MockLoadBalancerMockRecorder) PickWritePartition(domainID, taskList, taskListType, forwardedFrom interface{}) *gomock.Call {
+func (mr *MockLoadBalancerMockRecorder) PickWritePartition(taskListType, request interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PickWritePartition", reflect.TypeOf((*MockLoadBalancer)(nil).PickWritePartition), domainID, taskList, taskListType, forwardedFrom)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PickWritePartition", reflect.TypeOf((*MockLoadBalancer)(nil).PickWritePartition), taskListType, request)
 }
 
 // UpdateWeight mocks base method.
-func (m *MockLoadBalancer) UpdateWeight(domainID string, taskList types.TaskList, taskListType int, forwardedFrom, partition string, info *types.LoadBalancerHints) {
+func (m *MockLoadBalancer) UpdateWeight(taskListType int, request ReadRequest, partition string, info *types.LoadBalancerHints) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "UpdateWeight", domainID, taskList, taskListType, forwardedFrom, partition, info)
+	m.ctrl.Call(m, "UpdateWeight", taskListType, request, partition, info)
 }
 
 // UpdateWeight indicates an expected call of UpdateWeight.
-func (mr *MockLoadBalancerMockRecorder) UpdateWeight(domainID, taskList, taskListType, forwardedFrom, partition, info interface{}) *gomock.Call {
+func (mr *MockLoadBalancerMockRecorder) UpdateWeight(taskListType, request, partition, info interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateWeight", reflect.TypeOf((*MockLoadBalancer)(nil).UpdateWeight), domainID, taskList, taskListType, forwardedFrom, partition, info)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateWeight", reflect.TypeOf((*MockLoadBalancer)(nil).UpdateWeight), taskListType, request, partition, info)
 }

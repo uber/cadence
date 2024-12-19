@@ -28,10 +28,8 @@ import (
 	"path"
 	"sort"
 	"strconv"
-	"strings"
 	"sync"
 
-	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
@@ -133,61 +131,45 @@ func NewWeightedLoadBalancer(
 }
 
 func (lb *weightedLoadBalancer) PickWritePartition(
-	domainID string,
-	taskList types.TaskList,
 	taskListType int,
-	forwardedFrom string,
+	req WriteRequest,
 ) string {
-	return lb.fallbackLoadBalancer.PickWritePartition(domainID, taskList, taskListType, forwardedFrom)
+	return lb.fallbackLoadBalancer.PickWritePartition(taskListType, req)
 }
 
 func (lb *weightedLoadBalancer) PickReadPartition(
-	domainID string,
-	taskList types.TaskList,
 	taskListType int,
-	forwardedFrom string,
+	req ReadRequest,
+	isolationGroup string,
 ) string {
-	if forwardedFrom != "" || taskList.GetKind() == types.TaskListKindSticky {
-		return taskList.GetName()
-	}
-	if strings.HasPrefix(taskList.GetName(), common.ReservedTaskListPrefix) {
-		return taskList.GetName()
-	}
 	taskListKey := key{
-		domainID:     domainID,
-		taskListName: taskList.GetName(),
+		domainID:     req.GetDomainUUID(),
+		taskListName: req.GetTaskList().GetName(),
 		taskListType: taskListType,
 	}
 	wI := lb.weightCache.Get(taskListKey)
 	if wI == nil {
-		return lb.fallbackLoadBalancer.PickReadPartition(domainID, taskList, taskListType, forwardedFrom)
+		return lb.fallbackLoadBalancer.PickReadPartition(taskListType, req, isolationGroup)
 	}
 	w, ok := wI.(*weightSelector)
 	if !ok {
-		return lb.fallbackLoadBalancer.PickReadPartition(domainID, taskList, taskListType, forwardedFrom)
+		return lb.fallbackLoadBalancer.PickReadPartition(taskListType, req, isolationGroup)
 	}
 	p, cumulativeWeights := w.pick()
-	lb.logger.Debug("pick read partition", tag.WorkflowDomainID(domainID), tag.WorkflowTaskListName(taskList.GetName()), tag.WorkflowTaskListType(taskListType), tag.Dynamic("cumulative-weights", cumulativeWeights), tag.Dynamic("task-list-partition", p))
+	lb.logger.Debug("pick read partition", tag.WorkflowDomainID(req.GetDomainUUID()), tag.WorkflowTaskListName(req.GetTaskList().Name), tag.WorkflowTaskListType(taskListType), tag.Dynamic("cumulative-weights", cumulativeWeights), tag.Dynamic("task-list-partition", p))
 	if p < 0 {
-		return lb.fallbackLoadBalancer.PickReadPartition(domainID, taskList, taskListType, forwardedFrom)
+		return lb.fallbackLoadBalancer.PickReadPartition(taskListType, req, isolationGroup)
 	}
-	return getPartitionTaskListName(taskList.GetName(), p)
+	return getPartitionTaskListName(req.GetTaskList().GetName(), p)
 }
 
 func (lb *weightedLoadBalancer) UpdateWeight(
-	domainID string,
-	taskList types.TaskList,
 	taskListType int,
-	forwardedFrom string,
+	req ReadRequest,
 	partition string,
 	info *types.LoadBalancerHints,
 ) {
-	if forwardedFrom != "" || taskList.GetKind() == types.TaskListKindSticky {
-		return
-	}
-	if strings.HasPrefix(taskList.GetName(), common.ReservedTaskListPrefix) {
-		return
-	}
+	taskList := *req.GetTaskList()
 	if info == nil {
 		return
 	}
@@ -200,11 +182,11 @@ func (lb *weightedLoadBalancer) UpdateWeight(
 		}
 	}
 	taskListKey := key{
-		domainID:     domainID,
+		domainID:     req.GetDomainUUID(),
 		taskListName: taskList.GetName(),
 		taskListType: taskListType,
 	}
-	n := lb.provider.GetNumberOfReadPartitions(domainID, taskList, taskListType)
+	n := lb.provider.GetNumberOfReadPartitions(req.GetDomainUUID(), taskList, taskListType)
 	if n <= 1 {
 		lb.weightCache.Delete(taskListKey)
 		return
@@ -223,7 +205,7 @@ func (lb *weightedLoadBalancer) UpdateWeight(
 		return
 	}
 	weight := calcWeightFromLoadBalancerHints(info)
-	lb.logger.Debug("update task list partition weight", tag.WorkflowDomainID(domainID), tag.WorkflowTaskListName(taskList.GetName()), tag.WorkflowTaskListType(taskListType), tag.Dynamic("task-list-partition", p), tag.Dynamic("weight", weight), tag.Dynamic("load-balancer-hints", info))
+	lb.logger.Debug("update task list partition weight", tag.WorkflowDomainID(req.GetDomainUUID()), tag.WorkflowTaskListName(taskList.GetName()), tag.WorkflowTaskListType(taskListType), tag.Dynamic("task-list-partition", p), tag.Dynamic("weight", weight), tag.Dynamic("load-balancer-hints", info))
 	w.update(n, p, weight)
 }
 
