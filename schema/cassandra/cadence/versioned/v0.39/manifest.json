@@ -3,6 +3,6 @@
   "MinCompatibleVersion": "0.39",
   "Description": "Adding create time and last update time for history tables",
   "SchemaUpdateCqlFiles": [
-    "task_list_partition_config.cql"
+    "timestamps.cql"
   ]
 }
