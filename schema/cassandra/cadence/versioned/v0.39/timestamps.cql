@@ -1,6 +1,9 @@
 ALTER TABLE executions ADD created_time timestamp;
+ALTER TABLE executions ADD last_updated_time timestamp;
 ALTER TABLE history_node ADD created_time timestamp;
 ALTER TABLE history_tree ADD created_time timestamp;
+ALTER TABLE tasks ADD created_time timestamp;
+ALTER TABLE tasks ADD last_updated_time timestamp;
 ALTER TABLE domains ADD created_time timestamp;
 ALTER TABLE domains_by_name_v2 ADD created_time timestamp;
 ALTER TABLE queue ADD created_time timestamp;
