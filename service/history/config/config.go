@@ -242,7 +242,6 @@ type Config struct {
 	ReplicationTaskFetcherTimerJitterCoefficient       dynamicconfig.FloatPropertyFn
 	ReplicationTaskFetcherErrorRetryWait               dynamicconfig.DurationPropertyFn
 	ReplicationTaskFetcherServiceBusyWait              dynamicconfig.DurationPropertyFn
-	ReplicationTaskFetcherEnableGracefulSyncShutdown   dynamicconfig.BoolPropertyFn
 	ReplicationTaskProcessorErrorRetryWait             dynamicconfig.DurationPropertyFnWithShardIDFilter
 	ReplicationTaskProcessorErrorRetryMaxAttempts      dynamicconfig.IntPropertyFnWithShardIDFilter
 	ReplicationTaskProcessorErrorSecondRetryWait       dynamicconfig.DurationPropertyFnWithShardIDFilter
@@ -500,7 +499,6 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, maxMessageSize int, i
 		ReplicationTaskFetcherTimerJitterCoefficient:       dc.GetFloat64Property(dynamicconfig.ReplicationTaskFetcherTimerJitterCoefficient),
 		ReplicationTaskFetcherErrorRetryWait:               dc.GetDurationProperty(dynamicconfig.ReplicationTaskFetcherErrorRetryWait),
 		ReplicationTaskFetcherServiceBusyWait:              dc.GetDurationProperty(dynamicconfig.ReplicationTaskFetcherServiceBusyWait),
-		ReplicationTaskFetcherEnableGracefulSyncShutdown:   dc.GetBoolProperty(dynamicconfig.ReplicationTaskFetcherEnableGracefulSyncShutdown),
 		ReplicationTaskProcessorErrorRetryWait:             dc.GetDurationPropertyFilteredByShardID(dynamicconfig.ReplicationTaskProcessorErrorRetryWait),
 		ReplicationTaskProcessorErrorRetryMaxAttempts:      dc.GetIntPropertyFilteredByShardID(dynamicconfig.ReplicationTaskProcessorErrorRetryMaxAttempts),
 		ReplicationTaskProcessorErrorSecondRetryWait:       dc.GetDurationPropertyFilteredByShardID(dynamicconfig.ReplicationTaskProcessorErrorSecondRetryWait),
@@ -606,7 +604,6 @@ func NewForTestByShardNumber(shardNumber int) *Config {
 		"1": 50,
 	}))
 	panicIfErr(inMem.UpdateValue(dynamicconfig.QueueProcessorRandomSplitProbability, 0.5))
-	panicIfErr(inMem.UpdateValue(dynamicconfig.ReplicationTaskFetcherEnableGracefulSyncShutdown, true))
 	panicIfErr(inMem.UpdateValue(dynamicconfig.EnableStrongIdempotency, true))
 
 	dc := dynamicconfig.NewCollection(inMem, log.NewNoop())
@@ -631,7 +628,6 @@ func NewForTestByShardNumber(shardNumber int) *Config {
 	config.QueueProcessorPendingTaskSplitThreshold = dc.GetMapProperty(dynamicconfig.QueueProcessorPendingTaskSplitThreshold)
 	config.QueueProcessorStuckTaskSplitThreshold = dc.GetMapProperty(dynamicconfig.QueueProcessorStuckTaskSplitThreshold)
 	config.QueueProcessorRandomSplitProbability = dc.GetFloat64Property(dynamicconfig.QueueProcessorRandomSplitProbability)
-	config.ReplicationTaskFetcherEnableGracefulSyncShutdown = dc.GetBoolProperty(dynamicconfig.ReplicationTaskFetcherEnableGracefulSyncShutdown)
 	return config
 }
 
