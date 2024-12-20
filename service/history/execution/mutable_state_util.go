@@ -345,7 +345,7 @@ func CopyWorkflowExecutionInfo(sourceInfo *persistence.WorkflowExecutionInfo) *p
 		IsCron:                             sourceInfo.IsCron,
 		InitiatedID:                        sourceInfo.InitiatedID,
 		CompletionEventBatchID:             sourceInfo.CompletionEventBatchID,
-		CompletionEvent:                    sourceInfo.CompletionEvent,
+		CompletionEvent:                    sourceInfo.CompletionEvent, // not deep-copied, history events aren't mutated (unverified but seems very unlikely)
 		TaskList:                           sourceInfo.TaskList,
 		StickyTaskList:                     sourceInfo.StickyTaskList,
 		StickyScheduleToStartTimeout:       sourceInfo.StickyScheduleToStartTimeout,
@@ -378,10 +378,10 @@ func CopyWorkflowExecutionInfo(sourceInfo *persistence.WorkflowExecutionInfo) *p
 		ClientLibraryVersion:               sourceInfo.ClientLibraryVersion,
 		ClientFeatureVersion:               sourceInfo.ClientFeatureVersion,
 		ClientImpl:                         sourceInfo.ClientImpl,
-		AutoResetPoints:                    sourceInfo.AutoResetPoints,
-		Memo:                               sourceInfo.Memo,
-		SearchAttributes:                   sourceInfo.SearchAttributes,
-		PartitionConfig:                    sourceInfo.PartitionConfig,
+		AutoResetPoints:                    copyResetPoints(sourceInfo.AutoResetPoints), // points slice is deep-copied, to prevent appends from mutating the contents
+		Memo:                               copyMap(sourceInfo.Memo),                    // memo bytes value not deep-copied, but they are not mutated in place
+		SearchAttributes:                   copyMap(sourceInfo.SearchAttributes),        // attr bytes value not deep-copied, but they are not mutated in place
+		PartitionConfig:                    copyMap(sourceInfo.PartitionConfig),
 		Attempt:                            sourceInfo.Attempt,
 		HasRetryPolicy:                     sourceInfo.HasRetryPolicy,
 		InitialInterval:                    sourceInfo.InitialInterval,
@@ -393,6 +393,35 @@ func CopyWorkflowExecutionInfo(sourceInfo *persistence.WorkflowExecutionInfo) *p
 		BranchToken:                        sourceInfo.BranchToken,
 		ExpirationSeconds:                  sourceInfo.ExpirationSeconds,
 	}
+}
+
+func copyResetPoints(orig *types.ResetPoints) *types.ResetPoints {
+	if orig == nil {
+		return nil
+	}
+	if len(orig.Points) == 0 {
+		// tests imply this branch is relevant, but unverified
+		return &types.ResetPoints{
+			Points: nil,
+		}
+	}
+	// +1 cap because an append is expected when doing a reset or continue-as-new
+	points := make([]*types.ResetPointInfo, len(orig.Points), len(orig.Points)+1)
+	copy(points, orig.Points)
+	return &types.ResetPoints{
+		Points: points,
+	}
+}
+
+func copyMap[K comparable, V any](orig map[K]V) map[K]V {
+	if orig == nil {
+		return nil
+	}
+	dup := make(map[K]V, len(orig))
+	for k, v := range orig {
+		dup[k] = v
+	}
+	return dup
 }
 
 // CopyActivityInfo copies ActivityInfo
