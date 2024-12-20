@@ -465,15 +465,6 @@ func TestConvert(t *testing.T) {
 		assert.Equal(t, int64(1), outputs[0].(*persistence.SyncActivityTask).ScheduledID)
 		assert.Equal(t, int64(1), outputs[0].GetVersion())
 	})
-
-	t.Run("convertInt64SetToSlice", func(t *testing.T) {
-		key := int64(0)
-		inputs := map[int64]struct{}{key: {}}
-		outputs := convertInt64SetToSlice(inputs)
-		assert.NotNil(t, outputs)
-		assert.Equal(t, 1, len(outputs))
-		assert.Equal(t, key, outputs[0])
-	})
 }
 
 func TestScheduleDecision(t *testing.T) {

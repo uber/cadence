@@ -49,21 +49,6 @@ func (policy TransactionPolicy) Ptr() *TransactionPolicy {
 	return &policy
 }
 
-// NOTE: do not use make(type, len(input))
-// since this will assume initial length being len(inputs)
-// always use make(type, 0, len(input))
-
-func convertInt64SetToSlice(
-	inputs map[int64]struct{},
-) []int64 {
-
-	outputs := make([]int64, 0, len(inputs))
-	for item := range inputs {
-		outputs = append(outputs, item)
-	}
-	return outputs
-}
-
 func convertSyncActivityInfos(
 	activityInfos map[int64]*persistence.ActivityInfo,
 	inputs map[int64]struct{},
