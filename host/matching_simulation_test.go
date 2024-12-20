@@ -128,7 +128,7 @@ func TestMatchingSimulation(t *testing.T) {
 		dynamicconfig.MatchingPartitionUpscaleSustainedDuration:    clusterConfig.MatchingConfig.SimulationConfig.PartitionUpscaleSustainedDuration,
 		dynamicconfig.MatchingPartitionDownscaleSustainedDuration:  clusterConfig.MatchingConfig.SimulationConfig.PartitionDownscaleSustainedDuration,
 		dynamicconfig.MatchingAdaptiveScalerUpdateInterval:         clusterConfig.MatchingConfig.SimulationConfig.AdaptiveScalerUpdateInterval,
-		dynamicconfig.MatchingQPSTrackerInterval:                   clusterConfig.MatchingConfig.SimulationConfig.QPSTrackerInterval,
+		dynamicconfig.MatchingQPSTrackerInterval:                   getQpsTrackerInterval(clusterConfig.MatchingConfig.SimulationConfig.QPSTrackerInterval),
 		dynamicconfig.TaskIsolationDuration:                        clusterConfig.MatchingConfig.SimulationConfig.TaskIsolationDuration,
 	}
 
@@ -426,6 +426,7 @@ func (s *MatchingSimulationSuite) poll(
 						Name: tasklist,
 						Kind: types.TaskListKindNormal.Ptr(),
 					},
+					Identity: pollerID,
 				},
 				IsolationGroup: pollerConfig.getIsolationGroup(),
 			})
@@ -670,6 +671,13 @@ func getPartitionTaskListName(root string, partition int) string {
 		return root
 	}
 	return fmt.Sprintf("%v%v/%v", common.ReservedTaskListPrefix, root, partition)
+}
+
+func getQpsTrackerInterval(duration time.Duration) time.Duration {
+	if duration == 0 {
+		return 10 * time.Second
+	}
+	return duration
 }
 
 func randomlyPickKey(weights map[string]int) string {

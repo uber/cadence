@@ -17,6 +17,7 @@ matchingconfig:
     localpollwaittime: 10ms
     localtaskwaittime: 10ms
     taskisolationduration: 1s
+    tasklistloadbalancerstrategy: isolation
     tasks:
       - numtaskgenerators: 30
         taskspersecond: 500
