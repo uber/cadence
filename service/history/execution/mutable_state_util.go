@@ -84,17 +84,6 @@ func convertSyncActivityInfos(
 	return outputs
 }
 
-func convertUpdateTimerInfos(
-	inputs map[string]*persistence.TimerInfo,
-) []*persistence.TimerInfo {
-
-	outputs := make([]*persistence.TimerInfo, 0, len(inputs))
-	for _, item := range inputs {
-		outputs = append(outputs, item)
-	}
-	return outputs
-}
-
 func convertStringSetToSlice(
 	inputs map[string]struct{},
 ) []string {

@@ -1459,7 +1459,7 @@ func (e *mutableStateBuilder) CloseTransactionAsMutation(
 
 		UpsertActivityInfos:       maps.Values(e.updateActivityInfos),
 		DeleteActivityInfos:       convertInt64SetToSlice(e.deleteActivityInfos),
-		UpsertTimerInfos:          convertUpdateTimerInfos(e.updateTimerInfos),
+		UpsertTimerInfos:          maps.Values(e.updateTimerInfos),
 		DeleteTimerInfos:          convertStringSetToSlice(e.deleteTimerInfos),
 		UpsertChildExecutionInfos: convertUpdateChildExecutionInfos(e.updateChildExecutionInfos),
 		DeleteChildExecutionInfos: convertInt64SetToSlice(e.deleteChildExecutionInfos),
