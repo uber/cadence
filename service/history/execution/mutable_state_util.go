@@ -95,17 +95,6 @@ func convertStringSetToSlice(
 	return outputs
 }
 
-func convertPendingChildExecutionInfos(
-	inputs map[int64]*persistence.ChildExecutionInfo,
-) []*persistence.ChildExecutionInfo {
-
-	outputs := make([]*persistence.ChildExecutionInfo, 0, len(inputs))
-	for _, item := range inputs {
-		outputs = append(outputs, item)
-	}
-	return outputs
-}
-
 func convertUpdateChildExecutionInfos(
 	inputs map[int64]*persistence.ChildExecutionInfo,
 ) []*persistence.ChildExecutionInfo {
