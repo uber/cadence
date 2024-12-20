@@ -84,17 +84,6 @@ func convertSyncActivityInfos(
 	return outputs
 }
 
-func convertStringSetToSlice(
-	inputs map[string]struct{},
-) []string {
-
-	outputs := make([]string, 0, len(inputs))
-	for item := range inputs {
-		outputs = append(outputs, item)
-	}
-	return outputs
-}
-
 func convertWorkflowRequests(inputs map[persistence.WorkflowRequest]struct{}) []*persistence.WorkflowRequest {
 	outputs := make([]*persistence.WorkflowRequest, 0, len(inputs))
 	for key := range inputs {
