@@ -95,17 +95,6 @@ func convertStringSetToSlice(
 	return outputs
 }
 
-func convertPendingRequestCancelInfos(
-	inputs map[int64]*persistence.RequestCancelInfo,
-) []*persistence.RequestCancelInfo {
-
-	outputs := make([]*persistence.RequestCancelInfo, 0, len(inputs))
-	for _, item := range inputs {
-		outputs = append(outputs, item)
-	}
-	return outputs
-}
-
 func convertUpdateRequestCancelInfos(
 	inputs map[int64]*persistence.RequestCancelInfo,
 ) []*persistence.RequestCancelInfo {
