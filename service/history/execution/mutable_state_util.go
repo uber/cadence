@@ -53,17 +53,6 @@ func (policy TransactionPolicy) Ptr() *TransactionPolicy {
 // since this will assume initial length being len(inputs)
 // always use make(type, 0, len(input))
 
-func convertPendingActivityInfos(
-	inputs map[int64]*persistence.ActivityInfo,
-) []*persistence.ActivityInfo {
-
-	outputs := make([]*persistence.ActivityInfo, 0, len(inputs))
-	for _, item := range inputs {
-		outputs = append(outputs, item)
-	}
-	return outputs
-}
-
 func convertUpdateActivityInfos(
 	inputs map[int64]*persistence.ActivityInfo,
 ) []*persistence.ActivityInfo {

@@ -1544,7 +1544,7 @@ func (e *mutableStateBuilder) CloseTransactionAsSnapshot(
 		ExecutionInfo:    e.executionInfo,
 		VersionHistories: e.versionHistories,
 
-		ActivityInfos:       convertPendingActivityInfos(e.pendingActivityInfoIDs),
+		ActivityInfos:       maps.Values(e.pendingActivityInfoIDs),
 		TimerInfos:          convertPendingTimerInfos(e.pendingTimerInfoIDs),
 		ChildExecutionInfos: convertPendingChildExecutionInfos(e.pendingChildExecutionInfoIDs),
 		RequestCancelInfos:  convertPendingRequestCancelInfos(e.pendingRequestCancelInfoIDs),
