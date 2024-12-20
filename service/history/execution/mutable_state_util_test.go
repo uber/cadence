@@ -474,15 +474,6 @@ func TestConvert(t *testing.T) {
 		assert.Equal(t, 1, len(outputs))
 		assert.Equal(t, key, outputs[0])
 	})
-
-	t.Run("convertUpdateSignalInfos", func(t *testing.T) {
-		key := int64(0)
-		inputs := map[int64]*persistence.SignalInfo{key: {}}
-		outputs := convertUpdateSignalInfos(inputs)
-		assert.NotNil(t, outputs)
-		assert.Equal(t, 1, len(outputs))
-		assert.Equal(t, inputs[key], outputs[0])
-	})
 }
 
 func TestScheduleDecision(t *testing.T) {

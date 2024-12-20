@@ -95,17 +95,6 @@ func convertStringSetToSlice(
 	return outputs
 }
 
-func convertUpdateSignalInfos(
-	inputs map[int64]*persistence.SignalInfo,
-) []*persistence.SignalInfo {
-
-	outputs := make([]*persistence.SignalInfo, 0, len(inputs))
-	for _, item := range inputs {
-		outputs = append(outputs, item)
-	}
-	return outputs
-}
-
 func convertWorkflowRequests(inputs map[persistence.WorkflowRequest]struct{}) []*persistence.WorkflowRequest {
 	outputs := make([]*persistence.WorkflowRequest, 0, len(inputs))
 	for key := range inputs {
