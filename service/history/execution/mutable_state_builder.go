@@ -1548,7 +1548,7 @@ func (e *mutableStateBuilder) CloseTransactionAsSnapshot(
 		TimerInfos:          maps.Values(e.pendingTimerInfoIDs),
 		ChildExecutionInfos: maps.Values(e.pendingChildExecutionInfoIDs),
 		RequestCancelInfos:  maps.Values(e.pendingRequestCancelInfoIDs),
-		SignalInfos:         convertPendingSignalInfos(e.pendingSignalInfoIDs),
+		SignalInfos:         maps.Values(e.pendingSignalInfoIDs),
 		SignalRequestedIDs:  convertStringSetToSlice(e.pendingSignalRequestedIDs),
 
 		TransferTasks:    e.insertTransferTasks,
