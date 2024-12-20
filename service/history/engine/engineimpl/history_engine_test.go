@@ -219,7 +219,7 @@ func (s *engineSuite) TestGetMutableStateSync() {
 	test.AddWorkflowExecutionStartedEvent(msBuilder, workflowExecution, "wType", tasklist, []byte("input"), 100, 200, identity)
 	di := test.AddDecisionTaskScheduledEvent(msBuilder)
 	test.AddDecisionTaskStartedEvent(msBuilder, di.ScheduleID, tasklist, identity)
-	ms := execution.CreatePersistenceMutableState(msBuilder)
+	ms := execution.CreatePersistenceMutableState(s.T(), msBuilder)
 	gweResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
 	// right now the next event ID is 4
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(gweResponse, nil).Once()
@@ -297,7 +297,7 @@ func (s *engineSuite) TestGetMutableStateLongPoll() {
 	test.AddWorkflowExecutionStartedEvent(msBuilder, workflowExecution, "wType", tasklist, []byte("input"), 100, 200, identity)
 	di := test.AddDecisionTaskScheduledEvent(msBuilder)
 	test.AddDecisionTaskStartedEvent(msBuilder, di.ScheduleID, tasklist, identity)
-	ms := execution.CreatePersistenceMutableState(msBuilder)
+	ms := execution.CreatePersistenceMutableState(s.T(), msBuilder)
 	gweResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
 	// right now the next event ID is 4
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(gweResponse, nil).Once()
@@ -393,7 +393,7 @@ func (s *engineSuite) TestGetMutableStateLongPoll_CurrentBranchChanged() {
 	test.AddWorkflowExecutionStartedEvent(msBuilder, workflowExecution, "wType", tasklist, []byte("input"), 100, 200, identity)
 	di := test.AddDecisionTaskScheduledEvent(msBuilder)
 	test.AddDecisionTaskStartedEvent(msBuilder, di.ScheduleID, tasklist, identity)
-	ms := execution.CreatePersistenceMutableState(msBuilder)
+	ms := execution.CreatePersistenceMutableState(s.T(), msBuilder)
 	gweResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
 	// right now the next event ID is 4
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(gweResponse, nil).Once()
@@ -473,7 +473,7 @@ func (s *engineSuite) TestGetMutableStateLongPollTimeout() {
 	test.AddWorkflowExecutionStartedEvent(msBuilder, workflowExecution, "wType", tasklist, []byte("input"), 100, 200, identity)
 	di := test.AddDecisionTaskScheduledEvent(msBuilder)
 	test.AddDecisionTaskStartedEvent(msBuilder, di.ScheduleID, tasklist, identity)
-	ms := execution.CreatePersistenceMutableState(msBuilder)
+	ms := execution.CreatePersistenceMutableState(s.T(), msBuilder)
 	gweResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
 	// right now the next event ID is 4
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(gweResponse, nil).Once()
@@ -527,7 +527,7 @@ func (s *engineSuite) TestQueryWorkflow_RejectBasedOnCompleted() {
 	di.StartedID = event.ID
 	event = test.AddDecisionTaskCompletedEvent(msBuilder, di.ScheduleID, di.StartedID, nil, "some random identity")
 	test.AddCompleteWorkflowEvent(msBuilder, event.ID, nil)
-	ms := execution.CreatePersistenceMutableState(msBuilder)
+	ms := execution.CreatePersistenceMutableState(s.T(), msBuilder)
 	gweResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(gweResponse, nil).Once()
 
@@ -566,7 +566,7 @@ func (s *engineSuite) TestQueryWorkflow_RejectBasedOnFailed() {
 	di.StartedID = event.ID
 	event = test.AddDecisionTaskCompletedEvent(msBuilder, di.ScheduleID, di.StartedID, nil, "some random identity")
 	test.AddFailWorkflowEvent(msBuilder, event.ID, "failure reason", []byte{1, 2, 3})
-	ms := execution.CreatePersistenceMutableState(msBuilder)
+	ms := execution.CreatePersistenceMutableState(s.T(), msBuilder)
 	gweResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(gweResponse, nil).Once()
 
@@ -616,7 +616,7 @@ func (s *engineSuite) TestQueryWorkflow_FirstDecisionNotCompleted() {
 	test.AddWorkflowExecutionStartedEvent(msBuilder, workflowExecution, "wType", tasklist, []byte("input"), 100, 200, identity)
 	di := test.AddDecisionTaskScheduledEvent(msBuilder)
 	test.AddDecisionTaskStartedEvent(msBuilder, di.ScheduleID, tasklist, identity)
-	ms := execution.CreatePersistenceMutableState(msBuilder)
+	ms := execution.CreatePersistenceMutableState(s.T(), msBuilder)
 	gweResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(gweResponse, nil).Once()
 
@@ -653,7 +653,7 @@ func (s *engineSuite) TestQueryWorkflow_DirectlyThroughMatching() {
 	di = test.AddDecisionTaskScheduledEvent(msBuilder)
 	test.AddDecisionTaskStartedEvent(msBuilder, di.ScheduleID, tasklist, identity)
 
-	ms := execution.CreatePersistenceMutableState(msBuilder)
+	ms := execution.CreatePersistenceMutableState(s.T(), msBuilder)
 	gweResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(gweResponse, nil).Once()
 	s.mockMatchingClient.EXPECT().QueryWorkflow(gomock.Any(), gomock.Any()).Return(&types.QueryWorkflowResponse{QueryResult: []byte{1, 2, 3}}, nil)
@@ -695,7 +695,7 @@ func (s *engineSuite) TestQueryWorkflow_DecisionTaskDispatch_Timeout() {
 	di = test.AddDecisionTaskScheduledEvent(msBuilder)
 	test.AddDecisionTaskStartedEvent(msBuilder, di.ScheduleID, tasklist, identity)
 
-	ms := execution.CreatePersistenceMutableState(msBuilder)
+	ms := execution.CreatePersistenceMutableState(s.T(), msBuilder)
 	gweResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(gweResponse, nil).Once()
 	request := &types.HistoryQueryWorkflowRequest{
@@ -755,7 +755,7 @@ func (s *engineSuite) TestQueryWorkflow_ConsistentQueryBufferFull() {
 	di = test.AddDecisionTaskScheduledEvent(msBuilder)
 	test.AddDecisionTaskStartedEvent(msBuilder, di.ScheduleID, tasklist, identity)
 
-	ms := execution.CreatePersistenceMutableState(msBuilder)
+	ms := execution.CreatePersistenceMutableState(s.T(), msBuilder)
 	gweResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(gweResponse, nil).Once()
 
@@ -802,7 +802,7 @@ func (s *engineSuite) TestQueryWorkflow_DecisionTaskDispatch_Complete() {
 	di = test.AddDecisionTaskScheduledEvent(msBuilder)
 	test.AddDecisionTaskStartedEvent(msBuilder, di.ScheduleID, tasklist, identity)
 
-	ms := execution.CreatePersistenceMutableState(msBuilder)
+	ms := execution.CreatePersistenceMutableState(s.T(), msBuilder)
 	gweResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(gweResponse, nil).Once()
 
@@ -874,7 +874,7 @@ func (s *engineSuite) TestQueryWorkflow_DecisionTaskDispatch_Unblocked() {
 	di = test.AddDecisionTaskScheduledEvent(msBuilder)
 	test.AddDecisionTaskStartedEvent(msBuilder, di.ScheduleID, tasklist, identity)
 
-	ms := execution.CreatePersistenceMutableState(msBuilder)
+	ms := execution.CreatePersistenceMutableState(s.T(), msBuilder)
 	gweResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(gweResponse, nil).Once()
 	s.mockMatchingClient.EXPECT().QueryWorkflow(gomock.Any(), gomock.Any()).Return(&types.QueryWorkflowResponse{QueryResult: []byte{1, 2, 3}}, nil)
@@ -1006,7 +1006,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedUpdateExecutionFailed() {
 	di := test.AddDecisionTaskScheduledEvent(msBuilder)
 	test.AddDecisionTaskStartedEvent(msBuilder, di.ScheduleID, tl, identity)
 
-	ms := execution.CreatePersistenceMutableState(msBuilder)
+	ms := execution.CreatePersistenceMutableState(s.T(), msBuilder)
 	gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
 
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(gwmsResponse, nil).Once()
@@ -1050,7 +1050,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedIfTaskCompleted() {
 	startedEvent := test.AddDecisionTaskStartedEvent(msBuilder, di.ScheduleID, tl, identity)
 	test.AddDecisionTaskCompletedEvent(msBuilder, di.ScheduleID, startedEvent.ID, nil, identity)
 
-	ms := execution.CreatePersistenceMutableState(msBuilder)
+	ms := execution.CreatePersistenceMutableState(s.T(), msBuilder)
 	gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
 
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(gwmsResponse, nil).Once()
@@ -1089,7 +1089,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedIfTaskNotStarted() {
 	test.AddWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 100, 200, identity)
 	test.AddDecisionTaskScheduledEvent(msBuilder)
 
-	ms := execution.CreatePersistenceMutableState(msBuilder)
+	ms := execution.CreatePersistenceMutableState(s.T(), msBuilder)
 	gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
 
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(gwmsResponse, nil).Once()
@@ -1167,13 +1167,13 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedConflictOnUpdate() {
 		},
 	}}
 
-	ms := execution.CreatePersistenceMutableState(msBuilder)
+	ms := execution.CreatePersistenceMutableState(s.T(), msBuilder)
 	gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
 
 	test.AddActivityTaskCompletedEvent(msBuilder, activity2ScheduledEvent.ID,
 		activity2StartedEvent.ID, activity2Result, identity)
 
-	ms2 := execution.CreatePersistenceMutableState(msBuilder)
+	ms2 := execution.CreatePersistenceMutableState(s.T(), msBuilder)
 	gwmsResponse2 := &persistence.GetWorkflowExecutionResponse{State: ms2}
 
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(gwmsResponse, nil).Once()
@@ -1274,7 +1274,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedMaxAttemptsExceeded() {
 	}}
 
 	for i := 0; i < workflow.ConditionalRetryCount; i++ {
-		ms := execution.CreatePersistenceMutableState(msBuilder)
+		ms := execution.CreatePersistenceMutableState(s.T(), msBuilder)
 		gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
 
 		s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(gwmsResponse, nil).Once()
@@ -1353,7 +1353,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedCompleteWorkflowFailed() {
 	}}
 
 	for i := 0; i < 2; i++ {
-		ms := execution.CreatePersistenceMutableState(msBuilder)
+		ms := execution.CreatePersistenceMutableState(s.T(), msBuilder)
 		gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
 		s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(gwmsResponse, nil).Once()
 	}
@@ -1442,7 +1442,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedFailWorkflowFailed() {
 	}}
 
 	for i := 0; i < 2; i++ {
-		ms := execution.CreatePersistenceMutableState(msBuilder)
+		ms := execution.CreatePersistenceMutableState(s.T(), msBuilder)
 		gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
 		s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(gwmsResponse, nil).Once()
 	}
@@ -1516,8 +1516,8 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedBadDecisionAttributes() {
 		DecisionType: types.DecisionTypeCompleteWorkflowExecution.Ptr(),
 	}}
 
-	gwmsResponse1 := &persistence.GetWorkflowExecutionResponse{State: execution.CreatePersistenceMutableState(msBuilder)}
-	gwmsResponse2 := &persistence.GetWorkflowExecutionResponse{State: execution.CreatePersistenceMutableState(msBuilder)}
+	gwmsResponse1 := &persistence.GetWorkflowExecutionResponse{State: execution.CreatePersistenceMutableState(s.T(), msBuilder)}
+	gwmsResponse2 := &persistence.GetWorkflowExecutionResponse{State: execution.CreatePersistenceMutableState(s.T(), msBuilder)}
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(gwmsResponse1, nil).Once()
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(gwmsResponse2, nil).Once()
 
@@ -1634,10 +1634,10 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedSingleActivityScheduledAtt
 			},
 		}}
 
-		gwmsResponse1 := &persistence.GetWorkflowExecutionResponse{State: execution.CreatePersistenceMutableState(msBuilder)}
+		gwmsResponse1 := &persistence.GetWorkflowExecutionResponse{State: execution.CreatePersistenceMutableState(s.T(), msBuilder)}
 		s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(gwmsResponse1, nil).Once()
 		if iVar.expectDecisionFail {
-			gwmsResponse2 := &persistence.GetWorkflowExecutionResponse{State: execution.CreatePersistenceMutableState(msBuilder)}
+			gwmsResponse2 := &persistence.GetWorkflowExecutionResponse{State: execution.CreatePersistenceMutableState(s.T(), msBuilder)}
 			s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(gwmsResponse2, nil).Once()
 		}
 
@@ -1716,8 +1716,8 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedBadBinary() {
 
 	var decisions []*types.Decision
 
-	gwmsResponse1 := &persistence.GetWorkflowExecutionResponse{State: execution.CreatePersistenceMutableState(msBuilder)}
-	gwmsResponse2 := &persistence.GetWorkflowExecutionResponse{State: execution.CreatePersistenceMutableState(msBuilder)}
+	gwmsResponse1 := &persistence.GetWorkflowExecutionResponse{State: execution.CreatePersistenceMutableState(s.T(), msBuilder)}
+	gwmsResponse2 := &persistence.GetWorkflowExecutionResponse{State: execution.CreatePersistenceMutableState(s.T(), msBuilder)}
 
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(gwmsResponse1, nil).Once()
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(gwmsResponse2, nil).Once()
@@ -1785,7 +1785,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedSingleActivityScheduledDec
 		},
 	}}
 
-	ms := execution.CreatePersistenceMutableState(msBuilder)
+	ms := execution.CreatePersistenceMutableState(s.T(), msBuilder)
 	gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
 
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(gwmsResponse, nil).Once()
@@ -1849,7 +1849,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompleted_DecisionHeartbeatTimeout(
 
 	decisions := []*types.Decision{}
 
-	ms := execution.CreatePersistenceMutableState(msBuilder)
+	ms := execution.CreatePersistenceMutableState(s.T(), msBuilder)
 	gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
 
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(gwmsResponse, nil).Once()
@@ -1897,7 +1897,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompleted_DecisionHeartbeatNotTimeo
 
 	decisions := []*types.Decision{}
 
-	ms := execution.CreatePersistenceMutableState(msBuilder)
+	ms := execution.CreatePersistenceMutableState(s.T(), msBuilder)
 	gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
 
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(gwmsResponse, nil).Once()
@@ -1945,7 +1945,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompleted_DecisionHeartbeatNotTimeo
 
 	decisions := []*types.Decision{}
 
-	ms := execution.CreatePersistenceMutableState(msBuilder)
+	ms := execution.CreatePersistenceMutableState(s.T(), msBuilder)
 	gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
 
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(gwmsResponse, nil).Once()
@@ -1998,7 +1998,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedCompleteWorkflowSuccess() 
 		},
 	}}
 
-	ms := execution.CreatePersistenceMutableState(msBuilder)
+	ms := execution.CreatePersistenceMutableState(s.T(), msBuilder)
 	gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
 
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(gwmsResponse, nil).Once()
@@ -2058,7 +2058,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedFailWorkflowSuccess() {
 		},
 	}}
 
-	ms := execution.CreatePersistenceMutableState(msBuilder)
+	ms := execution.CreatePersistenceMutableState(s.T(), msBuilder)
 	gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
 
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(gwmsResponse, nil).Once()
@@ -2121,7 +2121,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedSignalExternalWorkflowSucc
 		},
 	}}
 
-	ms := execution.CreatePersistenceMutableState(msBuilder)
+	ms := execution.CreatePersistenceMutableState(s.T(), msBuilder)
 	gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
 
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(gwmsResponse, nil).Once()
@@ -2182,7 +2182,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedStartChildWorkflowWithAban
 		},
 	}}
 
-	ms := execution.CreatePersistenceMutableState(msBuilder)
+	ms := execution.CreatePersistenceMutableState(s.T(), msBuilder)
 	gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
 
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(gwmsResponse, nil).Once()
@@ -2251,7 +2251,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedStartChildWorkflowWithTerm
 		},
 	}}
 
-	ms := execution.CreatePersistenceMutableState(msBuilder)
+	ms := execution.CreatePersistenceMutableState(s.T(), msBuilder)
 	gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
 
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(gwmsResponse, nil).Once()
@@ -2372,7 +2372,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedSignalExternalWorkflowFail
 		},
 	}}
 
-	ms := execution.CreatePersistenceMutableState(msBuilder)
+	ms := execution.CreatePersistenceMutableState(s.T(), msBuilder)
 	gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
 
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(gwmsResponse, nil).Once()
@@ -2496,7 +2496,7 @@ func (s *engineSuite) TestRespondActivityTaskCompletedIfNoAIdProvided() {
 	)
 	test.AddWorkflowExecutionStartedEvent(msBuilder, workflowExecution, "wType", tasklist, []byte("input"), 100, 200, identity)
 	test.AddDecisionTaskScheduledEvent(msBuilder)
-	ms := execution.CreatePersistenceMutableState(msBuilder)
+	ms := execution.CreatePersistenceMutableState(s.T(), msBuilder)
 	gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
 	gceResponse := &persistence.GetCurrentExecutionResponse{RunID: constants.TestRunID}
 
@@ -2535,7 +2535,7 @@ func (s *engineSuite) TestRespondActivityTaskCompletedIfNotFound() {
 	)
 	test.AddWorkflowExecutionStartedEvent(msBuilder, workflowExecution, "wType", tasklist, []byte("input"), 100, 200, identity)
 	test.AddDecisionTaskScheduledEvent(msBuilder)
-	ms := execution.CreatePersistenceMutableState(msBuilder)
+	ms := execution.CreatePersistenceMutableState(s.T(), msBuilder)
 	gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
 	gceResponse := &persistence.GetCurrentExecutionResponse{RunID: constants.TestRunID}
 
@@ -2585,7 +2585,7 @@ func (s *engineSuite) TestRespondActivityTaskCompletedUpdateExecutionFailed() {
 		activityType, tl, activityInput, 100, 10, 1, 5)
 	test.AddActivityTaskStartedEvent(msBuilder, activityScheduledEvent.ID, identity)
 
-	ms := execution.CreatePersistenceMutableState(msBuilder)
+	ms := execution.CreatePersistenceMutableState(s.T(), msBuilder)
 	gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
 
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(gwmsResponse, nil).Once()
@@ -2640,7 +2640,7 @@ func (s *engineSuite) TestRespondActivityTaskCompletedIfTaskCompleted() {
 		activityResult, identity)
 	test.AddDecisionTaskScheduledEvent(msBuilder)
 
-	ms := execution.CreatePersistenceMutableState(msBuilder)
+	ms := execution.CreatePersistenceMutableState(s.T(), msBuilder)
 	gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
 
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(gwmsResponse, nil).Once()
@@ -2689,7 +2689,7 @@ func (s *engineSuite) TestRespondActivityTaskCompletedIfTaskNotStarted() {
 	test.AddActivityTaskScheduledEvent(msBuilder, decisionCompletedEvent.ID, activityID,
 		activityType, tl, activityInput, 100, 10, 1, 5)
 
-	ms := execution.CreatePersistenceMutableState(msBuilder)
+	ms := execution.CreatePersistenceMutableState(s.T(), msBuilder)
 	gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
 
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(gwmsResponse, nil).Once()
@@ -2745,10 +2745,10 @@ func (s *engineSuite) TestRespondActivityTaskCompletedConflictOnUpdate() {
 	test.AddActivityTaskStartedEvent(msBuilder, activity1ScheduledEvent.ID, identity)
 	test.AddActivityTaskStartedEvent(msBuilder, activity2ScheduledEvent.ID, identity)
 
-	ms1 := execution.CreatePersistenceMutableState(msBuilder)
+	ms1 := execution.CreatePersistenceMutableState(s.T(), msBuilder)
 	gwmsResponse1 := &persistence.GetWorkflowExecutionResponse{State: ms1}
 
-	ms2 := execution.CreatePersistenceMutableState(msBuilder)
+	ms2 := execution.CreatePersistenceMutableState(s.T(), msBuilder)
 	gwmsResponse2 := &persistence.GetWorkflowExecutionResponse{State: ms2}
 
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(gwmsResponse1, nil).Once()
@@ -2815,7 +2815,7 @@ func (s *engineSuite) TestRespondActivityTaskCompletedMaxAttemptsExceeded() {
 	test.AddActivityTaskStartedEvent(msBuilder, activityScheduledEvent.ID, identity)
 
 	for i := 0; i < workflow.ConditionalRetryCount; i++ {
-		ms := execution.CreatePersistenceMutableState(msBuilder)
+		ms := execution.CreatePersistenceMutableState(s.T(), msBuilder)
 		gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
 
 		s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(gwmsResponse, nil).Once()
@@ -2867,7 +2867,7 @@ func (s *engineSuite) TestRespondActivityTaskCompletedSuccess() {
 		activityType, tl, activityInput, 100, 10, 1, 5)
 	test.AddActivityTaskStartedEvent(msBuilder, activityScheduledEvent.ID, identity)
 
-	ms := execution.CreatePersistenceMutableState(msBuilder)
+	ms := execution.CreatePersistenceMutableState(s.T(), msBuilder)
 	gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
 
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(gwmsResponse, nil).Once()
@@ -2930,7 +2930,7 @@ func (s *engineSuite) TestRespondActivityTaskCompletedByIdSuccess() {
 		activityType, tl, activityInput, 100, 10, 1, 5)
 	test.AddActivityTaskStartedEvent(msBuilder, activityScheduledEvent.ID, identity)
 
-	ms := execution.CreatePersistenceMutableState(msBuilder)
+	ms := execution.CreatePersistenceMutableState(s.T(), msBuilder)
 	gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
 	gceResponse := &persistence.GetCurrentExecutionResponse{RunID: we.RunID}
 
@@ -3066,7 +3066,7 @@ func (s *engineSuite) TestRespondActivityTaskFailededIfNoAIdProvided() {
 	)
 	test.AddWorkflowExecutionStartedEvent(msBuilder, workflowExecution, "wType", tasklist, []byte("input"), 100, 200, identity)
 	test.AddDecisionTaskScheduledEvent(msBuilder)
-	ms := execution.CreatePersistenceMutableState(msBuilder)
+	ms := execution.CreatePersistenceMutableState(s.T(), msBuilder)
 	gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
 	gceResponse := &persistence.GetCurrentExecutionResponse{RunID: constants.TestRunID}
 
@@ -3105,7 +3105,7 @@ func (s *engineSuite) TestRespondActivityTaskFailededIfNotFound() {
 	)
 	test.AddWorkflowExecutionStartedEvent(msBuilder, workflowExecution, "wType", tasklist, []byte("input"), 100, 200, identity)
 	test.AddDecisionTaskScheduledEvent(msBuilder)
-	ms := execution.CreatePersistenceMutableState(msBuilder)
+	ms := execution.CreatePersistenceMutableState(s.T(), msBuilder)
 	gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
 	gceResponse := &persistence.GetCurrentExecutionResponse{RunID: constants.TestRunID}
 
@@ -3154,7 +3154,7 @@ func (s *engineSuite) TestRespondActivityTaskFailedUpdateExecutionFailed() {
 		activityType, tl, activityInput, 100, 10, 1, 5)
 	test.AddActivityTaskStartedEvent(msBuilder, activityScheduledEvent.ID, identity)
 
-	ms := execution.CreatePersistenceMutableState(msBuilder)
+	ms := execution.CreatePersistenceMutableState(s.T(), msBuilder)
 	gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
 
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(gwmsResponse, nil).Once()
@@ -3209,7 +3209,7 @@ func (s *engineSuite) TestRespondActivityTaskFailedIfTaskCompleted() {
 		failReason, details, identity)
 	test.AddDecisionTaskScheduledEvent(msBuilder)
 
-	ms := execution.CreatePersistenceMutableState(msBuilder)
+	ms := execution.CreatePersistenceMutableState(s.T(), msBuilder)
 	gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
 
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(gwmsResponse, nil).Once()
@@ -3258,7 +3258,7 @@ func (s *engineSuite) TestRespondActivityTaskFailedIfTaskNotStarted() {
 	test.AddActivityTaskScheduledEvent(msBuilder, decisionCompletedEvent.ID, activityID,
 		activityType, tl, activityInput, 100, 10, 1, 5)
 
-	ms := execution.CreatePersistenceMutableState(msBuilder)
+	ms := execution.CreatePersistenceMutableState(s.T(), msBuilder)
 	gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
 
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(gwmsResponse, nil).Once()
@@ -3315,14 +3315,14 @@ func (s *engineSuite) TestRespondActivityTaskFailedConflictOnUpdate() {
 	test.AddActivityTaskStartedEvent(msBuilder, activity1ScheduledEvent.ID, identity)
 	activity2StartedEvent := test.AddActivityTaskStartedEvent(msBuilder, activity2ScheduledEvent.ID, identity)
 
-	ms1 := execution.CreatePersistenceMutableState(msBuilder)
+	ms1 := execution.CreatePersistenceMutableState(s.T(), msBuilder)
 	gwmsResponse1 := &persistence.GetWorkflowExecutionResponse{State: ms1}
 
 	test.AddActivityTaskCompletedEvent(msBuilder, activity2ScheduledEvent.ID,
 		activity2StartedEvent.ID, activity2Result, identity)
 	test.AddDecisionTaskScheduledEvent(msBuilder)
 
-	ms2 := execution.CreatePersistenceMutableState(msBuilder)
+	ms2 := execution.CreatePersistenceMutableState(s.T(), msBuilder)
 	gwmsResponse2 := &persistence.GetWorkflowExecutionResponse{State: ms2}
 
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(gwmsResponse1, nil).Once()
@@ -3389,7 +3389,7 @@ func (s *engineSuite) TestRespondActivityTaskFailedMaxAttemptsExceeded() {
 	test.AddActivityTaskStartedEvent(msBuilder, activityScheduledEvent.ID, identity)
 
 	for i := 0; i < workflow.ConditionalRetryCount; i++ {
-		ms := execution.CreatePersistenceMutableState(msBuilder)
+		ms := execution.CreatePersistenceMutableState(s.T(), msBuilder)
 		gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
 
 		s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(gwmsResponse, nil).Once()
@@ -3441,7 +3441,7 @@ func (s *engineSuite) TestRespondActivityTaskFailedSuccess() {
 		activityType, tl, activityInput, 100, 10, 1, 5)
 	test.AddActivityTaskStartedEvent(msBuilder, activityScheduledEvent.ID, identity)
 
-	ms := execution.CreatePersistenceMutableState(msBuilder)
+	ms := execution.CreatePersistenceMutableState(s.T(), msBuilder)
 	gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
 
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(gwmsResponse, nil).Once()
@@ -3506,7 +3506,7 @@ func (s *engineSuite) TestRespondActivityTaskFailedByIDSuccess() {
 		activityType, tl, activityInput, 100, 10, 1, 5)
 	test.AddActivityTaskStartedEvent(msBuilder, activityScheduledEvent.ID, identity)
 
-	ms := execution.CreatePersistenceMutableState(msBuilder)
+	ms := execution.CreatePersistenceMutableState(s.T(), msBuilder)
 	gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
 	gceResponse := &persistence.GetCurrentExecutionResponse{RunID: we.RunID}
 
@@ -3571,7 +3571,7 @@ func (s *engineSuite) TestRecordActivityTaskHeartBeatSuccess_NoTimer() {
 	test.AddActivityTaskStartedEvent(msBuilder, activityScheduledEvent.ID, identity)
 
 	// No HeartBeat timer running.
-	ms := execution.CreatePersistenceMutableState(msBuilder)
+	ms := execution.CreatePersistenceMutableState(s.T(), msBuilder)
 	gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(gwmsResponse, nil).Once()
 	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything, mock.Anything).Return(&persistence.UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: &persistence.MutableStateUpdateSessionStats{}}, nil).Once()
@@ -3621,7 +3621,7 @@ func (s *engineSuite) TestRecordActivityTaskHeartBeatSuccess_TimerRunning() {
 		activityType, tl, activityInput, 100, 10, 1, 1)
 	test.AddActivityTaskStartedEvent(msBuilder, activityScheduledEvent.ID, identity)
 
-	ms := execution.CreatePersistenceMutableState(msBuilder)
+	ms := execution.CreatePersistenceMutableState(s.T(), msBuilder)
 	gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
 
 	// HeartBeat timer running.
@@ -3680,7 +3680,7 @@ func (s *engineSuite) TestRecordActivityTaskHeartBeatByIDSuccess() {
 	test.AddActivityTaskStartedEvent(msBuilder, activityScheduledEvent.ID, identity)
 
 	// No HeartBeat timer running.
-	ms := execution.CreatePersistenceMutableState(msBuilder)
+	ms := execution.CreatePersistenceMutableState(s.T(), msBuilder)
 	gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(gwmsResponse, nil).Once()
 	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything, mock.Anything).Return(&persistence.UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: &persistence.MutableStateUpdateSessionStats{}}, nil).Once()
@@ -3729,7 +3729,7 @@ func (s *engineSuite) TestRespondActivityTaskCanceled_Scheduled() {
 	test.AddActivityTaskScheduledEvent(msBuilder, decisionCompletedEvent.ID, activityID,
 		activityType, tl, activityInput, 100, 10, 1, 1)
 
-	ms := execution.CreatePersistenceMutableState(msBuilder)
+	ms := execution.CreatePersistenceMutableState(s.T(), msBuilder)
 	gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
 
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(gwmsResponse, nil).Once()
@@ -3780,7 +3780,7 @@ func (s *engineSuite) TestRespondActivityTaskCanceled_Started() {
 	_, _, err := msBuilder.AddActivityTaskCancelRequestedEvent(decisionCompletedEvent.ID, activityID, identity)
 	s.Nil(err)
 
-	ms := execution.CreatePersistenceMutableState(msBuilder)
+	ms := execution.CreatePersistenceMutableState(s.T(), msBuilder)
 	gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
 
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(gwmsResponse, nil).Once()
@@ -3843,7 +3843,7 @@ func (s *engineSuite) TestRespondActivityTaskCanceledByID_Started() {
 	_, _, err := msBuilder.AddActivityTaskCancelRequestedEvent(decisionCompletedEvent.ID, activityID, identity)
 	s.Nil(err)
 
-	ms := execution.CreatePersistenceMutableState(msBuilder)
+	ms := execution.CreatePersistenceMutableState(s.T(), msBuilder)
 	gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
 	gceResponse := &persistence.GetCurrentExecutionResponse{RunID: we.RunID}
 
@@ -3909,7 +3909,7 @@ func (s *engineSuite) TestRespondActivityTaskCanceledIfNoAIdProvided() {
 		constants.TestRunID,
 		constants.TestLocalDomainEntry,
 	)
-	ms := execution.CreatePersistenceMutableState(msBuilder)
+	ms := execution.CreatePersistenceMutableState(s.T(), msBuilder)
 	gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
 	gceResponse := &persistence.GetCurrentExecutionResponse{RunID: constants.TestRunID}
 
@@ -3941,7 +3941,7 @@ func (s *engineSuite) TestRespondActivityTaskCanceledIfNotFound() {
 		constants.TestRunID,
 		constants.TestLocalDomainEntry,
 	)
-	ms := execution.CreatePersistenceMutableState(msBuilder)
+	ms := execution.CreatePersistenceMutableState(s.T(), msBuilder)
 	gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
 	gceResponse := &persistence.GetCurrentExecutionResponse{RunID: constants.TestRunID}
 
@@ -3990,7 +3990,7 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_NotSchedule
 		},
 	}}
 
-	ms := execution.CreatePersistenceMutableState(msBuilder)
+	ms := execution.CreatePersistenceMutableState(s.T(), msBuilder)
 	gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
 
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(gwmsResponse, nil).Once()
@@ -4047,7 +4047,7 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_Scheduled()
 	di2 := test.AddDecisionTaskScheduledEvent(msBuilder)
 	test.AddDecisionTaskStartedEvent(msBuilder, di2.ScheduleID, tl, identity)
 
-	ms := execution.CreatePersistenceMutableState(msBuilder)
+	ms := execution.CreatePersistenceMutableState(s.T(), msBuilder)
 	gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
 
 	decisions := []*types.Decision{{
@@ -4117,7 +4117,7 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_Started() {
 	di2 := test.AddDecisionTaskScheduledEvent(msBuilder)
 	test.AddDecisionTaskStartedEvent(msBuilder, di2.ScheduleID, tl, identity)
 
-	ms := execution.CreatePersistenceMutableState(msBuilder)
+	ms := execution.CreatePersistenceMutableState(s.T(), msBuilder)
 	gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
 
 	decisions := []*types.Decision{{
@@ -4198,7 +4198,7 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_Completed()
 		},
 	}
 
-	ms := execution.CreatePersistenceMutableState(msBuilder)
+	ms := execution.CreatePersistenceMutableState(s.T(), msBuilder)
 	gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(gwmsResponse, nil).Once()
 	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything, mock.Anything).Return(&persistence.AppendHistoryNodesResponse{}, nil).Once()
@@ -4256,7 +4256,7 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_NoHeartBeat
 	di2 := test.AddDecisionTaskScheduledEvent(msBuilder)
 	test.AddDecisionTaskStartedEvent(msBuilder, di2.ScheduleID, tl, identity)
 
-	ms := execution.CreatePersistenceMutableState(msBuilder)
+	ms := execution.CreatePersistenceMutableState(s.T(), msBuilder)
 	gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
 
 	decisions := []*types.Decision{{
@@ -4363,7 +4363,7 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_Success() {
 	di2 := test.AddDecisionTaskScheduledEvent(msBuilder)
 	test.AddDecisionTaskStartedEvent(msBuilder, di2.ScheduleID, tl, identity)
 
-	ms := execution.CreatePersistenceMutableState(msBuilder)
+	ms := execution.CreatePersistenceMutableState(s.T(), msBuilder)
 	gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
 
 	decisions := []*types.Decision{{
@@ -4469,7 +4469,7 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_SuccessWith
 	di2 := test.AddDecisionTaskScheduledEvent(msBuilder)
 	test.AddDecisionTaskStartedEvent(msBuilder, di2.ScheduleID, tl, identity)
 
-	ms := execution.CreatePersistenceMutableState(msBuilder)
+	ms := execution.CreatePersistenceMutableState(s.T(), msBuilder)
 	gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
 
 	decisions := []*types.Decision{{
@@ -4616,7 +4616,7 @@ func (s *engineSuite) TestRequestCancel_RespondDecisionTaskCompleted_SuccessWith
 	di2 := test.AddDecisionTaskScheduledEvent(msBuilder)
 	test.AddDecisionTaskStartedEvent(msBuilder, di2.ScheduleID, tl, identity)
 
-	ms := execution.CreatePersistenceMutableState(msBuilder)
+	ms := execution.CreatePersistenceMutableState(s.T(), msBuilder)
 	gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
 
 	decisions := []*types.Decision{{
@@ -4700,7 +4700,7 @@ func (s *engineSuite) TestStarTimer_DuplicateTimerID() {
 	di := test.AddDecisionTaskScheduledEvent(msBuilder)
 	test.AddDecisionTaskStartedEvent(msBuilder, di.ScheduleID, tl, identity)
 
-	ms := execution.CreatePersistenceMutableState(msBuilder)
+	ms := execution.CreatePersistenceMutableState(s.T(), msBuilder)
 	gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
 
 	decisions := []*types.Decision{{
@@ -4738,7 +4738,7 @@ func (s *engineSuite) TestStarTimer_DuplicateTimerID() {
 		ScheduleID: di2.ScheduleID,
 	})
 
-	ms2 := execution.CreatePersistenceMutableState(executionBuilder)
+	ms2 := execution.CreatePersistenceMutableState(s.T(), executionBuilder)
 	gwmsResponse2 := &persistence.GetWorkflowExecutionResponse{State: ms2}
 
 	decisionFailedEvent := false
@@ -4805,7 +4805,7 @@ func (s *engineSuite) TestUserTimer_RespondDecisionTaskCompleted() {
 	di2 := test.AddDecisionTaskScheduledEvent(msBuilder)
 	test.AddDecisionTaskStartedEvent(msBuilder, di2.ScheduleID, tl, identity)
 
-	ms := execution.CreatePersistenceMutableState(msBuilder)
+	ms := execution.CreatePersistenceMutableState(s.T(), msBuilder)
 	gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
 
 	decisions := []*types.Decision{{
@@ -4863,7 +4863,7 @@ func (s *engineSuite) TestCancelTimer_RespondDecisionTaskCompleted_NoStartTimer(
 	di := test.AddDecisionTaskScheduledEvent(msBuilder)
 	test.AddDecisionTaskStartedEvent(msBuilder, di.ScheduleID, tl, identity)
 
-	ms := execution.CreatePersistenceMutableState(msBuilder)
+	ms := execution.CreatePersistenceMutableState(s.T(), msBuilder)
 	gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
 
 	decisions := []*types.Decision{{
@@ -4929,7 +4929,7 @@ func (s *engineSuite) TestCancelTimer_RespondDecisionTaskCompleted_TimerFired() 
 	_, _, err := msBuilder.CloseTransactionAsMutation(time.Now(), execution.TransactionPolicyActive)
 	s.Nil(err)
 
-	ms := execution.CreatePersistenceMutableState(msBuilder)
+	ms := execution.CreatePersistenceMutableState(s.T(), msBuilder)
 	gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
 	s.True(len(gwmsResponse.State.BufferedEvents) > 0)
 
@@ -5001,7 +5001,7 @@ func (s *engineSuite) TestSignalWorkflowExecution() {
 	)
 	test.AddWorkflowExecutionStartedEvent(msBuilder, we, "wType", tasklist, []byte("input"), 100, 200, identity)
 	test.AddDecisionTaskScheduledEvent(msBuilder)
-	ms := execution.CreatePersistenceMutableState(msBuilder)
+	ms := execution.CreatePersistenceMutableState(s.T(), msBuilder)
 	ms.ExecutionInfo.DomainID = constants.TestDomainID
 	gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
 
@@ -5044,7 +5044,7 @@ func (s *engineSuite) TestSignalWorkflowExecution_DuplicateRequest_WorkflowOpen(
 	)
 	test.AddWorkflowExecutionStartedEvent(msBuilder, we, "wType", tasklist, []byte("input"), 100, 200, identity)
 	test.AddDecisionTaskScheduledEvent(msBuilder)
-	ms := execution.CreatePersistenceMutableState(msBuilder)
+	ms := execution.CreatePersistenceMutableState(s.T(), msBuilder)
 	// assume duplicate request id
 	ms.SignalRequestedIDs = make(map[string]struct{})
 	ms.SignalRequestedIDs[requestID] = struct{}{}
@@ -5087,7 +5087,7 @@ func (s *engineSuite) TestSignalWorkflowExecution_DuplicateRequest_WorkflowCompl
 	)
 	test.AddWorkflowExecutionStartedEvent(msBuilder, we, "wType", tasklist, []byte("input"), 100, 200, identity)
 	test.AddDecisionTaskScheduledEvent(msBuilder)
-	ms := execution.CreatePersistenceMutableState(msBuilder)
+	ms := execution.CreatePersistenceMutableState(s.T(), msBuilder)
 	// assume duplicate request id
 	ms.SignalRequestedIDs = make(map[string]struct{})
 	ms.SignalRequestedIDs[requestID] = struct{}{}
@@ -5129,7 +5129,7 @@ func (s *engineSuite) TestSignalWorkflowExecution_WorkflowCompleted() {
 	)
 	test.AddWorkflowExecutionStartedEvent(msBuilder, *we, "wType", tasklist, []byte("input"), 100, 200, identity)
 	test.AddDecisionTaskScheduledEvent(msBuilder)
-	ms := execution.CreatePersistenceMutableState(msBuilder)
+	ms := execution.CreatePersistenceMutableState(s.T(), msBuilder)
 	ms.ExecutionInfo.State = persistence.WorkflowStateCompleted
 	gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
 
@@ -5165,7 +5165,7 @@ func (s *engineSuite) TestRemoveSignalMutableState() {
 	)
 	test.AddWorkflowExecutionStartedEvent(msBuilder, workflowExecution, "wType", tasklist, []byte("input"), 100, 200, identity)
 	test.AddDecisionTaskScheduledEvent(msBuilder)
-	ms := execution.CreatePersistenceMutableState(msBuilder)
+	ms := execution.CreatePersistenceMutableState(s.T(), msBuilder)
 	ms.ExecutionInfo.DomainID = constants.TestDomainID
 	gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
 
@@ -5194,7 +5194,7 @@ func (s *engineSuite) TestReapplyEvents_ReturnSuccess() {
 		workflowExecution.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
-	ms := execution.CreatePersistenceMutableState(msBuilder)
+	ms := execution.CreatePersistenceMutableState(s.T(), msBuilder)
 	gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
 	gceResponse := &persistence.GetCurrentExecutionResponse{RunID: constants.TestRunID}
 	s.mockExecutionMgr.On("GetCurrentExecution", mock.Anything, mock.Anything).Return(gceResponse, nil).Once()
@@ -5230,7 +5230,7 @@ func (s *engineSuite) TestReapplyEvents_IgnoreSameVersionEvents() {
 		constants.TestLocalDomainEntry,
 	)
 
-	ms := execution.CreatePersistenceMutableState(msBuilder)
+	ms := execution.CreatePersistenceMutableState(s.T(), msBuilder)
 	gwmsResponse := &persistence.GetWorkflowExecutionResponse{State: ms}
 	gceResponse := &persistence.GetCurrentExecutionResponse{RunID: constants.TestRunID}
 	s.mockExecutionMgr.On("GetCurrentExecution", mock.Anything, mock.Anything).Return(gceResponse, nil).Once()
@@ -5265,7 +5265,7 @@ func (s *engineSuite) TestReapplyEvents_ResetWorkflow() {
 		workflowExecution.GetRunID(),
 		constants.TestLocalDomainEntry,
 	)
-	ms := execution.CreatePersistenceMutableState(msBuilder)
+	ms := execution.CreatePersistenceMutableState(s.T(), msBuilder)
 	ms.ExecutionInfo.State = persistence.WorkflowStateCompleted
 	ms.ExecutionInfo.LastProcessedEvent = 1
 	token, err := msBuilder.GetCurrentBranchToken()
