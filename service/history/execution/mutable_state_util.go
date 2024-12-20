@@ -23,6 +23,7 @@ package execution
 
 import (
 	"encoding/json"
+	"testing"
 
 	"golang.org/x/exp/slices"
 
@@ -280,30 +281,30 @@ func FindAutoResetPoint(
 }
 
 // CreatePersistenceMutableState creates a persistence mutable state based on the its in-memory version
-func CreatePersistenceMutableState(ms MutableState) *persistence.WorkflowMutableState {
+func CreatePersistenceMutableState(t *testing.T, ms MutableState) *persistence.WorkflowMutableState {
 	builder := ms.(*mutableStateBuilder)
 	builder.FlushBufferedEvents() //nolint:errcheck
-	info := CopyWorkflowExecutionInfo(builder.GetExecutionInfo())
+	info := CopyWorkflowExecutionInfo(t, builder.GetExecutionInfo())
 	stats := &persistence.ExecutionStats{}
 	activityInfos := make(map[int64]*persistence.ActivityInfo)
 	for id, info := range builder.GetPendingActivityInfos() {
-		activityInfos[id] = CopyActivityInfo(info)
+		activityInfos[id] = CopyActivityInfo(t, info)
 	}
 	timerInfos := make(map[string]*persistence.TimerInfo)
 	for id, info := range builder.GetPendingTimerInfos() {
-		timerInfos[id] = CopyTimerInfo(info)
+		timerInfos[id] = CopyTimerInfo(t, info)
 	}
 	cancellationInfos := make(map[int64]*persistence.RequestCancelInfo)
 	for id, info := range builder.GetPendingRequestCancelExternalInfos() {
-		cancellationInfos[id] = CopyCancellationInfo(info)
+		cancellationInfos[id] = CopyCancellationInfo(t, info)
 	}
 	signalInfos := make(map[int64]*persistence.SignalInfo)
 	for id, info := range builder.GetPendingSignalExternalInfos() {
-		signalInfos[id] = CopySignalInfo(info)
+		signalInfos[id] = CopySignalInfo(t, info)
 	}
 	childInfos := make(map[int64]*persistence.ChildExecutionInfo)
 	for id, info := range builder.GetPendingChildExecutionInfos() {
-		childInfos[id] = CopyChildInfo(info)
+		childInfos[id] = CopyChildInfo(t, info)
 	}
 
 	builder.FlushBufferedEvents() //nolint:errcheck
@@ -333,7 +334,7 @@ func CreatePersistenceMutableState(ms MutableState) *persistence.WorkflowMutable
 }
 
 // CopyWorkflowExecutionInfo copies WorkflowExecutionInfo
-func CopyWorkflowExecutionInfo(sourceInfo *persistence.WorkflowExecutionInfo) *persistence.WorkflowExecutionInfo {
+func CopyWorkflowExecutionInfo(t *testing.T, sourceInfo *persistence.WorkflowExecutionInfo) *persistence.WorkflowExecutionInfo {
 	return &persistence.WorkflowExecutionInfo{
 		DomainID:                           sourceInfo.DomainID,
 		WorkflowID:                         sourceInfo.WorkflowID,
@@ -396,16 +397,16 @@ func CopyWorkflowExecutionInfo(sourceInfo *persistence.WorkflowExecutionInfo) *p
 }
 
 // CopyActivityInfo copies ActivityInfo
-func CopyActivityInfo(sourceInfo *persistence.ActivityInfo) *persistence.ActivityInfo {
+func CopyActivityInfo(t *testing.T, sourceInfo *persistence.ActivityInfo) *persistence.ActivityInfo {
 	details := slices.Clone(sourceInfo.Details)
 
 	return &persistence.ActivityInfo{
 		Version:                  sourceInfo.Version,
 		ScheduleID:               sourceInfo.ScheduleID,
 		ScheduledEventBatchID:    sourceInfo.ScheduledEventBatchID,
-		ScheduledEvent:           deepCopyHistoryEvent(sourceInfo.ScheduledEvent),
+		ScheduledEvent:           deepCopyHistoryEvent(t, sourceInfo.ScheduledEvent),
 		StartedID:                sourceInfo.StartedID,
-		StartedEvent:             deepCopyHistoryEvent(sourceInfo.StartedEvent),
+		StartedEvent:             deepCopyHistoryEvent(t, sourceInfo.StartedEvent),
 		ActivityID:               sourceInfo.ActivityID,
 		RequestID:                sourceInfo.RequestID,
 		Details:                  details,
@@ -439,7 +440,7 @@ func CopyActivityInfo(sourceInfo *persistence.ActivityInfo) *persistence.Activit
 }
 
 // CopyTimerInfo copies TimerInfo
-func CopyTimerInfo(sourceInfo *persistence.TimerInfo) *persistence.TimerInfo {
+func CopyTimerInfo(t *testing.T, sourceInfo *persistence.TimerInfo) *persistence.TimerInfo {
 	return &persistence.TimerInfo{
 		Version:    sourceInfo.Version,
 		TimerID:    sourceInfo.TimerID,
@@ -450,7 +451,7 @@ func CopyTimerInfo(sourceInfo *persistence.TimerInfo) *persistence.TimerInfo {
 }
 
 // CopyCancellationInfo copies RequestCancelInfo
-func CopyCancellationInfo(sourceInfo *persistence.RequestCancelInfo) *persistence.RequestCancelInfo {
+func CopyCancellationInfo(t *testing.T, sourceInfo *persistence.RequestCancelInfo) *persistence.RequestCancelInfo {
 	return &persistence.RequestCancelInfo{
 		Version:               sourceInfo.Version,
 		InitiatedID:           sourceInfo.InitiatedID,
@@ -460,21 +461,20 @@ func CopyCancellationInfo(sourceInfo *persistence.RequestCancelInfo) *persistenc
 }
 
 // CopySignalInfo copies SignalInfo
-func CopySignalInfo(sourceInfo *persistence.SignalInfo) *persistence.SignalInfo {
-	result := &persistence.SignalInfo{
+func CopySignalInfo(t *testing.T, sourceInfo *persistence.SignalInfo) *persistence.SignalInfo {
+	return &persistence.SignalInfo{
 		Version:               sourceInfo.Version,
 		InitiatedEventBatchID: sourceInfo.InitiatedEventBatchID,
 		InitiatedID:           sourceInfo.InitiatedID,
 		SignalRequestID:       sourceInfo.SignalRequestID,
 		SignalName:            sourceInfo.SignalName,
+		Input:                 slices.Clone(sourceInfo.Input),
+		Control:               slices.Clone(sourceInfo.Control),
 	}
-	result.Input = slices.Clone(sourceInfo.Input)
-	result.Control = slices.Clone(sourceInfo.Control)
-	return result
 }
 
 // CopyChildInfo copies ChildExecutionInfo
-func CopyChildInfo(sourceInfo *persistence.ChildExecutionInfo) *persistence.ChildExecutionInfo {
+func CopyChildInfo(t *testing.T, sourceInfo *persistence.ChildExecutionInfo) *persistence.ChildExecutionInfo {
 	return &persistence.ChildExecutionInfo{
 		Version:               sourceInfo.Version,
 		InitiatedID:           sourceInfo.InitiatedID,
@@ -487,12 +487,12 @@ func CopyChildInfo(sourceInfo *persistence.ChildExecutionInfo) *persistence.Chil
 		DomainNameDEPRECATED:  sourceInfo.DomainNameDEPRECATED,
 		WorkflowTypeName:      sourceInfo.WorkflowTypeName,
 		ParentClosePolicy:     sourceInfo.ParentClosePolicy,
-		InitiatedEvent:        deepCopyHistoryEvent(sourceInfo.InitiatedEvent),
-		StartedEvent:          deepCopyHistoryEvent(sourceInfo.StartedEvent),
+		InitiatedEvent:        deepCopyHistoryEvent(t, sourceInfo.InitiatedEvent),
+		StartedEvent:          deepCopyHistoryEvent(t, sourceInfo.StartedEvent),
 	}
 }
 
-func deepCopyHistoryEvent(e *types.HistoryEvent) *types.HistoryEvent {
+func deepCopyHistoryEvent(t *testing.T, e *types.HistoryEvent) *types.HistoryEvent {
 	if e == nil {
 		return nil
 	}
@@ -553,6 +553,7 @@ func GetChildExecutionDomainID(
 // we should always use DomainID field instead.
 // this function exists for backward compatibility reason
 func GetChildExecutionDomainEntry(
+	t *testing.T,
 	childInfo *persistence.ChildExecutionInfo,
 	domainCache cache.DomainCache,
 	parentDomainEntry *cache.DomainCacheEntry,

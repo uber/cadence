@@ -51,7 +51,7 @@ func TestCopyActivityInfo(t *testing.T) {
 
 		d1 := persistence.ActivityInfo{}
 		f.Fuzz(&d1)
-		d2 := CopyActivityInfo(&d1)
+		d2 := CopyActivityInfo(t, &d1)
 
 		assert.Equal(t, &d1, d2)
 	})
@@ -63,7 +63,7 @@ func TestCopyWorkflowExecutionInfo(t *testing.T) {
 
 		d1 := persistence.WorkflowExecutionInfo{}
 		f.Fuzz(&d1)
-		d2 := CopyWorkflowExecutionInfo(&d1)
+		d2 := CopyWorkflowExecutionInfo(t, &d1)
 
 		assert.Equal(t, &d1, d2)
 	})
@@ -75,7 +75,7 @@ func TestCopyTimerInfoMapping(t *testing.T) {
 
 		d1 := persistence.TimerInfo{}
 		f.Fuzz(&d1)
-		d2 := CopyTimerInfo(&d1)
+		d2 := CopyTimerInfo(t, &d1)
 
 		assert.Equal(t, &d1, d2)
 	})
@@ -87,7 +87,7 @@ func TestChildWorkflowMapping(t *testing.T) {
 
 		d1 := persistence.ChildExecutionInfo{}
 		f.Fuzz(&d1)
-		d2 := CopyChildInfo(&d1)
+		d2 := CopyChildInfo(t, &d1)
 
 		assert.Equal(t, &d1, d2)
 	})
@@ -99,7 +99,7 @@ func TestCopySignalInfo(t *testing.T) {
 
 		d1 := persistence.SignalInfo{}
 		f.Fuzz(&d1)
-		d2 := CopySignalInfo(&d1)
+		d2 := CopySignalInfo(t, &d1)
 
 		assert.Equal(t, &d1, d2)
 	})
@@ -111,7 +111,7 @@ func TestCopyCancellationInfo(t *testing.T) {
 
 		d1 := persistence.RequestCancelInfo{}
 		f.Fuzz(&d1)
-		d2 := CopyCancellationInfo(&d1)
+		d2 := CopyCancellationInfo(t, &d1)
 
 		assert.Equal(t, &d1, d2)
 	})
@@ -354,7 +354,7 @@ func TestCreatePersistenceMutableState(t *testing.T) {
 	builder.decisionTaskManager.(*mutableStateDecisionTaskManagerImpl).HasInFlightDecision()
 	builder.executionInfo.DecisionStartedID = 1
 
-	mutableState := CreatePersistenceMutableState(builder)
+	mutableState := CreatePersistenceMutableState(t, builder)
 	assert.NotNil(t, mutableState)
 	assert.Equal(t, builder.executionInfo, mutableState.ExecutionInfo)
 	assert.Equal(t, builder.pendingActivityInfoIDs, mutableState.ActivityInfos)
@@ -429,7 +429,7 @@ func TestGetChildExecutionDomainEntry(t *testing.T) {
 		mockDomainCache := cache.NewMockDomainCache(gomock.NewController(t))
 		expected := &cache.DomainCacheEntry{}
 		mockDomainCache.EXPECT().GetDomainByID(childInfo.DomainID).Return(expected, nil)
-		entry, err := GetChildExecutionDomainEntry(childInfo, mockDomainCache, constants.TestLocalDomainEntry)
+		entry, err := GetChildExecutionDomainEntry(t, childInfo, mockDomainCache, constants.TestLocalDomainEntry)
 		require.NoError(t, err)
 		assert.Equal(t, expected, entry)
 	})
@@ -440,7 +440,7 @@ func TestGetChildExecutionDomainEntry(t *testing.T) {
 		mockDomainCache := cache.NewMockDomainCache(gomock.NewController(t))
 		expected := &cache.DomainCacheEntry{}
 		mockDomainCache.EXPECT().GetDomain(childInfo.DomainNameDEPRECATED).Return(expected, nil)
-		entry, err := GetChildExecutionDomainEntry(childInfo, mockDomainCache, parentDomainEntry)
+		entry, err := GetChildExecutionDomainEntry(t, childInfo, mockDomainCache, parentDomainEntry)
 		require.NoError(t, err)
 		assert.Equal(t, expected, entry)
 	})
@@ -449,7 +449,7 @@ func TestGetChildExecutionDomainEntry(t *testing.T) {
 		childInfo := &persistence.ChildExecutionInfo{}
 		parentDomainEntry := constants.TestLocalDomainEntry
 		mockDomainCache := cache.NewMockDomainCache(gomock.NewController(t))
-		entry, err := GetChildExecutionDomainEntry(childInfo, mockDomainCache, parentDomainEntry)
+		entry, err := GetChildExecutionDomainEntry(t, childInfo, mockDomainCache, parentDomainEntry)
 		require.NoError(t, err)
 		assert.Equal(t, parentDomainEntry, entry)
 	})

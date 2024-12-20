@@ -172,7 +172,7 @@ func (s *engine3Suite) TestRecordDecisionTaskStartedSuccessStickyEnabled() {
 	test.AddWorkflowExecutionStartedEvent(msBuilder, we, "wType", tl, []byte("input"), 100, 200, identity)
 	di := test.AddDecisionTaskScheduledEvent(msBuilder)
 
-	ms := execution.CreatePersistenceMutableState(msBuilder)
+	ms := execution.CreatePersistenceMutableState(s.T(), msBuilder)
 
 	gwmsResponse := &p.GetWorkflowExecutionResponse{State: ms}
 
@@ -326,7 +326,7 @@ func (s *engine3Suite) TestSignalWithStartWorkflowExecution_JustSignal() {
 		runID,
 		constants.TestLocalDomainEntry,
 	)
-	ms := execution.CreatePersistenceMutableState(msBuilder)
+	ms := execution.CreatePersistenceMutableState(s.T(), msBuilder)
 	gwmsResponse := &p.GetWorkflowExecutionResponse{State: ms}
 	gceResponse := &p.GetCurrentExecutionResponse{RunID: runID}
 
