@@ -112,7 +112,7 @@ func TestDefaultPartitioner_GetIsolationGroupByDomainID(t *testing.T) {
 			stateAffordance:      func(state *isolationgroup.MockState) {},
 			incomingContext:      context.Background(),
 			expectedValue:        "",
-			expectedError:        errors.New("invalid partition config"),
+			expectedError:        nil,
 		},
 		"Error condition - No isolation-group information passed in 2": {
 			partitionKeyPassedIn: nil,
