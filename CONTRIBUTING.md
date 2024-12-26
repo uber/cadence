@@ -1,8 +1,15 @@
 # Developing Cadence
 
-This doc is intended for contributors to `cadence` server (hopefully that's you!)
+This doc is intended for contributors to Cadence backend. Thanks for considering to contribute ❤️
 
-Join our Slack channel(invite link in the [home page](https://github.com/cadence-workflow/cadence#cadence)) #development if you need help.
+Once you go through rest of this doc and get familiar with local development setup, take a look at the list of issues labeled with
+[good first issue](https://github.com/cadence-workflow/cadence/labels/good%20first%20issue).
+These issues are a great way to start contributing to Cadence. Later when you are more familiar with Cadence, look at issues with
+[up-for-grabs](https://github.com/cadence-workflow/cadence/labels/up-for-grabs).
+
+Feel free to join our [slack workspace](http://t.uber.com/cadence-slack) to reach out and discuss issues with the team.
+
+
 >Note: All contributors need to fill out the [Uber Contributor License Agreement](http://t.uber.com/cla) before we can merge in any of your changes
 
 ## Development Environment
@@ -164,17 +171,6 @@ $./bin/helloworld
 
 See [instructions](service/worker/README.md) for setting up replication(XDC).
 
-## Issues to start with
-
-Take a look at the list of issues labeled with
-[good first issue](https://github.com/cadence-workflow/cadence/labels/good%20first%20issue).
-These issues are a great way to start contributing to Cadence.
-
-Later when you are more familiar with Cadence, look at issues with
-[up-for-grabs](https://github.com/cadence-workflow/cadence/labels/up-for-grabs).
-
-
-
 ## Repository layout
 A Cadence server cluster is composed of four different services: Frontend, Matching, History and Worker(system).
 Here's what's in each top-level directory in this repository:
@@ -254,18 +250,12 @@ Examples:
 
 #### Code Format and Licence headers checking
 
-The project has strict rule about Golang format. You have to run
+The project has strict rule about Golang format, import ordering and license declarations. You have to run
 ```bash
-make fmt
+make pr
 ```
-to re-format your code. Otherwise the CI(buildkite) test will fail.
+which will take care of formatting for you.
 
-Also, this project is Open Source Software, and requires a header at the beginning of
-all new source files you are adding. To verify that all files contain the header execute:
-
-```bash
-make copyright
-```
 
 ### Code review
 We take code reviews very seriously at Cadence. Please don't be deterred if you feel like you've received some hefty feedback. That's completely normal and expected—and, if you're an external contributor, we very much appreciate your contribution!
