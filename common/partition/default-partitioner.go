@@ -84,7 +84,7 @@ func (r *defaultPartitioner) GetIsolationGroupByDomainID(ctx context.Context, sc
 	}
 	wfPartition := mapPartitionConfigToDefaultPartitionConfig(wfPartitionData)
 	if wfPartition.WorkflowStartIsolationGroup == "" || wfPartition.WFID == "" {
-		return "", ErrInvalidPartitionConfig
+		return "", nil
 	}
 
 	isolationGroups, err := r.isolationGroupState.IsolationGroupsByDomainID(ctx, pollerInfo.DomainID)
