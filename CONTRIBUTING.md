@@ -10,7 +10,8 @@ These issues are a great way to start contributing to Cadence. Later when you ar
 Feel free to join our [slack workspace](http://t.uber.com/cadence-slack) to reach out and discuss issues with the team.
 
 
->Note: All contributors need to fill out the [Uber Contributor License Agreement](http://t.uber.com/cla) before we can merge in any of your changes
+:warning: Note:
+>All contributors need to fill out the [Uber Contributor License Agreement](http://t.uber.com/cla) before we can merge in any of your changes
 
 ## Development Environment
 Below are the instructions of how to set up a development Environment.

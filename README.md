@@ -107,6 +107,7 @@ Visit [cadenceworkflow.io](https://cadenceworkflow.io) to learn more about Caden
   * Best for contributing/development discussion
 
 
+## Stars over time
 [![Stargazers over time](https://starchart.cc/uber/cadence.svg?variant=adaptive)](https://starchart.cc/uber/cadence)
 
 
