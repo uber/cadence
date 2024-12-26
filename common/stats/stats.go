@@ -36,13 +36,20 @@ import (
 type (
 	// emaFixedWindowQPSTracker is a QPSTracker that uses a fixed time period to calculate QPS and an exponential moving average algorithm to estimate QPS.
 	emaFixedWindowQPSTracker struct {
-		timeSource            clock.TimeSource
+		groups         sync.Map
+		root           *emaFixedWindowState
+		timeSource     clock.TimeSource
+		exp            float64
+		bucketInterval time.Duration
+		wg             sync.WaitGroup
+		done           chan struct{}
+		status         *atomic.Int32
+		baseEvent      event.E
+	}
+
+	emaFixedWindowState struct {
 		exp                   float64
-		bucketInterval        time.Duration
 		bucketIntervalSeconds float64
-		wg                    sync.WaitGroup
-		done                  chan struct{}
-		status                *atomic.Int32
 		firstBucket           bool
 		baseEvent             event.E
 		qps                   *atomic.Float64
@@ -50,18 +57,13 @@ type (
 	}
 )
 
-func NewEmaFixedWindowQPSTracker(timeSource clock.TimeSource, exp float64, bucketInterval time.Duration, baseEvent event.E) QPSTracker {
+func NewEmaFixedWindowQPSTracker(timeSource clock.TimeSource, exp float64, bucketInterval time.Duration, baseEvent event.E) QPSTrackerGroup {
 	return &emaFixedWindowQPSTracker{
-		timeSource:            timeSource,
-		exp:                   exp,
-		bucketInterval:        bucketInterval,
-		bucketIntervalSeconds: float64(bucketInterval) / float64(time.Second),
-		done:                  make(chan struct{}),
-		status:                atomic.NewInt32(common.DaemonStatusInitialized),
-		firstBucket:           true,
-		counter:               atomic.NewInt64(0),
-		qps:                   atomic.NewFloat64(0),
-		baseEvent:             baseEvent,
+		root:           newEmaFixedWindowState(exp, bucketInterval, baseEvent),
+		timeSource:     timeSource,
+		bucketInterval: bucketInterval,
+		done:           make(chan struct{}),
+		status:         atomic.NewInt32(common.DaemonStatusInitialized),
 	}
 }
 
@@ -89,25 +91,12 @@ func (r *emaFixedWindowQPSTracker) reportLoop() {
 }
 
 func (r *emaFixedWindowQPSTracker) report() {
-	if r.firstBucket {
-		counter := r.counter.Swap(0)
-		r.store(float64(counter) / r.bucketIntervalSeconds)
-		r.firstBucket = false
-		return
-	}
-	counter := r.counter.Swap(0)
-	qps := r.qps.Load()
-	r.store(qps*(1-r.exp) + float64(counter)*r.exp/r.bucketIntervalSeconds)
-}
-
-func (r *emaFixedWindowQPSTracker) store(qps float64) {
-	r.qps.Store(qps)
-	e := r.baseEvent
-	e.EventName = "QPSTrackerUpdate"
-	e.Payload = map[string]any{
-		"QPS": qps,
-	}
-	event.Log(e)
+	r.root.report()
+	r.groups.Range(func(key, value any) bool {
+		state := value.(*emaFixedWindowState)
+		state.report()
+		return true
+	})
 }
 
 func (r *emaFixedWindowQPSTracker) Stop() {
@@ -118,12 +107,89 @@ func (r *emaFixedWindowQPSTracker) Stop() {
 	r.wg.Wait()
 }
 
-func (r *emaFixedWindowQPSTracker) ReportCounter(delta int64) {
-	r.counter.Add(delta)
+func (r *emaFixedWindowQPSTracker) ReportCounter(amount int64) {
+	r.root.add(amount)
+}
+
+func (r *emaFixedWindowQPSTracker) ReportGroup(group string, amount int64) {
+	r.root.add(amount)
+	r.getOrCreate(group).add(amount)
+}
+
+func (r *emaFixedWindowQPSTracker) GroupQPS(group string) float64 {
+	state, ok := r.get(group)
+	if !ok {
+		return 0
+	}
+	return state.getQPS()
 }
 
 func (r *emaFixedWindowQPSTracker) QPS() float64 {
-	return r.qps.Load()
+	return r.root.getQPS()
+}
+
+func (r *emaFixedWindowQPSTracker) get(group string) (*emaFixedWindowState, bool) {
+	res, ok := r.groups.Load(group)
+	if !ok {
+		return nil, false
+	}
+	return res.(*emaFixedWindowState), true
+}
+
+func (r *emaFixedWindowQPSTracker) getOrCreate(group string) *emaFixedWindowState {
+	res, ok := r.groups.Load(group)
+	if !ok {
+		e := r.baseEvent
+		e.Payload = map[string]any{
+			"group": group,
+		}
+		res, _ = r.groups.LoadOrStore(group, newEmaFixedWindowState(r.exp, r.bucketInterval, e))
+	}
+	return res.(*emaFixedWindowState)
+}
+
+func newEmaFixedWindowState(exp float64, bucketInterval time.Duration, baseEvent event.E) *emaFixedWindowState {
+	return &emaFixedWindowState{
+		exp:                   exp,
+		bucketIntervalSeconds: bucketInterval.Seconds(),
+		firstBucket:           true,
+		baseEvent:             baseEvent,
+		qps:                   atomic.NewFloat64(0),
+		counter:               atomic.NewInt64(0),
+	}
+}
+
+func (s *emaFixedWindowState) report() {
+	if s.firstBucket {
+		counter := s.counter.Swap(0)
+		s.store(float64(counter) / s.bucketIntervalSeconds)
+		s.firstBucket = false
+		return
+	}
+	counter := s.counter.Swap(0)
+	qps := s.qps.Load()
+	s.store(qps*(1-s.exp) + float64(counter)*s.exp/s.bucketIntervalSeconds)
+}
+
+func (s *emaFixedWindowState) store(qps float64) {
+	s.qps.Store(qps)
+	e := s.baseEvent
+	e.EventName = "QPSTrackerUpdate"
+	payload := make(map[string]any, len(e.Payload)+1)
+	for k, v := range e.Payload {
+		payload[k] = v
+	}
+	payload["QPS"] = qps
+	e.Payload = payload
+	event.Log(e)
+}
+
+func (s *emaFixedWindowState) add(delta int64) {
+	s.counter.Add(delta)
+}
+
+func (s *emaFixedWindowState) getQPS() float64 {
+	return s.qps.Load()
 }
 
 type (

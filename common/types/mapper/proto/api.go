@@ -4006,11 +4006,13 @@ func FromTaskListStatus(t *types.TaskListStatus) *apiv1.TaskListStatus {
 		return nil
 	}
 	return &apiv1.TaskListStatus{
-		BacklogCountHint: t.BacklogCountHint,
-		ReadLevel:        t.ReadLevel,
-		AckLevel:         t.AckLevel,
-		RatePerSecond:    t.RatePerSecond,
-		TaskIdBlock:      FromTaskIDBlock(t.TaskIDBlock),
+		BacklogCountHint:      t.BacklogCountHint,
+		ReadLevel:             t.ReadLevel,
+		AckLevel:              t.AckLevel,
+		RatePerSecond:         t.RatePerSecond,
+		TaskIdBlock:           FromTaskIDBlock(t.TaskIDBlock),
+		IsolationGroupMetrics: FromIsolationGroupMetricsMap(t.IsolationGroupMetrics),
+		NewTasksPerSecond:     t.NewTasksPerSecond,
 	}
 }
 
@@ -4019,11 +4021,27 @@ func ToTaskListStatus(t *apiv1.TaskListStatus) *types.TaskListStatus {
 		return nil
 	}
 	return &types.TaskListStatus{
-		BacklogCountHint: t.BacklogCountHint,
-		ReadLevel:        t.ReadLevel,
-		AckLevel:         t.AckLevel,
-		RatePerSecond:    t.RatePerSecond,
-		TaskIDBlock:      ToTaskIDBlock(t.TaskIdBlock),
+		BacklogCountHint:      t.BacklogCountHint,
+		ReadLevel:             t.ReadLevel,
+		AckLevel:              t.AckLevel,
+		RatePerSecond:         t.RatePerSecond,
+		TaskIDBlock:           ToTaskIDBlock(t.TaskIdBlock),
+		IsolationGroupMetrics: ToIsolationGroupMetricsMap(t.IsolationGroupMetrics),
+		NewTasksPerSecond:     t.NewTasksPerSecond,
+	}
+}
+
+func FromIsolationGroupMetrics(t *types.IsolationGroupMetrics) *apiv1.IsolationGroupMetrics {
+	return &apiv1.IsolationGroupMetrics{
+		NewTasksPerSecond: t.NewTasksPerSecond,
+		PollerCount:       t.PollerCount,
+	}
+}
+
+func ToIsolationGroupMetrics(t *apiv1.IsolationGroupMetrics) *types.IsolationGroupMetrics {
+	return &types.IsolationGroupMetrics{
+		NewTasksPerSecond: t.NewTasksPerSecond,
+		PollerCount:       t.PollerCount,
 	}
 }
 
@@ -5458,6 +5476,28 @@ func ToWorkflowQueryResultMap(t map[string]*apiv1.WorkflowQueryResult) map[strin
 	v := make(map[string]*types.WorkflowQueryResult, len(t))
 	for key := range t {
 		v[key] = ToWorkflowQueryResult(t[key])
+	}
+	return v
+}
+
+func FromIsolationGroupMetricsMap(t map[string]*types.IsolationGroupMetrics) map[string]*apiv1.IsolationGroupMetrics {
+	if t == nil {
+		return nil
+	}
+	v := make(map[string]*apiv1.IsolationGroupMetrics, len(t))
+	for key := range t {
+		v[key] = FromIsolationGroupMetrics(t[key])
+	}
+	return v
+}
+
+func ToIsolationGroupMetricsMap(t map[string]*apiv1.IsolationGroupMetrics) map[string]*types.IsolationGroupMetrics {
+	if t == nil {
+		return nil
+	}
+	v := make(map[string]*types.IsolationGroupMetrics, len(t))
+	for key := range t {
+		v[key] = ToIsolationGroupMetrics(t[key])
 	}
 	return v
 }

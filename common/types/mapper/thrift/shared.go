@@ -5655,11 +5655,13 @@ func FromTaskListStatus(t *types.TaskListStatus) *shared.TaskListStatus {
 		return nil
 	}
 	return &shared.TaskListStatus{
-		BacklogCountHint: &t.BacklogCountHint,
-		ReadLevel:        &t.ReadLevel,
-		AckLevel:         &t.AckLevel,
-		RatePerSecond:    &t.RatePerSecond,
-		TaskIDBlock:      FromTaskIDBlock(t.TaskIDBlock),
+		BacklogCountHint:      &t.BacklogCountHint,
+		ReadLevel:             &t.ReadLevel,
+		AckLevel:              &t.AckLevel,
+		RatePerSecond:         &t.RatePerSecond,
+		TaskIDBlock:           FromTaskIDBlock(t.TaskIDBlock),
+		IsolationGroupMetrics: FromIsolationGroupMetricsMap(t.IsolationGroupMetrics),
+		NewTasksPerSecond:     &t.NewTasksPerSecond,
 	}
 }
 
@@ -5669,11 +5671,27 @@ func ToTaskListStatus(t *shared.TaskListStatus) *types.TaskListStatus {
 		return nil
 	}
 	return &types.TaskListStatus{
-		BacklogCountHint: t.GetBacklogCountHint(),
-		ReadLevel:        t.GetReadLevel(),
-		AckLevel:         t.GetAckLevel(),
-		RatePerSecond:    t.GetRatePerSecond(),
-		TaskIDBlock:      ToTaskIDBlock(t.TaskIDBlock),
+		BacklogCountHint:      t.GetBacklogCountHint(),
+		ReadLevel:             t.GetReadLevel(),
+		AckLevel:              t.GetAckLevel(),
+		RatePerSecond:         t.GetRatePerSecond(),
+		TaskIDBlock:           ToTaskIDBlock(t.TaskIDBlock),
+		IsolationGroupMetrics: ToIsolationGroupMetricsMap(t.GetIsolationGroupMetrics()),
+		NewTasksPerSecond:     t.GetNewTasksPerSecond(),
+	}
+}
+
+func FromIsolationGroupMetrics(t *types.IsolationGroupMetrics) *shared.IsolationGroupMetrics {
+	return &shared.IsolationGroupMetrics{
+		NewTasksPerSecond: &t.NewTasksPerSecond,
+		PollerCount:       &t.PollerCount,
+	}
+}
+
+func ToIsolationGroupMetrics(t *shared.IsolationGroupMetrics) *types.IsolationGroupMetrics {
+	return &types.IsolationGroupMetrics{
+		NewTasksPerSecond: t.GetNewTasksPerSecond(),
+		PollerCount:       t.GetPollerCount(),
 	}
 }
 
@@ -7195,6 +7213,28 @@ func ToBadBinaryInfoMap(t map[string]*shared.BadBinaryInfo) map[string]*types.Ba
 	v := make(map[string]*types.BadBinaryInfo, len(t))
 	for key := range t {
 		v[key] = ToBadBinaryInfo(t[key])
+	}
+	return v
+}
+
+func FromIsolationGroupMetricsMap(t map[string]*types.IsolationGroupMetrics) map[string]*shared.IsolationGroupMetrics {
+	if t == nil {
+		return nil
+	}
+	v := make(map[string]*shared.IsolationGroupMetrics, len(t))
+	for key := range t {
+		v[key] = FromIsolationGroupMetrics(t[key])
+	}
+	return v
+}
+
+func ToIsolationGroupMetricsMap(t map[string]*shared.IsolationGroupMetrics) map[string]*types.IsolationGroupMetrics {
+	if t == nil {
+		return nil
+	}
+	v := make(map[string]*types.IsolationGroupMetrics, len(t))
+	for key := range t {
+		v[key] = ToIsolationGroupMetrics(t[key])
 	}
 	return v
 }

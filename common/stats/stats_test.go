@@ -27,6 +27,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/service/matching/event"
 )
@@ -47,9 +49,7 @@ func TestEmaFixedWindowQPSTracker(t *testing.T) {
 	r.ReportCounter(20)
 
 	qps := r.QPS()
-	if qps != 0 {
-		t.Errorf("QPS mismatch, expected: 0, got: %v", qps)
-	}
+	assert.Equal(t, float64(0), qps)
 
 	timeSource.BlockUntil(1)
 	timeSource.Advance(bucketInterval)
@@ -57,9 +57,7 @@ func TestEmaFixedWindowQPSTracker(t *testing.T) {
 	// Test QPS
 	qps = r.QPS()
 	expectedQPS := float64(30) / (float64(bucketInterval) / float64(time.Second))
-	if math.Abs(qps-expectedQPS) > floatResolution {
-		t.Errorf("QPS mismatch, expected: %v, got: %v", expectedQPS, qps)
-	}
+	assert.InDelta(t, expectedQPS, qps, floatResolution)
 
 	r.ReportCounter(10)
 	timeSource.BlockUntil(1)
@@ -68,9 +66,32 @@ func TestEmaFixedWindowQPSTracker(t *testing.T) {
 	// Test QPS
 	qps = r.QPS()
 	expectedQPS = float64(22) / (float64(bucketInterval) / float64(time.Second))
-	if math.Abs(qps-expectedQPS) > floatResolution {
-		t.Errorf("QPS mismatch, expected: %v, got: %v", expectedQPS, qps)
-	}
+	assert.InDelta(t, expectedQPS, qps, floatResolution)
+}
+
+func TestEmaFixedWindowQPSTracker_Groups(t *testing.T) {
+	timeSource := clock.NewMockedTimeSourceAt(time.Now())
+	exp := 0.4
+	bucketInterval := time.Second
+
+	r := NewEmaFixedWindowQPSTracker(timeSource, exp, bucketInterval, event.E{})
+	r.Start()
+	defer r.Stop()
+
+	r.ReportGroup("foo", 10)
+	r.ReportGroup("bar", 20)
+
+	timeSource.BlockUntil(1)
+	timeSource.Advance(bucketInterval)
+	time.Sleep(10 * time.Millisecond)
+	// Test QPS
+	expectedQPS := float64(30) / (float64(bucketInterval) / float64(time.Second))
+	expectedFoo := float64(10) / (float64(bucketInterval) / float64(time.Second))
+	expectedBar := float64(20) / (float64(bucketInterval) / float64(time.Second))
+	assert.InDelta(t, expectedQPS, r.QPS(), floatResolution)
+	assert.InDelta(t, expectedFoo, r.GroupQPS("foo"), floatResolution)
+	assert.InDelta(t, expectedBar, r.GroupQPS("bar"), floatResolution)
+	assert.Equal(t, float64(0), r.GroupQPS("unknown"))
 }
 
 func TestRollingWindowQPSTracker(t *testing.T) {
