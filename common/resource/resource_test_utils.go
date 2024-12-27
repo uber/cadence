@@ -23,6 +23,7 @@ package resource
 import (
 	"testing"
 
+	oldgomock "github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/mock"
 	"github.com/uber-go/tally"
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
@@ -195,7 +196,7 @@ func NewTest(
 
 		// internal services clients
 
-		SDKClient:            publicservicetest.NewMockClient(controller),
+		SDKClient:            publicservicetest.NewMockClient(oldgomock.NewController(t)),
 		FrontendClient:       frontendClient,
 		MatchingClient:       matchingClient,
 		HistoryClient:        historyClient,

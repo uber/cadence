@@ -23,6 +23,7 @@ package testdata
 import (
 	"testing"
 
+	oldgomock "github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/mock"
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	"go.uber.org/cadence/.gen/go/cadence/workflowservicetest"
@@ -117,7 +118,7 @@ func NewEngineForTest(t *testing.T, newEngineFn NewEngineFn) *EngineForTest {
 		},
 	)
 
-	mockWFServiceClient := workflowservicetest.NewMockClient(controller)
+	mockWFServiceClient := workflowservicetest.NewMockClient(oldgomock.NewController(t))
 
 	replicatonTaskFetchers := replication.NewMockTaskFetchers(controller)
 	replicationTaskFetcher := replication.NewMockTaskFetcher(controller)

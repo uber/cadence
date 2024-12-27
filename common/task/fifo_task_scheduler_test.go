@@ -83,7 +83,7 @@ func (s *fifoTaskSchedulerSuite) TestFIFO() {
 	tasks := []PriorityTask{}
 	var taskWG sync.WaitGroup
 
-	calls := []*gomock.Call{
+	calls := []any{
 		s.mockProcessor.EXPECT().Start(),
 	}
 	mockFn := func(_ Task) error {
