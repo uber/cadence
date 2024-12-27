@@ -26,9 +26,9 @@ import (
 	"context"
 	"testing"
 
-	"github.com/golang/mock/gomock"
 	"github.com/google/go-cmp/cmp"
 	"go.uber.org/goleak"
+	"go.uber.org/mock/gomock"
 
 	"github.com/uber/cadence/common/log/testlogger"
 	"github.com/uber/cadence/common/mapq/types"

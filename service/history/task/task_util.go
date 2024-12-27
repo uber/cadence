@@ -24,7 +24,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/golang/mock/gomock"
+	"go.uber.org/mock/gomock"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"

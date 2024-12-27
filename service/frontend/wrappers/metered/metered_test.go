@@ -27,9 +27,9 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/uber-go/tally"
+	"go.uber.org/mock/gomock"
 	"go.uber.org/yarpc/yarpcerrors"
 
 	"github.com/uber/cadence/common/cache"

@@ -23,11 +23,11 @@ package resource
 import (
 	"testing"
 
-	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/mock"
 	"github.com/uber-go/tally"
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	publicservicetest "go.uber.org/cadence/.gen/go/cadence/workflowservicetest"
+	"go.uber.org/mock/gomock"
 	"go.uber.org/yarpc"
 
 	"github.com/uber/cadence/client"

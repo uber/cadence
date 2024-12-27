@@ -23,7 +23,7 @@ package resource
 import (
 	"testing"
 
-	"github.com/golang/mock/gomock"
+	"go.uber.org/mock/gomock"
 
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/quotas/global/algorithm"

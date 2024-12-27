@@ -26,12 +26,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/goleak"
+	"go.uber.org/mock/gomock"
 	"go.uber.org/yarpc/yarpcerrors"
 
 	"github.com/uber/cadence/common"

@@ -23,11 +23,11 @@ package execution
 import (
 	"testing"
 
-	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/uber-go/tally"
+	"go.uber.org/mock/gomock"
 
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/dynamicconfig"

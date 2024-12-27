@@ -27,8 +27,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang/mock/gomock"
 	"github.com/google/go-cmp/cmp"
+	"go.uber.org/mock/gomock"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/config"

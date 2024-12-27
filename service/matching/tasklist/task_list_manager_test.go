@@ -28,12 +28,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang/mock/gomock"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/uber-go/tally"
 	"go.uber.org/goleak"
+	"go.uber.org/mock/gomock"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/uber/cadence/client/history"

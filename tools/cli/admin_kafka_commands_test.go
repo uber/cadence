@@ -29,8 +29,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/mock/gomock"
 	"go.uber.org/thriftrw/protocol/binary"
 	"go.uber.org/thriftrw/ptr"
 

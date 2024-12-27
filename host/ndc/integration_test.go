@@ -28,10 +28,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang/mock/gomock"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	"go.uber.org/mock/gomock"
 	"go.uber.org/yarpc"
 
 	adminClient "github.com/uber/cadence/client/admin"

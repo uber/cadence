@@ -25,7 +25,7 @@ package cli
 import (
 	"fmt"
 
-	"github.com/golang/mock/gomock"
+	"go.uber.org/mock/gomock"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/types"

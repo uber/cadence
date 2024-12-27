@@ -23,10 +23,10 @@ package testdata
 import (
 	"testing"
 
-	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/mock"
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	"go.uber.org/cadence/.gen/go/cadence/workflowservicetest"
+	"go.uber.org/mock/gomock"
 
 	"github.com/uber/cadence/client/matching"
 	"github.com/uber/cadence/common/clock"

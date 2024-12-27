@@ -30,8 +30,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang/mock/gomock"
 	"github.com/google/go-cmp/cmp"
+	"go.uber.org/mock/gomock"
 
 	"github.com/uber/cadence/common/asyncworkflow/queue"
 	"github.com/uber/cadence/common/asyncworkflow/queue/provider"

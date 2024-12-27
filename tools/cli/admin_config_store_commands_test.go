@@ -25,9 +25,9 @@ package cli
 import (
 	"testing"
 
-	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/urfave/cli/v2"
+	"go.uber.org/mock/gomock"
 
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/tools/cli/clitest"

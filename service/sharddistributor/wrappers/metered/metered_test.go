@@ -28,10 +28,10 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/uber-go/tally"
+	"go.uber.org/mock/gomock"
 
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"

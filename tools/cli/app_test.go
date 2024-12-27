@@ -30,7 +30,6 @@ import (
 	"time"
 
 	"github.com/flynn/go-shlex"
-	"github.com/golang/mock/gomock"
 	"github.com/olekukonko/tablewriter"
 	"github.com/olivere/elastic"
 	"github.com/pborman/uuid"
@@ -38,6 +37,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"github.com/urfave/cli/v2"
+	"go.uber.org/mock/gomock"
 
 	"github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/client/frontend"

@@ -27,10 +27,10 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
+	"go.uber.org/mock/gomock"
 	"go.uber.org/yarpc/api/encoding"
 	"go.uber.org/yarpc/api/transport"
 	"golang.org/x/net/context"
