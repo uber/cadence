@@ -1,6 +1,8 @@
 module github.com/uber/cadence/cmd/server
 
-go 1.20
+go 1.22
+
+toolchain go1.23.4
 
 // build against the current code in the "main" (and gcloud) module, not a specific SHA.
 //
@@ -54,10 +56,10 @@ require (
 	go.uber.org/thriftrw v1.29.2 // indirect
 	go.uber.org/yarpc v1.70.3 // indirect
 	go.uber.org/zap v1.13.0 // indirect
-	golang.org/x/net v0.19.0 // indirect
-	golang.org/x/sync v0.5.0 // indirect
+	golang.org/x/net v0.26.0 // indirect
+	golang.org/x/sync v0.7.0 // indirect
 	golang.org/x/time v0.5.0 // indirect
-	golang.org/x/tools v0.16.0 // indirect
+	golang.org/x/tools v0.22.0 // indirect
 	gonum.org/v1/gonum v0.7.0 // indirect
 	google.golang.org/grpc v1.59.0 // indirect
 	gopkg.in/validator.v2 v2.0.0-20180514200540-135c24b11c19 // indirect
@@ -74,6 +76,7 @@ require (
 	github.com/mattn/go-colorable v0.1.9 // indirect
 	github.com/mattn/go-isatty v0.0.14 // indirect
 	github.com/xrash/smetrics v0.0.0-20240521201337-686a1a2994c1 // indirect
+	go.uber.org/mock v0.5.0 // indirect
 )
 
 require (
@@ -143,14 +146,14 @@ require (
 	go.opencensus.io v0.24.0 // indirect
 	go.uber.org/dig v1.10.0 // indirect
 	go.uber.org/net/metrics v1.3.0 // indirect
-	golang.org/x/crypto v0.16.0 // indirect
+	golang.org/x/crypto v0.24.0 // indirect
 	golang.org/x/exp v0.0.0-20231226003508-02704c960a9b // indirect
 	golang.org/x/exp/typeparams v0.0.0-20220218215828-6cf2b201936e // indirect
 	golang.org/x/lint v0.0.0-20210508222113-6edffad5e616 // indirect
-	golang.org/x/mod v0.14.0 // indirect
+	golang.org/x/mod v0.18.0 // indirect
 	golang.org/x/oauth2 v0.11.0 // indirect
-	golang.org/x/sys v0.15.0 // indirect
-	golang.org/x/text v0.14.0 // indirect
+	golang.org/x/sys v0.21.0 // indirect
+	golang.org/x/text v0.16.0 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
 	google.golang.org/api v0.128.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect

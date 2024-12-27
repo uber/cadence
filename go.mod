@@ -72,12 +72,10 @@ require (
 require (
 	github.com/flynn/go-shlex v0.0.0-20150515145356-3f9db97f8568
 	github.com/google/gofuzz v1.0.0
+	go.uber.org/mock v0.5.0
 )
 
-require (
-	github.com/xrash/smetrics v0.0.0-20240521201337-686a1a2994c1 // indirect
-	go.uber.org/mock v0.5.0 // indirect
-)
+require github.com/xrash/smetrics v0.0.0-20240521201337-686a1a2994c1 // indirect
 
 require (
 	github.com/BurntSushi/toml v1.3.2 // indirect
