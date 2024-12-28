@@ -49,7 +49,7 @@ func TestUpdateTaskTestSuite(t *testing.T) {
 	suite.Run(t, new(UpdateTaskTestSuite))
 }
 
-func (s *UpdateTaskTestSuite) SetupSuite() {
+func (s *UpdateTaskTestSuite) SetupTest() {
 	s.Assertions = require.New(s.T())
 }
 
@@ -720,7 +720,7 @@ func (s *UpdateTaskTestSuite) Test_readManifest() {
 			subDir:        string([]byte{0xff, 0xfe, 0xfd, 0xfc}),
 			manifestFile:  manifestFileName,
 			invalidSubDir: true,
-			err:           errors.New("invalid name"),
+			err:           fs.ErrInvalid, // bad utf8 returns this as of 1.23: https://github.com/golang/go/commit/bf821f65cfd61dcc431922eea2cb97ce0825d60c
 		},
 		"error - manifest.json file not found": {
 			subDir:       "v0.4",

@@ -23,7 +23,7 @@ package resource
 import (
 	"testing"
 
-	oldgomock "github.com/golang/mock/gomock"
+	oldgomock "github.com/golang/mock/gomock" // client library cannot change from the old gomock
 	"github.com/stretchr/testify/mock"
 	"github.com/uber-go/tally"
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
