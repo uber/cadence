@@ -21,7 +21,7 @@ require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dgryski/go-farm v0.0.0-20200201041132-a6ae2369ad13
 	github.com/gogo/protobuf v1.3.2 // indirect
-	github.com/golang/mock v1.6.0
+	github.com/golang/mock v1.6.0 // indirect
 	github.com/google/uuid v1.5.0 // indirect
 	github.com/m3db/prometheus_client_golang v0.8.1 // indirect
 	github.com/opentracing/opentracing-go v1.2.0 // indirect
@@ -52,6 +52,7 @@ require (
 require (
 	cloud.google.com/go/storage v1.30.1
 	github.com/uber/cadence v0.0.0-00010101000000-000000000000
+	go.uber.org/mock v0.5.0
 	golang.org/x/oauth2 v0.11.0
 	google.golang.org/api v0.128.0
 )
@@ -93,7 +94,6 @@ require (
 	github.com/uber-common/bark v1.2.1 // indirect
 	github.com/uber-go/mapdecode v1.0.0 // indirect
 	go.opencensus.io v0.24.0 // indirect
-	go.uber.org/mock v0.5.0 // indirect
 	go.uber.org/net/metrics v1.3.0 // indirect
 	golang.org/x/crypto v0.24.0 // indirect
 	golang.org/x/exp/typeparams v0.0.0-20220218215828-6cf2b201936e // indirect
