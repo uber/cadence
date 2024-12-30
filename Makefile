@@ -237,7 +237,12 @@ $(STABLE_BIN)/$(BUF_VERSION_BIN): | $(STABLE_BIN)
 # protoc-gen-gogofast (yarpc) are versioned via tools.go + go.mod (built above) and will be rebuilt as needed.
 # changing PROTOC_VERSION will automatically download and use the specified version
 PROTOC_VERSION = 29.2
-PROTOC_URL = https://github.com/protocolbuffers/protobuf/releases/download/v$(PROTOC_VERSION)/protoc-$(PROTOC_VERSION)-$(subst Darwin,osx,$(OS))-$(ARCH).zip
+ifeq (Darwin,$(OS))
+# protoc is oddly annoying about their OSX-targeting filenames, it doesn't match uname
+PROTOC_URL = https://github.com/protocolbuffers/protobuf/releases/download/v$(PROTOC_VERSION)/protoc-$(PROTOC_VERSION)-osx-universal_binary.zip
+else
+PROTOC_URL = https://github.com/protocolbuffers/protobuf/releases/download/v$(PROTOC_VERSION)/protoc-$(PROTOC_VERSION)-$(OS)-$(ARCH).zip
+endif
 # the zip contains an /include folder that we need to use to learn the well-known types
 PROTOC_UNZIP_DIR = $(STABLE_BIN)/protoc-$(PROTOC_VERSION)-zip
 # use PROTOC_VERSION_BIN as a bin prerequisite, not "protoc", so the correct version will be used.
