@@ -26,8 +26,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/mock/gomock"
 
 	"github.com/uber/cadence/common/asyncworkflow/queue"
 	"github.com/uber/cadence/common/asyncworkflow/queue/provider"

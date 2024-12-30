@@ -25,10 +25,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-go/tally"
+	"go.uber.org/mock/gomock"
 
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/dynamicconfig"
@@ -83,7 +83,7 @@ func (s *fifoTaskSchedulerSuite) TestFIFO() {
 	tasks := []PriorityTask{}
 	var taskWG sync.WaitGroup
 
-	calls := []*gomock.Call{
+	calls := []any{
 		s.mockProcessor.EXPECT().Start(),
 	}
 	mockFn := func(_ Task) error {

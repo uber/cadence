@@ -24,8 +24,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/mock/gomock"
 
 	"github.com/uber/cadence/.gen/go/health"
 	m "github.com/uber/cadence/.gen/go/matching"

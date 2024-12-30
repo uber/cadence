@@ -23,8 +23,8 @@ package queue
 import (
 	"testing"
 
-	"github.com/golang/mock/gomock"
 	"go.uber.org/goleak"
+	"go.uber.org/mock/gomock"
 
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/reconciliation/invariant"

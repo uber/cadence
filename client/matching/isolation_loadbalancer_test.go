@@ -25,8 +25,8 @@ package matching
 import (
 	"testing"
 
-	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/mock/gomock"
 
 	"github.com/uber/cadence/common/partition"
 	"github.com/uber/cadence/common/types"

@@ -23,10 +23,11 @@ package testdata
 import (
 	"testing"
 
-	"github.com/golang/mock/gomock"
+	oldgomock "github.com/golang/mock/gomock" // client library cannot change from old gomock
 	"github.com/stretchr/testify/mock"
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	"go.uber.org/cadence/.gen/go/cadence/workflowservicetest"
+	"go.uber.org/mock/gomock"
 
 	"github.com/uber/cadence/client/matching"
 	"github.com/uber/cadence/common/clock"
@@ -117,7 +118,9 @@ func NewEngineForTest(t *testing.T, newEngineFn NewEngineFn) *EngineForTest {
 		},
 	)
 
-	mockWFServiceClient := workflowservicetest.NewMockClient(controller)
+	// client library is still using the old deprecated gomock, as changing it would be a rather large breaking change.
+	// not really an issue, just use a separate controller for it - it'll still require everything via t.Cleanup.
+	mockWFServiceClient := workflowservicetest.NewMockClient(oldgomock.NewController(t))
 
 	replicatonTaskFetchers := replication.NewMockTaskFetchers(controller)
 	replicationTaskFetcher := replication.NewMockTaskFetcher(controller)

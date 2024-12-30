@@ -182,7 +182,7 @@ $(BIN)/thriftrw-plugin-yarpc: go.mod go.work
 	$(call go_mod_build_tool,go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc)
 
 $(BIN)/mockgen: internal/tools/go.mod go.work
-	$(call go_build_tool,github.com/golang/mock/mockgen)
+	$(call go_build_tool,go.uber.org/mock/mockgen)
 
 $(BIN)/mockery: internal/tools/go.mod go.work
 	$(call go_build_tool,github.com/vektra/mockery/v2,mockery)
