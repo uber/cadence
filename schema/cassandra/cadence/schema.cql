@@ -372,6 +372,8 @@ CREATE TABLE executions (
   version_histories              blob, -- the metadata of history branching
   version_histories_encoding     text,
   checksum                       frozen<checksum>,
+  created_time                   timestamp,
+  last_updated_time              timestamp,
   PRIMARY KEY  (shard_id, type, domain_id, workflow_id, run_id, visibility_ts, task_id)
 ) WITH COMPACTION = {
     'class': 'org.apache.cassandra.db.compaction.LeveledCompactionStrategy'
@@ -384,6 +386,7 @@ CREATE TABLE history_node (
   txn_id            bigint, -- for override the same node_id: bigger txn_id wins
   data                blob, -- Batch of workflow execution history events as a blob
   data_encoding       text, -- Protocol used for history serialization
+  created_time      timestamp,
   PRIMARY KEY ((tree_id), branch_id, node_id, txn_id )
   ) WITH CLUSTERING ORDER BY (branch_id ASC, node_id ASC, txn_id DESC)
     AND COMPACTION = {
@@ -396,6 +399,7 @@ CREATE TABLE history_tree (
   ancestors         list<frozen<branch_range>>,
   fork_time         timestamp, -- For fork operation to prevent race condition to leak event data when forking branches
   info              text, -- For background cleanup when fork operation cannot finish self cleanup due to crash
+  created_time      timestamp,
   PRIMARY KEY ((tree_id), branch_id )
 ) WITH COMPACTION = {
     'class': 'org.apache.cassandra.db.compaction.LeveledCompactionStrategy'
@@ -411,6 +415,8 @@ CREATE TABLE tasks (
   range_id         bigint, -- Used to ensure that only one process can write to the table
   task             frozen<task>,
   task_list        frozen<task_list>,
+  created_time       timestamp,
+  last_updated_time  timestamp,
   PRIMARY KEY ((domain_id, task_list_name, task_list_type), type, task_id)
 ) WITH COMPACTION = {
     'class': 'org.apache.cassandra.db.compaction.LeveledCompactionStrategy'
@@ -421,6 +427,7 @@ CREATE TABLE domains (
   id     uuid,
   domain frozen<domain>,
   config frozen<domain_config>,
+  created_time       timestamp,
   PRIMARY KEY (id)
 ) WITH COMPACTION = {
     'class': 'org.apache.cassandra.db.compaction.LeveledCompactionStrategy'
@@ -440,6 +447,7 @@ CREATE TABLE domains_by_name_v2 (
   failover_end_time             bigint, -- indicating domain failover state
   last_updated_time             bigint, -- indicating the domain last update timestamp
   notification_version          bigint,
+  created_time                  timestamp,
   PRIMARY KEY (domains_partition, name)
 )  WITH COMPACTION = {
      'class': 'org.apache.cassandra.db.compaction.LeveledCompactionStrategy'
@@ -489,6 +497,7 @@ CREATE TABLE queue (
   queue_type      int,
   message_id      bigint,
   message_payload blob,
+  created_time    timestamp,
   PRIMARY KEY  (queue_type, message_id)
 ) WITH COMPACTION = {
     'class': 'org.apache.cassandra.db.compaction.LeveledCompactionStrategy'
@@ -498,6 +507,8 @@ CREATE TABLE queue_metadata (
   queue_type        int,
   cluster_ack_level map<text, bigint>,
   version           bigint,
+  created_time      timestamp,
+  last_updated_time timestamp,
 PRIMARY KEY (queue_type)
 )  WITH COMPACTION = {
      'class': 'org.apache.cassandra.db.compaction.LeveledCompactionStrategy'
