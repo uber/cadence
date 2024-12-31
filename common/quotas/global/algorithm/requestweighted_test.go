@@ -172,10 +172,10 @@ func TestEmitsMetrics(t *testing.T) {
 	require.NoError(t, err)
 	snap = ts.Snapshot()
 	assertAllHistogramContents(snap, map[string]map[float64]int64{
-		"initialized":   {1: 1}, // keys are disjoint, so another key was created
-		"reinitialized": {0: 1},
-		"updated":       {0: 1},
-		"decayed":       {0: 1},
+		"initialized":   {1: 2}, // `h1:key` has not been touched, but `h2:key` was initialized -> two single-key inits.
+		"reinitialized": {0: 2}, // none reinitialized, second time
+		"updated":       {0: 2}, // none updated, second time
+		"decayed":       {0: 2}, // etc
 	})
 
 	err = agg.Update(UpdateParams{
@@ -186,10 +186,16 @@ func TestEmitsMetrics(t *testing.T) {
 	require.NoError(t, err)
 	snap = ts.Snapshot()
 	assertAllHistogramContents(snap, map[string]map[float64]int64{
-		"initialized":   {0: 1},
-		"reinitialized": {0: 1},
-		"updated":       {1: 1}, // h1 was updated
-		"decayed":       {0: 1},
+		"initialized": {
+			0: 1, // new "none initialized" event
+			1: 2, // previous "2x single-value updates"
+		},
+		"reinitialized": {0: 3},
+		"updated": {
+			0: 2, // previous "2x no updates"
+			1: 1, // new `h1:key` was updated
+		},
+		"decayed": {0: 3},
 	})
 
 	_, err = agg.HostUsage(h1, []Limit{key})
@@ -200,6 +206,12 @@ func TestEmitsMetrics(t *testing.T) {
 		"host_limits_queried": {2: 1}, // two hosts have data for that limit
 		"removed_limits":      {0: 1}, // none removed
 		"removed_host_limits": {0: 1}, // none removed
+
+		// --- past metrics still exist, unchanged by the call
+		"initialized":   {0: 1, 1: 2},
+		"reinitialized": {0: 3},
+		"updated":       {0: 2, 1: 1},
+		"decayed":       {0: 3},
 	})
 }
 
