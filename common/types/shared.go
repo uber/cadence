@@ -6393,13 +6393,20 @@ func (v *TaskListPartitionMetadata) GetOwnerHostName() (o string) {
 	return
 }
 
+type IsolationGroupMetrics struct {
+	NewTasksPerSecond float64 `json:"newTasksPerSecond,omitempty"`
+	PollerCount       int64   `json:"pollerCount,omitempty"`
+}
+
 // TaskListStatus is an internal type (TBD...)
 type TaskListStatus struct {
-	BacklogCountHint int64        `json:"backlogCountHint,omitempty"`
-	ReadLevel        int64        `json:"readLevel,omitempty"`
-	AckLevel         int64        `json:"ackLevel,omitempty"`
-	RatePerSecond    float64      `json:"ratePerSecond,omitempty"`
-	TaskIDBlock      *TaskIDBlock `json:"taskIDBlock,omitempty"`
+	BacklogCountHint      int64                             `json:"backlogCountHint,omitempty"`
+	ReadLevel             int64                             `json:"readLevel,omitempty"`
+	AckLevel              int64                             `json:"ackLevel,omitempty"`
+	RatePerSecond         float64                           `json:"ratePerSecond,omitempty"`
+	TaskIDBlock           *TaskIDBlock                      `json:"taskIDBlock,omitempty"`
+	IsolationGroupMetrics map[string]*IsolationGroupMetrics `json:"isolationGroupMetrics,omitempty"`
+	NewTasksPerSecond     float64                           `json:"newTasksPerSecond,omitempty"`
 }
 
 // GetBacklogCountHint is an internal getter (TBD...)

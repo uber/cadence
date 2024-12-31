@@ -240,6 +240,13 @@ var (
 		AckLevel:         AckLevel,
 		RatePerSecond:    RatePerSecond,
 		TaskIDBlock:      &TaskIDBlock,
+		IsolationGroupMetrics: map[string]*types.IsolationGroupMetrics{
+			"dca": {
+				NewTasksPerSecond: 10,
+				PollerCount:       1,
+			},
+		},
+		NewTasksPerSecond: 10,
 	}
 	TaskIDBlock = types.TaskIDBlock{
 		StartID: 551,

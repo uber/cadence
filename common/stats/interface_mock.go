@@ -110,3 +110,102 @@ func (mr *MockQPSTrackerMockRecorder) Stop() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stop", reflect.TypeOf((*MockQPSTracker)(nil).Stop))
 }
+
+// MockQPSTrackerGroup is a mock of QPSTrackerGroup interface.
+type MockQPSTrackerGroup struct {
+	ctrl     *gomock.Controller
+	recorder *MockQPSTrackerGroupMockRecorder
+}
+
+// MockQPSTrackerGroupMockRecorder is the mock recorder for MockQPSTrackerGroup.
+type MockQPSTrackerGroupMockRecorder struct {
+	mock *MockQPSTrackerGroup
+}
+
+// NewMockQPSTrackerGroup creates a new mock instance.
+func NewMockQPSTrackerGroup(ctrl *gomock.Controller) *MockQPSTrackerGroup {
+	mock := &MockQPSTrackerGroup{ctrl: ctrl}
+	mock.recorder = &MockQPSTrackerGroupMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockQPSTrackerGroup) EXPECT() *MockQPSTrackerGroupMockRecorder {
+	return m.recorder
+}
+
+// GroupQPS mocks base method.
+func (m *MockQPSTrackerGroup) GroupQPS(group string) float64 {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GroupQPS", group)
+	ret0, _ := ret[0].(float64)
+	return ret0
+}
+
+// GroupQPS indicates an expected call of GroupQPS.
+func (mr *MockQPSTrackerGroupMockRecorder) GroupQPS(group interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GroupQPS", reflect.TypeOf((*MockQPSTrackerGroup)(nil).GroupQPS), group)
+}
+
+// QPS mocks base method.
+func (m *MockQPSTrackerGroup) QPS() float64 {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "QPS")
+	ret0, _ := ret[0].(float64)
+	return ret0
+}
+
+// QPS indicates an expected call of QPS.
+func (mr *MockQPSTrackerGroupMockRecorder) QPS() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "QPS", reflect.TypeOf((*MockQPSTrackerGroup)(nil).QPS))
+}
+
+// ReportCounter mocks base method.
+func (m *MockQPSTrackerGroup) ReportCounter(arg0 int64) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "ReportCounter", arg0)
+}
+
+// ReportCounter indicates an expected call of ReportCounter.
+func (mr *MockQPSTrackerGroupMockRecorder) ReportCounter(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReportCounter", reflect.TypeOf((*MockQPSTrackerGroup)(nil).ReportCounter), arg0)
+}
+
+// ReportGroup mocks base method.
+func (m *MockQPSTrackerGroup) ReportGroup(group string, amount int64) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "ReportGroup", group, amount)
+}
+
+// ReportGroup indicates an expected call of ReportGroup.
+func (mr *MockQPSTrackerGroupMockRecorder) ReportGroup(group, amount interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReportGroup", reflect.TypeOf((*MockQPSTrackerGroup)(nil).ReportGroup), group, amount)
+}
+
+// Start mocks base method.
+func (m *MockQPSTrackerGroup) Start() {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "Start")
+}
+
+// Start indicates an expected call of Start.
+func (mr *MockQPSTrackerGroupMockRecorder) Start() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockQPSTrackerGroup)(nil).Start))
+}
+
+// Stop mocks base method.
+func (m *MockQPSTrackerGroup) Stop() {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "Stop")
+}
+
+// Stop indicates an expected call of Stop.
+func (mr *MockQPSTrackerGroupMockRecorder) Stop() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stop", reflect.TypeOf((*MockQPSTrackerGroup)(nil).Stop))
+}

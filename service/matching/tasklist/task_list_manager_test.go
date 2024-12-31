@@ -50,6 +50,7 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/partition"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/stats"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/constants"
 	"github.com/uber/cadence/service/matching/config"
@@ -64,6 +65,10 @@ type mockDeps struct {
 	mockTimeSource     clock.MockedTimeSource
 	dynamicClient      dynamicconfig.Client
 }
+
+var (
+	testIsolationGroups = []string{"datacenterA", "datacenterB"}
+)
 
 func setupMocksForTaskListManager(t *testing.T, taskListID *Identifier, taskListKind types.TaskListKind) (*taskListManagerImpl, *mockDeps) {
 	ctrl := gomock.NewController(t)
@@ -242,62 +247,143 @@ func createTestTaskListManagerWithConfig(t *testing.T, logger log.Logger, contro
 }
 
 func TestDescribeTaskList(t *testing.T) {
-	controller := gomock.NewController(t)
-	logger := testlogger.New(t)
-
-	startTaskID := int64(1)
-	taskCount := int64(3)
-	PollerIdentity := "test-poll"
-
-	// Create taskList Manager and set taskList state
-	tlm := createTestTaskListManager(t, logger, controller)
-	tlm.db.rangeID = int64(1)
-	tlm.taskAckManager.SetAckLevel(0)
-
-	for i := int64(0); i < taskCount; i++ {
-		err := tlm.taskAckManager.ReadItem(startTaskID + i)
-		assert.Nil(t, err)
+	// Magic values hardcoded in matching/config.go. Not much of a config :(
+	defaultRps := 100000.0
+	defaultRangeSize := 100000
+	startedID := int64(1)
+	firstIDBlock := &types.TaskIDBlock{
+		StartID: startedID,
+		EndID:   int64(defaultRangeSize),
+	}
+	cases := []struct {
+		name           string
+		includeStatus  bool
+		pollers        map[string]poller.Info
+		allowance      func(ctrl *gomock.Controller, impl *taskListManagerImpl)
+		expectedStatus *types.TaskListStatus
+		expectedConfig *types.TaskListPartitionConfig
+	}{
+		{
+			name: "no status, pollers, or config",
+		},
+		{
+			name: "no status, with config",
+			allowance: func(_ *gomock.Controller, impl *taskListManagerImpl) {
+				err := impl.RefreshTaskListPartitionConfig(context.Background(), &types.TaskListPartitionConfig{
+					Version:            1,
+					NumReadPartitions:  3,
+					NumWritePartitions: 2,
+				})
+				require.NoError(t, err)
+			},
+			expectedConfig: &types.TaskListPartitionConfig{
+				Version:            1,
+				NumReadPartitions:  3,
+				NumWritePartitions: 2,
+			},
+		},
+		{
+			name: "no status, with pollers",
+			pollers: map[string]poller.Info{
+				"pollerID": {
+					RatePerSecond:  1.0,
+					IsolationGroup: "a",
+				},
+			},
+		},
+		{
+			name:          "with status",
+			includeStatus: true,
+			expectedStatus: &types.TaskListStatus{
+				RatePerSecond: defaultRps,
+				TaskIDBlock:   firstIDBlock,
+				IsolationGroupMetrics: map[string]*types.IsolationGroupMetrics{
+					"datacenterA": {},
+					"datacenterB": {},
+				},
+			},
+		},
+		{
+			name:          "with status, tasks completed",
+			includeStatus: true,
+			allowance: func(_ *gomock.Controller, tlm *taskListManagerImpl) {
+				tlm.taskAckManager.SetAckLevel(5)
+				tlm.taskAckManager.SetReadLevel(10)
+			},
+			expectedStatus: &types.TaskListStatus{
+				BacklogCountHint: 0,
+				ReadLevel:        10,
+				AckLevel:         5,
+				RatePerSecond:    defaultRps,
+				TaskIDBlock:      firstIDBlock,
+				IsolationGroupMetrics: map[string]*types.IsolationGroupMetrics{
+					"datacenterA": {},
+					"datacenterB": {},
+				},
+			},
+		},
+		{
+			name:          "with status, pollers and metrics",
+			includeStatus: true,
+			pollers: map[string]poller.Info{
+				"a-1": {
+					RatePerSecond:  1.0,
+					IsolationGroup: "datacenterA",
+				},
+			},
+			allowance: func(ctrl *gomock.Controller, impl *taskListManagerImpl) {
+				mockQPS := stats.NewMockQPSTrackerGroup(ctrl)
+				mockQPS.EXPECT().GroupQPS("datacenterA").Return(float64(75.0))
+				mockQPS.EXPECT().GroupQPS("datacenterB").Return(float64(25.0))
+				mockQPS.EXPECT().QPS().Return(float64(100.0))
+				impl.qpsTracker = mockQPS
+				impl.matcher.UpdateRatelimit(common.Float64Ptr(1.0))
+			},
+			expectedStatus: &types.TaskListStatus{
+				RatePerSecond:     1.0, // From poller
+				TaskIDBlock:       firstIDBlock,
+				NewTasksPerSecond: 100,
+				IsolationGroupMetrics: map[string]*types.IsolationGroupMetrics{
+					"datacenterA": {
+						PollerCount:       1,
+						NewTasksPerSecond: 75.0,
+					},
+					"datacenterB": {
+						PollerCount:       0,
+						NewTasksPerSecond: 25.0,
+					},
+				},
+			},
+		},
 	}
 
-	includeTaskStatus := false
-	descResp := tlm.DescribeTaskList(includeTaskStatus)
-	require.Equal(t, 0, len(descResp.GetPollers()))
-	require.Nil(t, descResp.GetTaskListStatus())
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			controller := gomock.NewController(t)
+			logger := testlogger.New(t)
+			tlm := createTestTaskListManager(t, logger, controller)
+			tlm.db.rangeID = int64(1)
+			tlm.taskAckManager.SetAckLevel(0)
+			tlm.startWG.Done()
 
-	includeTaskStatus = true
-	taskListStatus := tlm.DescribeTaskList(includeTaskStatus).GetTaskListStatus()
-	require.NotNil(t, taskListStatus)
-	require.Zero(t, taskListStatus.GetAckLevel())
-	require.Equal(t, taskCount, taskListStatus.GetReadLevel())
-	require.Equal(t, int64(0), taskListStatus.GetBacklogCountHint())
-	require.InDelta(t, taskListStatus.GetRatePerSecond(), tlm.config.TaskDispatchRPS, 1.0)
-	taskIDBlock := taskListStatus.GetTaskIDBlock()
-	require.Equal(t, int64(1), taskIDBlock.GetStartID())
-	require.Equal(t, tlm.config.RangeSize, taskIDBlock.GetEndID())
-
-	// Add a poller and complete all tasks
-	tlm.pollerHistory.UpdatePollerInfo(poller.Identity(PollerIdentity), poller.Info{RatePerSecond: tlm.config.TaskDispatchRPS})
-	for i := int64(0); i < taskCount; i++ {
-		tlm.taskAckManager.AckItem(startTaskID + i)
+			expectedPollers := make([]*types.PollerInfo, 0, len(tc.pollers))
+			for id, info := range tc.pollers {
+				tlm.pollerHistory.UpdatePollerInfo(poller.Identity(id), info)
+				expectedPollers = append(expectedPollers, &types.PollerInfo{
+					LastAccessTime: common.Int64Ptr(tlm.timeSource.Now().UnixNano()),
+					Identity:       id,
+					RatePerSecond:  info.RatePerSecond,
+				})
+			}
+			if tc.allowance != nil {
+				tc.allowance(controller, tlm)
+			}
+			result := tlm.DescribeTaskList(tc.includeStatus)
+			assert.Equal(t, tc.expectedStatus, result.TaskListStatus)
+			assert.Equal(t, tc.expectedConfig, result.PartitionConfig)
+			assert.ElementsMatch(t, expectedPollers, result.Pollers)
+		})
 	}
-
-	descResp = tlm.DescribeTaskList(includeTaskStatus)
-	require.Equal(t, 1, len(descResp.GetPollers()))
-	require.Equal(t, PollerIdentity, descResp.Pollers[0].GetIdentity())
-	require.NotEmpty(t, descResp.Pollers[0].GetLastAccessTime())
-	require.InDelta(t, descResp.Pollers[0].GetRatePerSecond(), tlm.config.TaskDispatchRPS, 1.0)
-
-	rps := 5.0
-	tlm.pollerHistory.UpdatePollerInfo(poller.Identity(PollerIdentity), poller.Info{RatePerSecond: rps})
-	descResp = tlm.DescribeTaskList(includeTaskStatus)
-	require.Equal(t, 1, len(descResp.GetPollers()))
-	require.Equal(t, PollerIdentity, descResp.Pollers[0].GetIdentity())
-	require.InDelta(t, descResp.Pollers[0].GetRatePerSecond(), rps, 1.0)
-
-	taskListStatus = descResp.GetTaskListStatus()
-	require.NotNil(t, taskListStatus)
-	require.Equal(t, taskCount, taskListStatus.GetAckLevel())
-	require.Zero(t, taskListStatus.GetBacklogCountHint())
 }
 
 func TestCheckIdleTaskList(t *testing.T) {
@@ -1107,7 +1193,7 @@ func TestTaskListManagerImpl_HasPollerAfter(t *testing.T) {
 }
 
 func getIsolationgroupsHelper() []string {
-	return []string{"datacenterA", "datacenterB"}
+	return testIsolationGroups
 }
 
 func TestRefreshTaskListPartitionConfig(t *testing.T) {

@@ -37,3 +37,12 @@ type QPSTracker interface {
 	// QPS returns the current queries per second (QPS) value.
 	QPS() float64
 }
+
+// QPSTrackerGroup allows for estimating QPS metrics with an additional dimension
+type QPSTrackerGroup interface {
+	QPSTracker
+
+	ReportGroup(group string, amount int64)
+
+	GroupQPS(group string) float64
+}

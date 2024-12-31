@@ -33,6 +33,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"golang.org/x/exp/maps"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/uber/cadence/client/history"
@@ -128,7 +129,7 @@ type (
 		closeCallback        func(Manager)
 		throttleRetry        *backoff.ThrottleRetry
 
-		qpsTracker     stats.QPSTracker
+		qpsTracker     stats.QPSTrackerGroup
 		adaptiveScaler AdaptiveScaler
 
 		partitionConfigLock sync.RWMutex
@@ -503,7 +504,11 @@ func (c *taskListManagerImpl) AddTask(ctx context.Context, params AddTaskParams)
 	if params.ForwardedFrom == "" {
 		// request sent by history service
 		c.liveness.MarkAlive()
-		c.qpsTracker.ReportCounter(1)
+		if isolationGroup, ok := params.TaskInfo.PartitionConfig[partition.IsolationGroupKey]; ok {
+			c.qpsTracker.ReportGroup(isolationGroup, 1)
+		} else {
+			c.qpsTracker.ReportCounter(1)
+		}
 		c.scope.UpdateGauge(metrics.EstimatedAddTaskQPSGauge, c.qpsTracker.QPS())
 	}
 	var syncMatch bool
@@ -727,6 +732,15 @@ func (c *taskListManagerImpl) DescribeTaskList(includeTaskListStatus bool) *type
 		// fallback to im-memory backlog, if failed to get count from db
 		backlogCount = c.taskAckManager.GetBacklogCount()
 	}
+	isolationGroups := c.config.AllIsolationGroups()
+	pollerCounts := c.getRecentPollersByIsolationGroup()
+	isolationGroupMetrics := make(map[string]*types.IsolationGroupMetrics, len(isolationGroups))
+	for _, group := range isolationGroups {
+		isolationGroupMetrics[group] = &types.IsolationGroupMetrics{
+			NewTasksPerSecond: c.qpsTracker.GroupQPS(group),
+			PollerCount:       int64(pollerCounts[group]),
+		}
+	}
 	response.TaskListStatus = &types.TaskListStatus{
 		ReadLevel:        c.taskAckManager.GetReadLevel(),
 		AckLevel:         c.taskAckManager.GetAckLevel(),
@@ -736,6 +750,8 @@ func (c *taskListManagerImpl) DescribeTaskList(includeTaskListStatus bool) *type
 			StartID: taskIDBlock.start,
 			EndID:   taskIDBlock.end,
 		},
+		IsolationGroupMetrics: isolationGroupMetrics,
+		NewTasksPerSecond:     c.qpsTracker.QPS(),
 	}
 
 	return response
@@ -910,18 +926,20 @@ func (c *taskListManagerImpl) getIsolationGroupForTask(ctx context.Context, task
 }
 
 func (c *taskListManagerImpl) getPollerIsolationGroups() []string {
-	groupSet := c.pollerHistory.GetPollerIsolationGroups(c.timeSource.Now().Add(-1 * c.config.TaskIsolationPollerWindow()))
-	c.outstandingPollsLock.Lock()
-	for _, poller := range c.outstandingPollsMap {
-		groupSet[poller.isolationGroup]++
-	}
-	c.outstandingPollsLock.Unlock()
-	result := make([]string, 0, len(groupSet))
-	for k := range groupSet {
-		result = append(result, k)
-	}
+	groupSet := c.getRecentPollersByIsolationGroup()
+	result := maps.Keys(groupSet)
 	sort.Strings(result)
 	return result
+}
+
+func (c *taskListManagerImpl) getRecentPollersByIsolationGroup() map[string]int {
+	counts := c.pollerHistory.GetPollerIsolationGroups(c.timeSource.Now().Add(-1 * c.config.TaskIsolationPollerWindow()))
+	c.outstandingPollsLock.Lock()
+	defer c.outstandingPollsLock.Unlock()
+	for _, p := range c.outstandingPollsMap {
+		counts[p.isolationGroup]++
+	}
+	return counts
 }
 
 func (c *taskListManagerImpl) emitMisconfiguredPartitionMetrics() {
