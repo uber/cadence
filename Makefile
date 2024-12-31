@@ -103,12 +103,6 @@ $(warning found on line $(_BAD_AT_USE))
 $(error fix that line and try again)
 endif
 
-# M1 macs may need to switch back to x86, until arm releases are available
-EMULATE_X86 =
-ifeq ($(shell uname -sm),Darwin arm64)
-EMULATE_X86 = arch -x86_64
-endif
-
 PROJECT_ROOT = github.com/uber/cadence
 
 # helper for executing bins that need other bins, just `$(BIN_PATH) the_command ...`
@@ -221,9 +215,9 @@ $(BIN)/copyright: cmd/tools/copyright/licensegen.go
 
 # https://docs.buf.build/
 # changing BUF_VERSION will automatically download and use the specified version.
-BUF_VERSION = 0.36.0
+BUF_VERSION = 1.48.0
 OS = $(shell uname -s)
-ARCH = $(shell $(EMULATE_X86) uname -m)
+ARCH = $(shell uname -m)
 BUF_URL = https://github.com/bufbuild/buf/releases/download/v$(BUF_VERSION)/buf-$(OS)-$(ARCH)
 # use BUF_VERSION_BIN as a bin prerequisite, not "buf", so the correct version will be used.
 # otherwise this must be a .PHONY rule, or the buf bin / symlink could become out of date.
@@ -236,8 +230,13 @@ $(STABLE_BIN)/$(BUF_VERSION_BIN): | $(STABLE_BIN)
 # https://www.grpc.io/docs/languages/go/quickstart/
 # protoc-gen-gogofast (yarpc) are versioned via tools.go + go.mod (built above) and will be rebuilt as needed.
 # changing PROTOC_VERSION will automatically download and use the specified version
-PROTOC_VERSION = 3.14.0
-PROTOC_URL = https://github.com/protocolbuffers/protobuf/releases/download/v$(PROTOC_VERSION)/protoc-$(PROTOC_VERSION)-$(subst Darwin,osx,$(OS))-$(ARCH).zip
+PROTOC_VERSION = 29.2
+ifeq (Darwin,$(OS))
+# protoc is oddly annoying about their OSX-targeting filenames, it doesn't match uname
+PROTOC_URL = https://github.com/protocolbuffers/protobuf/releases/download/v$(PROTOC_VERSION)/protoc-$(PROTOC_VERSION)-osx-universal_binary.zip
+else
+PROTOC_URL = https://github.com/protocolbuffers/protobuf/releases/download/v$(PROTOC_VERSION)/protoc-$(PROTOC_VERSION)-$(OS)-$(ARCH).zip
+endif
 # the zip contains an /include folder that we need to use to learn the well-known types
 PROTOC_UNZIP_DIR = $(STABLE_BIN)/protoc-$(PROTOC_VERSION)-zip
 # use PROTOC_VERSION_BIN as a bin prerequisite, not "protoc", so the correct version will be used.
@@ -333,7 +332,7 @@ $(BUILD)/protoc: $(PROTO_FILES) $(STABLE_BIN)/$(PROTOC_VERSION_BIN) $(BIN)/proto
 	$Q mkdir -p $(PROTO_OUT)
 	$Q echo "protoc..."
 	$Q chmod +x $(STABLE_BIN)/$(PROTOC_VERSION_BIN)
-	$Q $(foreach PROTO_DIR,$(PROTO_DIRS),$(EMULATE_X86) $(STABLE_BIN)/$(PROTOC_VERSION_BIN) \
+	$Q $(foreach PROTO_DIR,$(PROTO_DIRS), $(STABLE_BIN)/$(PROTOC_VERSION_BIN) \
 		--plugin $(BIN)/protoc-gen-gogofast \
 		--plugin $(BIN)/protoc-gen-yarpc-go \
 		-I=$(PROTO_ROOT)/public \
@@ -556,6 +555,7 @@ tidy: ## `go mod tidy` all packages
 	$Q go mod tidy
 	$Q cd common/archiver/gcloud; go mod tidy || (echo "failed to tidy gcloud plugin, try manually copying go.mod contents into common/archiver/gcloud/go.mod and rerunning" >&2; exit 1)
 	$Q cd cmd/server; go mod tidy || (echo "failed to tidy main server module, try manually copying go.mod and common/archiver/gcloud/go.mod contents into cmd/server/go.mod and rerunning" >&2; exit 1)
+	$Q cd internal/tools; go mod tidy || (echo "failed to tidy the tools module, try it by hand" >&2; exit 1)
 
 clean: ## Clean build products
 	rm -f $(BINS)
