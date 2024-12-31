@@ -103,12 +103,6 @@ $(warning found on line $(_BAD_AT_USE))
 $(error fix that line and try again)
 endif
 
-# M1 macs may need to switch back to x86, until arm releases are available
-EMULATE_X86 =
-ifeq ($(shell uname -sm),Darwin arm64)
-EMULATE_X86 = arch -x86_64
-endif
-
 PROJECT_ROOT = github.com/uber/cadence
 
 # helper for executing bins that need other bins, just `$(BIN_PATH) the_command ...`
