@@ -115,6 +115,7 @@ func (mr *MockQPSTrackerMockRecorder) Stop() *gomock.Call {
 type MockQPSTrackerGroup struct {
 	ctrl     *gomock.Controller
 	recorder *MockQPSTrackerGroupMockRecorder
+	isgomock struct{}
 }
 
 // MockQPSTrackerGroupMockRecorder is the mock recorder for MockQPSTrackerGroup.
@@ -143,7 +144,7 @@ func (m *MockQPSTrackerGroup) GroupQPS(group string) float64 {
 }
 
 // GroupQPS indicates an expected call of GroupQPS.
-func (mr *MockQPSTrackerGroupMockRecorder) GroupQPS(group interface{}) *gomock.Call {
+func (mr *MockQPSTrackerGroupMockRecorder) GroupQPS(group any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GroupQPS", reflect.TypeOf((*MockQPSTrackerGroup)(nil).GroupQPS), group)
 }
@@ -169,7 +170,7 @@ func (m *MockQPSTrackerGroup) ReportCounter(arg0 int64) {
 }
 
 // ReportCounter indicates an expected call of ReportCounter.
-func (mr *MockQPSTrackerGroupMockRecorder) ReportCounter(arg0 interface{}) *gomock.Call {
+func (mr *MockQPSTrackerGroupMockRecorder) ReportCounter(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReportCounter", reflect.TypeOf((*MockQPSTrackerGroup)(nil).ReportCounter), arg0)
 }
@@ -181,7 +182,7 @@ func (m *MockQPSTrackerGroup) ReportGroup(group string, amount int64) {
 }
 
 // ReportGroup indicates an expected call of ReportGroup.
-func (mr *MockQPSTrackerGroupMockRecorder) ReportGroup(group, amount interface{}) *gomock.Call {
+func (mr *MockQPSTrackerGroupMockRecorder) ReportGroup(group, amount any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReportGroup", reflect.TypeOf((*MockQPSTrackerGroup)(nil).ReportGroup), group, amount)
 }
