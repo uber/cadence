@@ -186,6 +186,10 @@ var (
 		StartedTimestamp:          &Timestamp2,
 		Queries:                   WorkflowQueryMap,
 		NextEventID:               EventID3,
+		AutoConfigHint: &types.AutoConfigHint{
+			EnableAutoConfig:   true,
+			PollerWaitTimeInMs: 100,
+		},
 	}
 	RespondDecisionTaskCompletedRequest = types.RespondDecisionTaskCompletedRequest{
 		TaskToken:                  TaskToken,
@@ -232,6 +236,10 @@ var (
 		WorkflowType:                    &WorkflowType,
 		WorkflowDomain:                  DomainName,
 		Header:                          &Header,
+		AutoConfigHint: &types.AutoConfigHint{
+			EnableAutoConfig:   true,
+			PollerWaitTimeInMs: 100,
+		},
 	}
 	RespondActivityTaskCompletedRequest = types.RespondActivityTaskCompletedRequest{
 		TaskToken: TaskToken,
