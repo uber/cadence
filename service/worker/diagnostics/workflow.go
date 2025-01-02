@@ -177,6 +177,7 @@ func (w *dw) DiagnosticsWorkflow(ctx workflow.Context, params DiagnosticsWorkflo
 		return nil, fmt.Errorf("RetrieveRetryIssues: %w", err)
 	}
 	retryResult.Issues = retryIssues
+	retryResult.Runbooks = []string{linkToRetriesRunbook}
 
 	scope.IncCounter(metrics.DiagnosticsWorkflowSuccess)
 	return &DiagnosticsWorkflowResult{
