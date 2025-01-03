@@ -925,6 +925,7 @@ func TestTaskListManagerGetTaskBatch(t *testing.T) {
 		if errors.Is(err, ErrNoTasks) {
 			continue
 		}
+		assert.NotNil(t, task.AutoConfigHint)
 		assert.NoError(t, err)
 		assert.NotNil(t, task)
 		task.Finish(nil)
