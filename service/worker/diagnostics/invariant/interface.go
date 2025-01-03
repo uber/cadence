@@ -52,6 +52,7 @@ const (
 	RootCauseTypeServiceSideIssue                      RootCause = "There is an issue in the worker service that is causing a failure. Check identity for service logs"
 	RootCauseTypeServiceSidePanic                      RootCause = "There is a panic in the activity/workflow that is causing a failure"
 	RootCauseTypeServiceSideCustomError                RootCause = "Customised error returned by the activity/workflow"
+	RootCauseTypeBlobSizeLimit                         RootCause = "Workflow has exceeded the blob size limits configured for the domain"
 )
 
 func (r RootCause) String() string {

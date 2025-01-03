@@ -80,15 +80,20 @@ type timeoutRootCauseResult struct {
 }
 
 type failureDiagnostics struct {
-	Issues    []*failuresIssuesResult
-	RootCause []string
+	Issues    []*failureIssuesResult
+	RootCause []*failureRootCauseResult
 	Runbooks  []string
 }
 
-type failuresIssuesResult struct {
+type failureIssuesResult struct {
 	InvariantType string
 	Reason        string
-	Metadata      failure.FailureMetadata
+	Metadata      *failure.FailureMetadata
+}
+
+type failureRootCauseResult struct {
+	RootCauseType    string
+	BlobSizeMetadata *failure.BlobSizeMetadata
 }
 
 type retryDiagnostics struct {
@@ -169,7 +174,11 @@ func (w *dw) DiagnosticsWorkflow(ctx workflow.Context, params DiagnosticsWorkflo
 	}
 	failureResult.Issues = failureIssues
 
-	failureResult.RootCause = retrieveFailureRootCause(rootCauseResult)
+	failureRootCause, err := retrieveFailureRootCause(rootCauseResult)
+	if err != nil {
+		return nil, fmt.Errorf("RetrieveFailureRootCause: %w", err)
+	}
+	failureResult.RootCause = failureRootCause
 	failureResult.Runbooks = []string{linkToFailuresRunbook}
 
 	retryIssues, err := retrieveRetryIssues(checkResult)
@@ -269,33 +278,46 @@ func retrieveTimeoutRootCause(rootCause []invariant.InvariantRootCauseResult) ([
 	return result, nil
 }
 
-func retrieveFailureIssues(issues []invariant.InvariantCheckResult) ([]*failuresIssuesResult, error) {
-	result := make([]*failuresIssuesResult, 0)
+func retrieveFailureIssues(issues []invariant.InvariantCheckResult) ([]*failureIssuesResult, error) {
+	result := make([]*failureIssuesResult, 0)
 	for _, issue := range issues {
-		if issue.InvariantType == failure.ActivityFailed.String() || issue.InvariantType == failure.WorkflowFailed.String() {
+		if issue.InvariantType == failure.ActivityFailed.String() || issue.InvariantType == failure.WorkflowFailed.String() || issue.InvariantType == failure.DecisionCausedFailure.String() {
 			var data failure.FailureMetadata
 			err := json.Unmarshal(issue.Metadata, &data)
 			if err != nil {
 				return nil, err
 			}
-			result = append(result, &failuresIssuesResult{
+			result = append(result, &failureIssuesResult{
 				InvariantType: issue.InvariantType,
 				Reason:        issue.Reason,
-				Metadata:      data,
+				Metadata:      &data,
 			})
 		}
 	}
 	return result, nil
 }
 
-func retrieveFailureRootCause(rootCause []invariant.InvariantRootCauseResult) []string {
-	result := make([]string, 0)
+func retrieveFailureRootCause(rootCause []invariant.InvariantRootCauseResult) ([]*failureRootCauseResult, error) {
+	result := make([]*failureRootCauseResult, 0)
 	for _, rc := range rootCause {
 		if rc.RootCause == invariant.RootCauseTypeServiceSideIssue || rc.RootCause == invariant.RootCauseTypeServiceSidePanic || rc.RootCause == invariant.RootCauseTypeServiceSideCustomError {
-			result = append(result, rc.RootCause.String())
+			result = append(result, &failureRootCauseResult{
+				RootCauseType: rc.RootCause.String(),
+			})
+		}
+		if rc.RootCause == invariant.RootCauseTypeBlobSizeLimit {
+			var metadata failure.BlobSizeMetadata
+			err := json.Unmarshal(rc.Metadata, &metadata)
+			if err != nil {
+				return nil, err
+			}
+			result = append(result, &failureRootCauseResult{
+				RootCauseType:    rc.RootCause.String(),
+				BlobSizeMetadata: &metadata,
+			})
 		}
 	}
-	return result
+	return result, nil
 }
 
 func retrieveRetryIssues(issues []invariant.InvariantCheckResult) ([]*retryIssuesResult, error) {

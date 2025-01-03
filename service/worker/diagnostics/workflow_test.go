@@ -308,16 +308,48 @@ func (s *diagnosticsWorkflowTestSuite) Test__retrieveFailureIssues() {
 			Metadata:      actMetadataInBytes,
 		},
 	}
-	failureIssues := []*failuresIssuesResult{
+	failureIssues := []*failureIssuesResult{
 		{
 			InvariantType: failure.ActivityFailed.String(),
 			Reason:        failure.CustomError.String(),
-			Metadata:      actMetadata,
+			Metadata:      &actMetadata,
 		},
 	}
 	result, err := retrieveFailureIssues(issues)
 	s.NoError(err)
 	s.Equal(failureIssues, result)
+}
+
+func (s *diagnosticsWorkflowTestSuite) Test__retrieveFailureRootCause() {
+	blobSizeMetadataInBytes, err := json.Marshal(failure.BlobSizeMetadata{
+		BlobSizeWarnLimit:  5,
+		BlobSizeErrorLimit: 10,
+	})
+	s.NoError(err)
+	rootCause := []invariant.InvariantRootCauseResult{
+		{
+			RootCause: invariant.RootCauseTypeServiceSideIssue,
+		},
+		{
+			RootCause: invariant.RootCauseTypeBlobSizeLimit,
+			Metadata:  blobSizeMetadataInBytes,
+		},
+	}
+	failureRootCause := []*failureRootCauseResult{
+		{
+			RootCauseType: invariant.RootCauseTypeServiceSideIssue.String(),
+		},
+		{
+			RootCauseType: invariant.RootCauseTypeBlobSizeLimit.String(),
+			BlobSizeMetadata: &failure.BlobSizeMetadata{
+				BlobSizeWarnLimit:  5,
+				BlobSizeErrorLimit: 10,
+			},
+		},
+	}
+	result, err := retrieveFailureRootCause(rootCause)
+	s.NoError(err)
+	s.Equal(failureRootCause, result)
 }
 
 func (s *diagnosticsWorkflowTestSuite) Test__retrieveRetryIssues() {
