@@ -221,7 +221,7 @@ func (s *Service) Start() {
 	s.startFixerWorkflowWorker()
 	if s.config.IndexerCfg != nil {
 		if shouldStartMigrationIndexer(s.params) {
-			s.startMigrationIndexer()
+			s.startMigrationDualIndexer()
 		} else {
 			s.startIndexer()
 		}
@@ -394,19 +394,25 @@ func (s *Service) startIndexer() {
 	}
 }
 
-func (s *Service) startMigrationIndexer() {
-	visibilityIndexer := indexer.NewMigrationIndexer(
+func (s *Service) startMigrationDualIndexer() {
+	visibilityDualIndexer := indexer.NewMigrationDualIndexer(
 		s.config.IndexerCfg,
 		s.GetMessagingClient(),
 		s.params.ESClient,
 		s.params.OSClient,
 		s.params.ESConfig.Indices[common.VisibilityAppName],
+		s.params.OSConfig.Indices[common.VisibilityAppName],
 		s.GetLogger(),
 		s.GetMetricsClient(),
 	)
-	if err := visibilityIndexer.Start(); err != nil {
-		visibilityIndexer.Stop()
-		s.GetLogger().Fatal("fail to start indexer", tag.Error(err))
+	if err := visibilityDualIndexer.SourceIndexer.Start(); err != nil {
+		visibilityDualIndexer.SourceIndexer.Stop()
+		s.GetLogger().Fatal("fail to start source indexer", tag.Error(err))
+	}
+
+	if err := visibilityDualIndexer.DestIndexer.Start(); err != nil {
+		visibilityDualIndexer.DestIndexer.Stop()
+		s.GetLogger().Fatal("fail to start dest indexer", tag.Error(err))
 	}
 }
 
