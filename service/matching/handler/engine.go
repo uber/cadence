@@ -827,6 +827,7 @@ func (e *matchingEngineImpl) createSyncMatchPollForActivityTaskResponse(
 	response.WorkflowDomain = activityTaskDispatchInfo.WorkflowDomain
 	response.PartitionConfig = partitionConfig
 	response.LoadBalancerHints = loadBalancerHints
+	response.AutoConfigHint = task.AutoConfigHint
 	return response
 }
 
